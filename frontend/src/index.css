@@ -2,6 +2,41 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* ========================================================
+     GLOBAL RESPONSIVE TITLE TYPOGRAPHY SYSTEM
+     - Smaller screens (mobile < 640px): 1.5rem (24px)
+     - Tablet screens (640px - 1023px): 2.15rem (34.4px)
+     - All screens from tablet up / desktop (1024px+): 2.5rem (40px)
+     ======================================================== */
+  --section-title-size: clamp(1.5rem, 0.88rem + 2.65vw, 2.5rem);
+  --section-title-lh: 1.15;
+  --section-title-tracking: -0.025em;
+
+  /* Global Subtitle and Description Tokens */
+  --section-subtitle-size: clamp(0.875rem, 0.82rem + 0.25vw, 1.05rem);
+  --section-subtitle-lh: 1.6;
+}
+
+/* Strict responsive media query calibration for pixel-accurate breakpoints */
+@media (max-width: 639px) {
+  :root {
+    --section-title-size: 1.5rem;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  :root {
+    --section-title-size: 2.15rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --section-title-size: 2.5rem;
+  }
+}
+
 @layer base {
   html, body {
     margin: 0;
@@ -11,4 +46,40 @@
     color: #0f172a;
     -webkit-font-smoothing: antialiased;
   }
+}
+
+@layer utilities {
+  /* Utility class to apply global responsive title sizing to any element */
+  .text-section-title,
+  .section-title {
+    font-size: var(--section-title-size) !important;
+    line-height: var(--section-title-lh) !important;
+    letter-spacing: var(--section-title-tracking) !important;
+  }
+
+  .text-section-subtitle,
+  .section-subtitle {
+    font-size: var(--section-subtitle-size) !important;
+    line-height: var(--section-subtitle-lh) !important;
+  }
+}
+
+/* ========================================================
+   GLOBAL ENFORCEMENT FOR ALL SECTION HEADINGS
+   Applies uniformly across all 100 components in /sample
+   and the entire NexaTalent application.
+   ======================================================== */
+.theme-light section h2,
+[data-theme="light"] section h2,
+section h2.section-heading,
+.theme-light section h3.text-3xl,
+.theme-light section h3.text-4xl,
+.theme-light section h3.text-5xl,
+[data-theme="light"] section h3.text-3xl,
+[data-theme="light"] section h3.text-4xl,
+[data-theme="light"] section h3.text-5xl,
+.section-title {
+  font-size: var(--section-title-size) !important;
+  line-height: var(--section-title-lh) !important;
+  letter-spacing: var(--section-title-tracking) !important;
 }
