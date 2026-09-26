@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-// Import all 40 light-theme modern components + 10 signature components (50 total)
+// Import all 66 light-theme modern components
 import {
   LightHeroZoomReveal,
   LightHeroParallaxImage,
@@ -50,7 +50,6 @@ import {
   LightEditorialInsightCard,
   LightServiceTierComparison,
   LightTrustSignalStrip,
-  LightFinalCTAExpansion,
   SignatureTalentRadar,
   SignatureGCCFlightPath,
   SignatureCodeVettingTerminal,
@@ -60,7 +59,24 @@ import {
   SignatureTalentComparisonSlider,
   SignatureHiringSquadBuilder,
   SignatureParticleTextMorph,
-  SignatureExecutivePledgeShield
+  SignatureExecutivePledgeShield,
+  CorridorVettingTunnel,
+  CorridorGCCPipeline,
+  CorridorTechVault,
+  ParallaxMultiLayerSplit,
+  ParallaxDepthFloatMatrix,
+  HorizontalCardsRail,
+  HorizontalMandateShowcase,
+  OneSideStickySplitMilestones,
+  OneSideStickyFeatureStack,
+  TwoSectionDualStickyConvergence,
+  TwoSectionDualStickyComparison,
+  VerticalParallaxCaseStudy,
+  VerticalParallaxTalentArb,
+  StickyPinAccordionReveal,
+  PinnedCircularProgressReveal,
+  DualPinnedConvergenceShowcase,
+  LightFinalCTAExpansion,
 } from '../components/light-motion';
 
 interface SectionBannerProps {
@@ -69,31 +85,31 @@ interface SectionBannerProps {
   name: string;
   tech: string;
   description: string;
-  isSignature?: boolean;
+  isSpecial?: boolean;
 }
 
-const LightSectionDivider: React.FC<SectionBannerProps> = ({ index, id, name, tech, description, isSignature }) => (
+const LightSectionDivider: React.FC<SectionBannerProps> = ({ index, id, name, tech, description, isSpecial }) => (
   <div 
     id={id}
     className={`w-full border-y px-6 py-3.5 backdrop-blur-md sticky top-0 z-30 flex flex-wrap items-center justify-between gap-3 text-xs ${
-      isSignature 
+      isSpecial 
         ? 'bg-blue-50/90 border-blue-200 shadow-xs' 
         : 'bg-slate-100/70 border-slate-200/80'
     }`}
   >
     <div className="flex items-center gap-3">
       <span className={`font-mono font-extrabold px-2.5 py-0.5 rounded-md text-[11px] shadow-sm ${
-        isSignature 
+        isSpecial 
           ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white' 
           : 'bg-slate-900 text-white'
       }`}>
-        {String(index).padStart(2, '0')} / 50
+        {String(index).padStart(2, '0')} / 66
       </span>
       <h3 className="font-bold text-slate-900 text-sm tracking-tight m-0 flex items-center gap-2">
         <span>{name}</span>
-        {isSignature && (
+        {isSpecial && (
           <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black uppercase tracking-wider">
-            Signature
+            Signature / Parallax
           </span>
         )}
       </h3>
@@ -143,7 +159,10 @@ export const SampleShowcase: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 antialiased selection:bg-blue-100 selection:text-blue-900">
+    <div
+      data-theme="light"
+      className="theme-light min-h-screen bg-white text-slate-900 antialiased selection:bg-blue-100 selection:text-blue-900"
+    >
       
       {/* Top Reading Progress Bar */}
       <motion.div
@@ -163,7 +182,7 @@ export const SampleShowcase: React.FC = () => {
             className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold mb-6 shadow-xs"
           >
             <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-            <span>NexaTalent Production Motion Showcase • 50 Unique Components</span>
+            <span>NexaTalent Production Motion Showcase • 66 Complete Sections</span>
           </motion.div>
 
           <motion.h1
@@ -172,9 +191,9 @@ export const SampleShowcase: React.FC = () => {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="text-4xl sm:text-6xl font-black text-slate-900 tracking-tight leading-[1.1] mb-6"
           >
-            Complete 50 Modern Light-Theme <br className="hidden sm:inline" />
+            All 66 Modern Light-Theme <br className="hidden sm:inline" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600">
-              Animated & Signature Sections
+              Animated & Parallax Sections
             </span>
           </motion.h1>
 
@@ -184,8 +203,8 @@ export const SampleShowcase: React.FC = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed mb-10"
           >
-            Pure, unconstrained sequential presentation: 40 core architecture components + 10 signature interactive modules. 
-            All in crisp lighter theme with Lenis smooth inertia, GSAP sticky pin timelines, and interactive 3D mechanics.
+            Complete sequential showcase: 40 core architecture components, 10 signature modules, 
+            3 distinct 3D perspective depth corridors, multi-layer parallax sections, horizontal cards rails, and one-side & two-side sticky pin storytelling.
           </motion.p>
 
           {/* Key Feature Badges */}
@@ -197,28 +216,28 @@ export const SampleShowcase: React.FC = () => {
           >
             <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
               <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <span>50 Complete Sections</span>
+              <span>66 Complete Sections</span>
             </div>
             <div className="w-1 h-1 rounded-full bg-slate-300 hidden sm:block" />
             <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
               <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <span>10 Signature Experiences</span>
+              <span>3x 3D Depth Corridors</span>
             </div>
             <div className="w-1 h-1 rounded-full bg-slate-300 hidden sm:block" />
             <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
               <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <span>100% Light Theme</span>
+              <span>Horizontal & Vertical Parallax</span>
             </div>
             <div className="w-1 h-1 rounded-full bg-slate-300 hidden sm:block" />
             <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
               <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <span>GSAP + Lenis + Motion</span>
+              <span>One-Side & Two-Side Sticky Pins</span>
             </div>
           </motion.div>
         </div>
       </header>
 
-      {/* 50 SEQUENTIAL SECTIONS */}
+      {/* 66 SEQUENTIAL SECTIONS */}
       <main className="relative">
 
         {/* 01: Hero Center Zoom & Content Reveal */}
@@ -353,14 +372,14 @@ export const SampleShowcase: React.FC = () => {
           <LightCardExpandSection />
         </section>
 
-        {/* 12: 3D Perspective Depth Corridor */}
+        {/* 12: 3D Perspective Depth Corridor Base */}
         <section id="sec-12">
           <LightSectionDivider
             index={12}
             id="bar-12"
-            name="3D Perspective Depth Corridor"
+            name="3D Perspective Depth Corridor (Base)"
             tech="CSS 3D Transform + Scroll Scrub"
-            description="Z-space depth corridor simulating an architectural walkthrough"
+            description="Z-space depth corridor simulating an architectural capability walkthrough"
           />
           <LightPerspectiveCorridor />
         </section>
@@ -697,7 +716,7 @@ export const SampleShowcase: React.FC = () => {
             name="5-Axis Seniority & Competency Radar"
             tech="Dynamic SVG Polygon + Springs"
             description="Multi-dimensional competency assessment across architecture, concurrency, and AI"
-            isSignature={true}
+            isSpecial={true}
           />
           <SignatureTalentRadar />
         </section>
@@ -710,7 +729,7 @@ export const SampleShowcase: React.FC = () => {
             name="Geo-Orbital GCC Relocation & Pod Corridors"
             tech="Animated SVG Arc + Live Arbitrage"
             description="Interactive flight paths and talent cost arbitrage between Western tech hubs and India"
-            isSignature={true}
+            isSpecial={true}
           />
           <SignatureGCCFlightPath />
         </section>
@@ -723,7 +742,7 @@ export const SampleShowcase: React.FC = () => {
             name="Production Code Vetting Terminal"
             tech="Interactive Console + Execution Harness"
             description="High-tech terminal running lockless C++, Raft consensus, and CUDA flash-attention tests"
-            isSignature={true}
+            isSpecial={true}
           />
           <SignatureCodeVettingTerminal />
         </section>
@@ -736,7 +755,7 @@ export const SampleShowcase: React.FC = () => {
             name="3D Fluid Tilt Deck & Executive Outcomes"
             tech="3D Spring Tilt + Specular Glare"
             description="Dynamic cursor-following tilt cards displaying verified Tier-1 client deployments"
-            isSignature={true}
+            isSpecial={true}
           />
           <SignatureLiquidTiltDeck />
         </section>
@@ -749,7 +768,7 @@ export const SampleShowcase: React.FC = () => {
             name="Cross-Border Compensation Heatmap Matrix"
             tech="Dynamic Normalized Comp Bars"
             description="Interactive compensation bands, equity splits, and purchasing-power indices"
-            isSignature={true}
+            isSpecial={true}
           />
           <SignatureCompensationHeatmap />
         </section>
@@ -762,7 +781,7 @@ export const SampleShowcase: React.FC = () => {
             name="Precision Velocity Timeline Dial"
             tech="Interactive Stepper + Artifact Reveal"
             description="Scrub through Day 1 calibration to Day 75 turnkey 120-engineer center deployment"
-            isSignature={true}
+            isSpecial={true}
           />
           <SignatureInteractiveTimelineDial />
         </section>
@@ -775,7 +794,7 @@ export const SampleShowcase: React.FC = () => {
             name="Interactive Talent Velocity Slider"
             tech="Draggable Split-Screen Slider"
             description="Direct comparison between traditional staffing agencies and NexaTalent pods"
-            isSignature={true}
+            isSpecial={true}
           />
           <SignatureTalentComparisonSlider />
         </section>
@@ -788,7 +807,7 @@ export const SampleShowcase: React.FC = () => {
             name="Engineering Squad Architect & Simulator"
             tech="Interactive Headcount + SLA Output"
             description="Compose engineering pods in real time with dynamic monthly burn and timeline calculation"
-            isSignature={true}
+            isSpecial={true}
           />
           <SignatureHiringSquadBuilder />
         </section>
@@ -801,7 +820,7 @@ export const SampleShowcase: React.FC = () => {
             name="Interactive Physics Particle Typography"
             tech="Canvas 2D Spring Particle Simulation"
             description="450+ physics particles forming dynamic headlines that repel cursor interactions"
-            isSignature={true}
+            isSpecial={true}
           />
           <SignatureParticleTextMorph />
         </section>
@@ -814,20 +833,228 @@ export const SampleShowcase: React.FC = () => {
             name="4-Layer Executive Guarantee Shield"
             tech="Multi-Layer Covenant Unpacking"
             description="180-day warranty, 100% IP transfer covenant, SOC 2 Type II, and escrow protections"
-            isSignature={true}
+            isSpecial={true}
           />
           <SignatureExecutivePledgeShield />
         </section>
 
-        {/* 50: Grand Finale Scale-to-Edge Action Banner */}
+        {/* 50: 3D Perspective Depth Corridor - Variation 1 */}
         <section id="sec-50">
           <LightSectionDivider
             index={50}
             id="bar-50"
-            name="Final Scale-to-Edge Action Banner"
+            name="3D Depth Corridor V1: 4-Gate Vetting Tunnel"
+            tech="3D Perspective GSAP Scrub"
+            description="Stepping through 4 technical vetting gates filtering out 96.5% of candidate noise"
+            isSpecial={true}
+          />
+          <CorridorVettingTunnel />
+        </section>
+
+        {/* 51: 3D Perspective Depth Corridor - Variation 2 */}
+        <section id="sec-51">
+          <LightSectionDivider
+            index={51}
+            id="bar-51"
+            name="3D Depth Corridor V2: GCC 75-Day Pipeline"
+            tech="3D Perspective GSAP Scrub"
+            description="From incorporation to 120 senior engineers operating with full IP autonomy in 75 days"
+            isSpecial={true}
+          />
+          <CorridorGCCPipeline />
+        </section>
+
+        {/* 52: 3D Perspective Depth Corridor - Variation 3 */}
+        <section id="sec-52">
+          <LightSectionDivider
+            index={52}
+            id="bar-52"
+            name="3D Depth Corridor V3: Deep-Tech Architectural Vault"
+            tech="3D Perspective GSAP Scrub"
+            description="Frontier domains: FPGA low-latency, distributed consensus Raft, and GPU vLLM kernels"
+            isSpecial={true}
+          />
+          <CorridorTechVault />
+        </section>
+
+        {/* 53: Multi-Layer Vertical Parallax with Independent Speed Scrub */}
+        <section id="sec-53">
+          <LightSectionDivider
+            index={53}
+            id="bar-53"
+            name="Multi-Layer Depth Parallax (3 Independent Speeds)"
+            tech="Multi-Layer Parallax Scrub"
+            description="3 distinct overlapping cards moving at 0.5x, 0.85x, and 1.25x optical scrub velocities"
+            isSpecial={true}
+          />
+          <ParallaxMultiLayerSplit />
+        </section>
+
+        {/* 54: 3D Floating Metrics & Hologram Parallax */}
+        <section id="sec-54">
+          <LightSectionDivider
+            index={54}
+            id="bar-54"
+            name="Volumetric Metric Parallax Constellation"
+            tech="3D Parallax Velocity Deflection"
+            description="6 floating metric cards moving at independent velocities and rotational angles on scroll"
+            isSpecial={true}
+          />
+          <ParallaxDepthFloatMatrix />
+        </section>
+
+        {/* 55: Pinned Horizontal Rail - 5 GCC Case Studies */}
+        <section id="sec-55">
+          <LightSectionDivider
+            index={55}
+            id="bar-55"
+            name="Horizontal Rail: 5 Turnkey GCC Deployments"
+            tech="Pinned Horizontal GSAP Scrub"
+            description="Vertical scroll triggers lateral track movement across 5 global GCC success stories"
+            isSpecial={true}
+          />
+          <HorizontalCardsRail />
+        </section>
+
+        {/* 56: Pinned Horizontal Rail - Live Leadership Mandates */}
+        <section id="sec-56">
+          <LightSectionDivider
+            index={56}
+            id="bar-56"
+            name="Horizontal Rail: Live Executive Mandates"
+            tech="Pinned Horizontal GSAP Scrub"
+            description="Horizontal sliding deck displaying verified open VP, Director, and Architect searches"
+            isSpecial={true}
+          />
+          <HorizontalMandateShowcase />
+        </section>
+
+        {/* 57: One-Side Sticky Pin - Left Pinned Dashboard, Right Milestones */}
+        <section id="sec-57">
+          <LightSectionDivider
+            index={57}
+            id="bar-57"
+            name="One-Side Sticky Pin: Left Dashboard, Right Milestones"
+            tech="CSS Sticky Pin + ScrollTrigger"
+            description="Left executive health gauge stays pinned while right side scrolls through 5 milestones"
+            isSpecial={true}
+          />
+          <OneSideStickySplitMilestones />
+        </section>
+
+        {/* 58: One-Side Sticky Pin - Left Scrolling Rubric, Right Sticky Terminal */}
+        <section id="sec-58">
+          <LightSectionDivider
+            index={58}
+            id="bar-58"
+            name="One-Side Sticky Pin: Left Rubric, Right Sticky Terminal"
+            tech="CSS Sticky Pin + Reactive State"
+            description="Left side scrolls through technical rubrics while right side live terminal stays pinned"
+            isSpecial={true}
+          />
+          <OneSideStickyFeatureStack />
+        </section>
+
+        {/* 59: Two Sections Sticky Pin & Bilateral Convergence */}
+        <section id="sec-59">
+          <LightSectionDivider
+            index={59}
+            id="bar-59"
+            name="Two Sections Sticky Pin: Bilateral Convergence"
+            tech="Dual Pinned GSAP Convergence"
+            description="Challenge and solution panels pin and slide inward to lock into center SLA blueprint"
+            isSpecial={true}
+          />
+          <TwoSectionDualStickyConvergence />
+        </section>
+
+        {/* 60: Two Sections Sticky Pin: Sponsor & Squad Architecture */}
+        <section id="sec-60">
+          <LightSectionDivider
+            index={60}
+            id="bar-60"
+            name="Two Sections Sticky Pin: Sponsor & Squad Structure"
+            tech="Dual Pinned Comparison Scrub"
+            description="Synchronized pinned view of executive endorsement and exact trading pod hierarchy"
+            isSpecial={true}
+          />
+          <TwoSectionDualStickyComparison />
+        </section>
+
+        {/* 61: Vertical Parallax Section - 75-Day GCC Turnaround */}
+        <section id="sec-61">
+          <LightSectionDivider
+            index={61}
+            id="bar-61"
+            name="Vertical Parallax: 75-Day GCC Scale Story"
+            tech="Vertical Parallax Background Masking"
+            description="Differential vertical card shifts over massive parallax background typography"
+            isSpecial={true}
+          />
+          <VerticalParallaxCaseStudy />
+        </section>
+
+        {/* 62: Vertical Parallax Section - Cross-Border Talent Arbitrage */}
+        <section id="sec-62">
+          <LightSectionDivider
+            index={62}
+            id="bar-62"
+            name="Vertical Parallax: Cross-Border Capital Arbitrage"
+            tech="Vertical Parallax Speed Dampening"
+            description="Watch SF, New York, London, and Bangalore comp differentials shift vertically on scroll"
+            isSpecial={true}
+          />
+          <VerticalParallaxTalentArb />
+        </section>
+
+        {/* 63: Pinned Sticky Section with Dynamic Accordion Unfold */}
+        <section id="sec-63">
+          <LightSectionDivider
+            index={63}
+            id="bar-63"
+            name="Pinned Section: Progressive Accordion Unfold"
+            tech="Pinned ScrollTrigger Unfold"
+            description="Screen pins while 4 successive tiers of the BOT enterprise covenant unfold dynamically"
+            isSpecial={true}
+          />
+          <StickyPinAccordionReveal />
+        </section>
+
+        {/* 64: Pinned Interactive 360 Radial Progress Reveal */}
+        <section id="sec-64">
+          <LightSectionDivider
+            index={64}
+            id="bar-64"
+            name="Pinned Section: 360° Radial Progress Dial"
+            tech="Pinned SVG Radial Progress Scrub"
+            description="Central 360-degree circular dial fills 0% to 100% on scroll, unlocking legal covenants"
+            isSpecial={true}
+          />
+          <PinnedCircularProgressReveal />
+        </section>
+
+        {/* 65: Dual Pinned Bilateral Launchpad & Mandate Booking */}
+        <section id="sec-65">
+          <LightSectionDivider
+            index={65}
+            id="bar-65"
+            name="Dual Pinned Section: Pod Launchpad Configurator"
+            tech="Dual Pinned Scale Convergence"
+            description="Bilateral clamps lock onto an interactive executive mandate intake configurator"
+            isSpecial={true}
+          />
+          <DualPinnedConvergenceShowcase />
+        </section>
+
+        {/* 66: Grand Finale Scale-to-Edge Action Banner */}
+        <section id="sec-66">
+          <LightSectionDivider
+            index={66}
+            id="bar-66"
+            name="Grand Finale: Scale-to-Edge Action Banner"
             tech="GSAP ScrollTrigger Edge Expand"
             description="Card container seamlessly expands to full viewport width on final scroll"
-            isSignature={true}
+            isSpecial={true}
           />
           <LightFinalCTAExpansion />
         </section>
@@ -874,11 +1101,11 @@ export const SampleShowcase: React.FC = () => {
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-4">Motion Engineering</h4>
               <p className="text-xs text-slate-400 leading-relaxed mb-3">
-                All 50 components engineered with pure light design tokens, 60fps Framer Motion springs, and GSAP ScrollTrigger timeline pins.
+                All 66 components engineered with pure light design tokens, 60fps Framer Motion springs, and GSAP ScrollTrigger timeline pins.
               </p>
               <div className="inline-flex items-center gap-2 text-xs font-mono text-blue-400">
                 <Code2 className="w-4 h-4" />
-                <span>50 of 50 Sections Verified</span>
+                <span>66 of 66 Sections Verified</span>
               </div>
             </div>
           </div>

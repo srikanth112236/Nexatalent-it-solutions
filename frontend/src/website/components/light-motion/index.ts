@@ -1,4 +1,4 @@
-// 40 Modern Light-Theme Animated Components + 10 Premium Signature Animated Sections (50 Total)
+// 40 Modern Light-Theme Animated Components + 10 Signature Sections + 16 Advanced Parallax, Rails & Sticky Pin Sections (66 Total)
 export * from './LightHeroZoomReveal';
 export * from './LightHeroParallaxImage';
 export * from './LightStackedCards';
@@ -51,3 +51,21 @@ export * from './SignatureTalentComparisonSlider';
 export * from './SignatureHiringSquadBuilder';
 export * from './SignatureParticleTextMorph';
 export * from './SignatureExecutivePledgeShield';
+
+// 16 Advanced Parallax, Horizontal Rails & Sticky Pin Variations
+export * from './CorridorVettingTunnel';
+export * from './CorridorGCCPipeline';
+export * from './CorridorTechVault';
+export * from './ParallaxMultiLayerSplit';
+export * from './ParallaxDepthFloatMatrix';
+export * from './HorizontalCardsRail';
+export * from './HorizontalMandateShowcase';
+export * from './OneSideStickySplitMilestones';
+export * from './OneSideStickyFeatureStack';
+export * from './TwoSectionDualStickyConvergence';
+export * from './TwoSectionDualStickyComparison';
+export * from './VerticalParallaxCaseStudy';
+export * from './VerticalParallaxTalentArb';
+export * from './StickyPinAccordionReveal';
+export * from './PinnedCircularProgressReveal';
+export * from './DualPinnedConvergenceShowcase';
