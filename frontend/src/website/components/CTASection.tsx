@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { motion, useScroll, useTransform } from 'framer-motion';
+import { motionTokens } from '../../shared/motion/motionTokens';
 
 export interface CTASectionProps {
   badge?: string;
@@ -27,15 +29,29 @@ export const CTASection: React.FC<CTASectionProps> = ({
     'Pre-calibrated senior engineers only',
   ],
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start end", "end start"]
+  });
+
+  const yBackground = useTransform(scrollYProgress, [0, 1], [-50, 50]);
+  const words = title.split(' ');
+
   return (
     <section
+      ref={containerRef}
       style={{
         padding: '5rem 2rem',
         position: 'relative',
         overflow: 'hidden',
       }}
     >
-      <div
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        whileInView={{ opacity: 1, scale: 1 }}
+        viewport={{ once: true, margin: '-100px' }}
+        transition={{ duration: motionTokens.duration.deliberate, ease: motionTokens.ease.emphasis }}
         style={{
           maxWidth: '1100px',
           margin: '0 auto',
@@ -46,25 +62,40 @@ export const CTASection: React.FC<CTASectionProps> = ({
           textAlign: 'center',
           position: 'relative',
           boxShadow: '0 25px 50px -12px rgba(59, 130, 246, 0.25)',
+          overflow: 'hidden'
         }}
       >
-        {/* Glow ambient background spot */}
-        <div
+        {/* Glow ambient background spot with Parallax */}
+        <motion.div
+          animate={{
+            scale: [1, 1.1, 1],
+            opacity: [0.6, 1, 0.6],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
           style={{
             position: 'absolute',
             top: '50%',
             left: '50%',
-            transform: 'translate(-50%, -50%)',
+            x: '-50%',
+            y: yBackground,
             width: '600px',
             height: '300px',
-            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, transparent 70%)',
             filter: 'blur(60px)',
             pointerEvents: 'none',
           }}
         />
 
         <div style={{ position: 'relative', zIndex: 1 }}>
-          <div
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2, ...motionTokens.spring.gentle }}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -81,7 +112,7 @@ export const CTASection: React.FC<CTASectionProps> = ({
           >
             <Sparkles size={14} />
             {badge}
-          </div>
+          </motion.div>
 
           <h2
             style={{
@@ -91,12 +122,30 @@ export const CTASection: React.FC<CTASectionProps> = ({
               maxWidth: '850px',
               margin: '0 auto 1.25rem auto',
               lineHeight: 1.2,
+              display: 'flex',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              gap: '0.4rem'
             }}
           >
-            {title}
+            {words.map((word, i) => (
+              <motion.span
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.3 + i * motionTokens.stagger.small, ...motionTokens.spring.snappy }}
+              >
+                {word}
+              </motion.span>
+            ))}
           </h2>
 
-          <p
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.8, duration: motionTokens.duration.slow }}
             style={{
               fontSize: '1.0625rem',
               color: 'var(--color-text-secondary)',
@@ -106,7 +155,7 @@ export const CTASection: React.FC<CTASectionProps> = ({
             }}
           >
             {description}
-          </p>
+          </motion.p>
 
           {/* CTA Buttons */}
           <div
@@ -118,44 +167,68 @@ export const CTASection: React.FC<CTASectionProps> = ({
               marginBottom: '2.5rem',
             }}
           >
-            <Link
-              to={primaryCtaLink}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                backgroundColor: 'var(--color-primary)',
-                color: '#ffffff',
-                padding: '0.875rem 1.875rem',
-                borderRadius: 'var(--radius-lg)',
-                fontWeight: 700,
-                fontSize: '1rem',
-                textDecoration: 'none',
-                boxShadow: '0 4px 20px rgba(59, 130, 246, 0.5)',
-              }}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.9, ...motionTokens.spring.bouncy }}
             >
-              <span>{primaryCtaText}</span>
-              <ArrowRight size={18} />
-            </Link>
+              <Link
+                to={primaryCtaLink}
+                style={{ textDecoration: 'none' }}
+              >
+                <motion.div
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    backgroundColor: 'var(--color-primary)',
+                    color: '#ffffff',
+                    padding: '0.875rem 1.875rem',
+                    borderRadius: 'var(--radius-lg)',
+                    fontWeight: 700,
+                    fontSize: '1rem',
+                    boxShadow: '0 4px 20px rgba(59, 130, 246, 0.5)',
+                  }}
+                >
+                  <span>{primaryCtaText}</span>
+                  <ArrowRight size={18} />
+                </motion.div>
+              </Link>
+            </motion.div>
 
-            <Link
-              to={secondaryCtaLink}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                backgroundColor: 'rgba(15, 23, 42, 0.7)',
-                border: '1px solid var(--color-border)',
-                color: 'var(--color-text)',
-                padding: '0.875rem 1.75rem',
-                borderRadius: 'var(--radius-lg)',
-                fontWeight: 600,
-                fontSize: '1rem',
-                textDecoration: 'none',
-              }}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 1.0, ...motionTokens.spring.bouncy }}
             >
-              <span>{secondaryCtaText}</span>
-            </Link>
+              <Link
+                to={secondaryCtaLink}
+                style={{ textDecoration: 'none' }}
+              >
+                <motion.div
+                  whileHover={{ scale: 1.05, backgroundColor: 'rgba(255,255,255,0.1)' }}
+                  whileTap={{ scale: 0.95 }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    backgroundColor: 'rgba(15, 23, 42, 0.7)',
+                    border: '1px solid var(--color-border)',
+                    color: 'var(--color-text)',
+                    padding: '0.875rem 1.75rem',
+                    borderRadius: 'var(--radius-lg)',
+                    fontWeight: 600,
+                    fontSize: '1rem',
+                  }}
+                >
+                  <span>{secondaryCtaText}</span>
+                </motion.div>
+              </Link>
+            </motion.div>
           </div>
 
           {/* Bullet Highlights */}
@@ -170,14 +243,21 @@ export const CTASection: React.FC<CTASectionProps> = ({
             }}
           >
             {highlights.map((h, idx) => (
-              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <motion.div 
+                key={idx}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 1.2 + idx * motionTokens.stagger.small, ...motionTokens.spring.gentle }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              >
                 <CheckCircle2 size={16} color="var(--color-success)" />
                 <span>{h}</span>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 };

@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapPin, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { motionTokens } from '../../shared/motion/motionTokens';
 
 export interface LocationItem {
   id: string;
@@ -18,6 +20,27 @@ export interface LocationExplorerProps {
   subtitle?: string;
   locations?: LocationItem[];
 }
+
+const AnimatedRoleCounter: React.FC<{ value: number }> = ({ value }) => {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    let start = 0;
+    const end = value;
+    const incrementTime = 1500 / end;
+    
+    const timer = setInterval(() => {
+      start += Math.ceil(end / 20);
+      if (start > end) start = end;
+      setCount(start);
+      if (start === end) clearInterval(timer);
+    }, incrementTime);
+
+    return () => clearInterval(timer);
+  }, [value]);
+
+  return <span>{count}</span>;
+};
 
 export const LocationExplorer: React.FC<LocationExplorerProps> = ({
   badge = 'Global Talent Hubs',
@@ -62,10 +85,33 @@ export const LocationExplorer: React.FC<LocationExplorerProps> = ({
     },
   ],
 }) => {
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: motionTokens.stagger.medium,
+      }
+    }
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 30, scale: 0.95 },
+    show: { opacity: 1, y: 0, scale: 1, transition: motionTokens.spring.snappy }
+  };
+
   return (
     <section style={{ padding: '5rem 2rem', position: 'relative' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: motionTokens.duration.slow, ease: motionTokens.ease.standard }}
+          style={{ textAlign: 'center', marginBottom: '3.5rem' }}
+        >
           <span
             style={{
               fontSize: '0.8125rem',
@@ -83,118 +129,167 @@ export const LocationExplorer: React.FC<LocationExplorerProps> = ({
           <p style={{ color: 'var(--color-text-secondary)', maxWidth: '640px', margin: '0.75rem auto 0 auto' }}>
             {subtitle}
           </p>
-        </div>
+        </motion.div>
 
         {/* Location Cards Grid */}
-        <div
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: '-50px' }}
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
             gap: '1.5rem',
+            position: 'relative'
           }}
         >
           {locations.map((loc) => (
-            <div
+            <motion.div
               key={loc.id}
-              style={{
-                borderRadius: 'var(--radius-xl)',
-                backgroundColor: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
-                padding: '2rem',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                transition: 'all 0.25s ease',
-                boxShadow: 'var(--shadow-sm)',
-              }}
+              variants={cardVariants}
+              onMouseEnter={() => setHoveredId(loc.id)}
+              onMouseLeave={() => setHoveredId(null)}
+              style={{ position: 'relative', zIndex: hoveredId === loc.id ? 10 : 1 }}
             >
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <MapPin size={18} color="var(--color-primary-400)" />
-                    <div>
-                      <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-text)' }}>
-                        {loc.city}
-                      </h3>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>{loc.country}</span>
-                    </div>
-                  </div>
-                  <span
+              <AnimatePresence>
+                {hoveredId === loc.id && (
+                  <motion.div
+                    layoutId="locationGlow"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={motionTokens.spring.snappy}
                     style={{
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      color: 'var(--color-primary-400)',
-                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                      padding: '0.2rem 0.6rem',
-                      borderRadius: '9999px',
-                      border: '1px solid rgba(59, 130, 246, 0.25)',
+                      position: 'absolute',
+                      inset: '-1px',
+                      borderRadius: 'var(--radius-xl)',
+                      background: 'linear-gradient(135deg, var(--color-primary), transparent)',
+                      zIndex: -1,
+                      filter: 'blur(8px)',
                     }}
-                  >
-                    {loc.activeRoles} Open Roles
-                  </span>
-                </div>
-
-                <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: '1.25rem' }}>
-                  {loc.description}
-                </p>
-
-                {/* Avg Compensation Chip */}
-                <div
-                  style={{
-                    padding: '0.75rem 1rem',
-                    borderRadius: 'var(--radius-md)',
-                    backgroundColor: 'rgba(15, 23, 42, 0.6)',
-                    border: '1px solid rgba(255, 255, 255, 0.05)',
-                    marginBottom: '1.25rem',
-                  }}
-                >
-                  <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-tertiary)', textTransform: 'uppercase' }}>
-                    Median Senior Comp Band
-                  </div>
-                  <div style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-success)', marginTop: '0.2rem' }}>
-                    {loc.avgComp}
-                  </div>
-                </div>
-
-                {/* Tech Pills */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '1.5rem' }}>
-                  {loc.popularTech.map((tech, idx) => (
-                    <span
-                      key={idx}
-                      style={{
-                        fontSize: '0.6875rem',
-                        padding: '0.2rem 0.5rem',
-                        borderRadius: 'var(--radius-sm)',
-                        backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                        color: 'var(--color-text-secondary)',
-                      }}
-                    >
-                      {tech}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <Link
-                to={`/jobs?location=${encodeURIComponent(loc.city)}`}
+                  />
+                )}
+              </AnimatePresence>
+              
+              <motion.div
+                animate={{
+                  y: hoveredId === loc.id ? -8 : 0,
+                  borderColor: hoveredId === loc.id ? 'var(--color-primary)' : 'var(--color-border)',
+                }}
+                transition={motionTokens.spring.snappy}
                 style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  color: 'var(--color-primary-400)',
-                  textDecoration: 'none',
-                  paddingTop: '0.75rem',
-                  borderTop: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-xl)',
+                  backgroundColor: 'var(--color-surface)',
+                  border: '1px solid var(--color-border)',
+                  padding: '2rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  boxShadow: hoveredId === loc.id ? '0 20px 40px rgba(0,0,0,0.4)' : 'var(--shadow-sm)',
+                  height: '100%',
+                  position: 'relative',
+                  overflow: 'hidden'
                 }}
               >
-                <span>View {loc.city} Mandates</span>
-                <ArrowRight size={14} />
-              </Link>
-            </div>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <motion.div
+                        animate={{ y: hoveredId === loc.id ? [0, -5, 0] : 0 }}
+                        transition={{ duration: 0.5, repeat: hoveredId === loc.id ? Infinity : 0, repeatDelay: 1 }}
+                      >
+                        <MapPin size={18} color="var(--color-primary-400)" />
+                      </motion.div>
+                      <div>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-text)' }}>
+                          {loc.city}
+                        </h3>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>{loc.country}</span>
+                      </div>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        color: 'var(--color-primary-400)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        padding: '0.2rem 0.6rem',
+                        borderRadius: '9999px',
+                        border: '1px solid rgba(59, 130, 246, 0.25)',
+                      }}
+                    >
+                      {hoveredId === loc.id ? <AnimatedRoleCounter value={loc.activeRoles} /> : loc.activeRoles} Open Roles
+                    </span>
+                  </div>
+
+                  <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+                    {loc.description}
+                  </p>
+
+                  {/* Avg Compensation Chip */}
+                  <div
+                    style={{
+                      padding: '0.75rem 1rem',
+                      borderRadius: 'var(--radius-md)',
+                      backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                      border: '1px solid rgba(255, 255, 255, 0.05)',
+                      marginBottom: '1.25rem',
+                    }}
+                  >
+                    <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-tertiary)', textTransform: 'uppercase' }}>
+                      Median Senior Comp Band
+                    </div>
+                    <div style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-success)', marginTop: '0.2rem' }}>
+                      {loc.avgComp}
+                    </div>
+                  </div>
+
+                  {/* Tech Pills */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '1.5rem' }}>
+                    {loc.popularTech.map((tech, idx) => (
+                      <span
+                        key={idx}
+                        style={{
+                          fontSize: '0.6875rem',
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: 'var(--radius-sm)',
+                          backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                          color: 'var(--color-text-secondary)',
+                        }}
+                      >
+                        {tech}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <Link
+                  to={`/jobs?location=${encodeURIComponent(loc.city)}`}
+                  style={{ textDecoration: 'none' }}
+                >
+                  <motion.div
+                    whileHover={{ x: 5 }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      color: 'var(--color-primary-400)',
+                      paddingTop: '0.75rem',
+                      borderTop: '1px solid var(--color-border)',
+                      width: '100%',
+                    }}
+                  >
+                    <span>View {loc.city} Mandates</span>
+                    <ArrowRight size={14} />
+                  </motion.div>
+                </Link>
+              </motion.div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );

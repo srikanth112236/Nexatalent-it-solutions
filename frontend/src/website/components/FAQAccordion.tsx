@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown, HelpCircle, Search } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { motionTokens } from '../../shared/motion/motionTokens';
 
 export interface FAQItem {
   question: string;
@@ -55,6 +57,7 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
 }) => {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   const toggleItem = (index: number) => {
     setOpenIndex(openIndex === index ? null : index);
@@ -66,11 +69,23 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
       item.answer.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const headerVariants = {
+    hidden: { opacity: 0, y: -20 },
+    show: { opacity: 1, y: 0, transition: { duration: motionTokens.duration.standard, staggerChildren: motionTokens.stagger.small } }
+  };
+
   return (
     <section style={{ padding: '5rem 2rem', position: 'relative' }}>
       <div style={{ maxWidth: '880px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-          <div
+        <motion.div 
+          variants={headerVariants}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-50px" }}
+          style={{ textAlign: 'center', marginBottom: '3rem' }}
+        >
+          <motion.div
+            variants={headerVariants}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -83,20 +98,31 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
           >
             <HelpCircle size={15} />
             {badge}
-          </div>
-          <h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: 'var(--color-text)' }}>
+          </motion.div>
+          <motion.h2 
+            variants={headerVariants}
+            style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: 'var(--color-text)' }}
+          >
             {title}
-          </h2>
-          <p style={{ color: 'var(--color-text-secondary)', marginTop: '0.5rem', lineHeight: 1.6 }}>
+          </motion.h2>
+          <motion.p 
+            variants={headerVariants}
+            style={{ color: 'var(--color-text-secondary)', marginTop: '0.5rem', lineHeight: 1.6 }}
+          >
             {subtitle}
-          </p>
+          </motion.p>
 
           {showSearch && (
-            <div
+            <motion.div
+              variants={headerVariants}
+              animate={isSearchFocused ? { scale: 1.02 } : { scale: 1 }}
+              transition={motionTokens.spring.gentle}
               style={{
                 position: 'relative',
                 maxWidth: '480px',
                 margin: '2rem auto 0 auto',
+                boxShadow: isSearchFocused ? '0 0 0 2px rgba(59, 130, 246, 0.3)' : 'none',
+                borderRadius: 'var(--radius-lg)',
               }}
             >
               <Search
@@ -109,6 +135,8 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
                 placeholder="Search questions or keywords..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setIsSearchFocused(false)}
                 style={{
                   width: '100%',
                   padding: '0.75rem 1rem 0.75rem 2.75rem',
@@ -118,74 +146,90 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
                   color: 'var(--color-text)',
                   fontSize: '0.9375rem',
                   outline: 'none',
+                  transition: 'border-color 0.2s ease',
                 }}
               />
-            </div>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
 
         {/* Accordion Stack */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {filteredItems.map((item, idx) => {
-            const isOpen = openIndex === idx;
-            return (
-              <div
-                key={idx}
-                style={{
-                  borderRadius: 'var(--radius-lg)',
-                  backgroundColor: 'var(--color-surface)',
-                  border: isOpen ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid var(--color-border)',
-                  overflow: 'hidden',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                <button
-                  onClick={() => toggleItem(idx)}
+          <AnimatePresence>
+            {filteredItems.map((item, idx) => {
+              const isOpen = openIndex === idx;
+              return (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-20px" }}
+                  transition={{ delay: idx * motionTokens.stagger.small, duration: motionTokens.duration.standard }}
                   style={{
-                    width: '100%',
-                    padding: '1.25rem 1.5rem',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    color: 'var(--color-text)',
-                    fontSize: '1.0625rem',
-                    fontWeight: 600,
+                    borderRadius: 'var(--radius-lg)',
+                    backgroundColor: 'var(--color-surface)',
+                    border: isOpen ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid var(--color-border)',
+                    overflow: 'hidden',
+                    boxShadow: isOpen ? '0 4px 20px -10px rgba(59, 130, 246, 0.15)' : 'none',
                   }}
                 >
-                  <span>{item.question}</span>
-                  <ChevronDown
-                    size={20}
-                    color="var(--color-text-secondary)"
+                  <button
+                    onClick={() => toggleItem(idx)}
                     style={{
-                      transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                      transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                      flexShrink: 0,
-                      marginLeft: '1rem',
-                    }}
-                  />
-                </button>
-
-                {isOpen && (
-                  <div
-                    style={{
-                      padding: '0 1.5rem 1.5rem 1.5rem',
-                      color: 'var(--color-text-secondary)',
-                      fontSize: '0.9375rem',
-                      lineHeight: 1.6,
-                      borderTop: '1px solid rgba(255, 255, 255, 0.04)',
-                      paddingTop: '1rem',
+                      width: '100%',
+                      padding: '1.25rem 1.5rem',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      color: 'var(--color-text)',
+                      fontSize: '1.0625rem',
+                      fontWeight: 600,
                     }}
                   >
-                    {item.answer}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                    <span>{item.question}</span>
+                    <motion.div
+                      animate={{ rotate: isOpen ? 180 : 0 }}
+                      transition={motionTokens.spring.snappy}
+                      style={{ flexShrink: 0, marginLeft: '1rem' }}
+                    >
+                      <ChevronDown size={20} color={isOpen ? "var(--color-primary-400)" : "var(--color-text-secondary)"} />
+                    </motion.div>
+                  </button>
+
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: motionTokens.duration.standard, ease: motionTokens.ease.standard }}
+                      >
+                        <motion.div
+                          initial={{ y: -10, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          transition={{ delay: 0.1, duration: motionTokens.duration.standard }}
+                          style={{
+                            padding: '0 1.5rem 1.5rem 1.5rem',
+                            color: 'var(--color-text-secondary)',
+                            fontSize: '0.9375rem',
+                            lineHeight: 1.6,
+                            borderTop: '1px solid rgba(255, 255, 255, 0.04)',
+                            paddingTop: '1rem',
+                          }}
+                        >
+                          {item.answer}
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         </div>
       </div>
     </section>

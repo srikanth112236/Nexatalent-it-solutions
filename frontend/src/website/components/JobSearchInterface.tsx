@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Search, MapPin, Briefcase, Filter, ArrowRight } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { motionTokens } from '../../shared/motion/motionTokens';
 
 export interface JobSearchInterfaceProps {
   onSearch?: (criteria: { keyword: string; location: string; department: string }) => void;
@@ -16,6 +18,7 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
   const [location, setLocation] = useState('All Locations');
   const [department, setDepartment] = useState('All Specializations');
   const [selectedPills, setSelectedPills] = useState<string[]>(['Remote', 'High Comp (>₹60L)']);
+  const [isFocused, setIsFocused] = useState(false);
 
   const popularFilters = [
     'Remote',
@@ -38,7 +41,11 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
   };
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: motionTokens.duration.slow, ease: motionTokens.ease.standard }}
       style={{
         borderRadius: 'var(--radius-2xl)',
         backgroundColor: 'var(--color-surface)',
@@ -47,6 +54,8 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
         boxShadow: 'var(--shadow-lg)',
         maxWidth: '1100px',
         margin: '0 auto',
+        position: 'relative',
+        overflow: 'hidden'
       }}
     >
       <form onSubmit={handleSearchSubmit}>
@@ -62,8 +71,17 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
         >
           {/* Keyword Input */}
           <div style={{ position: 'relative' }}>
-            <Search size={18} color="var(--color-text-tertiary)" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
-            <input
+            <motion.div 
+              animate={isFocused ? { rotate: 90, scale: 1.1, color: 'var(--color-primary-400)' } : { rotate: 0, scale: 1, color: 'var(--color-text-tertiary)' }}
+              transition={motionTokens.spring.snappy}
+              style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center' }}
+            >
+              <Search size={18} />
+            </motion.div>
+            <motion.input
+              whileFocus={{ scale: 1.02, backgroundColor: 'rgba(15, 23, 42, 0.9)', borderColor: 'var(--color-primary)' }}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
               type="text"
               placeholder="Job title, skill, or keyword (e.g. Staff SRE)"
               value={keyword}
@@ -77,12 +95,13 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
                 color: 'var(--color-text)',
                 fontSize: '0.9375rem',
                 outline: 'none',
+                transition: 'all 0.2s ease'
               }}
             />
           </div>
 
           {/* Location Select */}
-          <div style={{ position: 'relative' }}>
+          <motion.div whileHover={{ scale: 1.02 }} style={{ position: 'relative' }}>
             <MapPin size={18} color="var(--color-text-tertiary)" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
             <select
               value={location}
@@ -107,10 +126,10 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
               <option value="London / UK">London / UK</option>
               <option value="San Francisco / US">San Francisco / US</option>
             </select>
-          </div>
+          </motion.div>
 
           {/* Department Select */}
-          <div style={{ position: 'relative' }}>
+          <motion.div whileHover={{ scale: 1.02 }} style={{ position: 'relative' }}>
             <Briefcase size={18} color="var(--color-text-tertiary)" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
             <select
               value={department}
@@ -134,10 +153,12 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
               <option value="Executive & Engineering Leadership">Executive Leadership</option>
               <option value="Product & Technical Program">Product Management</option>
             </select>
-          </div>
+          </motion.div>
 
           {/* Search Button */}
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05, boxShadow: '0 6px 20px rgba(59, 130, 246, 0.6)' }}
+            whileTap={{ scale: 0.95 }}
             type="submit"
             style={{
               padding: '0.8125rem 1.5rem',
@@ -157,7 +178,7 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
           >
             <span>Search</span>
             <ArrowRight size={16} />
-          </button>
+          </motion.button>
         </div>
 
         {/* Filter Pills and Total Found */}
@@ -176,38 +197,65 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-tertiary)' }}>
               Quick Filters:
             </span>
-            {popularFilters.map((pill) => {
-              const active = selectedPills.includes(pill);
-              return (
-                <button
-                  type="button"
-                  key={pill}
-                  onClick={() => togglePill(pill)}
-                  style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    padding: '0.25rem 0.625rem',
-                    borderRadius: '9999px',
-                    border: active ? '1px solid var(--color-primary)' : '1px solid var(--color-border)',
-                    backgroundColor: active ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-                    color: active ? 'var(--color-primary-400)' : 'var(--color-text-secondary)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  {pill}
-                </button>
-              );
-            })}
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {popularFilters.map((pill, idx) => {
+                const active = selectedPills.includes(pill);
+                return (
+                  <motion.button
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2 + idx * 0.05, ...motionTokens.spring.snappy }}
+                    type="button"
+                    key={pill}
+                    onClick={() => togglePill(pill)}
+                    style={{
+                      position: 'relative',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      padding: '0.25rem 0.625rem',
+                      borderRadius: '9999px',
+                      border: active ? '1px solid transparent' : '1px solid var(--color-border)',
+                      backgroundColor: 'transparent',
+                      color: active ? 'var(--color-primary-400)' : 'var(--color-text-secondary)',
+                      cursor: 'pointer',
+                      outline: 'none'
+                    }}
+                  >
+                    {active && (
+                      <motion.div
+                        layoutId="activePill"
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                          border: '1px solid var(--color-primary)',
+                          borderRadius: '9999px',
+                          zIndex: -1
+                        }}
+                        transition={motionTokens.spring.snappy}
+                      />
+                    )}
+                    {pill}
+                  </motion.button>
+                );
+              })}
+            </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}
+          >
             <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
               <strong style={{ color: 'var(--color-text)' }}>{totalRolesCount}</strong> Mandates Active
             </span>
 
             {onOpenFilterDrawer && (
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05, color: 'var(--color-primary)' }}
+                whileTap={{ scale: 0.95 }}
                 type="button"
                 onClick={onOpenFilterDrawer}
                 style={{
@@ -224,11 +272,11 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
               >
                 <Filter size={14} />
                 <span>Filters</span>
-              </button>
+              </motion.button>
             )}
-          </div>
+          </motion.div>
         </div>
       </form>
-    </div>
+    </motion.div>
   );
 };

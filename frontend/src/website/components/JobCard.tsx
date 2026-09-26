@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { MapPin, DollarSign, Briefcase, Bookmark, ArrowUpRight, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { motion, useMotionValue, useSpring } from 'framer-motion';
+import { motionTokens } from '../../shared/motion/motionTokens';
 
 export interface JobCardProps {
   id: string;
   title: string;
   company: string;
   location: string;
-  type: string; // 'Full-Time' | 'Contract' | 'Remote'
+  type: string;
   salary: string;
   experience: string;
   tags: string[];
@@ -33,8 +35,36 @@ export const JobCard: React.FC<JobCardProps> = ({
 }) => {
   const [saved, setSaved] = useState(false);
 
+  // Magnetic Apply Button Logic
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  
+  const springConfig = { damping: 15, stiffness: 150, mass: 0.1 };
+  const magneticX = useSpring(mouseX, springConfig);
+  const magneticY = useSpring(mouseY, springConfig);
+  
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!buttonRef.current) return;
+    const { left, top, width, height } = buttonRef.current.getBoundingClientRect();
+    const x = e.clientX - (left + width / 2);
+    const y = e.clientY - (top + height / 2);
+    mouseX.set(x * 0.15);
+    mouseY.set(y * 0.15);
+  };
+  
+  const handleMouseLeave = () => {
+    mouseX.set(0);
+    mouseY.set(0);
+  };
+
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{ duration: motionTokens.duration.standard }}
+      whileHover={{ y: -6, scale: 1.02 }}
       style={{
         borderRadius: 'var(--radius-xl)',
         backgroundColor: 'var(--color-surface)',
@@ -44,7 +74,6 @@ export const JobCard: React.FC<JobCardProps> = ({
         flexDirection: 'column',
         justifyContent: 'space-between',
         position: 'relative',
-        transition: 'all 0.25s ease',
         boxShadow: featured ? '0 10px 25px -5px rgba(59, 130, 246, 0.15)' : 'var(--shadow-sm)',
       }}
     >
@@ -53,7 +82,10 @@ export const JobCard: React.FC<JobCardProps> = ({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             {featured && (
-              <span
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={motionTokens.spring.bouncy}
                 style={{
                   fontSize: '0.6875rem',
                   fontWeight: 700,
@@ -65,10 +97,13 @@ export const JobCard: React.FC<JobCardProps> = ({
                 }}
               >
                 Featured
-              </span>
+              </motion.span>
             )}
             {urgent && (
-              <span
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ ...motionTokens.spring.bouncy, delay: 0.1 }}
                 style={{
                   fontSize: '0.6875rem',
                   fontWeight: 700,
@@ -80,9 +115,12 @@ export const JobCard: React.FC<JobCardProps> = ({
                 }}
               >
                 Priority SLA
-              </span>
+              </motion.span>
             )}
-            <span
+            <motion.span
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ ...motionTokens.spring.bouncy, delay: 0.2 }}
               style={{
                 fontSize: '0.6875rem',
                 fontWeight: 600,
@@ -93,10 +131,11 @@ export const JobCard: React.FC<JobCardProps> = ({
               }}
             >
               Verified Role
-            </span>
+            </motion.span>
           </div>
 
-          <button
+          <motion.button
+            whileTap={{ scale: 0.85 }}
             onClick={() => setSaved(!saved)}
             aria-label="Save job"
             style={{
@@ -110,7 +149,7 @@ export const JobCard: React.FC<JobCardProps> = ({
             }}
           >
             <Bookmark size={18} fill={saved ? 'currentColor' : 'none'} />
-          </button>
+          </motion.button>
         </div>
 
         {/* Title and Company */}
@@ -149,10 +188,13 @@ export const JobCard: React.FC<JobCardProps> = ({
             <MapPin size={14} color="var(--color-text-tertiary)" />
             <span>{location} · {type}</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <motion.div 
+            whileHover={{ scale: 1.05 }}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'default' }}
+          >
             <DollarSign size={14} color="var(--color-success)" />
             <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>{salary}</span>
-          </div>
+          </motion.div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <Briefcase size={14} color="var(--color-text-tertiary)" />
             <span>{experience}</span>
@@ -162,8 +204,12 @@ export const JobCard: React.FC<JobCardProps> = ({
         {/* Tags */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginBottom: '1.25rem' }}>
           {tags.map((tag, idx) => (
-            <span
+            <motion.span
               key={idx}
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: idx * 0.04 }}
               style={{
                 fontSize: '0.75rem',
                 padding: '0.2rem 0.5rem',
@@ -174,7 +220,7 @@ export const JobCard: React.FC<JobCardProps> = ({
               }}
             >
               {tag}
-            </span>
+            </motion.span>
           ))}
         </div>
       </div>
@@ -207,9 +253,15 @@ export const JobCard: React.FC<JobCardProps> = ({
           >
             Details
           </Link>
-          <button
+          <motion.button
+            ref={buttonRef}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            whileHover={{ boxShadow: '0 0 15px rgba(59, 130, 246, 0.5)' }}
+            style={{ x: magneticX, y: magneticY, display: 'inline-block' }}
             onClick={() => onApply?.(id)}
-            style={{
+          >
+            <div style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.35rem',
@@ -221,13 +273,21 @@ export const JobCard: React.FC<JobCardProps> = ({
               fontSize: '0.8125rem',
               fontWeight: 600,
               cursor: 'pointer',
-            }}
-          >
-            <span>Apply</span>
-            <ArrowUpRight size={14} />
-          </button>
+            }}>
+              <span>Apply</span>
+              <ArrowUpRight size={14} />
+            </div>
+          </motion.button>
         </div>
       </div>
-    </div>
+      
+      <style>{`
+        @keyframes shimmer {
+          to {
+            background-position: 200% center;
+          }
+        }
+      `}</style>
+    </motion.div>
   );
 };

@@ -1,6 +1,8 @@
 import React from 'react';
 import { Cpu, ShieldCheck, Globe, Activity, ArrowUpRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { motionTokens } from '../../shared/motion/motionTokens';
 
 export interface BentoContentGridProps {
   badge?: string;
@@ -13,10 +15,40 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
   title = 'Engineered as an Operating System for High-Caliber Hiring',
   subtitle = 'Modular talent infrastructure built for technology leaders who cannot afford hiring misfires.',
 }) => {
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1, 
+      transition: { 
+        staggerChildren: motionTokens.stagger.medium, 
+        delayChildren: 0.1 
+      } 
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 40, scale: 0.95 },
+    visible: { 
+      opacity: 1, 
+      y: 0, 
+      scale: 1, 
+      transition: { 
+        duration: motionTokens.duration.slow, 
+        ease: motionTokens.ease.outQuart || motionTokens.ease.standard 
+      } 
+    }
+  };
+
   return (
     <section style={{ padding: '5rem 2rem', position: 'relative' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
+      <motion.div 
+        style={{ maxWidth: '1200px', margin: '0 auto' }}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+        variants={containerVariants}
+      >
+        <motion.div style={{ textAlign: 'center', marginBottom: '3.5rem' }} variants={itemVariants}>
           <span
             style={{
               fontSize: '0.8125rem',
@@ -34,7 +66,7 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
           <p style={{ color: 'var(--color-text-secondary)', maxWidth: '640px', margin: '0.75rem auto 0 auto' }}>
             {subtitle}
           </p>
-        </div>
+        </motion.div>
 
         {/* Aceternity Bento Grid (2x2 with varying spans) */}
         <div
@@ -45,7 +77,9 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
           }}
         >
           {/* Bento Item 1: Large Span (7 Cols) */}
-          <div
+          <motion.div
+            variants={itemVariants}
+            whileHover={{ y: -8, scale: 1.01, rotateX: 2, rotateY: -2 }}
             style={{
               gridColumn: 'span 7',
               borderRadius: 'var(--radius-2xl)',
@@ -56,9 +90,11 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
               overflow: 'hidden',
               boxShadow: 'var(--shadow-md)',
               background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.8) 100%)',
+              perspective: 1000,
+              transformStyle: 'preserve-3d',
             }}
           >
-            <div
+            <motion.div
               style={{
                 width: '44px',
                 height: '44px',
@@ -70,9 +106,11 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
                 justifyContent: 'center',
                 marginBottom: '1.25rem',
               }}
+              whileHover={{ scale: 1.1, rotate: 10 }}
+              transition={motionTokens.spring.snappy}
             >
               <Cpu size={24} />
-            </div>
+            </motion.div>
             <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-text)', marginBottom: '0.75rem' }}>
               Semantic Vector Matching Engine
             </h3>
@@ -81,7 +119,7 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
             </p>
 
             {/* Terminal snippet mockup */}
-            <div
+            <motion.div
               style={{
                 backgroundColor: 'rgba(10, 15, 29, 0.8)',
                 border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -91,18 +129,30 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
                 fontSize: '0.75rem',
                 color: '#94a3b8',
               }}
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+              viewport={{ once: true }}
             >
               <div style={{ color: '#22c55e', marginBottom: '0.25rem' }}>
                 $ nexatalent calibrate --role "Principal SRE" --stack "Rust, K8s, eBPF"
               </div>
-              <div style={{ color: 'var(--color-text-tertiary)' }}>
+              <motion.div 
+                style={{ color: 'var(--color-text-tertiary)' }}
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                transition={{ delay: 0.8 }}
+                viewport={{ once: true }}
+              >
                 [MATCHED] Candidate #NT-8812 · 98.6% Alignment · Calibrated by Ex-VP Eng
-              </div>
-            </div>
-          </div>
+              </motion.div>
+            </motion.div>
+          </motion.div>
 
           {/* Bento Item 2: Medium Span (5 Cols) */}
-          <div
+          <motion.div
+            variants={itemVariants}
+            whileHover={{ y: -8, scale: 1.02, rotateX: 2, rotateY: 2 }}
             style={{
               gridColumn: 'span 5',
               borderRadius: 'var(--radius-2xl)',
@@ -113,10 +163,11 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
               flexDirection: 'column',
               justifyContent: 'space-between',
               boxShadow: 'var(--shadow-md)',
+              perspective: 1000,
             }}
           >
             <div>
-              <div
+              <motion.div
                 style={{
                   width: '44px',
                   height: '44px',
@@ -128,9 +179,11 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
                   justifyContent: 'center',
                   marginBottom: '1.25rem',
                 }}
+                whileHover={{ scale: 1.1, rotate: -10 }}
+                transition={motionTokens.spring.snappy}
               >
                 <ShieldCheck size={24} />
-              </div>
+              </motion.div>
               <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-text)', marginBottom: '0.75rem' }}>
                 90-Day Unconditional Guarantee
               </h3>
@@ -141,10 +194,12 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
             <div style={{ fontSize: '0.8125rem', color: 'var(--color-success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '1rem' }}>
               <span>100% Contractually Enforced</span>
             </div>
-          </div>
+          </motion.div>
 
           {/* Bento Item 3: Medium Span (5 Cols) */}
-          <div
+          <motion.div
+            variants={itemVariants}
+            whileHover={{ y: -8, scale: 1.02, rotateX: -2, rotateY: -2 }}
             style={{
               gridColumn: 'span 5',
               borderRadius: 'var(--radius-2xl)',
@@ -155,10 +210,11 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
+              perspective: 1000,
             }}
           >
             <div>
-              <div
+              <motion.div
                 style={{
                   width: '44px',
                   height: '44px',
@@ -170,9 +226,11 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
                   justifyContent: 'center',
                   marginBottom: '1.25rem',
                 }}
+                whileHover={{ scale: 1.1, rotate: 10 }}
+                transition={motionTokens.spring.snappy}
               >
                 <Globe size={24} />
-              </div>
+              </motion.div>
               <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-text)', marginBottom: '0.75rem' }}>
                 Global Cross-Border Footprint
               </h3>
@@ -183,10 +241,12 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
             <div style={{ fontSize: '0.8125rem', color: 'var(--color-primary-400)', fontWeight: 600 }}>
               6 Jurisdictions · Global Relocation Support
             </div>
-          </div>
+          </motion.div>
 
           {/* Bento Item 4: Large Span (7 Cols) */}
-          <div
+          <motion.div
+            variants={itemVariants}
+            whileHover={{ y: -8, scale: 1.01, rotateX: -2, rotateY: 2 }}
             style={{
               gridColumn: 'span 7',
               borderRadius: 'var(--radius-2xl)',
@@ -195,9 +255,10 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
               padding: '2.5rem',
               boxShadow: 'var(--shadow-md)',
               background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.4) 100%)',
+              perspective: 1000,
             }}
           >
-            <div
+            <motion.div
               style={{
                 width: '44px',
                 height: '44px',
@@ -209,9 +270,11 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
                 justifyContent: 'center',
                 marginBottom: '1.25rem',
               }}
+              whileHover={{ scale: 1.1, rotate: -10 }}
+              transition={motionTokens.spring.snappy}
             >
               <Activity size={24} />
-            </div>
+            </motion.div>
             <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-text)', marginBottom: '0.75rem' }}>
               Real-Time Client SLA Portal
             </h3>
@@ -231,11 +294,13 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
               }}
             >
               <span>Explore Employer Portal Experience</span>
-              <ArrowUpRight size={16} />
+              <motion.div whileHover={{ x: 3, y: -3 }} transition={motionTokens.spring.snappy}>
+                <ArrowUpRight size={16} />
+              </motion.div>
             </Link>
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 };

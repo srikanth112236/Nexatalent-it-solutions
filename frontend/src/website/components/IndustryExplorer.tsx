@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { motionTokens } from '../../shared/motion/motionTokens';
 
 export interface IndustryVertical {
   id: string;
@@ -18,6 +20,33 @@ export interface IndustryExplorerProps {
   subtitle?: string;
   industries?: IndustryVertical[];
 }
+
+const AnimatedCounter: React.FC<{ value: number }> = ({ value }) => {
+  const [count, setCount] = useState(0);
+  const nodeRef = useRef<HTMLSpanElement>(null);
+  const inView = useInView(nodeRef, { once: true });
+
+  useEffect(() => {
+    if (!inView) return;
+    let startTimestamp: number;
+    const duration = 1500;
+    const step = (timestamp: number) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      // easeOutQuart
+      const ease = 1 - Math.pow(1 - progress, 4);
+      setCount(Math.floor(ease * value));
+      if (progress < 1) {
+        window.requestAnimationFrame(step);
+      } else {
+        setCount(value);
+      }
+    };
+    window.requestAnimationFrame(step);
+  }, [value, inView]);
+
+  return <span ref={nodeRef}>{count}</span>;
+};
 
 export const IndustryExplorer: React.FC<IndustryExplorerProps> = ({
   badge = 'Domain Specialization Practices',
@@ -80,11 +109,36 @@ export const IndustryExplorer: React.FC<IndustryExplorerProps> = ({
     },
   ],
 }) => {
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: motionTokens.stagger.medium },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 30 },
+    show: { 
+      opacity: 1, 
+      y: 0, 
+      transition: { duration: motionTokens.duration.slow, ease: motionTokens.ease.standard } 
+    },
+  };
+
   return (
     <section style={{ padding: '5rem 2rem', position: 'relative' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-          <span
+      <motion.div 
+        style={{ maxWidth: '1200px', margin: '0 auto' }}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, margin: "-100px" }}
+        variants={containerVariants}
+      >
+        <motion.div style={{ textAlign: 'center', marginBottom: '3.5rem' }} variants={itemVariants}>
+          <motion.span
             style={{
               fontSize: '0.8125rem',
               fontWeight: 700,
@@ -94,108 +148,140 @@ export const IndustryExplorer: React.FC<IndustryExplorerProps> = ({
             }}
           >
             {badge}
-          </span>
-          <h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: 'var(--color-text)', marginTop: '0.5rem' }}>
+          </motion.span>
+          <motion.h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: 'var(--color-text)', marginTop: '0.5rem' }}>
             {title}
-          </h2>
-          <p style={{ color: 'var(--color-text-secondary)', maxWidth: '640px', margin: '0.75rem auto 0 auto' }}>
+          </motion.h2>
+          <motion.p style={{ color: 'var(--color-text-secondary)', maxWidth: '640px', margin: '0.75rem auto 0 auto' }}>
             {subtitle}
-          </p>
-        </div>
+          </motion.p>
+        </motion.div>
 
         {/* Matrix Grid */}
-        <div
+        <motion.div
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
             gap: '1.75rem',
           }}
+          variants={containerVariants}
         >
-          {industries.map((ind) => (
-            <div
-              key={ind.id}
-              style={{
-                borderRadius: 'var(--radius-xl)',
-                backgroundColor: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
-                padding: '2rem',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                transition: 'all 0.25s ease',
-              }}
-            >
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text)', lineHeight: 1.3 }}>
-                    {ind.name}
-                  </h3>
-                  <span
-                    style={{
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      color: 'var(--color-primary-400)',
-                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                      padding: '0.2rem 0.5rem',
-                      borderRadius: 'var(--radius-sm)',
-                    }}
-                  >
-                    {ind.activeMandates} Mandates
-                  </span>
-                </div>
-
-                <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: '1.25rem' }}>
-                  {ind.description}
-                </p>
-
-                {/* Key Roles */}
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-                    Frequent Placements
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                    {ind.highlightRoles.map((role, rIdx) => (
-                      <div key={rIdx} style={{ fontSize: '0.8125rem', color: 'var(--color-text)' }}>
-                        • {role}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div
+          <AnimatePresence>
+            {industries.map((ind) => (
+              <motion.div
+                key={ind.id}
+                variants={itemVariants}
+                onMouseEnter={() => setHoveredId(ind.id)}
+                onMouseLeave={() => setHoveredId(null)}
+                whileHover={{ y: -8, scale: 1.02, transition: motionTokens.spring.snappy }}
                 style={{
+                  borderRadius: 'var(--radius-xl)',
+                  backgroundColor: 'var(--color-surface)',
+                  border: '1px solid var(--color-border)',
+                  padding: '2rem',
                   display: 'flex',
+                  flexDirection: 'column',
                   justifyContent: 'space-between',
-                  alignItems: 'center',
-                  paddingTop: '1rem',
-                  borderTop: '1px solid var(--color-border)',
+                  position: 'relative',
+                  zIndex: 1,
                 }}
               >
-                <span style={{ fontSize: '0.75rem', color: 'var(--color-success)', fontWeight: 600 }}>
-                  Avg {ind.avgClosureDays}-Day SLA
-                </span>
-                <Link
-                  to={`/industries/${ind.id}`}
+                {hoveredId === ind.id && (
+                  <motion.div
+                    layoutId="industry-hover"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={motionTokens.spring.snappy}
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      borderRadius: 'var(--radius-xl)',
+                      backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                      zIndex: -1,
+                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                    }}
+                  />
+                )}
+                
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text)', lineHeight: 1.3 }}>
+                      {ind.name}
+                    </h3>
+                    <motion.span
+                      whileHover={{ scale: 1.05 }}
+                      transition={motionTokens.spring.snappy}
+                      style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        color: 'var(--color-primary-400)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        padding: '0.2rem 0.5rem',
+                        borderRadius: 'var(--radius-sm)',
+                        display: 'flex',
+                        gap: '0.25rem'
+                      }}
+                    >
+                      <AnimatedCounter value={ind.activeMandates} /> Mandates
+                    </motion.span>
+                  </div>
+
+                  <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+                    {ind.description}
+                  </p>
+
+                  {/* Key Roles */}
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                      Frequent Placements
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      {ind.highlightRoles.map((role, rIdx) => (
+                        <div key={rIdx} style={{ fontSize: '0.8125rem', color: 'var(--color-text)' }}>
+                          • {role}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div
                   style={{
-                    display: 'inline-flex',
+                    display: 'flex',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
-                    gap: '0.35rem',
-                    fontSize: '0.8125rem',
-                    fontWeight: 600,
-                    color: 'var(--color-primary-400)',
-                    textDecoration: 'none',
+                    paddingTop: '1rem',
+                    borderTop: '1px solid var(--color-border)',
                   }}
                 >
-                  <span>Practice Overview</span>
-                  <ArrowUpRight size={14} />
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-success)', fontWeight: 600, display: 'flex', gap: '0.25rem' }}>
+                    Avg <AnimatedCounter value={ind.avgClosureDays} />-Day SLA
+                  </span>
+                  <Link
+                    to={`/industries/${ind.id}`}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      fontSize: '0.8125rem',
+                      fontWeight: 600,
+                      color: 'var(--color-primary-400)',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    <span>Practice Overview</span>
+                    <motion.div whileHover={{ x: 3, y: -3 }} transition={motionTokens.spring.snappy}>
+                      <ArrowUpRight size={14} />
+                    </motion.div>
+                  </Link>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </motion.div>
+      </motion.div>
     </section>
   );
 };

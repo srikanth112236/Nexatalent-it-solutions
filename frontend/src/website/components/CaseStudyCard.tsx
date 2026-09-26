@@ -1,6 +1,8 @@
 import React from 'react';
 import { ArrowUpRight, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { motionTokens } from '../../shared/motion/motionTokens';
 
 export interface CaseStudyCardProps {
   id?: string;
@@ -30,7 +32,12 @@ export const CaseStudyCard: React.FC<CaseStudyCardProps> = ({
   featured = false,
 }) => {
   return (
-    <div
+    <motion.div
+      initial={{ y: 30, opacity: 0, scale: 0.97 }}
+      whileInView={{ y: 0, opacity: 1, scale: 1 }}
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{ duration: motionTokens.duration.standard, ease: motionTokens.ease.outQuart }}
+      whileHover={{ y: -6, scale: 1.015, boxShadow: featured ? '0 15px 35px rgba(59, 130, 246, 0.25)' : 'var(--shadow-lg)', borderColor: 'rgba(59, 130, 246, 0.5)' }}
       style={{
         borderRadius: 'var(--radius-xl)',
         backgroundColor: 'var(--color-surface)',
@@ -41,13 +48,15 @@ export const CaseStudyCard: React.FC<CaseStudyCardProps> = ({
         justifyContent: 'space-between',
         position: 'relative',
         overflow: 'hidden',
-        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         boxShadow: featured ? '0 12px 30px rgba(59, 130, 246, 0.15)' : 'var(--shadow-md)',
       }}
-      className="group hover:border-blue-500/50"
+      className="group"
     >
       {featured && (
-        <div
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ ...motionTokens.spring.bouncy, delay: 0.3 }}
           style={{
             position: 'absolute',
             top: '1rem',
@@ -62,7 +71,7 @@ export const CaseStudyCard: React.FC<CaseStudyCardProps> = ({
           }}
         >
           Featured Story
-        </div>
+        </motion.div>
       )}
 
       <div>
@@ -123,7 +132,14 @@ export const CaseStudyCard: React.FC<CaseStudyCardProps> = ({
           }}
         >
           {metrics.map((m, idx) => (
-            <div key={idx} style={{ textAlign: 'center' }}>
+            <motion.div 
+              key={idx} 
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 + idx * motionTokens.stagger.medium }}
+              style={{ textAlign: 'center' }}
+            >
               <div
                 style={{
                   fontSize: '1.25rem',
@@ -144,15 +160,19 @@ export const CaseStudyCard: React.FC<CaseStudyCardProps> = ({
               >
                 {m.label}
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
 
         {/* Tags */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginBottom: '1.5rem' }}>
           {tags.map((tag, idx) => (
-            <span
+            <motion.span
               key={idx}
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 + idx * 0.04 }}
               style={{
                 fontSize: '0.6875rem',
                 padding: '0.2rem 0.5rem',
@@ -163,7 +183,7 @@ export const CaseStudyCard: React.FC<CaseStudyCardProps> = ({
               }}
             >
               {tag}
-            </span>
+            </motion.span>
           ))}
         </div>
       </div>
@@ -183,8 +203,18 @@ export const CaseStudyCard: React.FC<CaseStudyCardProps> = ({
         }}
       >
         <span>Read Full Case Study</span>
-        <ArrowUpRight size={16} />
+        <motion.div
+          variants={{
+            rest: { x: 0 },
+            hover: { x: 4 }
+          }}
+          initial="rest"
+          whileHover="hover"
+          transition={motionTokens.spring.snappy}
+        >
+          <ArrowUpRight size={16} />
+        </motion.div>
       </Link>
-    </div>
+    </motion.div>
   );
 };

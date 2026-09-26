@@ -9,6 +9,7 @@ import { CandidatePortal } from '../portals/candidate/CandidatePortal';
 import { DesignSystemShowcase } from '../shared/design-system/DesignSystemShowcase';
 import { ComponentPlayground } from '../shared/primitives/ComponentPlayground';
 import { WebsiteComponentsCatalog } from '../website/pages/WebsiteComponentsCatalog';
+import { SampleShowcase } from '../website/pages/SampleShowcase';
 
 export function AppRoutes() {
   return (
@@ -17,6 +18,7 @@ export function AppRoutes() {
       <Route path="/design-system" element={<DesignSystemShowcase />} />
       <Route path="/components" element={<ComponentPlayground />} />
       <Route path="/website-components" element={<WebsiteComponentsCatalog />} />
+      <Route path="/sample" element={<SampleShowcase />} />
       {/* 1. Dedicated Authentication Routes */}
       <Route path="/login/*" element={<AuthRoutes />} />
       <Route path="/forgot-password/*" element={<AuthRoutes />} />

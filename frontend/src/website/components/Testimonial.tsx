@@ -1,5 +1,7 @@
 import React from 'react';
 import { Star, ShieldCheck } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { motionTokens } from '../../shared/motion/motionTokens';
 
 export interface TestimonialItem {
   id: string;
@@ -19,6 +21,29 @@ export interface TestimonialProps {
   badge?: string;
   testimonials?: TestimonialItem[];
 }
+
+const TypewriterText = ({ text }: { text: string }) => {
+  const words = text.split(" ");
+  return (
+    <>
+      {words.map((word, index) => (
+        <motion.span
+          key={index}
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{
+            duration: 0.1,
+            delay: index * 0.05,
+          }}
+          style={{ display: 'inline-block', marginRight: '4px' }}
+        >
+          {word}
+        </motion.span>
+      ))}
+    </>
+  );
+};
 
 export const Testimonial: React.FC<TestimonialProps> = ({
   badge = 'Client & Candidate Voices',
@@ -60,22 +85,41 @@ export const Testimonial: React.FC<TestimonialProps> = ({
     },
   ],
 }) => {
+  const headerVariants = {
+    hidden: { opacity: 0, y: -20 },
+    show: { opacity: 1, y: 0, transition: { duration: motionTokens.duration.standard, staggerChildren: motionTokens.stagger.medium } }
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 40, scale: 0.96 },
+    show: { opacity: 1, y: 0, scale: 1, transition: motionTokens.spring.gentle }
+  };
+
   return (
     <section style={{ padding: '5rem 2rem', position: 'relative' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-          <span
+        <motion.div 
+          variants={headerVariants}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-50px" }}
+          style={{ textAlign: 'center', marginBottom: '3.5rem' }}
+        >
+          <motion.span
+            variants={headerVariants}
             style={{
               fontSize: '0.8125rem',
               fontWeight: 600,
               color: 'var(--color-primary-400)',
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
+              display: 'inline-block'
             }}
           >
             {badge}
-          </span>
-          <h2
+          </motion.span>
+          <motion.h2
+            variants={headerVariants}
             style={{
               fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)',
               fontWeight: 800,
@@ -85,14 +129,21 @@ export const Testimonial: React.FC<TestimonialProps> = ({
             }}
           >
             {title}
-          </h2>
-          <p style={{ color: 'var(--color-text-secondary)', maxWidth: '640px', margin: '0 auto' }}>
+          </motion.h2>
+          <motion.p 
+            variants={headerVariants}
+            style={{ color: 'var(--color-text-secondary)', maxWidth: '640px', margin: '0 auto' }}
+          >
             {subtitle}
-          </p>
-        </div>
+          </motion.p>
+        </motion.div>
 
-        {/* Testimonials Grid (Aceternity style glass cards with glow hover) */}
-        <div
+        {/* Testimonials Grid */}
+        <motion.div
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-50px" }}
+          transition={{ staggerChildren: motionTokens.stagger.large }}
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
@@ -100,8 +151,10 @@ export const Testimonial: React.FC<TestimonialProps> = ({
           }}
         >
           {testimonials.map((t) => (
-            <div
+            <motion.div
               key={t.id}
+              variants={cardVariants}
+              whileHover={{ y: -8, boxShadow: '0 10px 30px -10px rgba(59, 130, 246, 0.2)' }}
               style={{
                 borderRadius: 'var(--radius-xl)',
                 backgroundColor: 'var(--color-surface)',
@@ -112,6 +165,13 @@ export const Testimonial: React.FC<TestimonialProps> = ({
                 justifyContent: 'space-between',
                 position: 'relative',
                 boxShadow: 'var(--shadow-md)',
+                transition: 'border-color 0.3s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-border)';
               }}
             >
               <div>
@@ -119,12 +179,24 @@ export const Testimonial: React.FC<TestimonialProps> = ({
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                   <div style={{ display: 'flex', gap: '0.25rem', color: '#fbbf24' }}>
                     {Array.from({ length: t.rating || 5 }).map((_, i) => (
-                      <Star key={i} size={16} fill="currentColor" />
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, scale: 0 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: 0.3 + (i * 0.1), ...motionTokens.spring.bouncy }}
+                      >
+                        <Star size={16} fill="currentColor" />
+                      </motion.div>
                     ))}
                   </div>
 
                   {t.highlightStat && (
-                    <span
+                    <motion.span
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      whileInView={{ opacity: 1, scale: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: 0.4, ...motionTokens.spring.snappy }}
                       style={{
                         fontSize: '0.75rem',
                         fontWeight: 700,
@@ -136,12 +208,12 @@ export const Testimonial: React.FC<TestimonialProps> = ({
                       }}
                     >
                       {t.highlightStat}
-                    </span>
+                    </motion.span>
                   )}
                 </div>
 
                 {/* Quote Text */}
-                <p
+                <div
                   style={{
                     color: 'var(--color-text)',
                     fontSize: '1rem',
@@ -150,8 +222,8 @@ export const Testimonial: React.FC<TestimonialProps> = ({
                     marginBottom: '1.75rem',
                   }}
                 >
-                  "{t.quote}"
-                </p>
+                  "<TypewriterText text={t.quote} />"
+                </div>
               </div>
 
               {/* Author Info */}
@@ -164,7 +236,11 @@ export const Testimonial: React.FC<TestimonialProps> = ({
                   borderTop: '1px solid var(--color-border)',
                 }}
               >
-                <div
+                <motion.div
+                  initial={{ scale: 0 }}
+                  whileInView={{ scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.5, ...motionTokens.spring.bouncy }}
                   style={{
                     width: '42px',
                     height: '42px',
@@ -179,7 +255,7 @@ export const Testimonial: React.FC<TestimonialProps> = ({
                   }}
                 >
                   {t.name[0]}
-                </div>
+                </motion.div>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                     <span style={{ fontWeight: 700, color: 'var(--color-text)', fontSize: '0.9375rem' }}>
@@ -194,9 +270,9 @@ export const Testimonial: React.FC<TestimonialProps> = ({
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );

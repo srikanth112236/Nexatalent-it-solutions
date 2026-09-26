@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { CheckCircle2, Layers, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { motion, useInView, animate } from 'framer-motion';
+import { motionTokens } from '../../shared/motion/motionTokens';
 
 export interface IndustrySpotlightProps {
   badge?: string;
@@ -12,6 +14,37 @@ export interface IndustrySpotlightProps {
   ctaLink?: string;
   ctaText?: string;
 }
+
+const AnimatedCounter = ({ value }: { value: string }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true, amount: 0.5 });
+  
+  useEffect(() => {
+    if (isInView && ref.current) {
+      const numStr = value.replace(/[^\d.]/g, '');
+      const num = parseFloat(numStr);
+      if (isNaN(num)) {
+        ref.current.textContent = value;
+        return;
+      }
+      const prefix = value.split(/[\d.]/)[0] || '';
+      const suffix = value.replace(prefix, '').replace(/[\d.]/g, '') || '';
+      
+      const controls = animate(0, num, {
+        duration: motionTokens.duration.slow * 2,
+        ease: motionTokens.ease.standard,
+        onUpdate: (v) => {
+          if (ref.current) {
+            ref.current.textContent = `${prefix}${Math.round(v).toLocaleString()}${suffix}`;
+          }
+        },
+      });
+      return () => controls.stop();
+    }
+  }, [isInView, value]);
+
+  return <div ref={ref}>{value}</div>;
+};
 
 export const IndustrySpotlight: React.FC<IndustrySpotlightProps> = ({
   badge = 'Vertical Focus Mandates',
@@ -33,8 +66,34 @@ export const IndustrySpotlight: React.FC<IndustrySpotlightProps> = ({
   ctaLink = '/industries/gcc',
   ctaText = 'Explore GCC Practice Capabilities',
 }) => {
+  const leftColVariants = {
+    hidden: { opacity: 0, x: -40 },
+    show: { 
+      opacity: 1, 
+      x: 0, 
+      transition: { duration: motionTokens.duration.slow, ease: motionTokens.ease.standard } 
+    }
+  };
+
+  const rightColVariants = {
+    hidden: { opacity: 0, x: 40 },
+    show: { 
+      opacity: 1, 
+      x: 0, 
+      transition: { duration: motionTokens.duration.slow, ease: motionTokens.ease.standard, staggerChildren: motionTokens.stagger.medium } 
+    }
+  };
+
+  const itemVariant = {
+    hidden: { opacity: 0, y: 20, scale: 0.95 },
+    show: { opacity: 1, y: 0, scale: 1, transition: motionTokens.spring.gentle }
+  };
+
   return (
-    <section
+    <motion.section
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, margin: "-100px" }}
       style={{
         padding: '5rem 2rem',
         borderRadius: 'var(--radius-2xl)',
@@ -44,20 +103,40 @@ export const IndustrySpotlight: React.FC<IndustrySpotlightProps> = ({
         maxWidth: '1200px',
         position: 'relative',
         overflow: 'hidden',
-        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.7) 100%)',
       }}
     >
+      <motion.div 
+        animate={{ 
+          background: [
+            'linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.7) 100%)',
+            'linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.8) 100%)',
+            'linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.7) 100%)'
+          ] 
+        }}
+        transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 0
+        }}
+      />
+      
       <div
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
           gap: '3rem',
           alignItems: 'center',
+          position: 'relative',
+          zIndex: 1
         }}
       >
         {/* Left Column: Context & Roles */}
-        <div>
-          <div
+        <motion.div variants={leftColVariants}>
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ ...motionTokens.spring.bouncy, delay: 0.2 }}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -74,7 +153,7 @@ export const IndustrySpotlight: React.FC<IndustrySpotlightProps> = ({
           >
             <Layers size={14} />
             {badge}
-          </div>
+          </motion.div>
           <h2
             style={{
               fontSize: 'clamp(1.75rem, 3vw, 2.5rem)',
@@ -122,8 +201,12 @@ export const IndustrySpotlight: React.FC<IndustrySpotlightProps> = ({
             </div>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {rolesPlacing.map((role, idx) => (
-                <li
+                <motion.li
                   key={idx}
+                  initial={{ opacity: 0, x: -10 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: idx * motionTokens.stagger.small, duration: motionTokens.duration.standard }}
                   style={{
                     display: 'flex',
                     alignItems: 'flex-start',
@@ -132,36 +215,57 @@ export const IndustrySpotlight: React.FC<IndustrySpotlightProps> = ({
                     color: 'var(--color-text)',
                   }}
                 >
-                  <CheckCircle2 size={16} color="var(--color-primary-400)" style={{ flexShrink: 0, marginTop: '3px' }} />
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    whileInView={{ scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: (idx * motionTokens.stagger.small) + 0.2, ...motionTokens.spring.snappy }}
+                  >
+                    <CheckCircle2 size={16} color="var(--color-primary-400)" style={{ flexShrink: 0, marginTop: '3px' }} />
+                  </motion.div>
                   <span>{role}</span>
-                </li>
+                </motion.li>
               ))}
             </ul>
           </div>
 
-          <Link
-            to={ctaLink}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              backgroundColor: 'var(--color-primary)',
-              color: '#ffffff',
-              padding: '0.75rem 1.5rem',
-              borderRadius: 'var(--radius-lg)',
-              fontWeight: 600,
-              fontSize: '0.9375rem',
-              textDecoration: 'none',
-              boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)',
-            }}
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            style={{ display: 'inline-block' }}
           >
-            <span>{ctaText}</span>
-            <ArrowRight size={16} />
-          </Link>
-        </div>
+            <Link
+              to={ctaLink}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                backgroundColor: 'var(--color-primary)',
+                color: '#ffffff',
+                padding: '0.75rem 1.5rem',
+                borderRadius: 'var(--radius-lg)',
+                fontWeight: 600,
+                fontSize: '0.9375rem',
+                textDecoration: 'none',
+                boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)',
+                transition: 'box-shadow 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.6)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 4px 14px rgba(59, 130, 246, 0.4)';
+              }}
+            >
+              <span>{ctaText}</span>
+              <ArrowRight size={16} />
+            </Link>
+          </motion.div>
+        </motion.div>
 
         {/* Right Column: Quantitative Proof Metrics Bento Box */}
-        <div
+        <motion.div
+          variants={rightColVariants}
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(2, 1fr)',
@@ -169,8 +273,10 @@ export const IndustrySpotlight: React.FC<IndustrySpotlightProps> = ({
           }}
         >
           {metrics.map((m, idx) => (
-            <div
+            <motion.div
               key={idx}
+              variants={itemVariant}
+              whileHover={{ y: -5, scale: 1.02 }}
               style={{
                 backgroundColor: 'rgba(17, 23, 38, 0.7)',
                 border: '1px solid var(--color-border)',
@@ -178,6 +284,13 @@ export const IndustrySpotlight: React.FC<IndustrySpotlightProps> = ({
                 padding: '2rem 1.5rem',
                 textAlign: 'center',
                 boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+                transition: 'border-color 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-border)';
               }}
             >
               <div
@@ -189,7 +302,7 @@ export const IndustrySpotlight: React.FC<IndustrySpotlightProps> = ({
                   marginBottom: '0.5rem',
                 }}
               >
-                {m.value}
+                <AnimatedCounter value={m.value} />
               </div>
               <div
                 style={{
@@ -200,10 +313,10 @@ export const IndustrySpotlight: React.FC<IndustrySpotlightProps> = ({
               >
                 {m.label}
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
-    </section>
+    </motion.section>
   );
 };

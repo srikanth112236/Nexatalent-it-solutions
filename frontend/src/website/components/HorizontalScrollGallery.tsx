@@ -1,6 +1,10 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, ArrowUpRight, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(ScrollTrigger);
 
 export interface GalleryItem {
   id: string;
@@ -62,20 +66,69 @@ export const HorizontalScrollGallery: React.FC<HorizontalScrollGalleryProps> = (
     },
   ],
 }) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!sectionRef.current || !containerRef.current) return;
+
+    const sections = gsap.utils.toArray<HTMLElement>('.gallery-panel');
+    
+    // Create the horizontal scroll animation
+    const tween = gsap.to(sections, {
+      xPercent: -100 * (sections.length - 1),
+      ease: 'none',
+      scrollTrigger: {
+        trigger: sectionRef.current,
+        pin: true,
+        scrub: 1,
+        end: () => `+=${containerRef.current?.offsetWidth || 0}`,
+        onUpdate: (self) => {
+          if (progressRef.current) {
+            progressRef.current.style.width = `${self.progress * 100}%`;
+          }
+        }
+      },
+    });
+
+    // Panel entrance animations (opacity/scale as they enter view)
+    sections.forEach((panel) => {
+      gsap.fromTo(
+        panel,
+        { opacity: 0.5, scale: 0.9 },
+        {
+          opacity: 1,
+          scale: 1,
+          ease: 'power1.inOut',
+          scrollTrigger: {
+            trigger: panel,
+            containerAnimation: tween,
+            start: 'left center',
+            end: 'right center',
+            scrub: true,
+          }
+        }
+      );
+    });
+
+    return () => {
+      ScrollTrigger.getAll().forEach(t => t.kill());
+    };
+  }, []);
 
   const scroll = (direction: 'left' | 'right') => {
-    if (scrollRef.current) {
-      const scrollAmount = 380;
-      scrollRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth',
-      });
+    if (sectionRef.current) {
+      // For GSAP horizontal scroll, clicking a button should ideally scroll the window vertically.
+      // We estimate the amount to scroll vertically to correspond to one panel width horizontally.
+      const panelWidth = window.innerWidth * 0.8; 
+      const scrollAmount = direction === 'left' ? -panelWidth : panelWidth;
+      window.scrollBy({ top: scrollAmount, behavior: 'smooth' });
     }
   };
 
   return (
-    <section style={{ padding: '5rem 2rem', position: 'relative' }}>
+    <section ref={sectionRef} style={{ padding: '5rem 2rem', position: 'relative', overflow: 'hidden' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         {/* Header with Navigation Arrows */}
         <div
@@ -111,156 +164,174 @@ export const HorizontalScrollGallery: React.FC<HorizontalScrollGalleryProps> = (
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button
-              onClick={() => scroll('left')}
-              aria-label="Scroll left"
-              style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
-                color: 'var(--color-text)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-              }}
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <button
-              onClick={() => scroll('right')}
-              aria-label="Scroll right"
-              style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
-                color: 'var(--color-text)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-              }}
-            >
-              <ChevronRight size={20} />
-            </button>
+          <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column', alignItems: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={() => scroll('left')}
+                aria-label="Scroll back"
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--color-surface)',
+                  border: '1px solid var(--color-border)',
+                  color: 'var(--color-text)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-surface)'; }}
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button
+                onClick={() => scroll('right')}
+                aria-label="Scroll forward"
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--color-surface)',
+                  border: '1px solid var(--color-border)',
+                  color: 'var(--color-text)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-surface)'; }}
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Scrollable Container */}
-        <div
-          ref={scrollRef}
-          style={{
-            display: 'flex',
-            gap: '1.5rem',
-            overflowX: 'auto',
-            paddingBottom: '1.5rem',
-            scrollbarWidth: 'none',
-            scrollSnapType: 'x mandatory',
-          }}
-        >
-          {items.map((item) => (
-            <div
-              key={item.id}
-              style={{
-                flex: '0 0 360px',
-                borderRadius: 'var(--radius-2xl)',
-                backgroundColor: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
-                padding: '2.25rem',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                scrollSnapAlign: 'start',
-                position: 'relative',
-                boxShadow: 'var(--shadow-md)',
-              }}
-            >
-              <div>
-                <span
-                  style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                    color: 'var(--color-primary-400)',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    padding: '0.25rem 0.625rem',
-                    borderRadius: 'var(--radius-sm)',
-                    display: 'inline-block',
-                    marginBottom: '1rem',
-                  }}
-                >
-                  {item.badge}
-                </span>
+        {/* Progress Bar */}
+        <div style={{ width: '100%', height: '2px', backgroundColor: 'rgba(255,255,255,0.1)', marginBottom: '2rem', borderRadius: '1px' }}>
+          <div ref={progressRef} style={{ width: '0%', height: '100%', backgroundColor: 'var(--color-primary)', borderRadius: '1px' }} />
+        </div>
 
-                <h3
-                  style={{
-                    fontSize: '1.25rem',
-                    fontWeight: 700,
-                    color: 'var(--color-text)',
-                    lineHeight: 1.35,
-                    marginBottom: '0.75rem',
-                  }}
-                >
-                  {item.title}
-                </h3>
-
-                <p
-                  style={{
-                    fontSize: '0.875rem',
-                    color: 'var(--color-text-secondary)',
-                    lineHeight: 1.6,
-                    marginBottom: '1.5rem',
-                  }}
-                >
-                  {item.description}
-                </p>
-              </div>
-
-              {/* Metric Box & Link */}
-              <div>
-                <div
-                  style={{
-                    padding: '1rem',
-                    borderRadius: 'var(--radius-lg)',
-                    backgroundColor: 'rgba(15, 23, 42, 0.6)',
-                    border: '1px solid rgba(255, 255, 255, 0.05)',
-                    marginBottom: '1.25rem',
-                  }}
-                >
-                  <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-text)', lineHeight: 1 }}>
-                    {item.stat}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', marginTop: '0.25rem' }}>
-                    {item.statLabel}
-                  </div>
-                </div>
-
-                {item.link && (
-                  <Link
-                    to={item.link}
+        {/* Scrollable Container (GSAP handles transform) */}
+        <div style={{ width: '100%', overflow: 'visible' }}>
+          <div
+            ref={containerRef}
+            style={{
+              display: 'flex',
+              gap: '1.5rem',
+              width: `${items.length * 100}%`,
+              flexWrap: 'nowrap',
+            }}
+          >
+            {items.map((item) => (
+              <div
+                key={item.id}
+                className="gallery-panel"
+                style={{
+                  width: '360px',
+                  flexShrink: 0,
+                  borderRadius: 'var(--radius-2xl)',
+                  backgroundColor: 'var(--color-surface)',
+                  border: '1px solid var(--color-border)',
+                  padding: '2.25rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  position: 'relative',
+                  boxShadow: 'var(--shadow-md)',
+                  transformOrigin: 'center center',
+                }}
+              >
+                <div>
+                  <span
                     style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                      fontSize: '0.8125rem',
-                      fontWeight: 600,
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
                       color: 'var(--color-primary-400)',
-                      textDecoration: 'none',
+                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                      padding: '0.25rem 0.625rem',
+                      borderRadius: 'var(--radius-sm)',
+                      display: 'inline-block',
+                      marginBottom: '1rem',
                     }}
                   >
-                    <span>Explore Practice</span>
-                    <ArrowUpRight size={14} />
-                  </Link>
-                )}
+                    {item.badge}
+                  </span>
+
+                  <h3
+                    style={{
+                      fontSize: '1.25rem',
+                      fontWeight: 700,
+                      color: 'var(--color-text)',
+                      lineHeight: 1.35,
+                      marginBottom: '0.75rem',
+                    }}
+                  >
+                    {item.title}
+                  </h3>
+
+                  <p
+                    style={{
+                      fontSize: '0.875rem',
+                      color: 'var(--color-text-secondary)',
+                      lineHeight: 1.6,
+                      marginBottom: '1.5rem',
+                    }}
+                  >
+                    {item.description}
+                  </p>
+                </div>
+
+                {/* Metric Box & Link */}
+                <div>
+                  <div
+                    style={{
+                      padding: '1rem',
+                      borderRadius: 'var(--radius-lg)',
+                      backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                      border: '1px solid rgba(255, 255, 255, 0.05)',
+                      marginBottom: '1.25rem',
+                    }}
+                  >
+                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-text)', lineHeight: 1 }}>
+                      {item.stat}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', marginTop: '0.25rem' }}>
+                      {item.statLabel}
+                    </div>
+                  </div>
+
+                  {item.link && (
+                    <Link
+                      to={item.link}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        fontSize: '0.8125rem',
+                        fontWeight: 600,
+                        color: 'var(--color-primary-400)',
+                        textDecoration: 'none',
+                        transition: 'color 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-primary)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-primary-400)'; }}
+                    >
+                      <span>Explore Practice</span>
+                      <ArrowUpRight size={14} />
+                    </Link>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </section>

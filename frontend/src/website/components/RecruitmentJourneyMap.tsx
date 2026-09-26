@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { UserCheck, Building2, CheckCircle2 } from 'lucide-react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(ScrollTrigger);
 
 export interface RecruitmentJourneyMapProps {
   badge?: string;
@@ -13,6 +17,8 @@ export const RecruitmentJourneyMap: React.FC<RecruitmentJourneyMapProps> = ({
   subtitle = 'See how employer hiring velocity aligns seamlessly with candidate career advocacy at every key milestone.',
 }) => {
   const [activeTrack, setActiveTrack] = useState<'employer' | 'candidate'>('employer');
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
 
   const employerMilestones = [
     {
@@ -92,9 +98,41 @@ export const RecruitmentJourneyMap: React.FC<RecruitmentJourneyMapProps> = ({
 
   const milestones = activeTrack === 'employer' ? employerMilestones : candidateMilestones;
 
+  useEffect(() => {
+    if (!sectionRef.current || !trackRef.current) return;
+    
+    // Clear previous ScrollTriggers
+    ScrollTrigger.getAll().forEach(t => t.kill());
+
+    const cards = trackRef.current.querySelectorAll('.journey-card');
+    
+    // Create timeline for progressive reveal
+    const tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: sectionRef.current,
+        start: 'top 20%',
+        end: 'bottom center',
+        scrub: 1,
+        pin: true,
+      }
+    });
+
+    cards.forEach((card, index) => {
+      tl.fromTo(card, 
+        { opacity: 0, x: 50, scale: 0.95 },
+        { opacity: 1, x: 0, scale: 1, duration: 1, ease: 'power2.out' },
+        index * 0.5
+      );
+    });
+
+    return () => {
+      ScrollTrigger.getAll().forEach(t => t.kill());
+    };
+  }, [activeTrack]);
+
   return (
-    <section style={{ padding: '5rem 2rem', position: 'relative' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <section ref={sectionRef} style={{ padding: '5rem 2rem', position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
           <span
             style={{
@@ -171,6 +209,7 @@ export const RecruitmentJourneyMap: React.FC<RecruitmentJourneyMapProps> = ({
 
         {/* Milestone Steps Horizontal Track */}
         <div
+          ref={trackRef}
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
@@ -179,7 +218,8 @@ export const RecruitmentJourneyMap: React.FC<RecruitmentJourneyMapProps> = ({
         >
           {milestones.map((m, idx) => (
             <div
-              key={idx}
+              key={`${activeTrack}-${idx}`}
+              className="journey-card"
               style={{
                 borderRadius: 'var(--radius-xl)',
                 backgroundColor: 'var(--color-surface)',
@@ -190,6 +230,7 @@ export const RecruitmentJourneyMap: React.FC<RecruitmentJourneyMapProps> = ({
                 justifyContent: 'space-between',
                 position: 'relative',
                 boxShadow: 'var(--shadow-sm)',
+                opacity: 0,
               }}
             >
               <div>

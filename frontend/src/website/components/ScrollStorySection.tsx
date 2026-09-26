@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(ScrollTrigger);
 
 export interface StoryChapter {
   id: string;
@@ -63,11 +67,64 @@ export const ScrollStorySection: React.FC<ScrollStorySectionProps> = ({
   ],
 }) => {
   const [activeChapterIndex, setActiveChapterIndex] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const leftColRef = useRef<HTMLDivElement>(null);
+  const rightColRef = useRef<HTMLDivElement>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current || !leftColRef.current || !rightColRef.current) return;
+
+    const chaptersElements = gsap.utils.toArray<HTMLElement>('.story-chapter');
+    
+    // Pin the entire section
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: containerRef.current,
+        start: 'top 10%',
+        end: `+=${chaptersElements.length * 800}`,
+        pin: true,
+        scrub: 0.5,
+        onUpdate: (self) => {
+          // Update active chapter based on progress
+          const progress = self.progress;
+          const index = Math.min(
+            chaptersElements.length - 1,
+            Math.floor(progress * chaptersElements.length)
+          );
+          setActiveChapterIndex(index);
+          
+          if (progressRef.current) {
+            progressRef.current.style.height = `${progress * 100}%`;
+          }
+        },
+      },
+    });
+
+    return () => {
+      ScrollTrigger.getAll().forEach((t) => t.kill());
+    };
+  }, [chapters.length]);
+
+  // Handle smooth animation on active chapter change
+  useEffect(() => {
+    if (!rightColRef.current) return;
+    
+    const ctx = gsap.context(() => {
+      gsap.fromTo('.stat-content', 
+        { opacity: 0, y: 20 }, 
+        { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out', stagger: 0.1 }
+      );
+    }, rightColRef);
+    
+    return () => ctx.revert();
+  }, [activeChapterIndex]);
+
   const activeChapter = chapters[activeChapterIndex] || chapters[0];
 
   return (
-    <section style={{ padding: '5rem 2rem', position: 'relative' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <section ref={containerRef} style={{ padding: '5rem 2rem', position: 'relative', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', width: '100%', flex: 1, display: 'flex', flexDirection: 'column' }}>
         <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
           <span
             style={{
@@ -88,31 +145,43 @@ export const ScrollStorySection: React.FC<ScrollStorySectionProps> = ({
           </p>
         </div>
 
-        {/* Two-Column Story Layout */}
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
             gap: '3rem',
             alignItems: 'center',
+            position: 'relative',
+            flex: 1,
           }}
         >
+          {/* Scroll Progress Bar */}
+          <div style={{ position: 'absolute', left: '-20px', top: '0', bottom: '0', width: '4px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '2px', display: 'none' }}>
+             <div ref={progressRef} style={{ width: '100%', backgroundColor: 'var(--color-primary)', borderRadius: '2px' }} />
+          </div>
+
           {/* Chapter Selector List */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div ref={leftColRef} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {chapters.map((chapter, idx) => {
               const isActive = idx === activeChapterIndex;
               return (
                 <div
                   key={chapter.id}
-                  onClick={() => setActiveChapterIndex(idx)}
+                  className="story-chapter"
+                  onClick={() => {
+                    // Manual click could jump scroll position, but for simplicity we keep it visually active
+                    setActiveChapterIndex(idx);
+                  }}
                   style={{
                     borderRadius: 'var(--radius-xl)',
                     backgroundColor: isActive ? 'var(--color-surface)' : 'rgba(15, 23, 42, 0.3)',
                     border: isActive ? '1px solid var(--color-primary)' : '1px solid var(--color-border)',
                     padding: '1.5rem 1.75rem',
                     cursor: 'pointer',
-                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                    transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
                     boxShadow: isActive ? '0 10px 30px rgba(59, 130, 246, 0.15)' : 'none',
+                    transform: isActive ? 'translateX(10px)' : 'translateX(0)',
+                    opacity: isActive ? 1 : 0.5,
                   }}
                 >
                   <div
@@ -123,6 +192,7 @@ export const ScrollStorySection: React.FC<ScrollStorySectionProps> = ({
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
                       marginBottom: '0.35rem',
+                      transition: 'color 0.3s ease',
                     }}
                   >
                     {chapter.tag}
@@ -133,22 +203,31 @@ export const ScrollStorySection: React.FC<ScrollStorySectionProps> = ({
                       fontWeight: 700,
                       color: isActive ? 'var(--color-text)' : 'var(--color-text-secondary)',
                       marginBottom: isActive ? '0.5rem' : 0,
+                      transition: 'color 0.3s ease',
                     }}
                   >
                     {chapter.title}
                   </h3>
-                  {isActive && (
-                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', lineHeight: 1.5 }}>
+                  <div 
+                    style={{ 
+                      height: isActive ? 'auto' : 0, 
+                      overflow: 'hidden', 
+                      opacity: isActive ? 1 : 0,
+                      transition: 'all 0.4s ease'
+                    }}
+                  >
+                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', lineHeight: 1.5, marginTop: '0.5rem' }}>
                       {chapter.description}
                     </p>
-                  )}
+                  </div>
                 </div>
               );
             })}
           </div>
 
-          {/* Active Story Visual Display (Aceternity style neon highlight card) */}
+          {/* Active Story Visual Display */}
           <div
+            ref={rightColRef}
             style={{
               borderRadius: 'var(--radius-2xl)',
               backgroundColor: 'var(--color-surface)',
@@ -160,7 +239,7 @@ export const ScrollStorySection: React.FC<ScrollStorySectionProps> = ({
               boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(59, 130, 246, 0.15)',
             }}
           >
-            <div
+            <div className="stat-content"
               style={{
                 fontSize: '0.8125rem',
                 fontWeight: 700,
@@ -172,7 +251,7 @@ export const ScrollStorySection: React.FC<ScrollStorySectionProps> = ({
               Verified Standard Output
             </div>
 
-            <div
+            <div className="stat-content"
               style={{
                 fontSize: '3.5rem',
                 fontWeight: 900,
@@ -184,7 +263,7 @@ export const ScrollStorySection: React.FC<ScrollStorySectionProps> = ({
               {activeChapter.statValue}
             </div>
 
-            <div
+            <div className="stat-content"
               style={{
                 fontSize: '1.125rem',
                 fontWeight: 600,
@@ -195,7 +274,7 @@ export const ScrollStorySection: React.FC<ScrollStorySectionProps> = ({
               {activeChapter.statLabel}
             </div>
 
-            <div
+            <div className="stat-content"
               style={{
                 padding: '1.25rem',
                 borderRadius: 'var(--radius-lg)',
@@ -214,6 +293,7 @@ export const ScrollStorySection: React.FC<ScrollStorySectionProps> = ({
 
             <Link
               to="/employers"
+              className="stat-content"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -226,6 +306,15 @@ export const ScrollStorySection: React.FC<ScrollStorySectionProps> = ({
                 fontSize: '0.9375rem',
                 textDecoration: 'none',
                 boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.6)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 14px rgba(59, 130, 246, 0.4)';
               }}
             >
               <span>Explore Employer Guarantee</span>

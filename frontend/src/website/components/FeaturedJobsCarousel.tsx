@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, ArrowRight, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { motionTokens } from '../../shared/motion/motionTokens';
 import { JobCard, JobCardProps } from './JobCard';
 
 export interface FeaturedJobsCarouselProps {
@@ -73,6 +75,7 @@ export const FeaturedJobsCarousel: React.FC<FeaturedJobsCarouselProps> = ({
 }) => {
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
   const [currentPage, setCurrentPage] = useState(0);
+  const [direction, setDirection] = useState(1);
 
   const pageSize = 3;
   const filteredJobs =
@@ -87,18 +90,70 @@ export const FeaturedJobsCarousel: React.FC<FeaturedJobsCarouselProps> = ({
   const visibleJobs = filteredJobs.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
 
   const handlePrev = () => {
+    setDirection(-1);
     setCurrentPage((prev) => (prev > 0 ? prev - 1 : totalPages - 1));
   };
 
   const handleNext = () => {
+    setDirection(1);
     setCurrentPage((prev) => (prev < totalPages - 1 ? prev + 1 : 0));
   };
 
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: motionTokens.stagger.medium,
+      }
+    }
+  };
+
+  const fadeUpVariant = {
+    hidden: { opacity: 0, y: 20 },
+    show: { 
+      opacity: 1, 
+      y: 0,
+      transition: {
+        duration: motionTokens.duration.standard,
+        ease: motionTokens.ease.standard
+      }
+    }
+  };
+
+  const gridVariants = {
+    enter: (dir: number) => ({
+      x: dir > 0 ? 30 : -30,
+      opacity: 0,
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+      transition: {
+        duration: motionTokens.duration.standard,
+        ease: motionTokens.ease.standard,
+        staggerChildren: motionTokens.stagger.small,
+      }
+    },
+    exit: (dir: number) => ({
+      x: dir < 0 ? 30 : -30,
+      opacity: 0,
+      transition: {
+        duration: motionTokens.duration.fast,
+        ease: motionTokens.ease.standard
+      }
+    }),
+  };
+
   return (
-    <section style={{ padding: '5rem 2rem', backgroundColor: 'rgba(15, 23, 42, 0.3)' }}>
+    <section style={{ padding: '5rem 2rem', backgroundColor: 'rgba(15, 23, 42, 0.3)', overflow: 'hidden' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         {/* Section Header */}
-        <div
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: '-50px' }}
           style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -109,7 +164,8 @@ export const FeaturedJobsCarousel: React.FC<FeaturedJobsCarouselProps> = ({
           }}
         >
           <div>
-            <div
+            <motion.div
+              variants={fadeUpVariant}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -122,20 +178,28 @@ export const FeaturedJobsCarousel: React.FC<FeaturedJobsCarouselProps> = ({
             >
               <Sparkles size={14} />
               {badge}
-            </div>
-            <h2 style={{ fontSize: 'clamp(1.75rem, 3vw, 2.5rem)', fontWeight: 800, color: 'var(--color-text)' }}>
+            </motion.div>
+            <motion.h2 
+              variants={fadeUpVariant}
+              style={{ fontSize: 'clamp(1.75rem, 3vw, 2.5rem)', fontWeight: 800, color: 'var(--color-text)' }}
+            >
               {title}
-            </h2>
-            <p style={{ color: 'var(--color-text-secondary)', marginTop: '0.5rem', maxWidth: '600px' }}>
+            </motion.h2>
+            <motion.p 
+              variants={fadeUpVariant}
+              style={{ color: 'var(--color-text-secondary)', marginTop: '0.5rem', maxWidth: '600px' }}
+            >
               {subtitle}
-            </p>
+            </motion.p>
           </div>
 
           {/* Carousel Arrows */}
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button
+          <motion.div variants={fadeUpVariant} style={{ display: 'flex', gap: '0.5rem' }}>
+            <motion.button
               onClick={handlePrev}
               aria-label="Previous jobs"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9, rotate: -5 }}
               style={{
                 width: '42px',
                 height: '42px',
@@ -150,10 +214,12 @@ export const FeaturedJobsCarousel: React.FC<FeaturedJobsCarouselProps> = ({
               }}
             >
               <ChevronLeft size={20} />
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               onClick={handleNext}
               aria-label="Next jobs"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9, rotate: 5 }}
               style={{
                 width: '42px',
                 height: '42px',
@@ -168,12 +234,16 @@ export const FeaturedJobsCarousel: React.FC<FeaturedJobsCarouselProps> = ({
               }}
             >
               <ChevronRight size={20} />
-            </button>
-          </div>
-        </div>
+            </motion.button>
+          </motion.div>
+        </motion.div>
 
         {/* Category Pills */}
-        <div
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
           style={{
             display: 'flex',
             gap: '0.5rem',
@@ -182,58 +252,101 @@ export const FeaturedJobsCarousel: React.FC<FeaturedJobsCarouselProps> = ({
             marginBottom: '2rem',
           }}
         >
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => {
-                setSelectedCategory(cat);
-                setCurrentPage(0);
-              }}
-              style={{
-                padding: '0.5rem 1rem',
-                borderRadius: '9999px',
-                border: selectedCategory === cat ? '1px solid var(--color-primary)' : '1px solid var(--color-border)',
-                backgroundColor: selectedCategory === cat ? 'rgba(59, 130, 246, 0.15)' : 'var(--color-surface)',
-                color: selectedCategory === cat ? 'var(--color-primary-400)' : 'var(--color-text-secondary)',
-                fontSize: '0.8125rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+          {categories.map((cat) => {
+            const isSelected = selectedCategory === cat;
+            return (
+              <motion.button
+                key={cat}
+                variants={fadeUpVariant}
+                onClick={() => {
+                  setSelectedCategory(cat);
+                  setCurrentPage(0);
+                  setDirection(1);
+                }}
+                style={{
+                  position: 'relative',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '9999px',
+                  border: isSelected ? '1px solid var(--color-primary)' : '1px solid var(--color-border)',
+                  backgroundColor: 'transparent',
+                  color: isSelected ? 'var(--color-primary-400)' : 'var(--color-text-secondary)',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  transition: 'color 0.2s ease',
+                  zIndex: 1
+                }}
+              >
+                {isSelected && (
+                  <motion.div
+                    layoutId="activeCategory"
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      borderRadius: '9999px',
+                      backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                      zIndex: -1
+                    }}
+                    transition={motionTokens.spring.snappy}
+                  />
+                )}
+                {cat}
+              </motion.button>
+            );
+          })}
+        </motion.div>
 
         {/* Jobs Grid */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-            gap: '1.5rem',
-            marginBottom: '2.5rem',
-          }}
-        >
-          {visibleJobs.length > 0 ? (
-            visibleJobs.map((job) => <JobCard key={job.id} {...job} />)
-          ) : (
-            <div
-              style={{
-                gridColumn: '1 / -1',
-                padding: '3rem',
-                textAlign: 'center',
-                color: 'var(--color-text-tertiary)',
-              }}
-            >
-              No roles currently listed in this category. Check back soon or view all jobs.
-            </div>
-          )}
+        <div style={{ position: 'relative', minHeight: '300px', marginBottom: '2.5rem' }}>
+          <AnimatePresence mode="wait" custom={direction}>
+            {visibleJobs.length > 0 ? (
+              <motion.div
+                key={`${selectedCategory}-${currentPage}`}
+                custom={direction}
+                variants={gridVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                  gap: '1.5rem',
+                }}
+              >
+                {visibleJobs.map((job) => (
+                  <motion.div key={job.id} variants={fadeUpVariant}>
+                    <JobCard {...job} />
+                  </motion.div>
+                ))}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: motionTokens.duration.slow }}
+                style={{
+                  padding: '3rem',
+                  textAlign: 'center',
+                  color: 'var(--color-text-tertiary)',
+                }}
+              >
+                No roles currently listed in this category. Check back soon or view all jobs.
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Bottom CTA Link */}
-        <div style={{ textAlign: 'center' }}>
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.4, duration: motionTokens.duration.standard }}
+          style={{ textAlign: 'center' }}
+        >
           <Link
             to="/jobs"
             style={{
@@ -249,7 +362,7 @@ export const FeaturedJobsCarousel: React.FC<FeaturedJobsCarouselProps> = ({
             <span>Explore All 240+ Open Mandates</span>
             <ArrowRight size={16} />
           </Link>
-        </div>
+        </motion.div>
       </div>
     </section>
   );

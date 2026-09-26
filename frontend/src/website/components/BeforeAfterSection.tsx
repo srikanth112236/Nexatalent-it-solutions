@@ -1,5 +1,7 @@
 import React from 'react';
 import { XCircle, CheckCircle2, Zap } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { motionTokens } from '../../shared/motion/motionTokens';
 
 export interface BeforeAfterSectionProps {
   badge?: string;
@@ -42,8 +44,25 @@ export const BeforeAfterSection: React.FC<BeforeAfterSectionProps> = ({
 
   return (
     <section style={{ padding: '5rem 2rem', position: 'relative' }}>
-      <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
+      <motion.div 
+        style={{ maxWidth: '1100px', margin: '0 auto' }}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-50px" }}
+        variants={{
+          hidden: {},
+          visible: {
+            transition: { staggerChildren: motionTokens.stagger.medium }
+          }
+        }}
+      >
+        <motion.div 
+          style={{ textAlign: 'center', marginBottom: '3.5rem' }}
+          variants={{
+            hidden: { opacity: 0, y: 20 },
+            visible: { opacity: 1, y: 0, transition: { duration: motionTokens.duration.slow, ease: motionTokens.ease.standard } }
+          }}
+        >
           <span
             style={{
               fontSize: '0.8125rem',
@@ -61,7 +80,7 @@ export const BeforeAfterSection: React.FC<BeforeAfterSectionProps> = ({
           <p style={{ color: 'var(--color-text-secondary)', maxWidth: '640px', margin: '0.75rem auto 0 auto' }}>
             {subtitle}
           </p>
-        </div>
+        </motion.div>
 
         {/* Comparison Table / Split Grid */}
         <div
@@ -69,19 +88,46 @@ export const BeforeAfterSection: React.FC<BeforeAfterSectionProps> = ({
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
             gap: '2rem',
+            position: 'relative',
           }}
         >
+          {/* Background Divider that grows from center */}
+          <motion.div 
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: '5%',
+              bottom: '5%',
+              width: '1px',
+              backgroundColor: 'var(--color-border)',
+              display: 'none', // Hidden on mobile, could be shown on md+
+              transformOrigin: 'top center',
+            }}
+            variants={{
+              hidden: { scaleY: 0, opacity: 0 },
+              visible: { scaleY: 1, opacity: 0.5, transition: { duration: motionTokens.duration.deliberate, ease: motionTokens.ease.standard } }
+            }}
+          />
+
           {/* Legacy Side */}
-          <div
+          <motion.div
             style={{
               borderRadius: 'var(--radius-xl)',
               backgroundColor: 'rgba(15, 23, 42, 0.5)',
               border: '1px solid rgba(239, 68, 68, 0.2)',
               padding: '2.5rem 2rem',
             }}
+            variants={{
+              hidden: { opacity: 0, x: -50 },
+              visible: { opacity: 1, x: 0, transition: { duration: motionTokens.duration.slow, ease: motionTokens.ease.standard } }
+            }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-              <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#ef4444' }} />
+              <motion.div 
+                style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#ef4444' }} 
+                animate={{ opacity: [0.5, 1, 0.5] }}
+                transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+              />
               <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text)' }}>
                 Conventional Agencies
               </h3>
@@ -89,7 +135,14 @@ export const BeforeAfterSection: React.FC<BeforeAfterSectionProps> = ({
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               {comparisonItems.map((item, idx) => (
-                <div key={idx} style={{ paddingBottom: '1.25rem', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                <motion.div 
+                  key={idx} 
+                  style={{ paddingBottom: '1.25rem', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}
+                  variants={{
+                    hidden: { opacity: 0, x: -20 },
+                    visible: { opacity: 1, x: 0, transition: { duration: motionTokens.duration.standard } }
+                  }}
+                >
                   <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
                     {item.factor}
                   </div>
@@ -97,13 +150,13 @@ export const BeforeAfterSection: React.FC<BeforeAfterSectionProps> = ({
                     <XCircle size={16} color="#ef4444" style={{ flexShrink: 0, marginTop: '2px' }} />
                     <span>{item.legacy}</span>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
-          </div>
+          </motion.div>
 
           {/* NexaTalent Side (Glowing Aceternity card) */}
-          <div
+          <motion.div
             style={{
               borderRadius: 'var(--radius-xl)',
               backgroundColor: 'var(--color-surface)',
@@ -113,8 +166,14 @@ export const BeforeAfterSection: React.FC<BeforeAfterSectionProps> = ({
               position: 'relative',
               overflow: 'hidden',
             }}
+            variants={{
+              hidden: { opacity: 0, x: 50 },
+              visible: { opacity: 1, x: 0, transition: { duration: motionTokens.duration.slow, ease: motionTokens.ease.standard } }
+            }}
+            whileHover={{ y: -5, boxShadow: '0 0 45px rgba(59, 130, 246, 0.3)' }}
+            transition={motionTokens.spring.snappy}
           >
-            <div
+            <motion.div
               style={{
                 position: 'absolute',
                 top: 0,
@@ -127,12 +186,20 @@ export const BeforeAfterSection: React.FC<BeforeAfterSectionProps> = ({
                 padding: '0.35rem 1rem',
                 borderBottomLeftRadius: 'var(--radius-md)',
               }}
+              initial={{ y: -20, opacity: 0 }}
+              whileInView={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.5, ...motionTokens.spring.bouncy }}
             >
               Proven Standard
-            </div>
+            </motion.div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-              <Zap size={18} color="var(--color-primary-400)" />
+              <motion.div
+                animate={{ rotate: [0, 15, -15, 0] }}
+                transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+              >
+                <Zap size={18} color="var(--color-primary-400)" />
+              </motion.div>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text)' }}>
                 NexaTalent Platform
               </h3>
@@ -140,20 +207,33 @@ export const BeforeAfterSection: React.FC<BeforeAfterSectionProps> = ({
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               {comparisonItems.map((item, idx) => (
-                <div key={idx} style={{ paddingBottom: '1.25rem', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                <motion.div 
+                  key={idx} 
+                  style={{ paddingBottom: '1.25rem', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}
+                  variants={{
+                    hidden: { opacity: 0, x: 20 },
+                    visible: { opacity: 1, x: 0, transition: { duration: motionTokens.duration.standard } }
+                  }}
+                >
                   <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-primary-400)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
                     {item.factor}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', color: 'var(--color-text)', fontSize: '0.875rem', lineHeight: 1.5, fontWeight: 500 }}>
-                    <CheckCircle2 size={16} color="var(--color-success)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <motion.div
+                      whileInView={{ scale: [0, 1.2, 1] }}
+                      viewport={{ once: true }}
+                      transition={{ delay: 0.2 + idx * motionTokens.stagger.small, ...motionTokens.spring.snappy }}
+                    >
+                      <CheckCircle2 size={16} color="var(--color-success)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                    </motion.div>
                     <span>{item.nexatalent}</span>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 };

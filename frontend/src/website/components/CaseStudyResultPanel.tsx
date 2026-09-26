@@ -1,5 +1,7 @@
 import React from 'react';
 import { CheckCircle2, Award, Quote } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { motionTokens } from '../../shared/motion/motionTokens';
 
 export interface CaseStudyResultPanelProps {
   clientName?: string;
@@ -44,7 +46,11 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
   },
 }) => {
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 40, scale: 0.98 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{ duration: motionTokens.duration.slow, ease: motionTokens.ease.outQuart }}
       style={{
         borderRadius: 'var(--radius-xl)',
         backgroundColor: 'var(--color-surface)',
@@ -84,7 +90,11 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
             {clientName}
           </h2>
         </div>
-        <div
+        <motion.div
+          initial={{ scale: 0 }}
+          whileInView={{ scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ ...motionTokens.spring.bouncy, delay: 0.2 }}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -100,7 +110,7 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
         >
           <Award size={16} />
           SLA Target: 100% Met
-        </div>
+        </motion.div>
       </div>
 
       {/* Metrics Strip */}
@@ -113,8 +123,12 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
         }}
       >
         {metrics.map((m, idx) => (
-          <div
+          <motion.div
             key={idx}
+            initial={{ opacity: 0, x: -20, scale: 0.95 }}
+            whileInView={{ opacity: 1, x: 0, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 + idx * motionTokens.stagger.medium, duration: motionTokens.duration.standard }}
             style={{
               padding: '1.5rem',
               borderRadius: 'var(--radius-lg)',
@@ -139,7 +153,7 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
             <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', lineHeight: 1.4 }}>
               {m.detail}
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
 
@@ -152,7 +166,12 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
           marginBottom: '3rem',
         }}
       >
-        <div>
+        <motion.div
+          initial={{ opacity: 0, x: -30 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: motionTokens.duration.standard, delay: 0.3 }}
+        >
           <h3
             style={{
               fontSize: '1.125rem',
@@ -170,9 +189,14 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
           <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9375rem', lineHeight: 1.6 }}>
             {challengeDescription}
           </p>
-        </div>
+        </motion.div>
 
-        <div>
+        <motion.div
+          initial={{ opacity: 0, x: 30 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: motionTokens.duration.standard, delay: 0.3 }}
+        >
           <h3
             style={{
               fontSize: '1.125rem',
@@ -189,8 +213,12 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
           </h3>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {solutionHighlights.map((hl, idx) => (
-              <li
+              <motion.li
                 key={idx}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.5 + idx * motionTokens.stagger.small }}
                 style={{
                   display: 'flex',
                   alignItems: 'flex-start',
@@ -200,16 +228,27 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
                   lineHeight: 1.5,
                 }}
               >
-                <CheckCircle2 size={16} color="var(--color-success)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <motion.div
+                  initial={{ scale: 0 }}
+                  whileInView={{ scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ ...motionTokens.spring.snappy, delay: 0.5 + idx * motionTokens.stagger.small + 0.1 }}
+                >
+                  <CheckCircle2 size={16} color="var(--color-success)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                </motion.div>
                 <span>{hl}</span>
-              </li>
+              </motion.li>
             ))}
           </ul>
-        </div>
+        </motion.div>
       </div>
 
       {/* Testimonial Quote Quote Box */}
-      <div
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        whileInView={{ opacity: 1, scale: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: motionTokens.duration.standard, delay: 0.6 }}
         style={{
           padding: '1.75rem',
           borderRadius: 'var(--radius-lg)',
@@ -220,7 +259,14 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
           alignItems: 'flex-start',
         }}
       >
-        <Quote size={28} color="var(--color-primary-400)" style={{ flexShrink: 0 }} />
+        <motion.div
+          initial={{ scale: 0, rotate: -15 }}
+          whileInView={{ scale: 1, rotate: 0 }}
+          viewport={{ once: true }}
+          transition={{ ...motionTokens.spring.bouncy, delay: 0.8 }}
+        >
+          <Quote size={28} color="var(--color-primary-400)" style={{ flexShrink: 0 }} />
+        </motion.div>
         <div>
           <p
             style={{
@@ -237,7 +283,7 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
             {quote.author} · <span style={{ color: 'var(--color-text-secondary)', fontWeight: 400 }}>{quote.role}, {quote.company}</span>
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

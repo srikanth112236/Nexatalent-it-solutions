@@ -1,6 +1,8 @@
 import React from 'react';
 import { Check, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { motionTokens } from '../../shared/motion/motionTokens';
 
 export interface ServiceTier {
   id: string;
@@ -84,7 +86,13 @@ export const ServiceComparison: React.FC<ServiceComparisonProps> = ({
   return (
     <section style={{ padding: '5rem 2rem', position: 'relative' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: motionTokens.duration.slow, ease: motionTokens.ease.standard }}
+          style={{ textAlign: 'center', marginBottom: '4rem' }}
+        >
           <span
             style={{
               fontSize: '0.8125rem',
@@ -102,7 +110,7 @@ export const ServiceComparison: React.FC<ServiceComparisonProps> = ({
           <p style={{ color: 'var(--color-text-secondary)', maxWidth: '640px', margin: '0.75rem auto 0 auto' }}>
             {subtitle}
           </p>
-        </div>
+        </motion.div>
 
         {/* 3-Column Tier Grid */}
         <div
@@ -113,9 +121,14 @@ export const ServiceComparison: React.FC<ServiceComparisonProps> = ({
             alignItems: 'stretch',
           }}
         >
-          {tiers.map((tier) => (
-            <div
+          {tiers.map((tier, tierIdx) => (
+            <motion.div
               key={tier.id}
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-50px' }}
+              transition={{ delay: tierIdx * motionTokens.stagger.medium, duration: motionTokens.duration.slow, ease: motionTokens.ease.standard }}
+              whileHover={{ y: -8, scale: 1.02, transition: motionTokens.spring.snappy }}
               style={{
                 borderRadius: 'var(--radius-2xl)',
                 backgroundColor: 'var(--color-surface)',
@@ -129,7 +142,10 @@ export const ServiceComparison: React.FC<ServiceComparisonProps> = ({
               }}
             >
               {tier.popular && (
-                <div
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.5, y: -20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ delay: 0.5, ...motionTokens.spring.bouncy }}
                   style={{
                     position: 'absolute',
                     top: '-14px',
@@ -146,7 +162,7 @@ export const ServiceComparison: React.FC<ServiceComparisonProps> = ({
                   }}
                 >
                   {tier.badge || 'Recommended'}
-                </div>
+                </motion.div>
               )}
 
               <div>
@@ -180,36 +196,55 @@ export const ServiceComparison: React.FC<ServiceComparisonProps> = ({
                 {/* Features List */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>
                   {tier.features.map((feat, idx) => (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem', fontSize: '0.875rem', color: 'var(--color-text)' }}>
-                      <Check size={16} color="var(--color-primary-400)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <motion.div 
+                      key={idx} 
+                      initial={{ opacity: 0, x: -10 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: tierIdx * 0.1 + idx * 0.05 + 0.3 }}
+                      style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem', fontSize: '0.875rem', color: 'var(--color-text)' }}
+                    >
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        whileInView={{ scale: 1 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: tierIdx * 0.1 + idx * 0.05 + 0.4, ...motionTokens.spring.bouncy }}
+                      >
+                        <Check size={16} color="var(--color-primary-400)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                      </motion.div>
                       <span>{feat}</span>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               </div>
 
               <Link
                 to={tier.ctaLink}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  padding: '0.875rem',
-                  borderRadius: 'var(--radius-lg)',
-                  backgroundColor: tier.popular ? 'var(--color-primary)' : 'rgba(255, 255, 255, 0.06)',
-                  border: tier.popular ? 'none' : '1px solid var(--color-border)',
-                  color: '#ffffff',
-                  fontWeight: 700,
-                  fontSize: '0.9375rem',
-                  textDecoration: 'none',
-                  transition: 'all 0.2s ease',
-                }}
+                style={{ textDecoration: 'none' }}
               >
-                <span>{tier.ctaText}</span>
-                <ArrowRight size={16} />
+                <motion.div
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    padding: '0.875rem',
+                    borderRadius: 'var(--radius-lg)',
+                    backgroundColor: tier.popular ? 'var(--color-primary)' : 'rgba(255, 255, 255, 0.06)',
+                    border: tier.popular ? 'none' : '1px solid var(--color-border)',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    fontSize: '0.9375rem',
+                    transition: 'background-color 0.2s ease',
+                  }}
+                >
+                  <span>{tier.ctaText}</span>
+                  <ArrowRight size={16} />
+                </motion.div>
               </Link>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>

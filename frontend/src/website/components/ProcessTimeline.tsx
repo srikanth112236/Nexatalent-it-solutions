@@ -1,5 +1,9 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { CheckCircle2, Clock, Zap } from 'lucide-react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(ScrollTrigger);
 
 export interface TimelineMilestone {
   dayLabel: string;
@@ -52,9 +56,83 @@ export const ProcessTimeline: React.FC<ProcessTimelineProps> = ({
     },
   ],
 }) => {
+  const sectionRef = useRef<HTMLElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const lineRef = useRef<HTMLDivElement>(null);
+  const milestoneRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  useEffect(() => {
+    if (!sectionRef.current || !containerRef.current || !lineRef.current) return;
+
+    const ctx = gsap.context(() => {
+      // Pin the section
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: containerRef.current,
+          start: 'top 20%',
+          end: 'bottom 40%',
+          scrub: 1,
+        }
+      });
+
+      // Animate line drawing down
+      tl.fromTo(
+        lineRef.current,
+        { scaleY: 0, transformOrigin: 'top center' },
+        { scaleY: 1, ease: 'none', duration: 1 }
+      );
+
+      // Reveal milestones progressively
+      milestoneRefs.current.forEach((el) => {
+        if (!el) return;
+        
+        // Individual scroll trigger for each milestone
+        gsap.fromTo(
+          el,
+          { opacity: 0, y: 50, scale: 0.95 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.8,
+            ease: 'back.out(1.2)',
+            scrollTrigger: {
+              trigger: el,
+              start: 'top 85%',
+              end: 'bottom 60%',
+              toggleActions: 'play none none reverse'
+            }
+          }
+        );
+        
+        // Pulse effect for the icon node
+        const iconNode = el.querySelector('.timeline-icon-node');
+        if (iconNode) {
+          gsap.to(iconNode, {
+            boxShadow: '0 0 25px rgba(59, 130, 246, 0.6)',
+            repeat: -1,
+            yoyo: true,
+            duration: 1.5,
+            ease: 'sine.inOut',
+            scrollTrigger: {
+              trigger: el,
+              start: 'top 70%',
+              toggleActions: 'play pause resume pause'
+            }
+          });
+        }
+      });
+    }, sectionRef);
+
+    return () => {
+      ScrollTrigger.getAll().forEach(t => t.kill());
+      ctx.revert();
+    };
+  }, []);
+
   return (
-    <section style={{ padding: '5rem 2rem', position: 'relative' }}>
-      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+    <section ref={sectionRef} style={{ padding: '5rem 2rem', position: 'relative' }}>
+      <div ref={containerRef} style={{ maxWidth: '1000px', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
           <div
             style={{
@@ -84,7 +162,7 @@ export const ProcessTimeline: React.FC<ProcessTimelineProps> = ({
 
         {/* Timeline Items */}
         <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
-          {/* Vertical Connecting Line */}
+          {/* Vertical Connecting Line Base */}
           <div
             style={{
               position: 'absolute',
@@ -92,7 +170,20 @@ export const ProcessTimeline: React.FC<ProcessTimelineProps> = ({
               bottom: '2rem',
               left: '28px',
               width: '2px',
-              backgroundColor: 'var(--color-border)',
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              zIndex: 0,
+            }}
+          />
+          {/* Animated Connecting Line */}
+          <div
+            ref={lineRef}
+            style={{
+              position: 'absolute',
+              top: '2rem',
+              bottom: '2rem',
+              left: '28px',
+              width: '2px',
+              backgroundColor: 'var(--color-primary)',
               zIndex: 0,
             }}
           />
@@ -100,6 +191,7 @@ export const ProcessTimeline: React.FC<ProcessTimelineProps> = ({
           {milestones.map((milestone, idx) => (
             <div
               key={idx}
+              ref={el => milestoneRefs.current[idx] = el}
               style={{
                 display: 'flex',
                 gap: '2rem',
@@ -109,6 +201,7 @@ export const ProcessTimeline: React.FC<ProcessTimelineProps> = ({
             >
               {/* Milestone Icon Node */}
               <div
+                className="timeline-icon-node"
                 style={{
                   width: '56px',
                   height: '56px',
@@ -119,7 +212,8 @@ export const ProcessTimeline: React.FC<ProcessTimelineProps> = ({
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
-                  boxShadow: '0 0 15px rgba(59, 130, 246, 0.3)',
+                  boxShadow: '0 0 15px rgba(59, 130, 246, 0.2)',
+                  transition: 'background-color 0.3s ease',
                 }}
               >
                 <Clock size={20} color="var(--color-primary-400)" />

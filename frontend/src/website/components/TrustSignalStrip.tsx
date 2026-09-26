@@ -1,5 +1,7 @@
 import React from 'react';
 import { ShieldCheck } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { motionTokens } from '../../shared/motion/motionTokens';
 
 export interface TrustSignalItem {
   iconName?: string;
@@ -31,13 +33,40 @@ export const TrustSignalStrip: React.FC<TrustSignalStripProps> = ({
     },
   ],
 }) => {
+  const containerVariants = {
+    hidden: { opacity: 0, filter: 'blur(10px)' },
+    visible: { 
+      opacity: 1, 
+      filter: 'blur(0px)',
+      transition: { 
+        duration: motionTokens.duration.slow, 
+        ease: motionTokens.ease.standard,
+        staggerChildren: motionTokens.stagger.medium
+      } 
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0, 
+      transition: motionTokens.spring.gentle
+    }
+  };
+
   return (
-    <section
+    <motion.section
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: '-50px' }}
+      variants={containerVariants}
       style={{
         padding: '2.5rem 2rem',
         backgroundColor: 'rgba(15, 23, 42, 0.6)',
         borderTop: '1px solid var(--color-border)',
         borderBottom: '1px solid var(--color-border)',
+        overflow: 'hidden'
       }}
     >
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -50,15 +79,24 @@ export const TrustSignalStrip: React.FC<TrustSignalStripProps> = ({
           }}
         >
           {signals.map((sig, idx) => (
-            <div
+            <motion.div
               key={idx}
+              variants={itemVariants}
+              whileHover={{ y: -4, scale: 1.02 }}
               style={{
                 display: 'flex',
                 alignItems: 'flex-start',
                 gap: '1rem',
+                cursor: 'default',
+                padding: '0.5rem',
+                borderRadius: 'var(--radius-lg)',
+                transition: 'background-color 0.3s ease'
               }}
             >
-              <div
+              <motion.div
+                initial={{ scale: 0, rotate: -15 }}
+                whileInView={{ scale: 1, rotate: 0 }}
+                transition={{ delay: idx * 0.1 + 0.2, ...motionTokens.spring.bouncy }}
                 style={{
                   width: '36px',
                   height: '36px',
@@ -69,10 +107,15 @@ export const TrustSignalStrip: React.FC<TrustSignalStripProps> = ({
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
+                  boxShadow: '0 0 0 rgba(59, 130, 246, 0)'
+                }}
+                whileHover={{
+                  boxShadow: '0 0 15px rgba(59, 130, 246, 0.5)',
+                  backgroundColor: 'rgba(59, 130, 246, 0.2)'
                 }}
               >
                 <ShieldCheck size={20} />
-              </div>
+              </motion.div>
               <div>
                 <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.2rem' }}>
                   {sig.headline}
@@ -81,10 +124,10 @@ export const TrustSignalStrip: React.FC<TrustSignalStripProps> = ({
                   {sig.subtext}
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
-    </section>
+    </motion.section>
   );
 };

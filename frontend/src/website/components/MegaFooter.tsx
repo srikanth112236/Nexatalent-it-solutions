@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Send, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { motionTokens } from '../../shared/motion/motionTokens';
 
 export const MegaFooter: React.FC = () => {
   const [newsletterEmail, setNewsletterEmail] = useState('');
@@ -13,6 +15,19 @@ export const MegaFooter: React.FC = () => {
     }
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { staggerChildren: 0.1, delayChildren: 0.2 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: motionTokens.duration.standard, ease: motionTokens.ease.standard } }
+  };
+
   return (
     <footer
       style={{
@@ -21,11 +36,19 @@ export const MegaFooter: React.FC = () => {
         padding: '5rem 2rem 3rem 2rem',
         position: 'relative',
         color: 'var(--color-text-secondary)',
+        overflow: 'hidden'
       }}
     >
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <motion.div 
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: '-50px' }}
+        variants={containerVariants}
+        style={{ maxWidth: '1200px', margin: '0 auto', position: 'relative', zIndex: 1 }}
+      >
         {/* Top Newsletter & Dispatch Bar */}
-        <div
+        <motion.div
+          variants={itemVariants}
           style={{
             padding: '2.5rem',
             borderRadius: 'var(--radius-2xl)',
@@ -37,6 +60,7 @@ export const MegaFooter: React.FC = () => {
             flexWrap: 'wrap',
             gap: '2rem',
             marginBottom: '4.5rem',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
           }}
         >
           <div>
@@ -49,7 +73,10 @@ export const MegaFooter: React.FC = () => {
           </div>
 
           {subscribed ? (
-            <div
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={motionTokens.spring.snappy}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -61,10 +88,11 @@ export const MegaFooter: React.FC = () => {
             >
               <CheckCircle2 size={20} />
               <span>Subscription Confirmed. Welcome to the Index.</span>
-            </div>
+            </motion.div>
           ) : (
             <form onSubmit={handleSubscribe} style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <input
+              <motion.input
+                whileFocus={{ scale: 1.02, borderColor: 'var(--color-primary-400)' }}
                 type="email"
                 required
                 placeholder="engineering.leader@company.com"
@@ -79,9 +107,12 @@ export const MegaFooter: React.FC = () => {
                   fontSize: '0.875rem',
                   minWidth: '280px',
                   outline: 'none',
+                  transition: 'border-color 0.2s'
                 }}
               />
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 type="submit"
                 style={{
                   display: 'flex',
@@ -99,10 +130,10 @@ export const MegaFooter: React.FC = () => {
               >
                 <span>Subscribe</span>
                 <Send size={14} />
-              </button>
+              </motion.button>
             </form>
           )}
-        </div>
+        </motion.div>
 
         {/* 5-Column Mega Navigation */}
         <div
@@ -114,79 +145,79 @@ export const MegaFooter: React.FC = () => {
           }}
         >
           {/* Col 1: Solutions */}
-          <div>
+          <motion.div variants={itemVariants}>
             <h4 style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--color-text)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1.25rem' }}>
               Solutions
             </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
-              <li><Link to="/solutions/contingent" style={{ color: 'inherit', textDecoration: 'none' }}>Contingent Search</Link></li>
-              <li><Link to="/solutions/retained" style={{ color: 'inherit', textDecoration: 'none' }}>Retained Executive Search</Link></li>
-              <li><Link to="/solutions/gcc" style={{ color: 'inherit', textDecoration: 'none' }}>GCC Turnkey Incubation</Link></li>
-              <li><Link to="/solutions/screening" style={{ color: 'inherit', textDecoration: 'none' }}>Technical Screening as a Service</Link></li>
-              <li><Link to="/employers" style={{ color: 'inherit', textDecoration: 'none' }}>Employer Portal & SLAs</Link></li>
+              {['Contingent Search', 'Retained Executive Search', 'GCC Turnkey Incubation', 'Technical Screening as a Service', 'Employer Portal & SLAs'].map((item, i) => (
+                <motion.li key={i} whileHover={{ x: 5, color: 'var(--color-primary-400)' }} transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}>
+                  <Link to="#" style={{ color: 'inherit', textDecoration: 'none' }}>{item}</Link>
+                </motion.li>
+              ))}
             </ul>
-          </div>
+          </motion.div>
 
           {/* Col 2: Verticals */}
-          <div>
+          <motion.div variants={itemVariants}>
             <h4 style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--color-text)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1.25rem' }}>
               Practices
             </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
-              <li><Link to="/industries/fintech" style={{ color: 'inherit', textDecoration: 'none' }}>FinTech & High Frequency</Link></li>
-              <li><Link to="/industries/ai-ml" style={{ color: 'inherit', textDecoration: 'none' }}>AI & Foundation Models</Link></li>
-              <li><Link to="/industries/cloud-native" style={{ color: 'inherit', textDecoration: 'none' }}>Cloud Native & SRE</Link></li>
-              <li><Link to="/industries/healthtech" style={{ color: 'inherit', textDecoration: 'none' }}>HealthTech & Bio</Link></li>
-              <li><Link to="/industries/automotive" style={{ color: 'inherit', textDecoration: 'none' }}>Automotive & Mobility</Link></li>
+              {['FinTech & High Frequency', 'AI & Foundation Models', 'Cloud Native & SRE', 'HealthTech & Bio', 'Automotive & Mobility'].map((item, i) => (
+                <motion.li key={i} whileHover={{ x: 5, color: 'var(--color-primary-400)' }} transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}>
+                  <Link to="#" style={{ color: 'inherit', textDecoration: 'none' }}>{item}</Link>
+                </motion.li>
+              ))}
             </ul>
-          </div>
+          </motion.div>
 
           {/* Col 3: Hub Locations */}
-          <div>
+          <motion.div variants={itemVariants}>
             <h4 style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--color-text)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1.25rem' }}>
               Global Hubs
             </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
-              <li><Link to="/locations/bangalore" style={{ color: 'inherit', textDecoration: 'none' }}>Bangalore, India</Link></li>
-              <li><Link to="/locations/hyderabad" style={{ color: 'inherit', textDecoration: 'none' }}>Hyderabad, India</Link></li>
-              <li><Link to="/locations/pune" style={{ color: 'inherit', textDecoration: 'none' }}>Pune, India</Link></li>
-              <li><Link to="/locations/london" style={{ color: 'inherit', textDecoration: 'none' }}>London, UK</Link></li>
-              <li><Link to="/locations/san-francisco" style={{ color: 'inherit', textDecoration: 'none' }}>San Francisco, US</Link></li>
-              <li><Link to="/jobs?location=remote" style={{ color: 'inherit', textDecoration: 'none' }}>Global Asynchronous Remote</Link></li>
+              {['Bangalore, India', 'Hyderabad, India', 'Pune, India', 'London, UK', 'San Francisco, US', 'Global Asynchronous Remote'].map((item, i) => (
+                <motion.li key={i} whileHover={{ x: 5, color: 'var(--color-primary-400)' }} transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}>
+                  <Link to="#" style={{ color: 'inherit', textDecoration: 'none' }}>{item}</Link>
+                </motion.li>
+              ))}
             </ul>
-          </div>
+          </motion.div>
 
           {/* Col 4: Platform & Portals */}
-          <div>
+          <motion.div variants={itemVariants}>
             <h4 style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--color-text)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1.25rem' }}>
               Platform Portals
             </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
-              <li><Link to="/portals/employer" style={{ color: 'inherit', textDecoration: 'none' }}>Employer Client Portal</Link></li>
-              <li><Link to="/portals/candidate" style={{ color: 'inherit', textDecoration: 'none' }}>Candidate Passport</Link></li>
-              <li><Link to="/portals/recruiter" style={{ color: 'inherit', textDecoration: 'none' }}>Recruiter Workspace</Link></li>
-              <li><Link to="/portals/superadmin" style={{ color: 'inherit', textDecoration: 'none' }}>SuperAdmin Console</Link></li>
-              <li><Link to="/components" style={{ color: 'inherit', textDecoration: 'none' }}>Component Library (All 40)</Link></li>
+              {['Employer Client Portal', 'Candidate Passport', 'Recruiter Workspace', 'SuperAdmin Console', 'Component Library (All 40)'].map((item, i) => (
+                <motion.li key={i} whileHover={{ x: 5, color: 'var(--color-primary-400)' }} transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}>
+                  <Link to="#" style={{ color: 'inherit', textDecoration: 'none' }}>{item}</Link>
+                </motion.li>
+              ))}
             </ul>
-          </div>
+          </motion.div>
 
           {/* Col 5: Company & Compliance */}
-          <div>
+          <motion.div variants={itemVariants}>
             <h4 style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--color-text)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1.25rem' }}>
               Trust & Legal
             </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
-              <li><Link to="/case-studies" style={{ color: 'inherit', textDecoration: 'none' }}>Client Case Studies</Link></li>
-              <li><Link to="/privacy" style={{ color: 'inherit', textDecoration: 'none' }}>Candidate Privacy Charter</Link></li>
-              <li><Link to="/terms" style={{ color: 'inherit', textDecoration: 'none' }}>Service Level Agreement (SLA)</Link></li>
-              <li><Link to="/security" style={{ color: 'inherit', textDecoration: 'none' }}>SOC-2 Type II Attestation</Link></li>
-              <li><Link to="/contact" style={{ color: 'inherit', textDecoration: 'none' }}>Escalation & Support</Link></li>
+              {['Client Case Studies', 'Candidate Privacy Charter', 'Service Level Agreement (SLA)', 'SOC-2 Type II Attestation', 'Escalation & Support'].map((item, i) => (
+                <motion.li key={i} whileHover={{ x: 5, color: 'var(--color-primary-400)' }} transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}>
+                  <Link to="#" style={{ color: 'inherit', textDecoration: 'none' }}>{item}</Link>
+                </motion.li>
+              ))}
             </ul>
-          </div>
+          </motion.div>
         </div>
 
         {/* Bottom Bar */}
-        <div
+        <motion.div
+          variants={itemVariants}
           style={{
             paddingTop: '2rem',
             borderTop: '1px solid var(--color-border)',
@@ -208,7 +239,11 @@ export const MegaFooter: React.FC = () => {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--color-success)' }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--color-success)' }} />
+              <motion.div 
+                animate={{ opacity: [1, 0.4, 1] }} 
+                transition={{ duration: 2, repeat: Infinity }}
+                style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--color-success)', boxShadow: '0 0 8px var(--color-success)' }} 
+              />
               <span>SLA Core Systems Operational (99.98%)</span>
             </div>
             <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -216,8 +251,8 @@ export const MegaFooter: React.FC = () => {
               ISO 27001 Certified
             </span>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </footer>
   );
 };

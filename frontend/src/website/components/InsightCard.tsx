@@ -1,6 +1,8 @@
 import React from 'react';
 import { Clock, ArrowUpRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { motionTokens } from '../../shared/motion/motionTokens';
 
 export interface InsightCardProps {
   id: string;
@@ -31,7 +33,12 @@ export const InsightCard: React.FC<InsightCardProps> = ({
   featured = false,
 }) => {
   return (
-    <article
+    <motion.article
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      viewport={{ once: true, margin: '-50px' }}
+      transition={{ duration: motionTokens.duration.standard, ease: motionTokens.ease.standard }}
+      whileHover={{ y: -6, scale: 1.015 }}
       style={{
         borderRadius: 'var(--radius-xl)',
         backgroundColor: 'var(--color-surface)',
@@ -42,13 +49,27 @@ export const InsightCard: React.FC<InsightCardProps> = ({
         justifyContent: 'space-between',
         position: 'relative',
         boxShadow: 'var(--shadow-sm)',
-        transition: 'all 0.25s ease',
+        transition: 'box-shadow 0.25s ease, border-color 0.25s ease',
+      }}
+      onHoverStart={(e) => {
+        const target = e.currentTarget as HTMLElement;
+        target.style.boxShadow = '0 10px 30px -10px rgba(59, 130, 246, 0.3)';
+        target.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+      }}
+      onHoverEnd={(e) => {
+        const target = e.currentTarget as HTMLElement;
+        target.style.boxShadow = 'var(--shadow-sm)';
+        target.style.borderColor = featured ? 'rgba(59, 130, 246, 0.4)' : 'var(--color-border)';
       }}
     >
       <div>
         {/* Category & Read Time */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <span
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', overflow: 'hidden' }}>
+          <motion.span
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ ...motionTokens.spring.gentle, delay: 0.1 }}
             style={{
               fontSize: '0.75rem',
               fontWeight: 700,
@@ -58,8 +79,12 @@ export const InsightCard: React.FC<InsightCardProps> = ({
             }}
           >
             {category}
-          </span>
-          <div
+          </motion.span>
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: motionTokens.duration.standard, delay: 0.2 }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -70,7 +95,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
           >
             <Clock size={12} />
             <span>{readTime}</span>
-          </div>
+          </motion.div>
         </div>
 
         {/* Title */}
@@ -145,12 +170,18 @@ export const InsightCard: React.FC<InsightCardProps> = ({
             alignItems: 'center',
             color: 'var(--color-primary-400)',
             textDecoration: 'none',
+            overflow: 'hidden',
           }}
           aria-label="Read article"
         >
-          <ArrowUpRight size={18} />
+          <motion.div
+            whileHover={{ x: 4, y: -4 }}
+            transition={motionTokens.spring.snappy}
+          >
+            <ArrowUpRight size={18} />
+          </motion.div>
         </Link>
       </div>
-    </article>
+    </motion.article>
   );
 };
