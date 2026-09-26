@@ -1,51 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Sparkles, Layers, ArrowUp, Activity, CheckCircle2 } from 'lucide-react';
-import {
-  AnimatedHero,
-  SplitHero,
-  VideoHero,
-  EmployerCandidateSwitcher,
-  RecruitmentWorkflow,
-  SolutionCardGrid,
-  IndustryCardGrid,
-  LogoMarquee,
-  MetricsCounter,
-  InteractiveTalentPipeline,
-  PortalPreview,
-  DashboardShowcase,
-  CaseStudyCard,
-  CaseStudyResultPanel,
-  JobCard,
-  FeaturedJobsCarousel,
-  IndustrySpotlight,
-  Testimonial,
-  FAQAccordion,
-  ResourceCard,
-  InsightCard,
-  ProcessTimeline,
-  ProcessStepper,
-  CTASection,
-  ContactForm,
-  HiringRequirementForm,
-  CandidateProfileCTA,
-  JobSearchInterface,
-  JobFilterDrawer,
-  LocationExplorer,
-  IndustryExplorer,
-  BeforeAfterSection,
-  BentoContentGrid,
-  ScrollStorySection,
-  HorizontalScrollGallery,
-  FloatingCTA,
-  TrustSignalStrip,
-  ServiceComparison,
-  RecruitmentJourneyMap,
-  MegaFooter,
-} from '../components';
+import React, { useEffect, useState } from 'react';
+import { motion, useScroll, useSpring } from 'framer-motion';
+import { 
+  Sparkles, 
+  ArrowUp, 
+  Zap, 
+  CheckCircle2, 
+  Code2
+} from 'lucide-react';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+// Import all 40 light-theme modern components
 import {
   LightHeroZoomReveal,
   LightHeroParallaxImage,
+  LightLogoTicker,
+  LightMetricsCounter,
   LightStackedCards,
   LightTwoColumnPinnedStory,
   LightHorizontalStory,
@@ -63,88 +32,86 @@ import {
   LightScrollSnappingStory,
   LightBackgroundGridSpotlight,
   LightMagneticCardAccordion,
-  LightFinalCTAExpansion,
+  LightBeforeAfterMatrix,
+  LightBentoArchitecture,
+  LightJobMandatesSearch,
+  LightJobCardShowcase,
+  LightFeaturedJobsCarousel,
+  LightCaseStudyMaster,
+  LightCaseStudyResultSplit,
+  LightIndustryPracticeGrid,
+  LightIndustrySpotlight,
+  LightLocationExplorer,
+  LightCandidateProfileDrop,
+  LightHiringIntakeForm,
+  LightDirectContactSection,
+  LightFAQAccordion,
+  LightSalaryResourceCard,
+  LightEditorialInsightCard,
+  LightServiceTierComparison,
+  LightTrustSignalStrip,
+  LightFinalCTAExpansion
 } from '../components/light-motion';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-interface SectionHeaderProps {
-  number: string;
+interface SectionBannerProps {
+  index: number;
+  id: string;
   name: string;
-  engine: string;
+  tech: string;
   description: string;
 }
 
-const ComponentHeader: React.FC<SectionHeaderProps> = ({ number, name, engine, description }) => (
-  <div
-    style={{
-      padding: '1.25rem 2rem',
-      backgroundColor: 'rgba(15, 23, 42, 0.85)',
-      backdropFilter: 'blur(12px)',
-      borderBottom: '1px solid var(--color-border)',
-      borderTop: '1px solid rgba(255, 255, 255, 0.05)',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      flexWrap: 'wrap',
-      gap: '1rem',
-      zIndex: 10,
-      position: 'relative',
-    }}
+const LightSectionDivider: React.FC<SectionBannerProps> = ({ index, id, name, tech, description }) => (
+  <div 
+    id={id}
+    className="w-full bg-slate-100/70 border-y border-slate-200/80 px-6 py-3.5 backdrop-blur-md sticky top-0 z-30 flex flex-wrap items-center justify-between gap-3 text-xs"
   >
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-      <span
-        style={{
-          fontSize: '0.8125rem',
-          fontWeight: 800,
-          fontFamily: 'monospace',
-          color: 'var(--color-primary-400)',
-          backgroundColor: 'rgba(59, 130, 246, 0.12)',
-          border: '1px solid rgba(59, 130, 246, 0.3)',
-          padding: '0.2rem 0.6rem',
-          borderRadius: 'var(--radius-sm)',
-        }}
-      >
-        {number}
+    <div className="flex items-center gap-3">
+      <span className="font-mono font-extrabold px-2.5 py-0.5 rounded-md bg-blue-600 text-white text-[11px] shadow-sm">
+        {String(index).padStart(2, '0')} / 40
       </span>
-      <div>
-        <h3 style={{ fontSize: '1.0625rem', fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>
-          {name}
-        </h3>
-        <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', margin: '0.15rem 0 0 0' }}>
-          {description}
-        </p>
-      </div>
+      <h3 className="font-bold text-slate-800 text-sm tracking-tight m-0">
+        {name}
+      </h3>
+      <span className="hidden md:inline text-slate-400">•</span>
+      <span className="hidden md:inline text-slate-500 font-medium">
+        {description}
+      </span>
     </div>
 
-    <span
-      style={{
-        fontSize: '0.75rem',
-        fontWeight: 700,
-        color: '#a855f7',
-        backgroundColor: 'rgba(168, 85, 247, 0.12)',
-        border: '1px solid rgba(168, 85, 247, 0.3)',
-        padding: '0.25rem 0.75rem',
-        borderRadius: '9999px',
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '0.35rem',
-      }}
-    >
-      <Activity size={12} />
-      {engine}
-    </span>
+    <div className="flex items-center gap-2">
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-slate-200 text-slate-700 font-semibold text-[11px] shadow-xs">
+        <Zap className="w-3 h-3 text-blue-600" />
+        {tech}
+      </span>
+    </div>
   </div>
 );
 
 export const SampleShowcase: React.FC = () => {
-  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
 
   useEffect(() => {
-    // Refresh ScrollTrigger calculations after initial paint to ensure all sticky/pinned offsets calculate accurately
+    // Refresh GSAP ScrollTrigger after mount and layout settlement
     const timer = setTimeout(() => {
       ScrollTrigger.refresh();
-    }, 500);
-    return () => clearTimeout(timer);
+    }, 600);
+
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   const scrollToTop = () => {
@@ -152,834 +119,642 @@ export const SampleShowcase: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', position: 'relative' }}>
-      {/* Top Hero / Meta Banner */}
-      <section
-        style={{
-          padding: '5rem 2rem 4rem 2rem',
-          borderBottom: '1px solid var(--color-border)',
-          background: 'radial-gradient(ellipse at 50% 0%, rgba(59, 130, 246, 0.18) 0%, rgba(10, 15, 29, 0.95) 75%)',
-          position: 'relative',
-          overflow: 'hidden',
-          textAlign: 'center',
-        }}
-      >
-        <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+    <div className="min-h-screen bg-white text-slate-900 antialiased selection:bg-blue-100 selection:text-blue-900">
+      
+      {/* Top Reading Progress Bar */}
+      <motion.div
+        className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 origin-left z-50"
+        style={{ scaleX }}
+      />
+
+      {/* Hero Showcase Header */}
+      <header className="relative bg-gradient-to-b from-blue-50/60 via-white to-slate-50 pt-28 pb-20 px-6 border-b border-slate-200 overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-gradient-to-r from-blue-200/20 via-indigo-200/20 to-emerald-200/20 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-5xl mx-auto text-center relative z-10">
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.4rem 1.1rem',
-              borderRadius: '9999px',
-              backgroundColor: 'rgba(59, 130, 246, 0.12)',
-              border: '1px solid rgba(59, 130, 246, 0.35)',
-              fontSize: '0.8125rem',
-              fontWeight: 700,
-              color: 'var(--color-primary-400)',
-              marginBottom: '1.5rem',
-            }}
+            transition={{ duration: 0.4 }}
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold mb-6 shadow-xs"
           >
-            <Sparkles size={15} />
-            NexaTalent Complete Animation & Motion System Showcase
+            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+            <span>NexaTalent Production Motion Showcase • Complete 40 Components</span>
           </motion.div>
 
           <motion.h1
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            style={{
-              fontSize: 'clamp(2.25rem, 5vw, 3.75rem)',
-              fontWeight: 900,
-              lineHeight: 1.15,
-              letterSpacing: '-0.03em',
-              marginBottom: '1.25rem',
-            }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="text-4xl sm:text-6xl font-black text-slate-900 tracking-tight leading-[1.1] mb-6"
           >
-            All 40 Animated Components
+            All 40 Modern Light-Theme <br className="hidden sm:inline" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600">
+              Animated Sections Showcase
+            </span>
           </motion.h1>
 
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            style={{
-              fontSize: 'clamp(1rem, 2vw, 1.25rem)',
-              color: 'var(--color-text-secondary)',
-              lineHeight: 1.6,
-              maxWidth: '780px',
-              margin: '0 auto 2.5rem auto',
-            }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed mb-10"
           >
-            Pure, unconstrained sequential presentation powered by <strong>Framer Motion</strong>,{' '}
-            <strong>GSAP ScrollTrigger</strong> pinned storytelling, <strong>Lenis</strong> smooth scrolling, and{' '}
-            <strong>Aceternity</strong>-grade dark design aesthetics.
+            Pure, seamless sequential presentation with consistent typography, crisp slate-900 hierarchy, 
+            Lenis smooth scrolling, one-side sticky pinned timelines, parallax hero imagery, and scrubbed storytelling.
           </motion.p>
 
-          {/* Engine Highlights Strip */}
+          {/* Key Feature Badges */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '1.5rem',
-              padding: '1.25rem 2rem',
-              borderRadius: 'var(--radius-xl)',
-              backgroundColor: 'rgba(15, 23, 42, 0.6)',
-              border: '1px solid var(--color-border)',
-              boxShadow: 'var(--shadow-lg)',
-            }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 p-4 rounded-2xl bg-white border border-slate-200/80 shadow-lg shadow-slate-200/40 max-w-4xl mx-auto"
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', fontWeight: 600 }}>
-              <CheckCircle2 size={16} color="var(--color-success)" />
-              <span>Lenis Smooth Scroll Active</span>
+            <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <span>40 Complete Sections</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', fontWeight: 600 }}>
-              <CheckCircle2 size={16} color="var(--color-success)" />
-              <span>Framer Motion 13 Spring & Stagger</span>
+            <div className="w-1 h-1 rounded-full bg-slate-300 hidden sm:block" />
+            <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <span>100% Light Theme</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', fontWeight: 600 }}>
-              <CheckCircle2 size={16} color="var(--color-success)" />
-              <span>GSAP ScrollTrigger Pin & Horizontal Scrub</span>
+            <div className="w-1 h-1 rounded-full bg-slate-300 hidden sm:block" />
+            <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <span>Sticky Pinning & Parallax</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', fontWeight: 600 }}>
-              <Layers size={16} color="var(--color-primary-400)" />
-              <span style={{ color: 'var(--color-primary-400)', fontWeight: 700 }}>40/40 Components Operational</span>
+            <div className="w-1 h-1 rounded-full bg-slate-300 hidden sm:block" />
+            <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <span>GSAP + Lenis + Motion</span>
             </div>
           </motion.div>
         </div>
-      </section>
+      </header>
 
-      {/* Sequential Pure Component Presentation Flow */}
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
+      {/* 40 SEQUENTIAL SECTIONS */}
+      <main className="relative">
 
-        {/* =========================================================================
-            PART 1: NEW SIGNATURE MOTION SHORTLIST (COMPLETE LIGHTER THEME SET)
-            ========================================================================= */}
-        <div style={{ backgroundColor: '#ffffff', borderBottom: '2px solid #e2e8f0', padding: '4rem 2rem 3rem 2rem', textAlign: 'center' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb', padding: '0.35rem 1rem', borderRadius: '9999px', fontSize: '0.8125rem', fontWeight: 800, marginBottom: '0.75rem' }}>
-            <Sparkles size={14} />
-            PART 1 · COMPLETE LIGHTER THEME SUITE
-          </div>
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.03em' }}>
-            Shortlist Motion Patterns in Modern Light Theme
-          </h2>
-          <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '720px', margin: '0.5rem auto 0 auto' }}>
-            A complete set of new, modern, and unique components implementing C01–C10 Core, S01–S10 Signature, and P01–P10 Premium patterns in clean executive light styling.
-          </p>
-        </div>
-
-        {/* 1. LightHeroZoomReveal (Patterns 13 & 14: Center Zoom & Focus -> Peripheral Reveal) */}
-        <section id="light-hero">
+        {/* 01: Hero Center Zoom & Content Reveal */}
+        <section id="sec-01">
+          <LightSectionDivider
+            index={1}
+            id="bar-01"
+            name="Center Zoom + Content Reveal"
+            tech="GSAP ScrollTrigger + Motion"
+            description="Core technology visual zooms to full width revealing platform capabilities"
+          />
           <LightHeroZoomReveal />
         </section>
 
-        {/* 2. LightHeroParallaxImage (Hero Parallax Sections & Parallax Image Scrolling) */}
-        <section id="light-hero-parallax">
+        {/* 02: Hero Parallax Image & Depth Scrub */}
+        <section id="sec-02">
+          <LightSectionDivider
+            index={2}
+            id="bar-02"
+            name="Hero Parallax Image & Depth Scrub"
+            tech="GSAP Parallax Scrub"
+            description="Multi-layer optical depth translation with floating metric telemetry cards"
+          />
           <LightHeroParallaxImage />
         </section>
 
-        {/* 3. LightCurtainReveal (Patterns 17 & 18: Horizontal & Vertical Curtain Reveals) */}
-        <section id="light-curtain">
-          <LightCurtainReveal />
+        {/* 03: Client Partnerships Infinite Speed Ticker */}
+        <section id="sec-03">
+          <LightSectionDivider
+            index={3}
+            id="bar-03"
+            name="Enterprise Client Logo Marquee"
+            tech="Continuous CSS GPU Transform"
+            description="Infinite marquee ticker featuring Tier-1 global tech and GCC partners"
+          />
+          <LightLogoTicker />
         </section>
 
-        {/* 4. LightSplitScreenConvergence (Patterns 19 & 20: Split-Screen Convergence & Divergence) */}
-        <section id="light-split-screen">
-          <LightSplitScreenConvergence />
+        {/* 04: Verified Placement Metrics Counter */}
+        <section id="sec-04">
+          <LightSectionDivider
+            index={4}
+            id="bar-04"
+            name="Verified Scale Metrics Counter"
+            tech="requestAnimationFrame Engine"
+            description="Live counted quantitative achievements triggered on viewport entry"
+          />
+          <LightMetricsCounter />
         </section>
 
-        {/* 5. LightStackedCards (Patterns 22 & C08: Card Collapse / Stacked Cards on Scroll) */}
-        <section id="light-stacked-cards">
+        {/* 05: Stacked Cards Depth Reveal */}
+        <section id="sec-05">
+          <LightSectionDivider
+            index={5}
+            id="bar-05"
+            name="Stacked Cards on Scroll"
+            tech="GSAP Scrub + Sticky Offset"
+            description="Layered card stacking with dynamic scale and opacity attenuation"
+          />
           <LightStackedCards />
         </section>
 
-        {/* 6. LightTwoColumnPinnedStory (Patterns 23 & 24: One-Side Sticky Scroll Pin & Visual Transforms) */}
-        <section id="light-pinned-story">
+        {/* 06: One-Side Sticky Pin Timeline Scroll */}
+        <section id="sec-06">
+          <LightSectionDivider
+            index={6}
+            id="bar-06"
+            name="One-Side Sticky Pin Timeline Story"
+            tech="CSS Sticky + ScrollTrigger"
+            description="Fixed left executive narrative while right execution milestones scroll"
+          />
           <LightTwoColumnPinnedStory />
         </section>
 
-        {/* 7. LightHorizontalStory (Patterns 40 & 41: Horizontal Full View Section on Scroll & Vertical-Horizontal-Vertical) */}
-        <section id="light-horizontal-story">
+        {/* 07: Horizontal Full View Section on Scroll */}
+        <section id="sec-07">
+          <LightSectionDivider
+            index={7}
+            id="bar-07"
+            name="Horizontal Full View Section"
+            tech="GSAP Horizontal Pinned Scrub"
+            description="Virtual horizontal track translation transforming vertical scroll into lateral pan"
+          />
           <LightHorizontalStory />
         </section>
 
-        {/* 8. LightProgressiveWorkflow (Patterns 28 & 29: Progressive Workflow Build & Dynamic SVG Line Drawing) */}
-        <section id="light-progressive-workflow">
+        {/* 08: Progressive SVG Line Drawing Journey */}
+        <section id="sec-08">
+          <LightSectionDivider
+            index={8}
+            id="bar-08"
+            name="Progressive SVG Line Drawing"
+            tech="Framer Motion PathLength Scrub"
+            description="Continuous vector stroke tracing 4 calibrated recruitment stages"
+          />
           <LightProgressiveWorkflow />
         </section>
 
-        {/* 9. LightInteractiveNetwork (Patterns 30 & 31: Node Activation & Orbiting Information) */}
-        <section id="light-interactive-network">
+        {/* 09: Interactive Canvas Talent Network */}
+        <section id="sec-09">
+          <LightSectionDivider
+            index={9}
+            id="bar-09"
+            name="Interactive Talent Node Network"
+            tech="HTML5 Canvas 2D + Physics"
+            description="Interactive 60fps force-directed graph connecting executive skill clusters"
+          />
           <LightInteractiveNetwork />
         </section>
 
-        {/* 10. LightRadialExpansion (Patterns 32 & 33: Radial Expansion & Radial Collapse) */}
-        <section id="light-radial-expansion">
-          <LightRadialExpansion />
-        </section>
-
-        {/* 11. LightTextToInterface (Patterns 34 & 35: Text to Interface Transformation & UI Fragment Assembly) */}
-        <section id="light-text-interface">
-          <LightTextToInterface />
-        </section>
-
-        {/* 12. LightBlurTransition (Patterns 36 & 37: Progressive Blur to Sharp & Section Blur Transition) */}
-        <section id="light-blur-transition">
-          <LightBlurTransition />
-        </section>
-
-        {/* 13. LightDataHumanTransformation (Patterns 38 & 39: Image to Data & Data to Human Transformation) */}
-        <section id="light-data-human">
-          <LightDataHumanTransformation />
-        </section>
-
-        {/* 14. LightScrollSnappingStory (Patterns 42 & 43: Scroll Snapping Story & Progress Color Transformation) */}
-        <section id="light-scroll-snapping">
-          <LightScrollSnappingStory />
-        </section>
-
-        {/* 15. LightBackgroundGridSpotlight (Patterns 44 & 45: Background Grid Transformation & Cursor Spotlight Follow) */}
-        <section id="light-grid-spotlight">
-          <LightBackgroundGridSpotlight />
-        </section>
-
-        {/* 16. LightMagneticCardAccordion (Patterns 46, 47, 48 & 49: Magnetic Cards, Hover Expand & Accordion Visual Transforms) */}
-        <section id="light-magnetic-accordion">
-          <LightMagneticCardAccordion />
-        </section>
-
-        {/* 17. LightDashboardAssembly (Patterns 25, 26, 27: Scroll-Scrubbed Dashboard Assembly & Disassembly) */}
-        <section id="light-dashboard-assembly">
+        {/* 10: Scroll-Scrubbed Dashboard Assembly */}
+        <section id="sec-10">
+          <LightSectionDivider
+            index={10}
+            id="bar-10"
+            name="Scroll-Scrubbed Dashboard Assembly"
+            tech="GSAP Staggered Assembly"
+            description="Analytics UI fragments converge seamlessly from perimeter into high-fidelity console"
+          />
           <LightDashboardAssembly />
         </section>
 
-        {/* 18. LightCardExpandSection (Pattern 21: Card Expansion to Full Section) */}
-        <section id="light-card-expand">
+        {/* 11: Modal Card Expansion with Deep Specs */}
+        <section id="sec-11">
+          <LightSectionDivider
+            index={11}
+            id="bar-11"
+            name="Full Card Expansion on Click"
+            tech="Framer Motion LayoutId"
+            description="Smooth morphing from grid card into high-fidelity specification modal"
+          />
           <LightCardExpandSection />
         </section>
 
-        {/* 19. LightPerspectiveCorridor (Patterns 15 & 16: Perspective Corridor & Depth Tunnel / Z-Axis Scroll) */}
-        <section id="light-perspective-corridor">
+        {/* 12: 3D Perspective Depth Corridor */}
+        <section id="sec-12">
+          <LightSectionDivider
+            index={12}
+            id="bar-12"
+            name="3D Perspective Depth Corridor"
+            tech="CSS 3D Transform + Scroll Scrub"
+            description="Z-space depth corridor simulating an architectural walkthrough"
+          />
           <LightPerspectiveCorridor />
         </section>
 
-        {/* 20. LightFinalCTAExpansion (Pattern 50: Final CTA Radial & Scale Expansion) */}
-        <section id="light-final-cta">
+        {/* 13: Horizontal & Vertical Curtain Reveals */}
+        <section id="sec-13">
+          <LightSectionDivider
+            index={13}
+            id="bar-13"
+            name="Dual-Axis Curtain Reveal"
+            tech="Clip-Path + ScrollTrigger"
+            description="Symmetric mask opening unveiling strategic talent infrastructure"
+          />
+          <LightCurtainReveal />
+        </section>
+
+        {/* 14: Split-Screen Dual Convergence */}
+        <section id="sec-14">
+          <LightSectionDivider
+            index={14}
+            id="bar-14"
+            name="Split-Screen Convergence & Divergence"
+            tech="GSAP Dual Translate"
+            description="Bilateral panels slide inward to lock into an integrated architecture view"
+          />
+          <LightSplitScreenConvergence />
+        </section>
+
+        {/* 15: Radial Orbital Node Expansion */}
+        <section id="sec-15">
+          <LightSectionDivider
+            index={15}
+            id="bar-15"
+            name="Radial Expansion & Collapse"
+            tech="Framer Motion Trigonometric Scatter"
+            description="Central nucleus bursting into peripheral specialization nodes on trigger"
+          />
+          <LightRadialExpansion />
+        </section>
+
+        {/* 16: Text Specification to UI Fragment Assembly */}
+        <section id="sec-16">
+          <LightSectionDivider
+            index={16}
+            id="bar-16"
+            name="Text to Interface Assembly"
+            tech="Morphing DOM Fragments"
+            description="Raw candidate requirements dynamically crystallize into verified UI components"
+          />
+          <LightTextToInterface />
+        </section>
+
+        {/* 17: Blur to Sharp Focus Transition */}
+        <section id="sec-17">
+          <LightSectionDivider
+            index={17}
+            id="bar-17"
+            name="Blur to Sharp Optical Reveal"
+            tech="SVG Blur Filter + Scroll"
+            description="Out-of-focus background imagery resolving to pixel-crisp executive precision"
+          />
+          <LightBlurTransition />
+        </section>
+
+        {/* 18: Algorithmic Data to Human Executive Transformation */}
+        <section id="sec-18">
+          <LightSectionDivider
+            index={18}
+            id="bar-18"
+            name="Data to Human Transformation"
+            tech="Dual-State Crossfade Morph"
+            description="Abstract telemetry data stream dissolving into verified leadership profile"
+          />
+          <LightDataHumanTransformation />
+        </section>
+
+        {/* 19: Velocity Scroll Snapping & Atmospheric Shift */}
+        <section id="sec-19">
+          <LightSectionDivider
+            index={19}
+            id="bar-19"
+            name="Scroll Snapping & Atmospheric Shift"
+            tech="CSS Scroll-Snap + Interpolation"
+            description="Precision viewport snapping with subtle background tint modulation"
+          />
+          <LightScrollSnappingStory />
+        </section>
+
+        {/* 20: Interactive Grid & Cursor Spotlight Follow */}
+        <section id="sec-20">
+          <LightSectionDivider
+            index={20}
+            id="bar-20"
+            name="Interactive Grid & Cursor Spotlight"
+            tech="Radial Gradient Pointer Event"
+            description="Aceternity-style mouse-following radiant glow illuminating underlying matrix"
+          />
+          <LightBackgroundGridSpotlight />
+        </section>
+
+        {/* 21: Spring-Tethered Magnetic Cards & Accordion */}
+        <section id="sec-21">
+          <LightSectionDivider
+            index={21}
+            id="bar-21"
+            name="Magnetic Cards & Visual Accordion"
+            tech="Physics Spring Hover + Accordion"
+            description="Cursor pull deflection with accordion expansion for multi-vertical exploration"
+          />
+          <LightMagneticCardAccordion />
+        </section>
+
+        {/* 22: Conventional vs NexaTalent Matrix */}
+        <section id="sec-22">
+          <LightSectionDivider
+            index={22}
+            id="bar-22"
+            name="Before & After Precision Matrix"
+            tech="Interactive Column Comparison"
+            description="Direct comparison between traditional staffing agencies and NexaTalent GCC pods"
+          />
+          <LightBeforeAfterMatrix />
+        </section>
+
+        {/* 23: Asymmetric 4-Cell Light Bento Grid Architecture */}
+        <section id="sec-23">
+          <LightSectionDivider
+            index={23}
+            id="bar-23"
+            name="Asymmetric Bento Architecture"
+            tech="CSS Grid + Stagger Entrance"
+            description="Modern 4-cell layout showcasing AI matching, GCC scale, and telemetry"
+          />
+          <LightBentoArchitecture />
+        </section>
+
+        {/* 24: Live Search Mandate Filter with Active Pills */}
+        <section id="sec-24">
+          <LightSectionDivider
+            index={24}
+            id="bar-24"
+            name="Live Mandates Search Engine"
+            tech="Client-side React State Filter"
+            description="Real-time text query and category filtering across open enterprise mandates"
+          />
+          <LightJobMandatesSearch />
+        </section>
+
+        {/* 25: Live Verified Leadership Mandate Cards */}
+        <section id="sec-25">
+          <LightSectionDivider
+            index={25}
+            id="bar-25"
+            name="Verified Mandate Cards Showcase"
+            tech="Interactive State + Modal Intent"
+            description="Rich job mandate cards with compensation tags, tech stacks, and quick apply"
+          />
+          <LightJobCardShowcase />
+        </section>
+
+        {/* 26: Verified Executive Roles Interactive Carousel */}
+        <section id="sec-26">
+          <LightSectionDivider
+            index={26}
+            id="bar-26"
+            name="Leadership Spotlight Carousel"
+            tech="Framer Motion Drag & Navigation"
+            description="Horizontal sliding carousel spotlighting confidential VP and Director roles"
+          />
+          <LightFeaturedJobsCarousel />
+        </section>
+
+        {/* 27: Quantified 75-Day GCC Case Study */}
+        <section id="sec-27">
+          <LightSectionDivider
+            index={27}
+            id="bar-27"
+            name="GCC Turnkey Outcome Master"
+            tech="Metric Cards + Quantified ROI"
+            description="Documented buildout of 120-engineer capability center in 75 days"
+          />
+          <LightCaseStudyMaster />
+        </section>
+
+        {/* 28: Challenge vs Solution Blueprint */}
+        <section id="sec-28">
+          <LightSectionDivider
+            index={28}
+            id="bar-28"
+            name="Challenge vs Solution Architecture"
+            tech="Dual Column Structural Contrast"
+            description="Side-by-side diagnosis of bottlenecked recruitment vs calibrated execution"
+          />
+          <LightCaseStudyResultSplit />
+        </section>
+
+        {/* 29: 6 Specialized Technical Domain Practice Cards */}
+        <section id="sec-29">
+          <LightSectionDivider
+            index={29}
+            id="bar-29"
+            name="Specialized Vertical Practice Grid"
+            tech="6-Card Responsive Grid"
+            description="Deep technical domains including GenAI, Cloud Platform, Quant, and Security"
+          />
+          <LightIndustryPracticeGrid />
+        </section>
+
+        {/* 30: Ultra Low-Latency FinTech & HFT Deep Dive */}
+        <section id="sec-30">
+          <LightSectionDivider
+            index={30}
+            id="bar-30"
+            name="Ultra Low-Latency FinTech Spotlight"
+            tech="Domain Deep-Dive Feature Split"
+            description="Comprehensive analysis of high-frequency trading and low-latency systems hiring"
+          />
+          <LightIndustrySpotlight />
+        </section>
+
+        {/* 31: Strategic Hubs Explorer (Bangalore, London, SF, Hyderabad) */}
+        <section id="sec-31">
+          <LightSectionDivider
+            index={31}
+            id="bar-31"
+            name="Strategic Global Hubs Explorer"
+            tech="Interactive Tabbed Location Matrix"
+            description="Talent density, salary differentials, and legal entities across 4 key technology hubs"
+          />
+          <LightLocationExplorer />
+        </section>
+
+        {/* 32: Drag & Drop Confidential Candidate Intake with NDA */}
+        <section id="sec-32">
+          <LightSectionDivider
+            index={32}
+            id="bar-32"
+            name="Confidential Candidate Profile Drop"
+            tech="Drag & Drop File Upload + NDA"
+            description="Secure career portal for executive engineers and directors with strict privacy"
+          />
+          <LightCandidateProfileDrop />
+        </section>
+
+        {/* 33: 3-Step Enterprise Mandate Configurator with SLA */}
+        <section id="sec-33">
+          <LightSectionDivider
+            index={33}
+            id="bar-33"
+            name="3-Step Enterprise Hiring Configurator"
+            tech="Multi-Step Interactive Form"
+            description="Calibrated scope builder with immediate SLA timeline and pod size estimates"
+          />
+          <LightHiringIntakeForm />
+        </section>
+
+        {/* 34: Direct Practice Lead Advisory Consultation */}
+        <section id="sec-34">
+          <LightSectionDivider
+            index={34}
+            id="bar-34"
+            name="Direct Practice Lead Consultation"
+            tech="Advisory Booking & Direct Intake"
+            description="Direct connection with senior Managing Directors without junior gatekeepers"
+          />
+          <LightDirectContactSection />
+        </section>
+
+        {/* 35: Searchable Enterprise FAQ with Category Filtering */}
+        <section id="sec-35">
+          <LightSectionDivider
+            index={35}
+            id="bar-35"
+            name="Enterprise Knowledge & FAQ Accordion"
+            tech="Smooth Height AnimatePresence"
+            description="Categorized responses addressing SLAs, pricing, guarantees, and vetting rigor"
+          />
+          <LightFAQAccordion />
+        </section>
+
+        {/* 36: Gated 2026 Compensation Guide with Instant Preview */}
+        <section id="sec-36">
+          <LightSectionDivider
+            index={36}
+            id="bar-36"
+            name="2026 Compensation Index & Benchmark"
+            tech="Interactive Table + Gated PDF Lead"
+            description="Real percentile benchmarks (P25 to P90) across 65+ technical specializations"
+          />
+          <LightSalaryResourceCard />
+        </section>
+
+        {/* 37: Thought Leadership Research & Engineering Perspectives */}
+        <section id="sec-37">
+          <LightSectionDivider
+            index={37}
+            id="bar-37"
+            name="Executive Research & Perspectives"
+            tech="Article Cards + Bookmark State"
+            description="Technical papers on GCC structuring, LLM architect evaluations, and equity models"
+          />
+          <LightEditorialInsightCard />
+        </section>
+
+        {/* 38: 3-Tier Commercial Engagement Matrix */}
+        <section id="sec-38">
+          <LightSectionDivider
+            index={38}
+            id="bar-38"
+            name="Commercial Models & Service Tiers"
+            tech="Annual/Flexible Toggle + Pricing Grid"
+            description="Contingent Search vs Retained Executive Pod vs Turnkey BOT Capability Center"
+          />
+          <LightServiceTierComparison />
+        </section>
+
+        {/* 39: SOC2, ISO 27001, GDPR Enterprise Compliance Standards */}
+        <section id="sec-39">
+          <LightSectionDivider
+            index={39}
+            id="bar-39"
+            name="Enterprise Trust & Security Badges"
+            tech="4-Pillar Compliance Grid"
+            description="SOC 2 Type II, ISO 27001, GDPR compliance, and 180-day guarantee warranty"
+          />
+          <LightTrustSignalStrip />
+        </section>
+
+        {/* 40: Dynamic Full-Width Scale Final CTA */}
+        <section id="sec-40">
+          <LightSectionDivider
+            index={40}
+            id="bar-40"
+            name="Final Scale-to-Edge Action Banner"
+            tech="GSAP ScrollTrigger Edge Expand"
+            description="Card container seamlessly expands to full viewport width on final scroll"
+          />
           <LightFinalCTAExpansion />
         </section>
 
-        {/* =========================================================================
-            PART 2: COMPLETE 40-COMPONENT PRODUCTION CATALOG
-            ========================================================================= */}
-        <div style={{ backgroundColor: 'var(--color-surface)', borderTop: '2px solid var(--color-border)', borderBottom: '1px solid var(--color-border)', padding: '4rem 2rem 3rem 2rem', textAlign: 'center' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', backgroundColor: 'rgba(59, 130, 246, 0.12)', border: '1px solid rgba(59, 130, 246, 0.3)', color: 'var(--color-primary-400)', padding: '0.35rem 1rem', borderRadius: '9999px', fontSize: '0.8125rem', fontWeight: 800, marginBottom: '0.75rem' }}>
-            <Layers size={14} />
-            PART 2 · COMPLETE 40-COMPONENT PRODUCTION CATALOG
+      </main>
+
+      {/* Modern Light Theme Footer */}
+      <footer className="bg-slate-900 text-white pt-16 pb-12 border-t border-slate-800">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 pb-12 border-b border-slate-800">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-black text-white text-base">
+                  N
+                </div>
+                <span className="font-extrabold text-xl tracking-tight text-white">NexaTalent</span>
+              </div>
+              <p className="text-slate-400 text-xs leading-relaxed">
+                The premier talent infrastructure and executive search firm for Global Capability Centers, 
+                Tier-1 technology platforms, and high-growth engineering organizations.
+              </p>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-4">Engineering Practices</h4>
+              <ul className="space-y-2 text-xs text-slate-400">
+                <li className="hover:text-white transition-colors cursor-pointer">AI & Machine Learning Infrastructure</li>
+                <li className="hover:text-white transition-colors cursor-pointer">Ultra Low-Latency & Quant Systems</li>
+                <li className="hover:text-white transition-colors cursor-pointer">Cloud Platform & Distributed Systems</li>
+                <li className="hover:text-white transition-colors cursor-pointer">Enterprise Cyber & Cryptographic Security</li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-4">Talent Hubs</h4>
+              <ul className="space-y-2 text-xs text-slate-400">
+                <li className="hover:text-white transition-colors cursor-pointer">Bangalore • Indiranagar & Outer Ring Rd</li>
+                <li className="hover:text-white transition-colors cursor-pointer">Hyderabad • HITEC City & Financial District</li>
+                <li className="hover:text-white transition-colors cursor-pointer">London • Bank & Canary Wharf</li>
+                <li className="hover:text-white transition-colors cursor-pointer">San Francisco • SoMa & Silicon Valley</li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-4">Motion Engineering</h4>
+              <p className="text-xs text-slate-400 leading-relaxed mb-3">
+                All 40 components engineered with pure light design tokens, 60fps Framer Motion springs, and GSAP ScrollTrigger timeline pins.
+              </p>
+              <div className="inline-flex items-center gap-2 text-xs font-mono text-blue-400">
+                <Code2 className="w-4 h-4" />
+                <span>40 of 40 Sections Verified</span>
+              </div>
+            </div>
           </div>
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, color: 'var(--color-text)', letterSpacing: '-0.03em' }}>
-            All 40 Aceternity & 21st.dev Website Components
-          </h2>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: '1.0625rem', maxWidth: '720px', margin: '0.5rem auto 0 auto' }}>
-            Continuous scroll flow of every production component with dedicated motion tags and real-time interaction states.
-          </p>
+
+          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+            <div>
+              © 2026 NexaTalent Inc. All rights reserved. SOC 2 Type II & ISO 27001 Certified.
+            </div>
+            <div className="flex items-center gap-6">
+              <span className="hover:text-slate-300 cursor-pointer">Privacy Notice</span>
+              <span className="hover:text-slate-300 cursor-pointer">Terms of Representation</span>
+              <span className="hover:text-slate-300 cursor-pointer">Security Whitepaper</span>
+            </div>
+          </div>
         </div>
+      </footer>
 
-        {/* 01. AnimatedHero */}
-        <section id="c-01">
-          <ComponentHeader
-            number="01 / 40"
-            name="AnimatedHero"
-            engine="Framer Motion + Radial Ambient Glow"
-            description="Breathing grid rays, spring badge entrance, staggered headline words & magnetic CTA buttons"
-          />
-          <AnimatedHero />
-        </section>
+      {/* Floating Scroll to Top Button */}
+      {showScrollTop && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          onClick={scrollToTop}
+          aria-label="Scroll back to top"
+          className="fixed bottom-8 right-8 z-40 p-3.5 rounded-full bg-blue-600 text-white shadow-xl shadow-blue-600/30 hover:bg-blue-700 transition-all cursor-pointer"
+        >
+          <ArrowUp className="w-5 h-5" />
+        </motion.button>
+      )}
 
-        {/* 02. SplitHero */}
-        <section id="c-02">
-          <ComponentHeader
-            number="02 / 40"
-            name="SplitHero"
-            engine="Framer Motion 3D Tilt Card + Dynamic Progress Bars"
-            description="Split view with mouse-tracking perspective tilt card and live calibrated scorecards"
-          />
-          <SplitHero />
-        </section>
-
-        {/* 03. VideoHero */}
-        <section id="c-03">
-          <ComponentHeader
-            number="03 / 40"
-            name="VideoHero"
-            engine="Framer Motion Ripple Waves + Scale Hover"
-            description="High-production video container with pulsing radial play wave rings and lightbox state"
-          />
-          <VideoHero />
-        </section>
-
-        {/* 04. EmployerCandidateSwitcher */}
-        <section id="c-04">
-          <ComponentHeader
-            number="04 / 40"
-            name="EmployerCandidateSwitcher"
-            engine="Framer Motion layoutId + AnimatePresence Swap"
-            description="Shared element slider pill transitioning context between Employer and Candidate portals"
-          />
-          <EmployerCandidateSwitcher />
-        </section>
-
-        {/* 05. RecruitmentWorkflow */}
-        <section id="c-05">
-          <ComponentHeader
-            number="05 / 40"
-            name="RecruitmentWorkflow"
-            engine="Framer Motion Staggered Cards + layoutId Glow Beam"
-            description="6-stage verified engineering recruitment protocol with active node highlight"
-          />
-          <RecruitmentWorkflow />
-        </section>
-
-        {/* 06. SolutionCardGrid */}
-        <section id="c-06">
-          <ComponentHeader
-            number="06 / 40"
-            name="SolutionCardGrid"
-            engine="Framer Motion Staggered Cascade + Spring Lift Hover"
-            description="Modular technical engagement models with responsive spring hover physics"
-          />
-          <SolutionCardGrid />
-        </section>
-
-        {/* 07. IndustryCardGrid */}
-        <section id="c-07">
-          <ComponentHeader
-            number="07 / 40"
-            name="IndustryCardGrid"
-            engine="3D Cursor Perspective Tilt + Alternating Slide Entrance"
-            description="Sector practices with dynamic cursor position tracking and animated bouncy badges"
-          />
-          <IndustryCardGrid />
-        </section>
-
-        {/* 08. LogoMarquee */}
-        <section id="c-08">
-          <ComponentHeader
-            number="08 / 40"
-            name="LogoMarquee"
-            engine="High-Performance CSS Keyframes Ticker + Blur Entrance"
-            description="Dual counter-scrolling infinite client marquee with micro scale interactions"
-          />
-          <LogoMarquee />
-        </section>
-
-        {/* 09. MetricsCounter */}
-        <section id="c-09">
-          <ComponentHeader
-            number="09 / 40"
-            name="MetricsCounter"
-            engine="requestAnimationFrame Counting Engine + Glassmorphic Glow"
-            description="Viewport-triggered progressive number counting from 0 to target with tabular alignment"
-          />
-          <MetricsCounter />
-        </section>
-
-        {/* 10. InteractiveTalentPipeline */}
-        <section id="c-10">
-          <ComponentHeader
-            number="10 / 40"
-            name="InteractiveTalentPipeline"
-            engine="GSAP ScrollTrigger + Framer Motion layoutId Slider"
-            description="Progressive 5-stage qualification pipeline with animated stroke lines and step highlights"
-          />
-          <InteractiveTalentPipeline />
-        </section>
-
-        {/* 11. PortalPreview */}
-        <section id="c-11">
-          <ComponentHeader
-            number="11 / 40"
-            name="PortalPreview"
-            engine="Framer Motion layoutId Switcher + AnimatePresence Content Swap"
-            description="Interactive preview of Employer, Candidate, and Recruiter workspaces with magnetic CTA"
-          />
-          <PortalPreview />
-        </section>
-
-        {/* 12. DashboardShowcase */}
-        <section id="c-12">
-          <ComponentHeader
-            number="12 / 40"
-            name="DashboardShowcase"
-            engine="Perspective 3D Window Entrance + Breathing Pulse Indicators"
-            description="Browser HUD mockup displaying live candidate SLA telemetry and pipeline metrics"
-          />
-          <DashboardShowcase />
-        </section>
-
-        {/* 13. CaseStudyCard */}
-        <section id="c-13" style={{ padding: '3rem 2rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-          <ComponentHeader
-            number="13 / 40"
-            name="CaseStudyCard"
-            engine="Framer Motion whileInView Entrance + Micro-Stagger"
-            description="Data-dense case outcome card featuring quantified delivery benchmarks and tags"
-          />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '2rem', marginTop: '2rem' }}>
-            <CaseStudyCard
-              client="AlphaFin Global HFT"
-              industry="FinTech & Low Latency Trading"
-              headline="Scaling an India GCC from 0 to 45 Senior Staff Engineers in 75 Days"
-              metrics={[
-                { label: 'Hires Closed', value: '45' },
-                { label: 'Time-to-Hire', value: '18 Days' },
-                { label: 'Retention at 12M', value: '98%' },
-              ]}
-              featured={true}
-            />
-            <CaseStudyCard
-              client="Hyperscale AI Labs"
-              industry="Generative AI & LLM Systems"
-              headline="Building an Elite 12-Person Distributed Inference Systems Pod"
-              metrics={[
-                { label: 'LLM Scientists', value: '12' },
-                { label: 'SLA Delivery', value: '48h' },
-                { label: 'Acceptance Rate', value: '94%' },
-              ]}
-              featured={false}
-            />
-          </div>
-        </section>
-
-        {/* 14. CaseStudyResultPanel */}
-        <section id="c-14">
-          <ComponentHeader
-            number="14 / 40"
-            name="CaseStudyResultPanel"
-            engine="Dual Column Lateral Slide Entrance + Scaled Checkmarks"
-            description="Executive split analysis comparing client technical challenge to deployed squad solution"
-          />
-          <CaseStudyResultPanel />
-        </section>
-
-        {/* 15. JobCard */}
-        <section id="c-15" style={{ padding: '3rem 2rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-          <ComponentHeader
-            number="15 / 40"
-            name="JobCard"
-            engine="Spring Elevation + Magnetic Apply + whileTap Bookmark"
-            description="Verified technical mandate card with priority badges and animated tags"
-          />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '2rem', marginTop: '2rem' }}>
-            <JobCard
-              id="mandate-01"
-              title="Principal Distributed Systems Architect"
-              company="OmniCloud Global"
-              location="Bangalore · Hybrid"
-              type="Full-Time"
-              salary="₹70L - ₹95L + Equity"
-              experience="9+ Years"
-              tags={['Rust', 'Distributed DB', 'Raft', 'eBPF']}
-              postedAt="1 day ago"
-              featured={true}
-              urgent={true}
-            />
-            <JobCard
-              id="mandate-02"
-              title="Staff Machine Learning Platform Lead"
-              company="Foundry Neural Systems"
-              location="Hyderabad · Hybrid"
-              type="Full-Time"
-              salary="₹65L - ₹85L + Equity"
-              experience="7+ Years"
-              tags={['vLLM', 'CUDA', 'Distributed PyTorch', 'Kubernetes']}
-              postedAt="3 hours ago"
-              featured={true}
-              urgent={false}
-            />
-          </div>
-        </section>
-
-        {/* 16. FeaturedJobsCarousel */}
-        <section id="c-16">
-          <ComponentHeader
-            number="16 / 40"
-            name="FeaturedJobsCarousel"
-            engine="Directional AnimatePresence + Category layoutId Pill"
-            description="Filterable job mandate carousel with directional slide transitions and interactive arrows"
-          />
-          <FeaturedJobsCarousel />
-        </section>
-
-        {/* 17. IndustrySpotlight */}
-        <section id="c-17">
-          <ComponentHeader
-            number="17 / 40"
-            name="IndustrySpotlight"
-            engine="Two-Column Lateral Reveal + Animated Metric Counters"
-            description="Deep dive into specialized engineering verticals with checklist cascades and live metrics"
-          />
-          <IndustrySpotlight />
-        </section>
-
-        {/* 18. Testimonial */}
-        <section id="c-18">
-          <ComponentHeader
-            number="18 / 40"
-            name="Testimonial"
-            engine="Sequential Star Pop + Custom Typewriter Text Reveal"
-            description="Verified enterprise leader quotes with magnetic hover elevation and sequential star fills"
-          />
-          <Testimonial />
-        </section>
-
-        {/* 19. FAQAccordion */}
-        <section id="c-19">
-          <ComponentHeader
-            number="19 / 40"
-            name="FAQAccordion"
-            engine="Framer Motion Height: auto + Spring Rotating Chevrons"
-            description="Searchable enterprise hiring FAQ with instantaneous query filtering and border glow"
-          />
-          <FAQAccordion />
-        </section>
-
-        {/* 20. ResourceCard */}
-        <section id="c-20" style={{ padding: '3rem 2rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-          <ComponentHeader
-            number="20 / 40"
-            name="ResourceCard"
-            engine="Framer Motion Spring Lift + Viewport Download Counter"
-            description="Gated technical salary playbooks and market benchmark research artifacts"
-          />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '2rem', marginTop: '2rem' }}>
-            <ResourceCard
-              id="report-01"
-              title="2026 India & US Tech Compensation Benchmark Report"
-              type="Salary Benchmark Guide"
-              description="Comprehensive compensation ranges, stock equity formulas, and notice period buyouts across 45,000 verified data points."
-              pages={48}
-              format="PDF"
-              downloadsCount="4,800+ Downloads"
-            />
-            <ResourceCard
-              id="report-02"
-              title="The India GCC Playbook: Zero to 100 Engineers"
-              type="Architectural Guide"
-              description="Step-by-step roadmap for multinational tech companies establishing turnkey engineering hubs in Bangalore and Hyderabad."
-              pages={64}
-              format="PDF"
-              downloadsCount="3,200+ Downloads"
-            />
-          </div>
-        </section>
-
-        {/* 21. InsightCard */}
-        <section id="c-21" style={{ padding: '3rem 2rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-          <ComponentHeader
-            number="21 / 40"
-            name="InsightCard"
-            engine="Framer Motion whileInView Entrance + Animated Arrow Translate"
-            description="Editorial thought leadership cards featuring author bio and read-time badges"
-          />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '2rem', marginTop: '2rem' }}>
-            <InsightCard
-              id="article-01"
-              title="Why 65% of Engineering GCCs Stumble in Year One (And How to Fix It)"
-              excerpt="Key architectural and operational traps multinational enterprises fall into when establishing engineering hubs in Bangalore."
-              category="GCC Strategy"
-              author={{ name: 'Vikramaditya Sharma', role: 'Head of GCC Advisory' }}
-              readTime="7 min read"
-              date="Sep 2026"
-              featured={true}
-            />
-            <InsightCard
-              id="article-02"
-              title="The End of Keyword-Based Recruiting: Enter Semantic Calibrations"
-              excerpt="Why resume keyword matching fails in distributed systems and how vector embeddings identify true senior engineering talent."
-              category="AI & Screening"
-              author={{ name: 'Dr. Ananya Ray', role: 'Lead Talent Intelligence' }}
-              readTime="5 min read"
-              date="Sep 2026"
-              featured={false}
-            />
-          </div>
-        </section>
-
-        {/* 22. ProcessTimeline */}
-        <section id="c-22">
-          <ComponentHeader
-            number="22 / 40"
-            name="ProcessTimeline"
-            engine="GSAP ScrollTrigger Progressive Node Reveal + Drawing SVG Line"
-            description="Deterministic SLA milestone timeline drawing a glowing connection stroke on scroll"
-          />
-          <ProcessTimeline />
-        </section>
-
-        {/* 23. ProcessStepper */}
-        <section id="c-23">
-          <ComponentHeader
-            number="23 / 40"
-            name="ProcessStepper"
-            engine="Directional AnimatePresence + Spring Width Progress Fill"
-            description="Interactive client engagement stepper with animated status bar and numbered step bubbles"
-          />
-          <ProcessStepper />
-        </section>
-
-        {/* 24. CTASection */}
-        <section id="c-24">
-          <ComponentHeader
-            number="24 / 40"
-            name="CTASection"
-            engine="Aceternity Radial Glow + Staggered Word Reveal + Parallax Shift"
-            description="Conversion banner with breathing background radial beams and magnetic action buttons"
-          />
-          <CTASection />
-        </section>
-
-        {/* 25. ContactForm */}
-        <section id="c-25" style={{ padding: '3rem 2rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-          <ComponentHeader
-            number="25 / 40"
-            name="ContactForm"
-            engine="3D Perspective Entrance + Focus Ring Expansion + Bouncy Checkmark"
-            description="Direct Practice Lead priority intake form with interactive field feedback"
-          />
-          <div style={{ marginTop: '2rem' }}>
-            <ContactForm />
-          </div>
-        </section>
-
-        {/* 26. HiringRequirementForm */}
-        <section id="c-26" style={{ padding: '3rem 2rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-          <ComponentHeader
-            number="26 / 40"
-            name="HiringRequirementForm"
-            engine="Multi-Step AnimatePresence + Progress Fill + Glow Submit State"
-            description="Interactive technical mandate configurator backed by 48-hour shortlist SLA"
-          />
-          <div style={{ marginTop: '2rem' }}>
-            <HiringRequirementForm />
-          </div>
-        </section>
-
-        {/* 27. CandidateProfileCTA */}
-        <section id="c-27">
-          <ComponentHeader
-            number="27 / 40"
-            name="CandidateProfileCTA"
-            engine="Orbital Blob Background + Drag & Drop Upload + Magnetic Buttons"
-            description="Confidential career representation intake with interactive resume dropzone"
-          />
-          <CandidateProfileCTA />
-        </section>
-
-        {/* 28. JobSearchInterface */}
-        <section id="c-28" style={{ padding: '3rem 2rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-          <ComponentHeader
-            number="28 / 40"
-            name="JobSearchInterface"
-            engine="layoutId Sliding Pill Selector + Staggered Filter Tags"
-            description="Real-time role search interface with quick filters and trigger for filter drawer"
-          />
-          <div style={{ marginTop: '2rem' }}>
-            <JobSearchInterface
-              onOpenFilterDrawer={() => setFilterDrawerOpen(true)}
-              totalRolesCount={312}
-            />
-          </div>
-        </section>
-
-        {/* 29. JobFilterDrawer trigger & interactive drawer */}
-        <section id="c-29" style={{ padding: '3rem 2rem', maxWidth: '1200px', margin: '0 auto', width: '100%', textAlign: 'center' }}>
-          <ComponentHeader
-            number="29 / 40"
-            name="JobFilterDrawer"
-            engine="AnimatePresence Backdrop Fade + Slide-in Drawer from Right"
-            description="Interactive slide-out filter drawer with multi-criteria checkboxes and reset actions"
-          />
-          <div style={{ padding: '3rem', backgroundColor: 'var(--color-surface)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-border)', marginTop: '2rem' }}>
-            <button
-              onClick={() => setFilterDrawerOpen(true)}
-              style={{
-                padding: '0.875rem 2rem',
-                borderRadius: 'var(--radius-lg)',
-                backgroundColor: 'var(--color-primary)',
-                color: '#ffffff',
-                border: 'none',
-                fontWeight: 700,
-                fontSize: '1rem',
-                cursor: 'pointer',
-                boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)',
-              }}
-            >
-              Open Interactive Filter Drawer Preview
-            </button>
-            <JobFilterDrawer
-              isOpen={filterDrawerOpen}
-              onClose={() => setFilterDrawerOpen(false)}
-            />
-          </div>
-        </section>
-
-        {/* 30. LocationExplorer */}
-        <section id="c-30">
-          <ComponentHeader
-            number="30 / 40"
-            name="LocationExplorer"
-            engine="Staggered Grid Reveal + layoutId Card Border Glow + Bouncing Pins"
-            description="Global tech hubs analysis with median senior compensation bands and active mandates"
-          />
-          <LocationExplorer />
-        </section>
-
-        {/* 31. IndustryExplorer */}
-        <section id="c-31">
-          <ComponentHeader
-            number="31 / 40"
-            name="IndustryExplorer"
-            engine="Framer Motion whileInView Stagger + Animated Closure Days Counter"
-            description="Specialized domain matrices showcasing average turnaround days and frequent placements"
-          />
-          <IndustryExplorer />
-        </section>
-
-        {/* 32. BeforeAfterSection */}
-        <section id="c-32">
-          <ComponentHeader
-            number="32 / 40"
-            name="BeforeAfterSection"
-            engine="Opposite Side Lateral Columns + Pulsing Neon Standard Glow"
-            description="Conventional agencies vs NexaTalent Operating System comparison matrix"
-          />
-          <BeforeAfterSection />
-        </section>
-
-        {/* 33. BentoContentGrid */}
-        <section id="c-33">
-          <ComponentHeader
-            number="33 / 40"
-            name="BentoContentGrid"
-            engine="Aceternity Asymmetric Bento Grid + 3D Card Hover Rotations"
-            description="4-cell modular architectural showcase with terminal command simulation"
-          />
-          <BentoContentGrid />
-        </section>
-
-        {/* 34. ScrollStorySection */}
-        <section id="c-34">
-          <ComponentHeader
-            number="34 / 40"
-            name="ScrollStorySection"
-            engine="GSAP ScrollTrigger Pinned Narrative Progression"
-            description="Section pins on scroll as chapters smoothly advance and cross-fade stats on the right"
-          />
-          <ScrollStorySection />
-        </section>
-
-        {/* 35. HorizontalScrollGallery */}
-        <section id="c-35">
-          <ComponentHeader
-            number="35 / 40"
-            name="HorizontalScrollGallery"
-            engine="GSAP ScrollTrigger Vertical-to-Horizontal Scrub Gallery"
-            description="Pins vertically and translates horizontally across key architectural engineering disciplines"
-          />
-          <HorizontalScrollGallery />
-        </section>
-
-        {/* 36. FloatingCTA */}
-        <section id="c-36" style={{ padding: '3rem 2rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-          <ComponentHeader
-            number="36 / 40"
-            name="FloatingCTA"
-            engine="Scroll Detection + AnimatePresence Slide-Up + Breathing Glow"
-            description="Docked bottom quick action bar with SLA guarantee and dismiss animation"
-          />
-          <FloatingCTA headline="Need 3 verified Principal Engineers this week?" />
-        </section>
-
-        {/* 37. TrustSignalStrip */}
-        <section id="c-37">
-          <ComponentHeader
-            number="37 / 40"
-            name="TrustSignalStrip"
-            engine="Framer Motion whileInView Stagger + Bouncy Icon Entrance"
-            description="SOC-2, ISO 27001, 90-day warranty, and 48-hour SLA proof strip"
-          />
-          <TrustSignalStrip />
-        </section>
-
-        {/* 38. ServiceComparison */}
-        <section id="c-38">
-          <ComponentHeader
-            number="38 / 40"
-            name="ServiceComparison"
-            engine="Staggered Tier Entrance + Bouncy Recommended Badge + Checklist Cascade"
-            description="Transparent 3-tier engagement model comparison (Contingent, Retained, GCC Squad)"
-          />
-          <ServiceComparison />
-        </section>
-
-        {/* 39. RecruitmentJourneyMap */}
-        <section id="c-39">
-          <ComponentHeader
-            number="39 / 40"
-            name="RecruitmentJourneyMap"
-            engine="GSAP ScrollTrigger Progressive Milestone Pinned Reveal"
-            description="Synchronous dual-track roadmap aligning employer hiring milestones with candidate care"
-          />
-          <RecruitmentJourneyMap />
-        </section>
-
-        {/* 40. MegaFooter */}
-        <section id="c-40">
-          <ComponentHeader
-            number="40 / 40"
-            name="MegaFooter"
-            engine="Staggered Column Entrance + Focus Expand + Pulsing System Health"
-            description="Enterprise 5-column navigation footer with newsletter intake and ISO/SLA verification"
-          />
-          <MegaFooter />
-        </section>
-
-      </div>
-
-      {/* Floating Scroll To Top Action */}
-      <button
-        onClick={scrollToTop}
-        aria-label="Scroll to top"
-        style={{
-          position: 'fixed',
-          bottom: '5.5rem',
-          right: '2rem',
-          width: '46px',
-          height: '46px',
-          borderRadius: '50%',
-          backgroundColor: 'rgba(15, 23, 42, 0.9)',
-          backdropFilter: 'blur(8px)',
-          border: '1px solid var(--color-border)',
-          color: 'var(--color-primary-400)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          boxShadow: 'var(--shadow-xl)',
-          zIndex: 800,
-          transition: 'all 0.2s ease',
-        }}
-      >
-        <ArrowUp size={20} />
-      </button>
     </div>
   );
 };
