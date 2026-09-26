@@ -46,31 +46,31 @@ export const FullScreenHorizontalParallaxTimelineMatrix: React.FC = () => {
   return (
     <section
       ref={containerRef}
-      className="relative w-screen min-h-screen bg-slate-900 text-white overflow-hidden flex flex-col justify-center m-0 p-0"
+      className="relative w-screen min-h-screen bg-white text-slate-900 overflow-hidden flex flex-col justify-center m-0 p-0"
       style={{ width: '100vw', maxWidth: '100vw' }}
     >
       {/* Background Matrix Lines */}
       <div
-        className="absolute inset-0 pointer-events-none opacity-20"
+        className="absolute inset-0 pointer-events-none opacity-30"
         style={{
           backgroundImage:
-            'linear-gradient(to right, #38bdf8 1px, transparent 1px), linear-gradient(to bottom, #38bdf8 1px, transparent 1px)',
-          backgroundSize: '80px 80px',
+            'linear-gradient(to right, #e2e8f0 1px, transparent 1px), linear-gradient(to bottom, #e2e8f0 1px, transparent 1px)',
+          backgroundSize: '64px 64px',
         }}
       />
 
       {/* Header */}
-      <div className="relative z-10 w-full px-8 md:px-16 pt-8 pb-4 flex justify-between items-center border-b border-slate-800">
+      <div className="relative z-10 w-full px-8 md:px-16 pt-8 pb-4 flex justify-between items-center border-b border-slate-200">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-400/30 text-blue-400 text-xs font-mono font-bold mb-2">
-            <Clock className="w-3.5 h-3.5" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-mono font-bold mb-2">
+            <Clock className="w-3.5 h-3.5 text-blue-600" />
             <span>ENTERPRISE 75-DAY RAMP TIMELINE · GSAP HORIZONTAL SCRUB</span>
           </div>
-          <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight">
-            From Zero to <span className="text-emerald-400">80+ Engineers</span> in 75 Days
+          <h2 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tight">
+            From Zero to <span className="text-emerald-600">80+ Engineers</span> in 75 Days
           </h2>
         </div>
-        <div className="hidden md:flex items-center gap-2 text-xs font-mono text-emerald-400">
+        <div className="hidden md:flex items-center gap-2 text-xs font-mono text-emerald-600 font-bold">
           <TrendingUp className="w-4 h-4" />
           <span>GUARANTEED DAY-75 VELOCITY</span>
         </div>
@@ -82,32 +82,32 @@ export const FullScreenHorizontalParallaxTimelineMatrix: React.FC = () => {
           {DAYS.map((ramp, idx) => (
             <div
               key={idx}
-              className="w-[85vw] sm:w-[460px] p-8 rounded-3xl bg-slate-800/90 border border-slate-700 shadow-2xl backdrop-blur-xl flex flex-col justify-between"
+              className="w-[85vw] sm:w-[460px] p-8 rounded-3xl bg-slate-50 border border-slate-200 shadow-xl shadow-slate-200/50 backdrop-blur-xl flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm font-mono font-extrabold text-blue-400">
+                  <span className="text-sm font-mono font-extrabold text-blue-600">
                     {ramp.day}
                   </span>
-                  <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-xs font-bold border border-emerald-400/30">
+                  <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 font-mono text-xs font-bold border border-emerald-200">
                     {ramp.headcount}
                   </span>
                 </div>
-                <h3 className="text-2xl font-black text-white mb-6">{ramp.phase}</h3>
+                <h3 className="text-2xl font-black text-slate-900 mb-6">{ramp.phase}</h3>
 
                 <div className="space-y-3 mb-6">
                   {ramp.deliverables.map((deliv, dIdx) => (
-                    <div key={dIdx} className="flex items-start gap-2.5 text-xs text-slate-300">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <div key={dIdx} className="flex items-start gap-2.5 text-xs text-slate-700">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                       <span>{deliv}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-700 flex items-center justify-between text-xs font-mono text-slate-400">
+              <div className="pt-4 border-t border-slate-200 flex items-center justify-between text-xs font-mono text-slate-500">
                 <span>Phase SLA</span>
-                <span className="text-white font-bold">100% On-Schedule</span>
+                <span className="text-slate-900 font-bold">100% On-Schedule</span>
               </div>
             </div>
           ))}

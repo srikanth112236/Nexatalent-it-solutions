@@ -40,7 +40,7 @@ export const FullScreenHorizontalSplitCurtainLaser: React.FC = () => {
         // 3. Telemetry card zooms forward
         .fromTo(
           telemetryRef.current,
-          { scale: 0.8, opacity: 0 },
+          { scale: 0.88, opacity: 0 },
           { scale: 1, opacity: 1, ease: 'power2.out' },
           0.4
         );
@@ -52,7 +52,7 @@ export const FullScreenHorizontalSplitCurtainLaser: React.FC = () => {
   return (
     <section
       ref={containerRef}
-      className="relative w-screen min-h-screen bg-slate-950 text-white overflow-hidden flex items-center justify-center m-0 p-0"
+      className="relative w-screen min-h-screen bg-slate-50 text-slate-900 overflow-hidden flex items-center justify-center m-0 p-0"
       style={{ width: '100vw', maxWidth: '100vw' }}
     >
       {/* Background Quant High-Frequency Telemetry Revealed */}
@@ -60,36 +60,36 @@ export const FullScreenHorizontalSplitCurtainLaser: React.FC = () => {
         ref={telemetryRef}
         className="relative z-10 w-full px-8 md:px-20 py-16 max-w-5xl mx-auto text-center"
       >
-        <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center">
-          <Activity className="w-8 h-8 text-cyan-400 animate-pulse" />
+        <div className="w-16 h-16 mx-auto mb-6 rounded-3xl bg-blue-50 border border-blue-200 flex items-center justify-center shadow-lg shadow-blue-500/10">
+          <Activity className="w-8 h-8 text-blue-600 animate-pulse" />
         </div>
 
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-400/30 text-cyan-400 font-mono text-xs font-bold mb-4">
-          <Zap className="w-3.5 h-3.5" />
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 font-mono text-xs font-bold mb-4">
+          <Zap className="w-3.5 h-3.5 text-blue-600" />
           <span>LASER SPLIT CURTAIN REVEAL · HFT QUANT ENGINE</span>
         </div>
 
-        <h2 className="text-4xl md:text-6xl font-black text-white tracking-tight mb-4">
+        <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tight mb-4">
           Sub-Millisecond Quant Guild
         </h2>
-        <p className="text-slate-400 text-sm md:text-base max-w-2xl mx-auto mb-8 leading-relaxed">
+        <p className="text-slate-600 text-sm md:text-base max-w-2xl mx-auto mb-10 leading-relaxed">
           High-frequency trading algorithmic talent calibrated on custom FPGA hardware, DPDK packet ingestion, and order-book arbitration.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left font-mono">
-          <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800">
-            <div className="text-xs text-cyan-400 mb-1">Tick-To-Trade Latency</div>
-            <div className="text-2xl font-black text-white">&lt; 840 Nanoseconds</div>
+          <div className="p-8 rounded-3xl bg-white border border-slate-200 shadow-xl shadow-slate-200/50">
+            <div className="text-xs text-blue-600 font-bold mb-1">Tick-To-Trade Latency</div>
+            <div className="text-2xl font-black text-slate-900">&lt; 840 Nanoseconds</div>
             <div className="text-xs text-slate-500 mt-2">Custom Solarflare OpenOnload Kernel</div>
           </div>
-          <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800">
-            <div className="text-xs text-cyan-400 mb-1">FPGA RTL Engineers</div>
-            <div className="text-2xl font-black text-white">46 Verified Leads</div>
+          <div className="p-8 rounded-3xl bg-white border border-slate-200 shadow-xl shadow-slate-200/50">
+            <div className="text-xs text-blue-600 font-bold mb-1">FPGA RTL Engineers</div>
+            <div className="text-2xl font-black text-slate-900">46 Verified Leads</div>
             <div className="text-xs text-slate-500 mt-2">Xilinx UltraScale+ / Verilog Master</div>
           </div>
-          <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800">
-            <div className="text-xs text-cyan-400 mb-1">GCC Cost Differential</div>
-            <div className="text-2xl font-black text-emerald-400">-58% Net Spend</div>
+          <div className="p-8 rounded-3xl bg-white border border-slate-200 shadow-xl shadow-slate-200/50">
+            <div className="text-xs text-emerald-600 font-bold mb-1">GCC Cost Differential</div>
+            <div className="text-2xl font-black text-emerald-600">-58% Net Spend</div>
             <div className="text-xs text-slate-500 mt-2">Delivered in 21 Days to Prod</div>
           </div>
         </div>
@@ -98,36 +98,36 @@ export const FullScreenHorizontalSplitCurtainLaser: React.FC = () => {
       {/* Central Laser Incision Line */}
       <div
         ref={laserLineRef}
-        className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-1 bg-gradient-to-b from-transparent via-cyan-400 to-transparent z-30 shadow-[0_0_20px_#22d3ee]"
+        className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-1.5 bg-gradient-to-b from-transparent via-blue-500 to-transparent z-30 shadow-[0_0_20px_#3b82f6]"
       />
 
       {/* Left Shutter Curtain */}
       <div
         ref={leftPanelRef}
-        className="absolute left-0 top-0 bottom-0 w-1/2 bg-slate-950 border-r border-cyan-500/30 p-12 flex flex-col justify-between z-20 shadow-2xl"
+        className="absolute left-0 top-0 bottom-0 w-1/2 bg-white border-r border-slate-300 p-12 lg:p-16 flex flex-col justify-between z-20 shadow-2xl backdrop-blur-xl"
       >
-        <div className="text-xs font-mono text-cyan-400 font-bold uppercase tracking-widest">
+        <div className="text-xs font-mono text-blue-600 font-extrabold uppercase tracking-widest">
           QUANT VAULT FLANK 01
         </div>
-        <div className="text-2xl md:text-4xl font-black text-white flex items-center gap-3">
-          <Cpu className="w-8 h-8 text-cyan-400" />
+        <div className="text-2xl md:text-4xl font-black text-slate-900 flex items-center gap-3">
+          <Cpu className="w-8 h-8 text-blue-600" />
           <span>FPGA & Low Latency</span>
         </div>
-        <div className="text-xs font-mono text-slate-500">LASER SPLIT INITIATED</div>
+        <div className="text-xs font-mono text-slate-400">LASER SPLIT INITIATED</div>
       </div>
 
       {/* Right Shutter Curtain */}
       <div
         ref={rightPanelRef}
-        className="absolute right-0 top-0 bottom-0 w-1/2 bg-slate-950 border-l border-cyan-500/30 p-12 flex flex-col justify-between z-20 shadow-2xl text-right"
+        className="absolute right-0 top-0 bottom-0 w-1/2 bg-white border-l border-slate-300 p-12 lg:p-16 flex flex-col justify-between z-20 shadow-2xl backdrop-blur-xl text-right"
       >
-        <div className="text-xs font-mono text-cyan-400 font-bold uppercase tracking-widest">
+        <div className="text-xs font-mono text-blue-600 font-extrabold uppercase tracking-widest">
           QUANT VAULT FLANK 02
         </div>
-        <div className="text-2xl md:text-4xl font-black text-white">
+        <div className="text-2xl md:text-4xl font-black text-slate-900">
           <span>Algorithmic Execution</span>
         </div>
-        <div className="text-xs font-mono text-slate-500">DIVIDING HORIZONTALLY</div>
+        <div className="text-xs font-mono text-slate-400">DIVIDING HORIZONTALLY</div>
       </div>
     </section>
   );

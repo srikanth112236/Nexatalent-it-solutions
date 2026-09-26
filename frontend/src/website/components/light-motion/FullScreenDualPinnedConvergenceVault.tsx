@@ -19,7 +19,7 @@ export const FullScreenDualPinnedConvergenceVault: React.FC = () => {
         scrollTrigger: {
           trigger: containerRef.current,
           start: 'top top',
-          end: '+=140%',
+          end: '+=150%',
           pin: true,
           scrub: 1,
         },
@@ -27,19 +27,19 @@ export const FullScreenDualPinnedConvergenceVault: React.FC = () => {
 
       tl.fromTo(
         leftDoorRef.current,
-        { x: '-100%' },
-        { x: '0%', ease: 'power2.out' },
+        { xPercent: -100 },
+        { xPercent: 0, ease: 'power2.out' },
         0
       )
         .fromTo(
           rightDoorRef.current,
-          { x: '100%' },
-          { x: '0%', ease: 'power2.out' },
+          { xPercent: 100 },
+          { xPercent: 0, ease: 'power2.out' },
           0
         )
         .fromTo(
           lockCoreRef.current,
-          { scale: 0.5, rotate: -90, opacity: 0 },
+          { scale: 0.6, rotate: -90, opacity: 0 },
           { scale: 1, rotate: 0, opacity: 1, ease: 'back.out(1.5)' },
           0.3
         );
@@ -51,90 +51,96 @@ export const FullScreenDualPinnedConvergenceVault: React.FC = () => {
   return (
     <section
       ref={containerRef}
-      className="relative w-screen min-h-screen bg-slate-950 text-white overflow-hidden flex items-center justify-center m-0 p-0"
+      className="relative w-screen min-h-screen bg-slate-100 text-slate-900 overflow-hidden flex items-center justify-center m-0 p-0"
       style={{ width: '100vw', maxWidth: '100vw' }}
     >
-      {/* Background Radial Light Source */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-950/40 via-slate-950 to-slate-950 pointer-events-none" />
+      {/* Background Microdot Texture */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-50"
+        style={{
+          backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)',
+          backgroundSize: '24px 24px',
+        }}
+      />
 
-      {/* Left Heavy Vault Door */}
+      {/* Left Sovereign Satin Vault Door */}
       <div
         ref={leftDoorRef}
-        className="absolute left-0 top-0 bottom-0 w-1/2 bg-slate-900 border-r-4 border-amber-500/50 p-12 flex flex-col justify-between z-20 shadow-2xl"
+        className="absolute left-0 top-0 bottom-0 w-1/2 bg-white/95 border-r border-slate-300 p-12 lg:p-16 flex flex-col justify-between z-20 shadow-2xl backdrop-blur-md"
       >
         <div className="flex items-center justify-between">
-          <span className="font-mono text-xs text-amber-400 font-bold uppercase tracking-widest">
-            VAULT SECTOR 01 · IP QUARANTINE
+          <span className="font-mono text-xs text-blue-600 font-extrabold uppercase tracking-widest">
+            SWISS ARCHITECTURE VAULT · SECTOR 01
           </span>
-          <Lock className="w-5 h-5 text-amber-400" />
+          <Lock className="w-5 h-5 text-blue-600" />
         </div>
 
         <div className="max-w-md">
-          <h3 className="text-3xl lg:text-5xl font-black text-white tracking-tight mb-4">
+          <h3 className="text-3xl lg:text-5xl font-black text-slate-900 tracking-tight mb-4">
             Zero-Leak IP Enclave
           </h3>
-          <p className="text-slate-400 text-sm leading-relaxed mb-6">
+          <p className="text-slate-600 text-sm leading-relaxed mb-6">
             Hardware-isolated virtual desktop infrastructures ensuring source code never leaves your sovereign enterprise VPC boundaries.
           </p>
-          <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono text-slate-300 space-y-2">
-            <div>AES-256 Bit Hardened Cryptographic Keys</div>
-            <div className="text-amber-400 font-semibold">SOC 2 Type II · ISO 27001 Certified</div>
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-700 space-y-2">
+            <div>AES-256 Bit Hardened Cryptographic Enclave</div>
+            <div className="text-blue-600 font-bold">SOC 2 Type II · ISO 27001 Certified</div>
           </div>
         </div>
 
-        <div className="text-xs font-mono text-slate-500">
-          STATUS: CLAMPING SYNCHRONIZED
+        <div className="text-xs font-mono text-slate-400">
+          STATUS: HYDRAULIC ALIGNMENT CONFIRMED
         </div>
       </div>
 
-      {/* Right Heavy Vault Door */}
+      {/* Right Sovereign Satin Vault Door */}
       <div
         ref={rightDoorRef}
-        className="absolute right-0 top-0 bottom-0 w-1/2 bg-slate-900 border-l-4 border-blue-500/50 p-12 flex flex-col justify-between z-20 shadow-2xl text-right"
+        className="absolute right-0 top-0 bottom-0 w-1/2 bg-white/95 border-l border-slate-300 p-12 lg:p-16 flex flex-col justify-between z-20 shadow-2xl backdrop-blur-md text-right"
       >
         <div className="flex items-center justify-between flex-row-reverse">
-          <span className="font-mono text-xs text-blue-400 font-bold uppercase tracking-widest">
-            VAULT SECTOR 02 · NON-COMPETE LEDGER
+          <span className="font-mono text-xs text-emerald-600 font-extrabold uppercase tracking-widest">
+            SWISS ARCHITECTURE VAULT · SECTOR 02
           </span>
-          <Key className="w-5 h-5 text-blue-400" />
+          <Key className="w-5 h-5 text-emerald-600" />
         </div>
 
         <div className="max-w-md ml-auto">
-          <h3 className="text-3xl lg:text-5xl font-black text-white tracking-tight mb-4">
-            Immutable Candidate Clearance
+          <h3 className="text-3xl lg:text-5xl font-black text-slate-900 tracking-tight mb-4">
+            Candidate Clearance Ledger
           </h3>
-          <p className="text-slate-400 text-sm leading-relaxed mb-6">
+          <p className="text-slate-600 text-sm leading-relaxed mb-6">
             Cryptographically signed dual-employment audits and conflict-of-interest quarantine checks verified in real time.
           </p>
-          <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono text-slate-300 space-y-2 text-left">
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-700 space-y-2 text-left">
             <div>Background Attestation: 100% Cleared</div>
-            <div className="text-blue-400 font-semibold">Pre-Screened Security Clearance</div>
+            <div className="text-emerald-600 font-bold">Pre-Screened Security Clearance Sealed</div>
           </div>
         </div>
 
-        <div className="text-xs font-mono text-slate-500">
-          STATUS: HYDRAULIC LOCK ENGAGED
+        <div className="text-xs font-mono text-slate-400">
+          STATUS: ESCROW CONVERGENCE READY
         </div>
       </div>
 
-      {/* Center Vault Lock Hub */}
+      {/* Center Vault Lock Dial */}
       <div
         ref={lockCoreRef}
-        className="relative z-30 flex flex-col items-center justify-center p-8 rounded-full bg-slate-900 border-4 border-amber-400 shadow-2xl shadow-amber-400/20 w-80 h-80 text-center"
+        className="relative z-30 flex flex-col items-center justify-center p-8 rounded-full bg-white border-4 border-slate-900 shadow-2xl shadow-slate-900/15 w-84 h-84 text-center"
       >
-        <ShieldCheck className="w-14 h-14 text-amber-400 mb-3 animate-pulse" />
-        <div className="text-xs font-mono font-bold text-amber-400 uppercase tracking-widest mb-1">
+        <ShieldCheck className="w-14 h-14 text-blue-600 mb-3" />
+        <div className="text-xs font-mono font-bold text-slate-500 uppercase tracking-widest mb-1">
           SOVEREIGN SEAL
         </div>
-        <div className="text-xl font-black text-white tracking-tight mb-2">
-          IRONCLAD GCC CORE
+        <div className="text-xl font-black text-slate-900 tracking-tight mb-2">
+          SWISS-GRADE CORE
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-slate-300 font-medium">
-          <Award className="w-3.5 h-3.5 text-blue-400" />
+        <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+          <Award className="w-3.5 h-3.5 text-emerald-600" />
           <span>Zero Vulnerability Verified</span>
         </div>
-        <button className="mt-4 px-4 py-1.5 rounded-full bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1 hover:bg-amber-300 transition-colors cursor-pointer">
-          <span>Audit Spec</span>
+        <button className="mt-4 px-5 py-2 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center gap-1 hover:bg-blue-600 transition-colors cursor-pointer">
+          <span>Audit Specs</span>
           <ArrowUpRight className="w-3.5 h-3.5" />
         </button>
       </div>

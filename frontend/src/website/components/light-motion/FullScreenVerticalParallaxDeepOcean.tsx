@@ -65,29 +65,29 @@ export const FullScreenVerticalParallaxDeepOcean: React.FC = () => {
   return (
     <section
       ref={containerRef}
-      className="relative w-screen min-h-[130vh] bg-slate-950 text-white overflow-hidden flex flex-col justify-center items-center m-0 p-0"
+      className="relative w-screen min-h-[130vh] bg-gradient-to-b from-teal-50/40 via-white to-slate-50 text-slate-900 overflow-hidden flex flex-col justify-center items-center m-0 p-0"
       style={{ width: '100vw', maxWidth: '100vw' }}
     >
-      {/* Bioluminescent Sonar Pulse Rings */}
+      {/* Light Sonar Concentric Rings */}
       <div
         ref={ring1Ref}
-        className="absolute w-[600px] h-[600px] rounded-full border border-teal-500/30 pointer-events-none"
+        className="absolute w-[600px] h-[600px] rounded-full border border-teal-300/40 pointer-events-none"
       />
       <div
         ref={ring2Ref}
-        className="absolute w-[950px] h-[950px] rounded-full border border-cyan-500/20 pointer-events-none"
+        className="absolute w-[950px] h-[950px] rounded-full border border-cyan-200/50 pointer-events-none"
       />
 
       {/* Center Deep Scanner Core */}
       <div className="relative z-10 text-center px-6 max-w-2xl mx-auto">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-500/10 border border-teal-400/30 text-teal-400 font-mono text-xs font-bold mb-4">
-          <Radio className="w-3.5 h-3.5 text-teal-400 animate-pulse" />
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-teal-800 font-mono text-xs font-bold mb-4">
+          <Radio className="w-3.5 h-3.5 text-teal-600 animate-pulse" />
           <span>DEEP TALENT MARKET SCANNER · BIOLUMINESCENT SONAR</span>
         </div>
-        <h2 className="text-4xl md:text-6xl font-black text-white tracking-tight mb-4">
-          Sub-Surface Passive <span className="text-teal-400">Headhunting</span>
+        <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tight mb-4">
+          Sub-Surface Passive <span className="text-teal-600">Headhunting</span>
         </h2>
-        <p className="text-slate-400 text-sm leading-relaxed mb-8">
+        <p className="text-slate-600 text-sm leading-relaxed mb-8">
           Uncovering unlisted tier-1 architects and elite engineering directors who never enter public job markets.
         </p>
       </div>
@@ -96,28 +96,36 @@ export const FullScreenVerticalParallaxDeepOcean: React.FC = () => {
       <div className="relative z-20 w-full px-8 md:px-24 flex flex-wrap justify-around items-center gap-8 mt-12">
         <div
           ref={floatCard1Ref}
-          className="p-6 rounded-3xl bg-slate-900/90 border border-teal-500/40 shadow-2xl backdrop-blur-xl max-w-sm"
+          className="p-8 rounded-3xl bg-white border border-teal-200/80 shadow-2xl shadow-teal-500/5 backdrop-blur-xl max-w-sm"
         >
-          <div className="flex items-center gap-2 text-teal-400 font-mono text-xs font-bold mb-2">
-            <Search className="w-4 h-4" />
+          <div className="flex items-center gap-2 text-teal-700 font-mono text-xs font-bold mb-3">
+            <Search className="w-4 h-4 text-teal-600" />
             <span>DEPTH: 3,200M · PASSIVE DISCOVERY</span>
           </div>
-          <div className="font-bold text-white text-lg mb-1">Stealth VP Engineering</div>
-          <div className="text-xs text-slate-400 mb-3">Currently leading 350-engineer platform team at high-growth SaaS decacorn.</div>
-          <div className="text-xs font-mono text-emerald-400 font-semibold">Discrete Dialogue Open</div>
+          <div className="font-extrabold text-slate-900 text-xl mb-2">Stealth VP Engineering</div>
+          <div className="text-xs text-slate-600 mb-4 leading-relaxed">
+            Currently leading 350-engineer platform team at high-growth SaaS decacorn.
+          </div>
+          <div className="text-xs font-mono text-emerald-600 font-bold bg-emerald-50 px-3 py-1 rounded-full inline-block">
+            Discrete Dialogue Open
+          </div>
         </div>
 
         <div
           ref={floatCard2Ref}
-          className="p-6 rounded-3xl bg-slate-900/90 border border-cyan-500/40 shadow-2xl backdrop-blur-xl max-w-sm"
+          className="p-8 rounded-3xl bg-white border border-cyan-200/80 shadow-2xl shadow-cyan-500/5 backdrop-blur-xl max-w-sm"
         >
-          <div className="flex items-center gap-2 text-cyan-400 font-mono text-xs font-bold mb-2">
-            <ShieldCheck className="w-4 h-4" />
-            <span>DEPTH: 6,400M · ZERO CONFLICT OF INTEREST</span>
+          <div className="flex items-center gap-2 text-cyan-700 font-mono text-xs font-bold mb-3">
+            <ShieldCheck className="w-4 h-4 text-cyan-600" />
+            <span>DEPTH: 6,400M · NON-COMPETE CLEARED</span>
           </div>
-          <div className="font-bold text-white text-lg mb-1">Founding GCC Managing Director</div>
-          <div className="text-xs text-slate-400 mb-3">Delivered 0-to-1200 engineer scale for global investment bank in 24 months.</div>
-          <div className="text-xs font-mono text-cyan-400 font-semibold">Verified Track Record</div>
+          <div className="font-extrabold text-slate-900 text-xl mb-2">Founding GCC Managing Director</div>
+          <div className="text-xs text-slate-600 mb-4 leading-relaxed">
+            Delivered 0-to-1200 engineer scale for global investment bank in 24 months.
+          </div>
+          <div className="text-xs font-mono text-cyan-700 font-bold bg-cyan-50 px-3 py-1 rounded-full inline-block">
+            Verified Track Record
+          </div>
         </div>
       </div>
     </section>

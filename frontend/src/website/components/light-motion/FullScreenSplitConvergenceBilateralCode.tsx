@@ -51,20 +51,20 @@ export const FullScreenSplitConvergenceBilateralCode: React.FC = () => {
   return (
     <section
       ref={containerRef}
-      className="relative w-screen min-h-screen bg-slate-950 text-white overflow-hidden flex items-center justify-center m-0 p-0"
+      className="relative w-screen min-h-screen bg-slate-100 text-slate-900 overflow-hidden flex items-center justify-center m-0 p-0"
       style={{ width: '100vw', maxWidth: '100vw' }}
     >
       {/* Pattern 19: Left Code Screen */}
       <div
         ref={leftTerminalRef}
-        className="w-1/2 min-h-screen p-8 md:p-12 lg:p-16 flex flex-col justify-between bg-slate-900 border-r border-slate-800"
+        className="w-1/2 min-h-screen p-8 md:p-12 lg:p-16 flex flex-col justify-between bg-white border-r border-slate-300 shadow-xl"
       >
         <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-blue-400 mb-4">
+          <div className="flex items-center gap-2 text-xs font-mono text-blue-600 font-bold mb-4">
             <Terminal className="w-4 h-4" />
             <span>US INFRASTRUCTURE REPO · BRANCH: MASTER</span>
           </div>
-          <pre className="text-xs font-mono text-slate-300 bg-slate-950 p-4 rounded-xl border border-slate-800 leading-relaxed overflow-x-hidden">
+          <pre className="text-xs font-mono text-slate-800 bg-slate-50 p-5 rounded-2xl border border-slate-200 leading-relaxed overflow-x-hidden shadow-inner">
             <code>
               {`// Silicon Valley Tier-1 Backplane
 impl ClusterOrchestrator {
@@ -76,7 +76,7 @@ impl ClusterOrchestrator {
             </code>
           </pre>
         </div>
-        <div className="text-xs font-mono text-slate-500">
+        <div className="text-xs font-mono text-slate-400">
           STAGE: WAITING FOR BILATERAL MERGE
         </div>
       </div>
@@ -84,14 +84,14 @@ impl ClusterOrchestrator {
       {/* Pattern 19: Right Code Screen */}
       <div
         ref={rightTerminalRef}
-        className="w-1/2 min-h-screen p-8 md:p-12 lg:p-16 flex flex-col justify-between bg-slate-900 border-l border-slate-800 text-right"
+        className="w-1/2 min-h-screen p-8 md:p-12 lg:p-16 flex flex-col justify-between bg-slate-50 border-l border-slate-300 shadow-xl text-right"
       >
         <div>
-          <div className="flex items-center justify-end gap-2 text-xs font-mono text-emerald-400 mb-4">
+          <div className="flex items-center justify-end gap-2 text-xs font-mono text-emerald-600 font-bold mb-4">
             <span>BANGALORE QUANT SQUAD · BRANCH: FEATURE/OPT</span>
             <Terminal className="w-4 h-4" />
           </div>
-          <pre className="text-xs font-mono text-slate-300 bg-slate-950 p-4 rounded-xl border border-slate-800 leading-relaxed overflow-x-hidden text-left">
+          <pre className="text-xs font-mono text-slate-800 bg-white p-5 rounded-2xl border border-slate-200 leading-relaxed overflow-x-hidden text-left shadow-inner">
             <code>
               {`// India GCC Optimization Kernel
 async fn handle_packet_burst(buf: &[u8]) {
@@ -102,7 +102,7 @@ async fn handle_packet_burst(buf: &[u8]) {
             </code>
           </pre>
         </div>
-        <div className="text-xs font-mono text-slate-500">
+        <div className="text-xs font-mono text-slate-400">
           STAGE: CODE REVIEW APPROVED 100%
         </div>
       </div>
@@ -110,12 +110,12 @@ async fn handle_packet_burst(buf: &[u8]) {
       {/* Center Merge Pipeline Hub */}
       <div
         ref={mergeHubRef}
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 p-6 rounded-2xl bg-white text-slate-950 shadow-2xl border-2 border-emerald-500 flex flex-col items-center text-center"
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 p-7 rounded-3xl bg-slate-900 text-white shadow-2xl border-2 border-emerald-500 flex flex-col items-center text-center"
       >
-        <GitMerge className="w-8 h-8 text-emerald-600 mb-2" />
-        <div className="text-xs font-mono font-bold uppercase text-slate-500">Unified Pipeline</div>
-        <div className="text-sm font-black text-slate-900 flex items-center gap-1.5 mt-1">
-          <GitPullRequest className="w-4 h-4 text-blue-600" />
+        <GitMerge className="w-8 h-8 text-emerald-400 mb-2" />
+        <div className="text-xs font-mono font-bold uppercase text-slate-400">Unified Pipeline</div>
+        <div className="text-sm font-black text-white flex items-center gap-1.5 mt-1">
+          <GitPullRequest className="w-4 h-4 text-blue-400" />
           <span>PR #4182 Merged to Prod</span>
         </div>
       </div>

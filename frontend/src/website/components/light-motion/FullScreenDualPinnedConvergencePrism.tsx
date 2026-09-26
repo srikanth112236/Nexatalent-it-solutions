@@ -19,7 +19,7 @@ export const FullScreenDualPinnedConvergencePrism: React.FC = () => {
         scrollTrigger: {
           trigger: containerRef.current,
           start: 'top top',
-          end: '+=150%',
+          end: '+=160%',
           pin: true,
           scrub: 1,
         },
@@ -27,19 +27,19 @@ export const FullScreenDualPinnedConvergencePrism: React.FC = () => {
 
       tl.fromTo(
         leftPrismRef.current,
-        { x: '-100%', opacity: 0 },
-        { x: '0%', opacity: 1, ease: 'power2.out' },
+        { xPercent: -100, opacity: 0 },
+        { xPercent: 0, opacity: 1, ease: 'power2.out' },
         0
       )
         .fromTo(
           rightPrismRef.current,
-          { x: '100%', opacity: 0 },
-          { x: '0%', opacity: 1, ease: 'power2.out' },
+          { xPercent: 100, opacity: 0 },
+          { xPercent: 0, opacity: 1, ease: 'power2.out' },
           0
         )
         .fromTo(
           lensRef.current,
-          { scale: 0.2, rotate: 180, opacity: 0 },
+          { scale: 0.3, rotate: 180, opacity: 0 },
           { scale: 1, rotate: 0, opacity: 1, ease: 'elastic.out(1, 0.75)' },
           0.3
         );
@@ -51,35 +51,35 @@ export const FullScreenDualPinnedConvergencePrism: React.FC = () => {
   return (
     <section
       ref={containerRef}
-      className="relative w-screen min-h-screen bg-slate-900 text-white overflow-hidden flex items-center justify-center m-0 p-0"
+      className="relative w-screen min-h-screen bg-gradient-to-b from-white via-indigo-50/30 to-slate-50 text-slate-900 overflow-hidden flex items-center justify-center m-0 p-0"
       style={{ width: '100vw', maxWidth: '100vw' }}
     >
-      {/* Background Refractive Gradients */}
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-slate-950 to-blue-950 pointer-events-none" />
+      {/* Soft Ambient Chromatic Blur */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] bg-gradient-to-r from-blue-200/40 via-purple-200/30 to-emerald-200/40 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Left Chromatic Refraction Wing */}
       <div
         ref={leftPrismRef}
-        className="absolute left-0 top-0 bottom-0 w-1/2 p-12 lg:p-20 flex flex-col justify-center bg-gradient-to-r from-blue-600/20 via-indigo-600/10 to-transparent border-r border-blue-500/20 backdrop-blur-md"
+        className="absolute left-0 top-0 bottom-0 w-1/2 p-12 lg:p-20 flex flex-col justify-center bg-white/80 border-r border-slate-200/80 backdrop-blur-2xl shadow-xl"
       >
         <div className="max-w-md">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 font-mono text-xs font-bold mb-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-mono text-xs font-bold mb-4 border border-blue-200">
             <Compass className="w-3.5 h-3.5" />
             <span>PRISM GATE 01 · HEURISTIC SPECTRUM</span>
           </div>
-          <h3 className="text-3xl lg:text-5xl font-black text-white tracking-tight mb-4">
-            Algorithmic Candidate Refraction
+          <h3 className="text-3xl lg:text-5xl font-black text-slate-900 tracking-tight mb-4">
+            Algorithmic Refraction
           </h3>
-          <p className="text-slate-400 text-sm leading-relaxed mb-6">
+          <p className="text-slate-600 text-sm leading-relaxed mb-6">
             Multi-spectral evaluation breaking candidate problem-solving into raw AST structure, system design depth, and cognitive adaptability.
           </p>
-          <div className="flex items-center gap-4 text-xs font-mono text-slate-300">
+          <div className="flex items-center gap-4 text-xs font-mono text-slate-600">
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-blue-400" />
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
               <span>Depth Index: 98.4</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-indigo-400" />
+              <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
               <span>Speed: 1.2s Eval</span>
             </div>
           </div>
@@ -89,26 +89,26 @@ export const FullScreenDualPinnedConvergencePrism: React.FC = () => {
       {/* Right Chromatic Refraction Wing */}
       <div
         ref={rightPrismRef}
-        className="absolute right-0 top-0 bottom-0 w-1/2 p-12 lg:p-20 flex flex-col justify-center items-end bg-gradient-to-l from-emerald-600/20 via-teal-600/10 to-transparent border-l border-emerald-500/20 backdrop-blur-md text-right"
+        className="absolute right-0 top-0 bottom-0 w-1/2 p-12 lg:p-20 flex flex-col justify-center items-end bg-white/80 border-l border-slate-200/80 backdrop-blur-2xl shadow-xl text-right"
       >
         <div className="max-w-md">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 font-mono text-xs font-bold mb-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-mono text-xs font-bold mb-4 border border-emerald-200">
             <Filter className="w-3.5 h-3.5" />
-            <span>PRISM GATE 02 · CULTURAL ALIGNMENT</span>
+            <span>PRISM GATE 02 · CULTURAL CALIBRATION</span>
           </div>
-          <h3 className="text-3xl lg:text-5xl font-black text-white tracking-tight mb-4">
-            Executive Cultural Transmittance
+          <h3 className="text-3xl lg:text-5xl font-black text-slate-900 tracking-tight mb-4">
+            Leadership Transmittance
           </h3>
-          <p className="text-slate-400 text-sm leading-relaxed mb-6">
+          <p className="text-slate-600 text-sm leading-relaxed mb-6">
             Filtering for proactive ownership, high-autonomy decision velocity, and cross-border English fluency.
           </p>
-          <div className="flex items-center justify-end gap-4 text-xs font-mono text-slate-300">
+          <div className="flex items-center justify-end gap-4 text-xs font-mono text-slate-600">
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
               <span>Autonomy: Tier-1</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-teal-400" />
+              <span className="w-2.5 h-2.5 rounded-full bg-teal-600" />
               <span>Fit: 99.1%</span>
             </div>
           </div>
@@ -118,16 +118,16 @@ export const FullScreenDualPinnedConvergencePrism: React.FC = () => {
       {/* Center Chromatic Talent Lens */}
       <div
         ref={lensRef}
-        className="relative z-30 p-10 rounded-full bg-slate-900/90 border-2 border-white/40 shadow-[0_0_80px_rgba(59,130,246,0.4)] backdrop-blur-2xl text-center flex flex-col items-center justify-center w-84 h-84"
+        className="relative z-30 p-10 rounded-full bg-white border border-slate-200 shadow-2xl shadow-blue-500/20 backdrop-blur-2xl text-center flex flex-col items-center justify-center w-84 h-84"
       >
-        <Eye className="w-12 h-12 text-blue-400 mb-3 animate-pulse" />
-        <div className="text-xs font-mono font-bold text-blue-300 uppercase tracking-widest mb-1">
+        <Eye className="w-12 h-12 text-blue-600 mb-3 animate-pulse" />
+        <div className="text-xs font-mono font-bold text-slate-500 uppercase tracking-widest mb-1">
           CHROMATIC FOCUS
         </div>
-        <div className="text-2xl font-black text-white tracking-tight mb-2">
+        <div className="text-2xl font-black text-slate-900 tracking-tight mb-2">
           Top 0.5% Talent
         </div>
-        <div className="inline-flex items-center gap-1.5 text-xs text-emerald-400 font-mono">
+        <div className="inline-flex items-center gap-1.5 text-xs text-emerald-600 font-mono font-bold">
           <Sparkles className="w-3.5 h-3.5" />
           <span>Clearance Confirmed</span>
         </div>
