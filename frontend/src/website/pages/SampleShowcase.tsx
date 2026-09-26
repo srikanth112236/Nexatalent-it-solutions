@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, Layers, ArrowUp, Activity, CheckCircle2 } from 'lucide-react';
 import {
@@ -45,6 +45,7 @@ import {
 } from '../components';
 import {
   LightHeroZoomReveal,
+  LightHeroParallaxImage,
   LightStackedCards,
   LightTwoColumnPinnedStory,
   LightHorizontalStory,
@@ -53,8 +54,18 @@ import {
   LightDashboardAssembly,
   LightCardExpandSection,
   LightPerspectiveCorridor,
+  LightCurtainReveal,
+  LightSplitScreenConvergence,
+  LightRadialExpansion,
+  LightTextToInterface,
+  LightBlurTransition,
+  LightDataHumanTransformation,
+  LightScrollSnappingStory,
+  LightBackgroundGridSpotlight,
+  LightMagneticCardAccordion,
   LightFinalCTAExpansion,
 } from '../components/light-motion';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 interface SectionHeaderProps {
   number: string;
@@ -127,6 +138,14 @@ const ComponentHeader: React.FC<SectionHeaderProps> = ({ number, name, engine, d
 
 export const SampleShowcase: React.FC = () => {
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    // Refresh ScrollTrigger calculations after initial paint to ensure all sticky/pinned offsets calculate accurately
+    const timer = setTimeout(() => {
+      ScrollTrigger.refresh();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -257,52 +276,102 @@ export const SampleShowcase: React.FC = () => {
           </p>
         </div>
 
-        {/* 1. LightHeroZoomReveal (C01, C03, C09, C10) */}
+        {/* 1. LightHeroZoomReveal (Patterns 13 & 14: Center Zoom & Focus -> Peripheral Reveal) */}
         <section id="light-hero">
           <LightHeroZoomReveal />
         </section>
 
-        {/* 2. LightStackedCards (C08 Stacked Cards on Scroll) */}
+        {/* 2. LightHeroParallaxImage (Hero Parallax Sections & Parallax Image Scrolling) */}
+        <section id="light-hero-parallax">
+          <LightHeroParallaxImage />
+        </section>
+
+        {/* 3. LightCurtainReveal (Patterns 17 & 18: Horizontal & Vertical Curtain Reveals) */}
+        <section id="light-curtain">
+          <LightCurtainReveal />
+        </section>
+
+        {/* 4. LightSplitScreenConvergence (Patterns 19 & 20: Split-Screen Convergence & Divergence) */}
+        <section id="light-split-screen">
+          <LightSplitScreenConvergence />
+        </section>
+
+        {/* 5. LightStackedCards (Patterns 22 & C08: Card Collapse / Stacked Cards on Scroll) */}
         <section id="light-stacked-cards">
           <LightStackedCards />
         </section>
 
-        {/* 3. LightTwoColumnPinnedStory (C06 Sticky Content + S04 Pinned Story) */}
+        {/* 6. LightTwoColumnPinnedStory (Patterns 23 & 24: One-Side Sticky Scroll Pin & Visual Transforms) */}
         <section id="light-pinned-story">
           <LightTwoColumnPinnedStory />
         </section>
 
-        {/* 4. LightHorizontalStory (S02 + S03 Horizontal Full-Screen Panels & Parallax) */}
+        {/* 7. LightHorizontalStory (Patterns 40 & 41: Horizontal Full View Section on Scroll & Vertical-Horizontal-Vertical) */}
         <section id="light-horizontal-story">
           <LightHorizontalStory />
         </section>
 
-        {/* 5. LightProgressiveWorkflow (C07 + S05 + S09 Progressive SVG Line Drawing) */}
+        {/* 8. LightProgressiveWorkflow (Patterns 28 & 29: Progressive Workflow Build & Dynamic SVG Line Drawing) */}
         <section id="light-progressive-workflow">
           <LightProgressiveWorkflow />
         </section>
 
-        {/* 6. LightInteractiveNetwork (S06 + E03 Interactive Node Activation) */}
+        {/* 9. LightInteractiveNetwork (Patterns 30 & 31: Node Activation & Orbiting Information) */}
         <section id="light-interactive-network">
           <LightInteractiveNetwork />
         </section>
 
-        {/* 7. LightDashboardAssembly (S07 + P04 Scroll-Scrubbed Dashboard Assembly) */}
+        {/* 10. LightRadialExpansion (Patterns 32 & 33: Radial Expansion & Radial Collapse) */}
+        <section id="light-radial-expansion">
+          <LightRadialExpansion />
+        </section>
+
+        {/* 11. LightTextToInterface (Patterns 34 & 35: Text to Interface Transformation & UI Fragment Assembly) */}
+        <section id="light-text-interface">
+          <LightTextToInterface />
+        </section>
+
+        {/* 12. LightBlurTransition (Patterns 36 & 37: Progressive Blur to Sharp & Section Blur Transition) */}
+        <section id="light-blur-transition">
+          <LightBlurTransition />
+        </section>
+
+        {/* 13. LightDataHumanTransformation (Patterns 38 & 39: Image to Data & Data to Human Transformation) */}
+        <section id="light-data-human">
+          <LightDataHumanTransformation />
+        </section>
+
+        {/* 14. LightScrollSnappingStory (Patterns 42 & 43: Scroll Snapping Story & Progress Color Transformation) */}
+        <section id="light-scroll-snapping">
+          <LightScrollSnappingStory />
+        </section>
+
+        {/* 15. LightBackgroundGridSpotlight (Patterns 44 & 45: Background Grid Transformation & Cursor Spotlight Follow) */}
+        <section id="light-grid-spotlight">
+          <LightBackgroundGridSpotlight />
+        </section>
+
+        {/* 16. LightMagneticCardAccordion (Patterns 46, 47, 48 & 49: Magnetic Cards, Hover Expand & Accordion Visual Transforms) */}
+        <section id="light-magnetic-accordion">
+          <LightMagneticCardAccordion />
+        </section>
+
+        {/* 17. LightDashboardAssembly (Patterns 25, 26, 27: Scroll-Scrubbed Dashboard Assembly & Disassembly) */}
         <section id="light-dashboard-assembly">
           <LightDashboardAssembly />
         </section>
 
-        {/* 8. LightCardExpandSection (S08 Card to Full Section Expansion) */}
+        {/* 18. LightCardExpandSection (Pattern 21: Card Expansion to Full Section) */}
         <section id="light-card-expand">
           <LightCardExpandSection />
         </section>
 
-        {/* 9. LightPerspectiveCorridor (P01 + P02 + P03 3D Perspective Depth Corridor) */}
+        {/* 19. LightPerspectiveCorridor (Patterns 15 & 16: Perspective Corridor & Depth Tunnel / Z-Axis Scroll) */}
         <section id="light-perspective-corridor">
           <LightPerspectiveCorridor />
         </section>
 
-        {/* 10. LightFinalCTAExpansion (P10 Final CTA Radial & Scale Expansion) */}
+        {/* 20. LightFinalCTAExpansion (Pattern 50: Final CTA Radial & Scale Expansion) */}
         <section id="light-final-cta">
           <LightFinalCTAExpansion />
         </section>

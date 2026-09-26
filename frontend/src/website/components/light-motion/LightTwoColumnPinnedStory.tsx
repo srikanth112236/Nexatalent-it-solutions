@@ -81,20 +81,11 @@ export const LightTwoColumnPinnedStory: React.FC = () => {
     const sections = gsap.utils.toArray<HTMLElement>('.story-scroll-trigger');
 
     const ctx = gsap.context(() => {
-      // Pin the left summary column while scrolling right stages
-      ScrollTrigger.create({
-        trigger: containerRef.current,
-        start: 'top 15%',
-        end: 'bottom 85%',
-        pin: leftColRef.current,
-        pinSpacing: false,
-      });
-
       sections.forEach((sec, idx) => {
         ScrollTrigger.create({
           trigger: sec,
-          start: 'top 50%',
-          end: 'bottom 50%',
+          start: 'top 55%',
+          end: 'bottom 55%',
           onEnter: () => setActiveStage(idx),
           onEnterBack: () => setActiveStage(idx),
         });
@@ -161,6 +152,9 @@ export const LightTwoColumnPinnedStory: React.FC = () => {
           <div
             ref={leftColRef}
             style={{
+              position: 'sticky',
+              top: '100px',
+              alignSelf: 'start',
               borderRadius: '24px',
               backgroundColor: '#f8fafc',
               border: '1px solid #e2e8f0',
