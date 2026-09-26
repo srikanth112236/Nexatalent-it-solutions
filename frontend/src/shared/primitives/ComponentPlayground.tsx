@@ -102,9 +102,12 @@ export function ComponentPlayground() {
       <header style={{ marginBottom: '3rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <Badge variant="primary">Phase 3 Component Library</Badge>
-          <div style={{ display: 'flex', gap: '1.5rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <Link to="/website-components" style={{ color: 'var(--color-primary-400)', fontSize: '0.875rem', textDecoration: 'none', fontWeight: 700, backgroundColor: 'rgba(59, 130, 246, 0.1)', padding: '0.35rem 0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(59, 130, 246, 0.25)' }}>
+              ✦ 40 Website Components (Phase 4)
+            </Link>
             <Link to="/design-system" style={{ color: 'var(--color-primary)', fontSize: '0.875rem', textDecoration: 'none' }}>
-              &larr; Design System Tokens
+              &larr; Design Tokens
             </Link>
             <Link to="/" style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem', textDecoration: 'none' }}>
               Website Home &rarr;
