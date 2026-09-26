@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-// Import all 40 light-theme modern components
+// Import all 40 light-theme modern components + 10 signature components (50 total)
 import {
   LightHeroZoomReveal,
   LightHeroParallaxImage,
@@ -50,7 +50,17 @@ import {
   LightEditorialInsightCard,
   LightServiceTierComparison,
   LightTrustSignalStrip,
-  LightFinalCTAExpansion
+  LightFinalCTAExpansion,
+  SignatureTalentRadar,
+  SignatureGCCFlightPath,
+  SignatureCodeVettingTerminal,
+  SignatureLiquidTiltDeck,
+  SignatureCompensationHeatmap,
+  SignatureInteractiveTimelineDial,
+  SignatureTalentComparisonSlider,
+  SignatureHiringSquadBuilder,
+  SignatureParticleTextMorph,
+  SignatureExecutivePledgeShield
 } from '../components/light-motion';
 
 interface SectionBannerProps {
@@ -59,19 +69,33 @@ interface SectionBannerProps {
   name: string;
   tech: string;
   description: string;
+  isSignature?: boolean;
 }
 
-const LightSectionDivider: React.FC<SectionBannerProps> = ({ index, id, name, tech, description }) => (
+const LightSectionDivider: React.FC<SectionBannerProps> = ({ index, id, name, tech, description, isSignature }) => (
   <div 
     id={id}
-    className="w-full bg-slate-100/70 border-y border-slate-200/80 px-6 py-3.5 backdrop-blur-md sticky top-0 z-30 flex flex-wrap items-center justify-between gap-3 text-xs"
+    className={`w-full border-y px-6 py-3.5 backdrop-blur-md sticky top-0 z-30 flex flex-wrap items-center justify-between gap-3 text-xs ${
+      isSignature 
+        ? 'bg-blue-50/90 border-blue-200 shadow-xs' 
+        : 'bg-slate-100/70 border-slate-200/80'
+    }`}
   >
     <div className="flex items-center gap-3">
-      <span className="font-mono font-extrabold px-2.5 py-0.5 rounded-md bg-blue-600 text-white text-[11px] shadow-sm">
-        {String(index).padStart(2, '0')} / 40
+      <span className={`font-mono font-extrabold px-2.5 py-0.5 rounded-md text-[11px] shadow-sm ${
+        isSignature 
+          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white' 
+          : 'bg-slate-900 text-white'
+      }`}>
+        {String(index).padStart(2, '0')} / 50
       </span>
-      <h3 className="font-bold text-slate-800 text-sm tracking-tight m-0">
-        {name}
+      <h3 className="font-bold text-slate-900 text-sm tracking-tight m-0 flex items-center gap-2">
+        <span>{name}</span>
+        {isSignature && (
+          <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black uppercase tracking-wider">
+            Signature
+          </span>
+        )}
       </h3>
       <span className="hidden md:inline text-slate-400">•</span>
       <span className="hidden md:inline text-slate-500 font-medium">
@@ -139,7 +163,7 @@ export const SampleShowcase: React.FC = () => {
             className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold mb-6 shadow-xs"
           >
             <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-            <span>NexaTalent Production Motion Showcase • Complete 40 Components</span>
+            <span>NexaTalent Production Motion Showcase • 50 Unique Components</span>
           </motion.div>
 
           <motion.h1
@@ -148,9 +172,9 @@ export const SampleShowcase: React.FC = () => {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="text-4xl sm:text-6xl font-black text-slate-900 tracking-tight leading-[1.1] mb-6"
           >
-            All 40 Modern Light-Theme <br className="hidden sm:inline" />
+            Complete 50 Modern Light-Theme <br className="hidden sm:inline" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600">
-              Animated Sections Showcase
+              Animated & Signature Sections
             </span>
           </motion.h1>
 
@@ -160,8 +184,8 @@ export const SampleShowcase: React.FC = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed mb-10"
           >
-            Pure, seamless sequential presentation with consistent typography, crisp slate-900 hierarchy, 
-            Lenis smooth scrolling, one-side sticky pinned timelines, parallax hero imagery, and scrubbed storytelling.
+            Pure, unconstrained sequential presentation: 40 core architecture components + 10 signature interactive modules. 
+            All in crisp lighter theme with Lenis smooth inertia, GSAP sticky pin timelines, and interactive 3D mechanics.
           </motion.p>
 
           {/* Key Feature Badges */}
@@ -173,17 +197,17 @@ export const SampleShowcase: React.FC = () => {
           >
             <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
               <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <span>40 Complete Sections</span>
+              <span>50 Complete Sections</span>
+            </div>
+            <div className="w-1 h-1 rounded-full bg-slate-300 hidden sm:block" />
+            <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <span>10 Signature Experiences</span>
             </div>
             <div className="w-1 h-1 rounded-full bg-slate-300 hidden sm:block" />
             <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
               <CheckCircle2 className="w-4 h-4 text-emerald-500" />
               <span>100% Light Theme</span>
-            </div>
-            <div className="w-1 h-1 rounded-full bg-slate-300 hidden sm:block" />
-            <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <span>Sticky Pinning & Parallax</span>
             </div>
             <div className="w-1 h-1 rounded-full bg-slate-300 hidden sm:block" />
             <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
@@ -194,7 +218,7 @@ export const SampleShowcase: React.FC = () => {
         </div>
       </header>
 
-      {/* 40 SEQUENTIAL SECTIONS */}
+      {/* 50 SEQUENTIAL SECTIONS */}
       <main className="relative">
 
         {/* 01: Hero Center Zoom & Content Reveal */}
@@ -665,14 +689,145 @@ export const SampleShowcase: React.FC = () => {
           <LightTrustSignalStrip />
         </section>
 
-        {/* 40: Dynamic Full-Width Scale Final CTA */}
+        {/* 40: 5-Axis Seniority & Competency Radar */}
         <section id="sec-40">
           <LightSectionDivider
             index={40}
             id="bar-40"
+            name="5-Axis Seniority & Competency Radar"
+            tech="Dynamic SVG Polygon + Springs"
+            description="Multi-dimensional competency assessment across architecture, concurrency, and AI"
+            isSignature={true}
+          />
+          <SignatureTalentRadar />
+        </section>
+
+        {/* 41: Geo-Orbital GCC Relocation Flight Paths */}
+        <section id="sec-41">
+          <LightSectionDivider
+            index={41}
+            id="bar-41"
+            name="Geo-Orbital GCC Relocation & Pod Corridors"
+            tech="Animated SVG Arc + Live Arbitrage"
+            description="Interactive flight paths and talent cost arbitrage between Western tech hubs and India"
+            isSignature={true}
+          />
+          <SignatureGCCFlightPath />
+        </section>
+
+        {/* 42: Production Code Vetting Terminal */}
+        <section id="sec-42">
+          <LightSectionDivider
+            index={42}
+            id="bar-42"
+            name="Production Code Vetting Terminal"
+            tech="Interactive Console + Execution Harness"
+            description="High-tech terminal running lockless C++, Raft consensus, and CUDA flash-attention tests"
+            isSignature={true}
+          />
+          <SignatureCodeVettingTerminal />
+        </section>
+
+        {/* 43: 3D Fluid Tilt Deck & Client Proof */}
+        <section id="sec-43">
+          <LightSectionDivider
+            index={43}
+            id="bar-43"
+            name="3D Fluid Tilt Deck & Executive Outcomes"
+            tech="3D Spring Tilt + Specular Glare"
+            description="Dynamic cursor-following tilt cards displaying verified Tier-1 client deployments"
+            isSignature={true}
+          />
+          <SignatureLiquidTiltDeck />
+        </section>
+
+        {/* 44: Cross-Border Compensation Heatmap Matrix */}
+        <section id="sec-44">
+          <LightSectionDivider
+            index={44}
+            id="bar-44"
+            name="Cross-Border Compensation Heatmap Matrix"
+            tech="Dynamic Normalized Comp Bars"
+            description="Interactive compensation bands, equity splits, and purchasing-power indices"
+            isSignature={true}
+          />
+          <SignatureCompensationHeatmap />
+        </section>
+
+        {/* 45: Precision Velocity Timeline Dial */}
+        <section id="sec-45">
+          <LightSectionDivider
+            index={45}
+            id="bar-45"
+            name="Precision Velocity Timeline Dial"
+            tech="Interactive Stepper + Artifact Reveal"
+            description="Scrub through Day 1 calibration to Day 75 turnkey 120-engineer center deployment"
+            isSignature={true}
+          />
+          <SignatureInteractiveTimelineDial />
+        </section>
+
+        {/* 46: Interactive Before/After Comparison Slider */}
+        <section id="sec-46">
+          <LightSectionDivider
+            index={46}
+            id="bar-46"
+            name="Interactive Talent Velocity Slider"
+            tech="Draggable Split-Screen Slider"
+            description="Direct comparison between traditional staffing agencies and NexaTalent pods"
+            isSignature={true}
+          />
+          <SignatureTalentComparisonSlider />
+        </section>
+
+        {/* 47: Interactive Engineering Squad Architect */}
+        <section id="sec-47">
+          <LightSectionDivider
+            index={47}
+            id="bar-47"
+            name="Engineering Squad Architect & Simulator"
+            tech="Interactive Headcount + SLA Output"
+            description="Compose engineering pods in real time with dynamic monthly burn and timeline calculation"
+            isSignature={true}
+          />
+          <SignatureHiringSquadBuilder />
+        </section>
+
+        {/* 48: Interactive Physics Particle Typography */}
+        <section id="sec-48">
+          <LightSectionDivider
+            index={48}
+            id="bar-48"
+            name="Interactive Physics Particle Typography"
+            tech="Canvas 2D Spring Particle Simulation"
+            description="450+ physics particles forming dynamic headlines that repel cursor interactions"
+            isSignature={true}
+          />
+          <SignatureParticleTextMorph />
+        </section>
+
+        {/* 49: 4-Layer Executive Guarantee Shield */}
+        <section id="sec-49">
+          <LightSectionDivider
+            index={49}
+            id="bar-49"
+            name="4-Layer Executive Guarantee Shield"
+            tech="Multi-Layer Covenant Unpacking"
+            description="180-day warranty, 100% IP transfer covenant, SOC 2 Type II, and escrow protections"
+            isSignature={true}
+          />
+          <SignatureExecutivePledgeShield />
+        </section>
+
+        {/* 50: Grand Finale Scale-to-Edge Action Banner */}
+        <section id="sec-50">
+          <LightSectionDivider
+            index={50}
+            id="bar-50"
             name="Final Scale-to-Edge Action Banner"
             tech="GSAP ScrollTrigger Edge Expand"
             description="Card container seamlessly expands to full viewport width on final scroll"
+            isSignature={true}
           />
           <LightFinalCTAExpansion />
         </section>
@@ -719,11 +874,11 @@ export const SampleShowcase: React.FC = () => {
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-4">Motion Engineering</h4>
               <p className="text-xs text-slate-400 leading-relaxed mb-3">
-                All 40 components engineered with pure light design tokens, 60fps Framer Motion springs, and GSAP ScrollTrigger timeline pins.
+                All 50 components engineered with pure light design tokens, 60fps Framer Motion springs, and GSAP ScrollTrigger timeline pins.
               </p>
               <div className="inline-flex items-center gap-2 text-xs font-mono text-blue-400">
                 <Code2 className="w-4 h-4" />
-                <span>40 of 40 Sections Verified</span>
+                <span>50 of 50 Sections Verified</span>
               </div>
             </div>
           </div>

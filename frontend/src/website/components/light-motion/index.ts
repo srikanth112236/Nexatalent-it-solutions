@@ -1,4 +1,4 @@
-// 40 Modern Light-Theme Animated Components
+// 40 Modern Light-Theme Animated Components + 10 Premium Signature Animated Sections (50 Total)
 export * from './LightHeroZoomReveal';
 export * from './LightHeroParallaxImage';
 export * from './LightStackedCards';
@@ -39,3 +39,15 @@ export * from './LightSalaryResourceCard';
 export * from './LightEditorialInsightCard';
 export * from './LightServiceTierComparison';
 export * from './LightTrustSignalStrip';
+
+// 10 Unique Signature Animated Sections
+export * from './SignatureTalentRadar';
+export * from './SignatureGCCFlightPath';
+export * from './SignatureCodeVettingTerminal';
+export * from './SignatureLiquidTiltDeck';
+export * from './SignatureCompensationHeatmap';
+export * from './SignatureInteractiveTimelineDial';
+export * from './SignatureTalentComparisonSlider';
+export * from './SignatureHiringSquadBuilder';
+export * from './SignatureParticleTextMorph';
+export * from './SignatureExecutivePledgeShield';
