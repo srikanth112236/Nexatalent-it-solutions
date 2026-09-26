@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Button, Badge, Modal } from '../../shared/primitives';
+import { motionTokens } from '../../shared/motion/motionTokens';
 
 export interface VideoHeroProps {
   badge?: string;
@@ -19,24 +21,50 @@ export const VideoHero: React.FC<VideoHeroProps> = ({
 
   return (
     <section style={{ maxWidth: '1280px', margin: '0 auto', padding: '5rem 2rem', textAlign: 'center' }}>
-      <Badge variant="primary" style={{ marginBottom: '1.25rem' }}>{badge}</Badge>
-      <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)', fontWeight: 800, letterSpacing: '-0.03em', maxWidth: '840px', margin: '0 auto 1.25rem auto' }}>
-        {title}
-      </h2>
-      <p style={{ color: 'var(--color-text-muted)', fontSize: '1.1rem', maxWidth: '640px', margin: '0 auto 2.5rem auto' }}>
-        {description}
-      </p>
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.4 }}
+      >
+        <Badge variant="primary" style={{ marginBottom: '1.25rem' }}>{badge}</Badge>
+      </motion.div>
 
-      {/* Video Container with Ambient Shadow */}
-      <div
+      <motion.h2
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6, delay: 0.1, ease: motionTokens.ease.standard }}
+        style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)', fontWeight: 800, letterSpacing: '-0.03em', maxWidth: '840px', margin: '0 auto 1.25rem auto', color: '#ffffff' }}
+      >
+        {title}
+      </motion.h2>
+
+      <motion.p
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6, delay: 0.2, ease: motionTokens.ease.standard }}
+        style={{ color: 'var(--color-text-muted)', fontSize: '1.1rem', maxWidth: '640px', margin: '0 auto 3rem auto', lineHeight: 1.6 }}
+      >
+        {description}
+      </motion.p>
+
+      {/* Video Container with Breathing Glowing Border and Animated Play Trigger */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96 }}
+        whileInView={{ opacity: 1, scale: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.7, delay: 0.3, ease: motionTokens.ease.emphasis }}
+        whileHover={{ scale: 1.01 }}
         style={{
           position: 'relative',
           maxWidth: '960px',
           margin: '0 auto',
           borderRadius: 'var(--radius-2xl)',
           overflow: 'hidden',
-          border: '1px solid var(--color-border)',
-          boxShadow: 'var(--shadow-xl)',
+          border: '1px solid rgba(59, 130, 246, 0.4)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 35px rgba(59, 130, 246, 0.2)',
           cursor: 'pointer',
         }}
         onClick={() => setIsPlaying(true)}
@@ -47,7 +75,7 @@ export const VideoHero: React.FC<VideoHeroProps> = ({
           style={{ width: '100%', height: 'auto', display: 'block', aspectRatio: '16/9', objectFit: 'cover' }}
         />
 
-        {/* Ambient Overlay & Play Trigger */}
+        {/* Ambient Dark Overlay & Pulsing Ripple Play Button */}
         <div
           style={{
             position: 'absolute',
@@ -56,38 +84,69 @@ export const VideoHero: React.FC<VideoHeroProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            transition: 'background-color 0.2s',
           }}
         >
-          <div
-            style={{
-              width: '72px',
-              height: '72px',
-              borderRadius: '50%',
-              backgroundColor: 'var(--color-primary)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: 'var(--shadow-glow-primary)',
-              transition: 'transform 0.2s',
-            }}
-          >
-            <span style={{ color: '#ffffff', fontSize: '1.5rem', marginLeft: '4px' }}>▶</span>
+          {/* Concentric Animated Pulse Ring */}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <motion.div
+              animate={{
+                scale: [1, 1.8, 1],
+                opacity: [0.6, 0, 0.6],
+              }}
+              transition={{
+                duration: 2.4,
+                repeat: Infinity,
+                ease: 'easeOut',
+              }}
+              style={{
+                position: 'absolute',
+                width: '76px',
+                height: '76px',
+                borderRadius: '50%',
+                border: '2px solid rgba(59, 130, 246, 0.6)',
+              }}
+            />
+
+            <motion.div
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.94 }}
+              style={{
+                width: '76px',
+                height: '76px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--color-primary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 30px rgba(59, 130, 246, 0.7)',
+                position: 'relative',
+                zIndex: 2,
+              }}
+            >
+              <span style={{ color: '#ffffff', fontSize: '1.6rem', marginLeft: '5px' }}>▶</span>
+            </motion.div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       <Modal
         isOpen={isPlaying}
         onClose={() => setIsPlaying(false)}
-        title="NexaTalent Platform Overview"
-        maxWidth="800px"
+        title="NexaTalent Platform Overview & Workflow"
+        maxWidth="840px"
       >
-        <div style={{ aspectRatio: '16/9', backgroundColor: '#000000', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <p style={{ color: '#ffffff', fontSize: '0.95rem' }}>Interactive Demo Video Player</p>
+        <div style={{ aspectRatio: '16/9', backgroundColor: '#090d16', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--color-border)' }}>
+          <div style={{ textAlign: 'center', padding: '2rem' }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.5rem' }}>
+              Platform Video Tour Activated
+            </div>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+              Demonstrating the real-time client pipeline, candidate verification checks, and SLA clock.
+            </p>
+          </div>
         </div>
         <div style={{ marginTop: '1.25rem', textAlign: 'right' }}>
-          <Button variant="secondary" onClick={() => setIsPlaying(false)}>Close Player</Button>
+          <Button variant="secondary" onClick={() => setIsPlaying(false)}>Close Walkthrough</Button>
         </div>
       </Modal>
     </section>
