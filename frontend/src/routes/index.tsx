@@ -10,6 +10,7 @@ import { DesignSystemShowcase } from '../shared/design-system/DesignSystemShowca
 import { ComponentPlayground } from '../shared/primitives/ComponentPlayground';
 import { WebsiteComponentsCatalog } from '../website/pages/WebsiteComponentsCatalog';
 import { SampleShowcase } from '../website/pages/SampleShowcase';
+import { SampleComponentsPage } from '../website/pages/SampleComponentsPage';
 
 export function AppRoutes() {
   return (
@@ -19,6 +20,8 @@ export function AppRoutes() {
       <Route path="/components" element={<ComponentPlayground />} />
       <Route path="/website-components" element={<WebsiteComponentsCatalog />} />
       <Route path="/sample" element={<SampleShowcase />} />
+      <Route path="/sample-components" element={<SampleComponentsPage />} />
+      <Route path="/sample-compoements" element={<SampleComponentsPage />} />
       {/* 1. Dedicated Authentication Routes */}
       <Route path="/login/*" element={<AuthRoutes />} />
       <Route path="/forgot-password/*" element={<AuthRoutes />} />
