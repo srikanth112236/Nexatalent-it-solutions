@@ -85,3 +85,25 @@ export * from './SignatureStickyCurvedPath';
 export * from './SignatureStickySpotlightAccordion';
 export * from './SignatureLiveArbitrageMatrixSlider';
 export * from './SignatureVolumetricCubeStack';
+
+// 20 New Full-Screen Dual Pinned Convergence, Split Curtains & Parallax Components
+export * from './FullScreenDualPinnedConvergenceHolo';
+export * from './FullScreenDualPinnedConvergenceVault';
+export * from './FullScreenDualPinnedConvergenceMatrix';
+export * from './FullScreenDualPinnedConvergencePrism';
+export * from './FullScreenVerticalParallaxMesh';
+export * from './FullScreenVerticalParallaxConstellation';
+export * from './FullScreenVerticalParallaxAtmosphere';
+export * from './FullScreenVerticalParallaxDeepOcean';
+export * from './FullScreenHorizontalParallaxRail';
+export * from './FullScreenHorizontalParallaxInfiniteCampus';
+export * from './FullScreenHorizontalParallaxTimelineMatrix';
+export * from './FullScreenSplitConvergenceHero';
+export * from './FullScreenSplitDivergenceExecutive';
+export * from './FullScreenSplitConvergenceBilateralCode';
+export * from './FullScreenSplitDivergenceTalentArb';
+export * from './FullScreenHorizontalSplitCurtain';
+export * from './FullScreenVerticalSplitCurtain';
+export * from './FullScreenHorizontalSplitCurtainLaser';
+export * from './FullScreenVerticalSplitCurtainAperture';
+export * from './FullScreenDiagonalCurtainConvergence';

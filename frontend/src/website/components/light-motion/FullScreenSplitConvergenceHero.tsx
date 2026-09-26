@@ -1,0 +1,131 @@
+import React, { useEffect, useRef } from 'react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { ArrowRight, Zap, Building2, Globe } from 'lucide-react';
+
+gsap.registerPlugin(ScrollTrigger);
+
+export const FullScreenSplitConvergenceHero: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const leftSideRef = useRef<HTMLDivElement>(null);
+  const rightSideRef = useRef<HTMLDivElement>(null);
+  const unifiedBadgeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: containerRef.current,
+          start: 'top top',
+          end: '+=150%',
+          pin: true,
+          scrub: 1,
+        },
+      });
+
+      // Pattern 19: Bilateral halves slide together to meet at 50/50 center seam
+      tl.fromTo(
+        leftSideRef.current,
+        { xPercent: -50 },
+        { xPercent: 0, ease: 'power2.out' },
+        0
+      )
+        .fromTo(
+          rightSideRef.current,
+          { xPercent: 50 },
+          { xPercent: 0, ease: 'power2.out' },
+          0
+        )
+        .fromTo(
+          unifiedBadgeRef.current,
+          { scale: 0, opacity: 0 },
+          { scale: 1, opacity: 1, ease: 'back.out(1.7)' },
+          0.3
+        );
+    }, containerRef);
+
+    return () => ctx.revert();
+  }, []);
+
+  return (
+    <section
+      ref={containerRef}
+      className="relative w-screen min-h-screen bg-slate-950 text-white overflow-hidden flex items-stretch m-0 p-0"
+      style={{ width: '100vw', maxWidth: '100vw' }}
+    >
+      {/* Pattern 19: Left Screen Split (Western Enterprise) */}
+      <div
+        ref={leftSideRef}
+        className="w-1/2 min-h-screen p-8 md:p-16 lg:p-24 flex flex-col justify-between bg-gradient-to-br from-slate-900 to-blue-950 border-r border-blue-500/30 z-10"
+      >
+        <div className="flex items-center gap-2 text-blue-400 font-mono text-xs font-bold">
+          <Building2 className="w-4 h-4" />
+          <span>WESTERN HEADQUARTERS · PATTERN 19 CONVERGENCE</span>
+        </div>
+
+        <div className="max-w-lg">
+          <span className="text-blue-400 font-mono text-xs font-bold uppercase tracking-widest block mb-2">
+            Demand Vector
+          </span>
+          <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-white tracking-tight mb-6">
+            Global Tech Leadership
+          </h2>
+          <p className="text-slate-300 text-sm md:text-base leading-relaxed mb-6">
+            US & European organizations requiring hardened engineering guilds without Silicon Valley compensation premiums.
+          </p>
+          <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-700 font-mono text-xs text-slate-300 space-y-2">
+            <div>Median Bay Area Principal: <span className="text-white font-bold">$420K TC</span></div>
+            <div>Time to Fill in SF: <span className="text-amber-400 font-bold">110 Days</span></div>
+          </div>
+        </div>
+
+        <div className="text-xs font-mono text-slate-500">
+          WESTERN CONVERGENCE FLANK
+        </div>
+      </div>
+
+      {/* Pattern 19: Right Screen Split (India GCC Center) */}
+      <div
+        ref={rightSideRef}
+        className="w-1/2 min-h-screen p-8 md:p-16 lg:p-24 flex flex-col justify-between bg-gradient-to-bl from-slate-900 to-emerald-950 border-l border-emerald-500/30 z-10 text-right"
+      >
+        <div className="flex items-center justify-end gap-2 text-emerald-400 font-mono text-xs font-bold">
+          <span>INDIA TALENT CORE · FULL 100VW CONVERGENCE</span>
+          <Globe className="w-4 h-4" />
+        </div>
+
+        <div className="max-w-lg ml-auto">
+          <span className="text-emerald-400 font-mono text-xs font-bold uppercase tracking-widest block mb-2">
+            Supply Vector
+          </span>
+          <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-white tracking-tight mb-6">
+            Autonomous GCC Squads
+          </h2>
+          <p className="text-slate-300 text-sm md:text-base leading-relaxed mb-6">
+            Pre-vetted engineering directors and Staff architects ready to execute high-impact roadmaps on Day 1.
+          </p>
+          <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-700 font-mono text-xs text-slate-300 space-y-2 text-left">
+            <div>NexaTalent Calibrated Comp: <span className="text-emerald-400 font-bold">₹1.25 Cr ($150K)</span></div>
+            <div>Time to Deploy: <span className="text-blue-400 font-bold">14 Days</span></div>
+          </div>
+        </div>
+
+        <div className="text-xs font-mono text-slate-500">
+          EASTERN CONVERGENCE FLANK
+        </div>
+      </div>
+
+      {/* Center Unified Seam Lock Badge */}
+      <div
+        ref={unifiedBadgeRef}
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 px-6 py-3 rounded-full bg-white text-slate-950 font-bold text-xs shadow-2xl flex items-center gap-2 border-2 border-blue-500"
+      >
+        <Zap className="w-4 h-4 text-blue-600 fill-current" />
+        <span>PATTERN 19: UNIFIED OPERATION</span>
+        <ArrowRight className="w-4 h-4" />
+      </div>
+    </section>
+  );
+};
