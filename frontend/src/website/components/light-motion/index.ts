@@ -69,3 +69,19 @@ export * from './VerticalParallaxTalentArb';
 export * from './StickyPinAccordionReveal';
 export * from './PinnedCircularProgressReveal';
 export * from './DualPinnedConvergenceShowcase';
+
+// 14 New Radial Variations, Parallax Reveal, and Signature Components
+export * from './PinnedOrbitalHologramDial';
+export * from './PinnedRadialHexagonRadar';
+export * from './PinnedSpeedometerGauge';
+export * from './ParallaxIsometricCityRamp';
+export * from './ParallaxFloatingCodeHologram';
+export * from './ParallaxWaveformSounding';
+export * from './SignatureMagneticCursorDeck';
+export * from './SignatureMorphingShapeSVG';
+export * from './SignatureSplitTextScramble';
+export * from './SignatureInteractiveFlipCards';
+export * from './SignatureStickyCurvedPath';
+export * from './SignatureStickySpotlightAccordion';
+export * from './SignatureLiveArbitrageMatrixSlider';
+export * from './SignatureVolumetricCubeStack';

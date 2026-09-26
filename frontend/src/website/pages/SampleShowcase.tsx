@@ -76,6 +76,20 @@ import {
   StickyPinAccordionReveal,
   PinnedCircularProgressReveal,
   DualPinnedConvergenceShowcase,
+  PinnedOrbitalHologramDial,
+  PinnedRadialHexagonRadar,
+  PinnedSpeedometerGauge,
+  ParallaxIsometricCityRamp,
+  ParallaxFloatingCodeHologram,
+  ParallaxWaveformSounding,
+  SignatureMagneticCursorDeck,
+  SignatureMorphingShapeSVG,
+  SignatureSplitTextScramble,
+  SignatureInteractiveFlipCards,
+  SignatureStickyCurvedPath,
+  SignatureStickySpotlightAccordion,
+  SignatureLiveArbitrageMatrixSlider,
+  SignatureVolumetricCubeStack,
   LightFinalCTAExpansion,
 } from '../components/light-motion';
 
@@ -88,44 +102,8 @@ interface SectionBannerProps {
   isSpecial?: boolean;
 }
 
-const LightSectionDivider: React.FC<SectionBannerProps> = ({ index, id, name, tech, description, isSpecial }) => (
-  <div 
-    id={id}
-    className={`w-full border-y px-6 py-3.5 backdrop-blur-md sticky top-0 z-30 flex flex-wrap items-center justify-between gap-3 text-xs ${
-      isSpecial 
-        ? 'bg-blue-50/90 border-blue-200 shadow-xs' 
-        : 'bg-slate-100/70 border-slate-200/80'
-    }`}
-  >
-    <div className="flex items-center gap-3">
-      <span className={`font-mono font-extrabold px-2.5 py-0.5 rounded-md text-[11px] shadow-sm ${
-        isSpecial 
-          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white' 
-          : 'bg-slate-900 text-white'
-      }`}>
-        {String(index).padStart(2, '0')} / 66
-      </span>
-      <h3 className="font-bold text-slate-900 text-sm tracking-tight m-0 flex items-center gap-2">
-        <span>{name}</span>
-        {isSpecial && (
-          <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black uppercase tracking-wider">
-            Signature / Parallax
-          </span>
-        )}
-      </h3>
-      <span className="hidden md:inline text-slate-400">•</span>
-      <span className="hidden md:inline text-slate-500 font-medium">
-        {description}
-      </span>
-    </div>
-
-    <div className="flex items-center gap-2">
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-slate-200 text-slate-700 font-semibold text-[11px] shadow-xs">
-        <Zap className="w-3 h-3 text-blue-600" />
-        {tech}
-      </span>
-    </div>
-  </div>
+const LightSectionDivider: React.FC<SectionBannerProps> = ({ id }) => (
+  <div id={id} className="sr-only" aria-hidden="true" />
 );
 
 export const SampleShowcase: React.FC = () => {
@@ -182,7 +160,7 @@ export const SampleShowcase: React.FC = () => {
             className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold mb-6 shadow-xs"
           >
             <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-            <span>NexaTalent Production Motion Showcase • 66 Complete Sections</span>
+            <span>NexaTalent Production Motion Showcase • 80 Complete Sections</span>
           </motion.div>
 
           <motion.h1
@@ -191,7 +169,7 @@ export const SampleShowcase: React.FC = () => {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="text-4xl sm:text-6xl font-black text-slate-900 tracking-tight leading-[1.1] mb-6"
           >
-            All 66 Modern Light-Theme <br className="hidden sm:inline" />
+            All 80 Modern Light-Theme <br className="hidden sm:inline" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600">
               Animated & Parallax Sections
             </span>
@@ -203,7 +181,7 @@ export const SampleShowcase: React.FC = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed mb-10"
           >
-            Complete sequential showcase: 40 core architecture components, 10 signature modules, 
+            Seamless production showcase: 40 core architecture components, 18 signature modules, 
             3 distinct 3D perspective depth corridors, multi-layer parallax sections, horizontal cards rails, and one-side & two-side sticky pin storytelling.
           </motion.p>
 
@@ -215,8 +193,8 @@ export const SampleShowcase: React.FC = () => {
             className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 p-4 rounded-2xl bg-white border border-slate-200/80 shadow-lg shadow-slate-200/40 max-w-4xl mx-auto"
           >
             <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <span>66 Complete Sections</span>
+              <Zap className="w-4 h-4 text-blue-600" />
+              <span>80 Complete Sections</span>
             </div>
             <div className="w-1 h-1 rounded-full bg-slate-300 hidden sm:block" />
             <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
@@ -1046,11 +1024,193 @@ export const SampleShowcase: React.FC = () => {
           <DualPinnedConvergenceShowcase />
         </section>
 
-        {/* 66: Grand Finale Scale-to-Edge Action Banner */}
+        {/* 66: Pinned 360° Radial Variation 1: Gyroscopic Orbital Dial */}
         <section id="sec-66">
           <LightSectionDivider
             index={66}
             id="bar-66"
+            name="Pinned 360° Radial: Gyroscopic Orbital Dial"
+            tech="GSAP Pin + Orbital Trigonometry"
+            description="Triple-orbital gyroscopic counter-rotating candidate vetting dial"
+            isSpecial={true}
+          />
+          <PinnedOrbitalHologramDial />
+        </section>
+
+        {/* 67: Pinned 360° Radial Variation 2: Hexagonal Radar */}
+        <section id="sec-67">
+          <LightSectionDivider
+            index={67}
+            id="bar-67"
+            name="Pinned 360° Radial: Hexagonal Caliper Radar"
+            tech="GSAP Pin + Polygonal Polar Scrub"
+            description="6-axis expanding hexagonal caliper telemetry radar"
+            isSpecial={true}
+          />
+          <PinnedRadialHexagonRadar />
+        </section>
+
+        {/* 68: Pinned 360° Radial Variation 3: Precision Tachometer Gauge */}
+        <section id="sec-68">
+          <LightSectionDivider
+            index={68}
+            id="bar-68"
+            name="Pinned 360° Radial: Precision Speedometer Gauge"
+            tech="Dual Arc Sweep + Dynamic Needle Pin"
+            description="Dual precision tachometers tracking GCC ramp speed and talent yield"
+            isSpecial={true}
+          />
+          <PinnedSpeedometerGauge />
+        </section>
+
+        {/* 69: Vertical Parallax Variation 1: Isometric Campus Ramp */}
+        <section id="sec-69">
+          <LightSectionDivider
+            index={69}
+            id="bar-69"
+            name="Vertical Parallax: 4-Tier Isometric Campus Ramp"
+            tech="Multi-Speed Scroll Scrub"
+            description="Isometric 4-tier capability campus stack unfolding on scroll"
+            isSpecial={true}
+          />
+          <ParallaxIsometricCityRamp />
+        </section>
+
+        {/* 70: Vertical Parallax Variation 2: Floating Code Terminal Hologram */}
+        <section id="sec-70">
+          <LightSectionDivider
+            index={70}
+            id="bar-70"
+            name="Vertical Parallax: Floating Code Hologram"
+            tech="Differential Z-Axis Floating Holograms"
+            description="Dual floating code terminal holograms revealing real-time AST analysis"
+            isSpecial={true}
+          />
+          <ParallaxFloatingCodeHologram />
+        </section>
+
+        {/* 71: Vertical Parallax Variation 3: HFT Waveform Telemetry */}
+        <section id="sec-71">
+          <LightSectionDivider
+            index={71}
+            id="bar-71"
+            name="Vertical Parallax: HFT Pulse Waveform Telemetry"
+            tech="Audio/Quant Waveform Scroll Modulation"
+            description="HFT market pulse & dynamic waveform telemetry synchronized to scroll"
+            isSpecial={true}
+          />
+          <ParallaxWaveformSounding />
+        </section>
+
+        {/* 72: Signature Scroll Animation 1: Magnetic 3D Cursor Deck */}
+        <section id="sec-72">
+          <LightSectionDivider
+            index={72}
+            id="bar-72"
+            name="Signature: Magnetic 3D Cursor Deck"
+            tech="Magnetic Cursor Physics + Spring Vector"
+            description="Spring-loaded 3D tilt deck with magnetic cursor attraction"
+            isSpecial={true}
+          />
+          <SignatureMagneticCursorDeck />
+        </section>
+
+        {/* 73: Signature Scroll Animation 2: Morphing Shape SVG */}
+        <section id="sec-73">
+          <LightSectionDivider
+            index={73}
+            id="bar-73"
+            name="Signature: Liquid Morphing Shape SVG"
+            tech="Organic Cubic Bezier Spline Morph"
+            description="Liquid morphing SVG fluid dynamics reacting to vertical scroll"
+            isSpecial={true}
+          />
+          <SignatureMorphingShapeSVG />
+        </section>
+
+        {/* 74: Signature Scroll Animation 3: Split Text Decryption Scramble */}
+        <section id="sec-74">
+          <LightSectionDivider
+            index={74}
+            id="bar-74"
+            name="Signature: Decryption Text Scramble"
+            tech="Glyph Cycling & Matrix Decryption"
+            description="Scroll-triggered cyberpunk textual decryption and character unscramble"
+            isSpecial={true}
+          />
+          <SignatureSplitTextScramble />
+        </section>
+
+        {/* 75: Signature Scroll Animation 4: 3D Flip Specification Cards */}
+        <section id="sec-75">
+          <LightSectionDivider
+            index={75}
+            id="bar-75"
+            name="Signature: 3D Flip Specification Cards"
+            tech="180° CSS 3D Preserve-3D Flip"
+            description="Interactive card flip revealing deep technical specs and metrics"
+            isSpecial={true}
+          />
+          <SignatureInteractiveFlipCards />
+        </section>
+
+        {/* 76: Signature Scroll Animation 5: Sticky Curved Path Vector Laser */}
+        <section id="sec-76">
+          <LightSectionDivider
+            index={76}
+            id="bar-76"
+            name="Signature: Sticky Curved Path Vector Beam"
+            tech="Cubic Bezier PathLength Travelling Laser"
+            description="Glowing vector energy pulse tracing an S-curve across pinned narrative cards"
+            isSpecial={true}
+          />
+          <SignatureStickyCurvedPath />
+        </section>
+
+        {/* 77: Signature Scroll Animation 6: Sticky Spotlight Intelligence Accordion */}
+        <section id="sec-77">
+          <LightSectionDivider
+            index={77}
+            id="bar-77"
+            name="Signature: Mouse-Following Spotlight Accordion"
+            tech="Dynamic Radial Gradient Mouse Tracking"
+            description="Radial spotlight illumination beam tracking cursor over talent accordions"
+            isSpecial={true}
+          />
+          <SignatureStickySpotlightAccordion />
+        </section>
+
+        {/* 78: Signature Scroll Animation 7: Live Arbitrage Matrix Slider */}
+        <section id="sec-78">
+          <LightSectionDivider
+            index={78}
+            id="bar-78"
+            name="Signature: Live Arbitrage Matrix Calculator"
+            tech="Real-time Capital Arbitrage Multi-Slider"
+            description="Dynamic mathematical financial model calculating multi-year GCC savings"
+            isSpecial={true}
+          />
+          <SignatureLiveArbitrageMatrixSlider />
+        </section>
+
+        {/* 79: Signature Scroll Animation 8: Volumetric Voxel Cube Stack */}
+        <section id="sec-79">
+          <LightSectionDivider
+            index={79}
+            id="bar-79"
+            name="Signature: 4-Tier Volumetric Talent Cube"
+            tech="Isometric 3D Rotation + Exploded View"
+            description="3D isometric voxel stack deconstructing into four enterprise layers"
+            isSpecial={true}
+          />
+          <SignatureVolumetricCubeStack />
+        </section>
+
+        {/* 80: Grand Finale Scale-to-Edge Action Banner */}
+        <section id="sec-80">
+          <LightSectionDivider
+            index={80}
+            id="bar-80"
             name="Grand Finale: Scale-to-Edge Action Banner"
             tech="GSAP ScrollTrigger Edge Expand"
             description="Card container seamlessly expands to full viewport width on final scroll"
@@ -1101,11 +1261,11 @@ export const SampleShowcase: React.FC = () => {
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-4">Motion Engineering</h4>
               <p className="text-xs text-slate-400 leading-relaxed mb-3">
-                All 66 components engineered with pure light design tokens, 60fps Framer Motion springs, and GSAP ScrollTrigger timeline pins.
+                All 80 components engineered with pure light design tokens, 60fps Framer Motion springs, and GSAP ScrollTrigger timeline pins.
               </p>
               <div className="inline-flex items-center gap-2 text-xs font-mono text-blue-400">
                 <Code2 className="w-4 h-4" />
-                <span>66 of 66 Sections Verified</span>
+                <span>80 of 80 Sections Verified</span>
               </div>
             </div>
           </div>
