@@ -1,10 +1,13 @@
-import { ErrorBoundary } from '@nexatalent/shared';
+import { BrowserRouter } from 'react-router-dom';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { RecruiterRoutes } from '../routes';
 
 export function RecruiterApp() {
   return (
     <ErrorBoundary>
-      <RecruiterRoutes />
+      <BrowserRouter>
+        <RecruiterRoutes />
+      </BrowserRouter>
     </ErrorBoundary>
   );
 }

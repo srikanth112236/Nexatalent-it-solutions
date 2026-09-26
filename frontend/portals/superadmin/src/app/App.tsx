@@ -1,10 +1,13 @@
-import { ErrorBoundary } from '@nexatalent/shared';
+import { BrowserRouter } from 'react-router-dom';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { SuperAdminRoutes } from '../routes';
 
 export function SuperAdminApp() {
   return (
     <ErrorBoundary>
-      <SuperAdminRoutes />
+      <BrowserRouter>
+        <SuperAdminRoutes />
+      </BrowserRouter>
     </ErrorBoundary>
   );
 }

@@ -1,5 +1,5 @@
 import { BrowserRouter } from 'react-router-dom';
-import { ErrorBoundary } from '@nexatalent/shared';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { AppRoutes } from '../routes';
 import '../styles/tokens.css';
 

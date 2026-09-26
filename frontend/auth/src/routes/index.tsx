@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
-import { ROLE_DEFAULT_REDIRECTS, UserRole } from '@nexatalent/shared';
+import { ROLE_DEFAULT_REDIRECTS, UserRole } from '../types';
 
 function LoginPage() {
   const [selectedRole, setSelectedRole] = useState<UserRole>('candidate');
