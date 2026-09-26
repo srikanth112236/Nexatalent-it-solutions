@@ -2,29 +2,26 @@
   "name": "nexatalent-frontend",
   "version": "1.0.0",
   "private": true,
-  "description": "NexaTalent Frontend Ecosystem — Website, Auth & Protected Multi-Role Portals",
-  "workspaces": [
-    "shared",
-    "website",
-    "auth",
-    "portals/*"
-  ],
+  "type": "module",
   "scripts": {
-    "dev:website": "npm run dev -w website",
-    "dev:auth": "npm run dev -w auth",
-    "dev:superadmin": "npm run dev -w portals/superadmin",
-    "dev:employee": "npm run dev -w portals/employee",
-    "dev:recruiter": "npm run dev -w portals/recruiter",
-    "dev:employer": "npm run dev -w portals/employer",
-    "dev:candidate": "npm run dev -w portals/candidate",
-    "build": "npm run build --workspaces --if-present",
-    "build:website": "npm run build -w website",
-    "build:auth": "npm run build -w auth",
-    "build:portals": "npm run build --workspace=portals/superadmin --workspace=portals/employee --workspace=portals/recruiter --workspace=portals/employer --workspace=portals/candidate",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.441.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2"
   },
   "devDependencies": {
     "@types/node": "^22.5.4",
-    "typescript": "^5.5.4"
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.3"
   }
 }
