@@ -43,6 +43,18 @@ import {
   RecruitmentJourneyMap,
   MegaFooter,
 } from '../components';
+import {
+  LightHeroZoomReveal,
+  LightStackedCards,
+  LightTwoColumnPinnedStory,
+  LightHorizontalStory,
+  LightProgressiveWorkflow,
+  LightInteractiveNetwork,
+  LightDashboardAssembly,
+  LightCardExpandSection,
+  LightPerspectiveCorridor,
+  LightFinalCTAExpansion,
+} from '../components/light-motion';
 
 interface SectionHeaderProps {
   number: string;
@@ -228,6 +240,88 @@ export const SampleShowcase: React.FC = () => {
 
       {/* Sequential Pure Component Presentation Flow */}
       <div style={{ display: 'flex', flexDirection: 'column' }}>
+
+        {/* =========================================================================
+            PART 1: NEW SIGNATURE MOTION SHORTLIST (COMPLETE LIGHTER THEME SET)
+            ========================================================================= */}
+        <div style={{ backgroundColor: '#ffffff', borderBottom: '2px solid #e2e8f0', padding: '4rem 2rem 3rem 2rem', textAlign: 'center' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb', padding: '0.35rem 1rem', borderRadius: '9999px', fontSize: '0.8125rem', fontWeight: 800, marginBottom: '0.75rem' }}>
+            <Sparkles size={14} />
+            PART 1 · COMPLETE LIGHTER THEME SUITE
+          </div>
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.03em' }}>
+            Shortlist Motion Patterns in Modern Light Theme
+          </h2>
+          <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '720px', margin: '0.5rem auto 0 auto' }}>
+            A complete set of new, modern, and unique components implementing C01–C10 Core, S01–S10 Signature, and P01–P10 Premium patterns in clean executive light styling.
+          </p>
+        </div>
+
+        {/* 1. LightHeroZoomReveal (C01, C03, C09, C10) */}
+        <section id="light-hero">
+          <LightHeroZoomReveal />
+        </section>
+
+        {/* 2. LightStackedCards (C08 Stacked Cards on Scroll) */}
+        <section id="light-stacked-cards">
+          <LightStackedCards />
+        </section>
+
+        {/* 3. LightTwoColumnPinnedStory (C06 Sticky Content + S04 Pinned Story) */}
+        <section id="light-pinned-story">
+          <LightTwoColumnPinnedStory />
+        </section>
+
+        {/* 4. LightHorizontalStory (S02 + S03 Horizontal Full-Screen Panels & Parallax) */}
+        <section id="light-horizontal-story">
+          <LightHorizontalStory />
+        </section>
+
+        {/* 5. LightProgressiveWorkflow (C07 + S05 + S09 Progressive SVG Line Drawing) */}
+        <section id="light-progressive-workflow">
+          <LightProgressiveWorkflow />
+        </section>
+
+        {/* 6. LightInteractiveNetwork (S06 + E03 Interactive Node Activation) */}
+        <section id="light-interactive-network">
+          <LightInteractiveNetwork />
+        </section>
+
+        {/* 7. LightDashboardAssembly (S07 + P04 Scroll-Scrubbed Dashboard Assembly) */}
+        <section id="light-dashboard-assembly">
+          <LightDashboardAssembly />
+        </section>
+
+        {/* 8. LightCardExpandSection (S08 Card to Full Section Expansion) */}
+        <section id="light-card-expand">
+          <LightCardExpandSection />
+        </section>
+
+        {/* 9. LightPerspectiveCorridor (P01 + P02 + P03 3D Perspective Depth Corridor) */}
+        <section id="light-perspective-corridor">
+          <LightPerspectiveCorridor />
+        </section>
+
+        {/* 10. LightFinalCTAExpansion (P10 Final CTA Radial & Scale Expansion) */}
+        <section id="light-final-cta">
+          <LightFinalCTAExpansion />
+        </section>
+
+        {/* =========================================================================
+            PART 2: COMPLETE 40-COMPONENT PRODUCTION CATALOG
+            ========================================================================= */}
+        <div style={{ backgroundColor: 'var(--color-surface)', borderTop: '2px solid var(--color-border)', borderBottom: '1px solid var(--color-border)', padding: '4rem 2rem 3rem 2rem', textAlign: 'center' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', backgroundColor: 'rgba(59, 130, 246, 0.12)', border: '1px solid rgba(59, 130, 246, 0.3)', color: 'var(--color-primary-400)', padding: '0.35rem 1rem', borderRadius: '9999px', fontSize: '0.8125rem', fontWeight: 800, marginBottom: '0.75rem' }}>
+            <Layers size={14} />
+            PART 2 · COMPLETE 40-COMPONENT PRODUCTION CATALOG
+          </div>
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, color: 'var(--color-text)', letterSpacing: '-0.03em' }}>
+            All 40 Aceternity & 21st.dev Website Components
+          </h2>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '1.0625rem', maxWidth: '720px', margin: '0.5rem auto 0 auto' }}>
+            Continuous scroll flow of every production component with dedicated motion tags and real-time interaction states.
+          </p>
+        </div>
 
         {/* 01. AnimatedHero */}
         <section id="c-01">
