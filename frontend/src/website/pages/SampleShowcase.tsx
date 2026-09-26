@@ -110,6 +110,26 @@ import {
   FullScreenHorizontalSplitCurtainLaser,
   FullScreenVerticalSplitCurtainAperture,
   FullScreenDiagonalCurtainConvergence,
+  FullScreenDualPinnedConvergenceOrbitalRings,
+  FullScreenDualPinnedConvergenceMagneticRails,
+  FullScreenDualPinnedConvergenceTectonicPlates,
+  FullScreenDualPinnedConvergenceIrisAperture,
+  FullScreenVerticalParallaxTopographicContour,
+  FullScreenVerticalParallaxGlassMural,
+  FullScreenVerticalParallaxQuantumWave,
+  FullScreenVerticalParallaxStratosphereLaunch,
+  FullScreenHorizontalParallaxEditorialScroll,
+  FullScreenHorizontalParallaxArchitecturalFloorplan,
+  FullScreenHorizontalParallaxCurrencyArbitrageFlight,
+  FullScreenSplitConvergenceBilateralTerminal,
+  FullScreenSplitDivergenceArchitecturalWings,
+  FullScreenSplitConvergenceFinancialEscrow,
+  FullScreenSplitDivergenceCandidateJourney,
+  FullScreenHorizontalSplitCurtainLouver,
+  FullScreenVerticalSplitCurtainMonolith,
+  FullScreenHorizontalSplitCurtainPrismBeams,
+  FullScreenVerticalSplitCurtainVaultDial,
+  FullScreenDiagonalCurtainOrigamiFold,
   LightFinalCTAExpansion,
 } from '../components/light-motion';
 
@@ -180,7 +200,7 @@ export const SampleShowcase: React.FC = () => {
             className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold mb-6 shadow-xs"
           >
             <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-            <span>NexaTalent Production Motion Showcase • 100 Complete Sections</span>
+            <span>NexaTalent Production Motion Showcase • 120 Complete Sections</span>
           </motion.div>
 
           <motion.h1
@@ -189,7 +209,7 @@ export const SampleShowcase: React.FC = () => {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="text-4xl sm:text-6xl font-black text-slate-900 tracking-tight leading-[1.1] mb-6"
           >
-            All 100 Modern Light-Theme <br className="hidden sm:inline" />
+            All 120 Modern Light-Theme <br className="hidden sm:inline" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600">
               Animated & Parallax Sections
             </span>
@@ -214,7 +234,7 @@ export const SampleShowcase: React.FC = () => {
           >
             <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
               <Zap className="w-4 h-4 text-blue-600" />
-              <span>100 Complete Sections</span>
+              <span>120 Complete Sections</span>
             </div>
             <div className="w-1 h-1 rounded-full bg-slate-300 hidden sm:block" />
             <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
@@ -1346,11 +1366,131 @@ export const SampleShowcase: React.FC = () => {
           <FullScreenDiagonalCurtainConvergence />
         </section>
 
-        {/* 100: Grand Finale Scale-to-Edge Action Banner */}
+        {/* 100: Full-Screen Dual Pinned Convergence: Orbital Rings */}
         <section id="sec-100">
+          <LightSectionDivider index={100} id="bar-100" name="Dual Pinned: Orbital Rings Convergence" tech="Gyroscopic Opposed Rings" description="Left and right gyroscopic orbital rings rotate and clamp onto central pod nexus" isSpecial={true} />
+          <FullScreenDualPinnedConvergenceOrbitalRings />
+        </section>
+
+        {/* 101: Full-Screen Dual Pinned Convergence: Magnetic Rails */}
+        <section id="sec-101">
+          <LightSectionDivider index={101} id="bar-101" name="Dual Pinned: Magnetic Levitation Rails" tech="Bilateral Maglev Linear Suspension" description="Left and right magnetic suspension tracks clamp inward to lock executive pod" isSpecial={true} />
+          <FullScreenDualPinnedConvergenceMagneticRails />
+        </section>
+
+        {/* 102: Full-Screen Dual Pinned Convergence: Tectonic Plates */}
+        <section id="sec-102">
+          <LightSectionDivider index={102} id="bar-102" name="Dual Pinned: Continental Tectonic Convergence" tech="Lithospheric Continental Shifting" description="US enterprise crust and Indian tech bedrock interlock to forge GCC platform" isSpecial={true} />
+          <FullScreenDualPinnedConvergenceTectonicPlates />
+        </section>
+
+        {/* 103: Full-Screen Dual Pinned Convergence: Mechanical Iris Aperture */}
+        <section id="sec-103">
+          <LightSectionDivider index={103} id="bar-103" name="Dual Pinned: Mechanical Iris Aperture" tech="Bilateral Interlocking Aperture Blades" description="Radial shutter blades close bilaterally around high-frequency assessment terminal" isSpecial={true} />
+          <FullScreenDualPinnedConvergenceIrisAperture />
+        </section>
+
+        {/* 104: Full-Screen Vertical Parallax: Topographic Elevation Contour */}
+        <section id="sec-104">
+          <LightSectionDivider index={104} id="bar-104" name="Vertical Parallax: Topographic Elevation Contours" tech="Multi-Layer Iso-Elevation Mapping" description="Topographic elevation lines shift at differential speeds charting global engineering corridors" isSpecial={true} />
+          <FullScreenVerticalParallaxTopographicContour />
+        </section>
+
+        {/* 105: Full-Screen Vertical Parallax: Frosted Glass Mural */}
+        <section id="sec-105">
+          <LightSectionDivider index={105} id="bar-105" name="Vertical Parallax: Architectural Frosted Glass Mural" tech="Layered Prismatic Translucency" description="Frosted glass architectural panes drift vertically at non-linear parallax velocities" isSpecial={true} />
+          <FullScreenVerticalParallaxGlassMural />
+        </section>
+
+        {/* 106: Full-Screen Vertical Parallax: Quantum Sine Waveform */}
+        <section id="sec-106">
+          <LightSectionDivider index={106} id="bar-106" name="Vertical Parallax: Quantum Sine Waveform" tech="Sine Oscillation + Differential Vertical Drift" description="Continuous oscillating quantum wave with floating algorithmic research metrics" isSpecial={true} />
+          <FullScreenVerticalParallaxQuantumWave />
+        </section>
+
+        {/* 107: Full-Screen Vertical Parallax: Stratosphere Launch */}
+        <section id="sec-107">
+          <LightSectionDivider index={107} id="bar-107" name="Vertical Parallax: Stratospheric GCC Launch" tech="Atmospheric Altitude Gradient Scaling" description="Ascend through 4 stratospheric altitude tiers from Staff Engineer to Managing Director" isSpecial={true} />
+          <FullScreenVerticalParallaxStratosphereLaunch />
+        </section>
+
+        {/* 108: Full-Screen Horizontal Parallax: Editorial Scroll Spread */}
+        <section id="sec-108">
+          <LightSectionDivider index={108} id="bar-108" name="Horizontal Parallax: High-Fashion Editorial Spread" tech="Kinetic Typography & Staggered Cards" description="Luxury magazine layout with oversized typography and differential horizontal drift" isSpecial={true} />
+          <FullScreenHorizontalParallaxEditorialScroll />
+        </section>
+
+        {/* 109: Full-Screen Horizontal Parallax: Architectural Floorplan */}
+        <section id="sec-109">
+          <LightSectionDivider index={109} id="bar-109" name="Horizontal Parallax: 1,000-Seat CAD Masterplan" tech="Blue-Grid CAD Blueprint Tracking" description="Traverse 100,000 sq.ft GCC campus floorplan with interactive wing pins" isSpecial={true} />
+          <FullScreenHorizontalParallaxArchitecturalFloorplan />
+        </section>
+
+        {/* 110: Full-Screen Horizontal Parallax: Currency Arbitrage Flight */}
+        <section id="sec-110">
+          <LightSectionDivider index={110} id="bar-110" name="Horizontal Parallax: Cross-Border Arbitrage Flight" tech="Multi-Timezone FX Vector Pathing" description="Global capital efficiency journey tracking currency yield across 3 continents" isSpecial={true} />
+          <FullScreenHorizontalParallaxCurrencyArbitrageFlight />
+        </section>
+
+        {/* 111: Full-Screen Pattern 19: Bilateral Cloud Terminal Convergence */}
+        <section id="sec-111">
+          <LightSectionDivider index={111} id="bar-111" name="Pattern 19: Bilateral Cloud Terminal Convergence" tech="AWS Multi-Region Terraform Clamping" description="East & West terminal pods converge horizontally into a unified zero-trust cluster" isSpecial={true} />
+          <FullScreenSplitConvergenceBilateralTerminal />
+        </section>
+
+        {/* 112: Full-Screen Pattern 20: Divergence Architectural Wings */}
+        <section id="sec-112">
+          <LightSectionDivider index={112} id="bar-112" name="Pattern 20: Divergence Architectural Wings" tech="Full-Viewport Flanking Parting" description="Architectural wings slide outward revealing proprietary tier-1 talent radar" isSpecial={true} />
+          <FullScreenSplitDivergenceArchitecturalWings />
+        </section>
+
+        {/* 113: Full-Screen Pattern 19: Financial Escrow Convergence */}
+        <section id="sec-113">
+          <LightSectionDivider index={113} id="bar-113" name="Pattern 19: Cross-Border Financial Escrow Convergence" tech="FDIC vs RBI Treasury Convergence" description="Sovereign banking panels slide together to seal multi-currency smart contract" isSpecial={true} />
+          <FullScreenSplitConvergenceFinancialEscrow />
+        </section>
+
+        {/* 114: Full-Screen Pattern 20: Candidate Journey 4-Vector Divergence */}
+        <section id="sec-114">
+          <LightSectionDivider index={114} id="bar-114" name="Pattern 20: Candidate Journey Divergence" tech="Omnidirectional Symmetrical Separation" description="Unified candidate docket diverges into 4 rigorous evaluation vectors" isSpecial={true} />
+          <FullScreenSplitDivergenceCandidateJourney />
+        </section>
+
+        {/* 115: Full-Screen Pattern 17: Horizontal Venetian Louver Split */}
+        <section id="sec-115">
+          <LightSectionDivider index={115} id="bar-115" name="Pattern 17: Venetian Louver Slats Split Curtain" tech="Multi-Slat 3D Rotation & Horizontal Sliding" description="Horizontal louver slats twist and retract to unveil GCC performance metrics" isSpecial={true} />
+          <FullScreenHorizontalSplitCurtainLouver />
+        </section>
+
+        {/* 116: Full-Screen Pattern 18: Vertical Architectural Monolith Split */}
+        <section id="sec-116">
+          <LightSectionDivider index={116} id="bar-116" name="Pattern 18: Vertical Architectural Monolith Split" tech="Heavy Monolithic Slab Parting" description="Brutalist architectural slabs split vertically revealing global network routing" isSpecial={true} />
+          <FullScreenVerticalSplitCurtainMonolith />
+        </section>
+
+        {/* 117: Full-Screen Pattern 17: Chromatic Prism Beam Curtain */}
+        <section id="sec-117">
+          <LightSectionDivider index={117} id="bar-117" name="Pattern 17: Chromatic Beam Refraction Curtain" tech="Optical Prism Separation & Light Shearing" description="Horizontal curtains part while central prism expands revealing quant guild" isSpecial={true} />
+          <FullScreenHorizontalSplitCurtainPrismBeams />
+        </section>
+
+        {/* 118: Full-Screen Pattern 18: Vertical Vault Dial Curtain */}
+        <section id="sec-118">
+          <LightSectionDivider index={118} id="bar-118" name="Pattern 18: Geared Vault Dial Vertical Split" tech="Dual Blast Hatch Retraction" description="Hydraulic vault hatches split up and down revealing sovereign equity escrow" isSpecial={true} />
+          <FullScreenVerticalSplitCurtainVaultDial />
+        </section>
+
+        {/* 119: Full-Screen Pattern 17-20 Hybrid: 3D Diagonal Origami Flap Fold */}
+        <section id="sec-119">
+          <LightSectionDivider index={119} id="bar-119" name="Pattern 17-20 Hybrid: 3D Diagonal Origami Fold" tech="4-Corner Diagonal Flap Unfolding" description="Four triangular origami flaps peel back in 3D to reveal AI research fellowship" isSpecial={true} />
+          <FullScreenDiagonalCurtainOrigamiFold />
+        </section>
+
+        {/* 120: Grand Finale Scale-to-Edge Action Banner */}
+        <section id="sec-120">
           <LightSectionDivider
-            index={100}
-            id="bar-100"
+            index={120}
+            id="bar-120"
             name="Grand Finale: Scale-to-Edge Action Banner"
             tech="GSAP ScrollTrigger Edge Expand"
             description="Card container seamlessly expands to full viewport width on final scroll"
@@ -1401,11 +1541,11 @@ export const SampleShowcase: React.FC = () => {
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-4">Motion Engineering</h4>
               <p className="text-xs text-slate-400 leading-relaxed mb-3">
-                All 100 components engineered with pure light design tokens, 60fps Framer Motion springs, and GSAP ScrollTrigger timeline pins.
+                All 120 components engineered with pure light design tokens, 60fps Framer Motion springs, and GSAP ScrollTrigger timeline pins.
               </p>
               <div className="inline-flex items-center gap-2 text-xs font-mono text-blue-400">
                 <Code2 className="w-4 h-4" />
-                <span>100 of 100 Sections Verified</span>
+                <span>120 of 120 Sections Verified</span>
               </div>
             </div>
           </div>
