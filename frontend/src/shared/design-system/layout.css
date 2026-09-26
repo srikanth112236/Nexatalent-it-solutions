@@ -1,0 +1,66 @@
+/* ==========================================================================
+   NexaTalent Design System — Layout & Container System
+   ========================================================================== */
+
+.container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--container-padding);
+  padding-right: var(--container-padding);
+}
+
+.container-sm { max-width: var(--container-max-sm); }
+.container-md { max-width: var(--container-max-md); }
+.container-lg { max-width: var(--container-max-lg); }
+.container-xl { max-width: var(--container-max-xl); }
+.container-2xl { max-width: var(--container-max-2xl); }
+
+/* Flex & Grid Layout Helpers */
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.grid-cols-auto-fit {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-6);
+}
+
+.grid-cols-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+}
+
+@media (max-width: 768px) {
+  .grid-cols-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.grid-cols-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-6);
+}
+
+@media (max-width: 1024px) {
+  .grid-cols-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .grid-cols-3 {
+    grid-template-columns: 1fr;
+  }
+}

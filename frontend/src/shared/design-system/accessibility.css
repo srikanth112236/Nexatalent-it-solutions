@@ -1,0 +1,46 @@
+/* ==========================================================================
+   NexaTalent Design System — Accessibility & Focus (WCAG 2.2 AA)
+   ========================================================================== */
+
+/* Universal Accessible Focus State */
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* Screen Reader Only Utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Skip to Main Content Link */
+.skip-to-content {
+  position: absolute;
+  top: -100px;
+  left: 1rem;
+  z-index: 9999;
+  padding: 0.75rem 1.25rem;
+  background-color: var(--color-primary);
+  color: #ffffff;
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-semibold);
+  transition: top var(--duration-fast) var(--ease-standard);
+}
+
+.skip-to-content:focus {
+  top: 1rem;
+}
+
+/* Interactive Touch Target Size */
+.accessible-touch-target {
+  min-height: var(--touch-target-min);
+  min-width: var(--touch-target-min);
+}

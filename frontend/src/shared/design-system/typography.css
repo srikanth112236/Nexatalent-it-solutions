@@ -1,0 +1,72 @@
+/* ==========================================================================
+   NexaTalent Design System — Typography Utility Classes
+   ========================================================================== */
+
+.text-display {
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-extrabold);
+  line-height: var(--line-height-display);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.text-h1 {
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-heading);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.text-h2 {
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-heading);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.text-h3 {
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-heading);
+  letter-spacing: -0.01em;
+}
+
+.text-h4 {
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-h4);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.text-body-lg {
+  font-size: var(--font-size-body-lg);
+  line-height: var(--line-height-body);
+}
+
+.text-body {
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+}
+
+.text-body-sm {
+  font-size: var(--font-size-body-sm);
+  line-height: var(--line-height-tight);
+}
+
+.text-caption {
+  font-size: var(--font-size-caption);
+  line-height: 1.4;
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+/* Color Modifier Classes */
+.text-color-primary { color: var(--color-primary); }
+.text-color-accent { color: var(--color-accent); }
+.text-color-muted { color: var(--color-text-muted); }
+.text-color-subtle { color: var(--color-text-subtle); }
+.text-color-success { color: var(--color-success); }
+.text-color-warning { color: var(--color-warning); }
+.text-color-danger { color: var(--color-danger); }

@@ -6,10 +6,13 @@ import { EmployeePortal } from '../portals/employee/EmployeePortal';
 import { RecruiterPortal } from '../portals/recruiter/RecruiterPortal';
 import { EmployerPortal } from '../portals/employer/EmployerPortal';
 import { CandidatePortal } from '../portals/candidate/CandidatePortal';
+import { DesignSystemShowcase } from '../shared/design-system/DesignSystemShowcase';
 
 export function AppRoutes() {
   return (
     <Routes>
+      {/* Living Design System Showcase */}
+      <Route path="/design-system" element={<DesignSystemShowcase />} />
       {/* 1. Dedicated Authentication Routes */}
       <Route path="/login/*" element={<AuthRoutes />} />
       <Route path="/forgot-password/*" element={<AuthRoutes />} />

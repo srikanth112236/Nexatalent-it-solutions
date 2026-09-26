@@ -29,6 +29,7 @@ export function WebsiteHeader() {
             <Link to="/employers" style={{ transition: 'color 0.2s' }}>For Employers</Link>
             <Link to="/candidates" style={{ transition: 'color 0.2s' }}>For Candidates</Link>
             <Link to="/case-studies" style={{ transition: 'color 0.2s' }}>Case Studies</Link>
+            <Link to="/design-system" style={{ color: 'var(--color-primary, #3b82f6)' }}>Design System</Link>
           </nav>
         </div>
 
