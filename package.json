@@ -1,0 +1,29 @@
+{
+  "name": "nexatalent-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NexaTalent — Production-grade recruitment and talent solutions platform",
+  "workspaces": [
+    "frontend/shared",
+    "frontend/website",
+    "frontend/auth",
+    "frontend/portals/*",
+    "backend"
+  ],
+  "scripts": {
+    "dev:website": "npm run dev -w frontend/website",
+    "dev:auth": "npm run dev -w frontend/auth",
+    "dev:backend": "npm run dev -w backend",
+    "build": "npm run build:shared && npm run build --workspaces --if-present",
+    "build:shared": "npm run build -w frontend/shared",
+    "build:website": "npm run build -w frontend/website",
+    "build:auth": "npm run build -w frontend/auth",
+    "build:portals": "npm run build --workspace=frontend/portals/superadmin --workspace=frontend/portals/employee --workspace=frontend/portals/recruiter --workspace=frontend/portals/employer --workspace=frontend/portals/candidate",
+    "build:backend": "npm run build -w backend",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}
