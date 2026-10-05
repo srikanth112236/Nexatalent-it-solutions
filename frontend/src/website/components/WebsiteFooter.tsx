@@ -56,7 +56,7 @@ export function WebsiteFooter() {
         </div>
 
         <div style={{ borderTop: '1px solid var(--color-border-subtle, #141c2e)', paddingTop: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.825rem', color: 'var(--color-text-muted, #94a3b8)' }}>
-          <p>© {new Date().getFullYear()} NexaTalent Platform Inc. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} NexaTalent IT Solutions Platform Inc. All rights reserved.</p>
           <div style={{ display: 'flex', gap: '1.5rem' }}>
             <Link to="/privacy-policy">Privacy</Link>
             <Link to="/terms">Terms</Link>

@@ -85,11 +85,11 @@ export const FullScreenDualPinnedConvergenceOrbitalRings: React.FC = () => {
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 font-mono text-xs space-y-2">
             <div className="flex justify-between">
               <span className="text-slate-500">Target Headcount</span>
-              <span className="text-slate-900 font-bold">120 Principal Staff</span>
+              <span className="text-slate-900 font-bold">Scoped Per Mandate</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Capital Escrow</span>
-              <span className="text-blue-600 font-bold">$22.4M Fully Funded</span>
+              <span className="text-slate-500">Commercial Basis</span>
+              <span className="text-blue-600 font-bold">Documented Agreement</span>
             </div>
           </div>
         </div>

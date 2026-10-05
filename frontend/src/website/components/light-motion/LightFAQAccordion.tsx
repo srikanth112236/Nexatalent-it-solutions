@@ -14,7 +14,7 @@ const FAQ_DATA: FAQItem[] = [
   {
     id: 'faq-1',
     category: 'engagement',
-    question: 'How fast can NexaTalent deploy an enterprise search team or pod?',
+    question: 'How fast can NexaTalent IT Solutions deploy an enterprise search team or pod?',
     answer: 'Typical turnaround for shortlisting verified senior engineers and directors is 72 business hours. For end-to-end squad buildouts (5–12 engineers), initial deployment takes an average of 14–21 calendar days with calibrated salary banding and background verifications pre-cleared.',
     tag: 'SLA Speed'
   },
@@ -49,7 +49,7 @@ const FAQ_DATA: FAQItem[] = [
   {
     id: 'faq-6',
     category: 'engagement',
-    question: 'Can NexaTalent recruit cross-border or facilitate overseas relocations?',
+    question: 'Can NexaTalent IT Solutions recruit cross-border or facilitate overseas relocations?',
     answer: 'Yes. We maintain active talent pipelines across India (Bangalore, Hyderabad, NCR, Pune), the United Kingdom (London), and North America (San Francisco, Austin, New York). Our global mobility partners handle Tier-2 / H1B / O-1 visa sponsorship paperwork and relocation logistics seamlessly.',
     tag: 'Global Mobility'
   }

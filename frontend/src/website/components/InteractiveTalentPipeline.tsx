@@ -82,7 +82,7 @@ export const InteractiveTalentPipeline: React.FC = () => {
                 backgroundColor: 'var(--color-surface)',
                 border: '1px solid transparent',
                 borderRadius: 'var(--radius-lg)',
-                color: isSelected ? '#ffffff' : 'var(--color-text-muted)',
+                color: isSelected ? 'var(--nt-surface, #ffffff)' : 'var(--color-text-muted)',
                 textAlign: 'left',
                 cursor: 'pointer',
                 fontFamily: 'var(--font-family-sans)',
@@ -120,7 +120,7 @@ export const InteractiveTalentPipeline: React.FC = () => {
               <div style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', color: isSelected ? 'var(--color-primary)' : 'var(--color-text-subtle)', transition: 'color 0.3s' }}>
                 Stage 0{idx + 1}
               </div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0.25rem 0', color: isSelected ? '#ffffff' : 'inherit', transition: 'color 0.3s' }}>{p.stage}</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0.25rem 0', color: isSelected ? 'var(--nt-surface, #ffffff)' : 'inherit', transition: 'color 0.3s' }}>{p.stage}</div>
               <div style={{ fontSize: '0.85rem', color: isSelected ? 'var(--color-accent)' : 'var(--color-text-muted)', transition: 'color 0.3s' }}>{p.count}</div>
             </motion.button>
           );

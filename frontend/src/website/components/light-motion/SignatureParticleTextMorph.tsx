@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { RefreshCw, Move } from 'lucide-react';
 
-const WORDS = ['NEXATALENT', 'LEADERSHIP', 'DISTRIBUTED', 'GLOBAL GCC'];
+const WORDS = ['NEXATALENT IT SOLUTIONS', 'LEADERSHIP', 'DISTRIBUTED', 'GLOBAL GCC'];
 
 interface Particle {
   x: number;

@@ -7,8 +7,8 @@ export const LightCaseStudyResultSplit: React.FC = () => {
     <section
       className="theme-light"
       style={{
-        backgroundColor: '#ffffff',
-        borderBottom: '1px solid #e2e8f0',
+        backgroundColor: 'var(--nt-surface, #ffffff)',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
         padding: '6rem 2rem',
       }}
     >
@@ -30,13 +30,13 @@ export const LightCaseStudyResultSplit: React.FC = () => {
             }}
           >
             <Sparkles size={14} />
-            <span>24 / 40 · CHALLENGE VS. SOLUTION ARCHITECTURE</span>
+            <span>NEXATALENT CHALLENGE VS. SOLUTION ARCHITECTURE</span>
           </div>
 
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a', marginBottom: '0.75rem' }}>
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)', marginBottom: '0.75rem' }}>
             Inside the Deployment Blueprint
           </h2>
-          <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0 auto', lineHeight: 1.6 }}>
+          <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0 auto', lineHeight: 1.6 }}>
             Comparing parent enterprise roadblocks to the calibrated operating system deployed by our team.
           </p>
         </div>
@@ -67,10 +67,10 @@ export const LightCaseStudyResultSplit: React.FC = () => {
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <div style={{ padding: '0.75rem 1rem', backgroundColor: '#ffffff', borderRadius: '12px', color: '#9a3412', fontSize: '0.875rem', fontWeight: 600 }}>
+              <div style={{ padding: '0.75rem 1rem', backgroundColor: 'var(--nt-surface, #ffffff)', borderRadius: '12px', color: '#9a3412', fontSize: '0.875rem', fontWeight: 600 }}>
                 ✕ Generic resume keyword matching without code-level depth
               </div>
-              <div style={{ padding: '0.75rem 1rem', backgroundColor: '#ffffff', borderRadius: '12px', color: '#9a3412', fontSize: '0.875rem', fontWeight: 600 }}>
+              <div style={{ padding: '0.75rem 1rem', backgroundColor: 'var(--nt-surface, #ffffff)', borderRadius: '12px', color: '#9a3412', fontSize: '0.875rem', fontWeight: 600 }}>
                 ✕ Multiple candidate no-shows on offer day-1 joining
               </div>
             </div>
@@ -88,23 +88,23 @@ export const LightCaseStudyResultSplit: React.FC = () => {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#2563eb', fontWeight: 800, fontSize: '0.875rem', marginBottom: '1.25rem' }}>
               <CheckCircle2 size={20} />
-              <span>THE NEXATALENT SOLUTION</span>
+              <span>THE NEXATALENT IT SOLUTIONS SOLUTION</span>
             </div>
 
             <h3 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#1e40af', marginBottom: '1rem' }}>
-              48h Vector Shortlist + Ex-Staff Panel Vetting
+              Structured Shortlist + Practitioner Panel Vetting
             </h3>
 
             <p style={{ color: '#1e3a8a', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '2rem' }}>
-              NexaTalent deployed an ex-Principal Engineer to write objective concurrency rubrics, pre-interviewed 100% of candidate profiles, and calibrated compensation expectations before first round presentation.
+              NexaTalent IT Solutions assigns a practitioner reviewer to write objective concurrency rubrics, screens profiles before presentation, and calibrates compensation expectations before first round interviews.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <div style={{ padding: '0.75rem 1rem', backgroundColor: '#ffffff', borderRadius: '12px', color: '#1e40af', fontSize: '0.875rem', fontWeight: 600 }}>
-                ✓ 3 of 4 candidates advanced straight to final offer stages
+              <div style={{ padding: '0.75rem 1rem', backgroundColor: 'var(--nt-surface, #ffffff)', borderRadius: '12px', color: '#1e40af', fontSize: '0.875rem', fontWeight: 600 }}>
+                ✓ Shortlisted profiles advance with documented evaluation notes
               </div>
-              <div style={{ padding: '0.75rem 1rem', backgroundColor: '#ffffff', borderRadius: '12px', color: '#1e40af', fontSize: '0.875rem', fontWeight: 600 }}>
-                ✓ 100% joining rate backed by daily transition check-ins
+              <div style={{ padding: '0.75rem 1rem', backgroundColor: 'var(--nt-surface, #ffffff)', borderRadius: '12px', color: '#1e40af', fontSize: '0.875rem', fontWeight: 600 }}>
+                ✓ Joining supported with regular transition check-ins
               </div>
             </div>
           </motion.div>
@@ -113,9 +113,9 @@ export const LightCaseStudyResultSplit: React.FC = () => {
         {/* Executive Quote Strip */}
         <div
           style={{
-            backgroundColor: '#f8fafc',
+            backgroundColor: 'var(--nt-surface-2, #f8fafc)',
             borderRadius: '20px',
-            border: '1px solid #e2e8f0',
+            border: '1px solid var(--nt-border, #e2e8f0)',
             padding: '2.5rem 3rem',
             display: 'flex',
             alignItems: 'center',
@@ -125,12 +125,12 @@ export const LightCaseStudyResultSplit: React.FC = () => {
         >
           <Quote size={40} color="#2563eb" style={{ flexShrink: 0 }} />
           <div>
-            <p style={{ fontStyle: 'italic', color: '#334155', fontSize: '1.0625rem', lineHeight: 1.6, marginBottom: '0.75rem' }}>
-              "NexaTalent operates more like a specialized distributed systems consultancy than a recruiting agency. The candidates arrived pre-screened to our exact scale requirements."
+            <p style={{ fontStyle: 'italic', color: 'var(--nt-ink-2, #334155)', fontSize: '1.0625rem', lineHeight: 1.6, marginBottom: '0.75rem' }}>
+              "NexaTalent IT Solutions operates more like a specialized distributed systems consultancy than a recruiting agency. The candidates arrived pre-screened to our exact scale requirements."
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <strong style={{ color: '#0f172a' }}>Director of Infrastructure</strong>
-              <span style={{ color: '#64748b' }}>· AlphaFin Global Hub</span>
+              <strong style={{ color: 'var(--nt-ink, #0f172a)' }}>Director of Infrastructure</strong>
+              <span style={{ color: 'var(--nt-muted, #64748b)' }}>· AlphaFin Global Hub</span>
             </div>
           </div>
         </div>

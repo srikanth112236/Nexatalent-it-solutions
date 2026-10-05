@@ -4,28 +4,28 @@ import { ShieldCheck, CheckCircle2 } from 'lucide-react';
 export const DetailServiceLevelGuaranteeSla: React.FC = () => {
   const slas = [
     {
-      metric: '14-Day Delivery SLA',
+      metric: 'Calibrated Shortlists',
       target: 'Shortlist Delivery',
-      desc: 'First calibrated slate of 3 top-tier candidates delivered within 14 calendar days of intake calibration.',
-      penalty: '10% Fee Discount if missed',
+      desc: 'First slate follows intake calibration against documented role requirements and evaluation criteria.',
+      penalty: 'Tracked per milestone',
     },
     {
-      metric: '90-Day Free Replacement',
+      metric: 'Structured Replacement Terms',
       target: 'Candidate Tenure',
-      desc: 'If any placed engineer departs or fails performance reviews within 90 days, we replace them at zero additional cost.',
-      penalty: '100% Free Replacement',
+      desc: 'Replacement terms for early departures are documented in each engagement agreement.',
+      penalty: 'Documented in agreement',
     },
     {
-      metric: '75-Day GCC Turnkey Launch',
+      metric: 'Milestone-Tracked Launches',
       target: 'Entity & Office Setup',
-      desc: 'Complete turnkey infrastructure, incorporation, facility lease, and initial 50-person pod fully operational in 75 days.',
-      penalty: 'Daily milestone liquidated damages',
+      desc: 'Infrastructure, incorporation, facility and initial pod ramp-up tracked against agreed milestones.',
+      penalty: 'Milestone reporting',
     },
     {
-      metric: '99.4% Offer Acceptance Rate',
+      metric: 'Offer Closure Support',
       target: 'Closing Precision',
-      desc: 'Because we pre-align compensation, RSUs, and candidate life goals upfront, offers are rarely declined.',
-      penalty: 'Backed by pre-close commitments',
+      desc: 'Compensation expectations and candidate motivations are aligned before offers are extended.',
+      penalty: 'Pre-close alignment',
     },
   ];
 

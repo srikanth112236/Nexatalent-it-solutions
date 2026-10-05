@@ -117,11 +117,11 @@ export const LightProgressiveWorkflow: React.FC = () => {
       ref={containerRef}
       className="theme-light"
       style={{
-        backgroundColor: '#ffffff',
-        color: '#0f172a',
+        backgroundColor: 'var(--nt-surface, #ffffff)',
+        color: 'var(--nt-ink, #0f172a)',
         padding: '6rem 2rem',
         position: 'relative',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
       }}
     >
       <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
@@ -145,10 +145,10 @@ export const LightProgressiveWorkflow: React.FC = () => {
             <GitPullRequest size={14} />
             C07, S05 & S09 Progressive SVG Workflow Line Drawing
           </div>
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a' }}>
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)' }}>
             The 6-Stage Deterministic Hiring Protocol
           </h2>
-          <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
+          <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
             As you scroll, the dynamic SVG connection line draws between each phase, activating milestones in real time.
           </p>
         </div>
@@ -204,9 +204,9 @@ export const LightProgressiveWorkflow: React.FC = () => {
                     {isEven ? (
                       <div
                         style={{
-                          backgroundColor: '#f8fafc',
+                          backgroundColor: 'var(--nt-surface-2, #f8fafc)',
                           borderRadius: '20px',
-                          border: '1px solid #e2e8f0',
+                          border: '1px solid var(--nt-border, #e2e8f0)',
                           padding: '2rem',
                           boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
                         }}
@@ -219,10 +219,10 @@ export const LightProgressiveWorkflow: React.FC = () => {
                             {st.day}
                           </span>
                         </div>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)', marginBottom: '0.5rem' }}>
                           {st.title}
                         </h3>
-                        <p style={{ fontSize: '0.9375rem', color: '#475569', lineHeight: 1.6 }}>
+                        <p style={{ fontSize: '0.9375rem', color: 'var(--nt-muted, #475569)', lineHeight: 1.6 }}>
                           {st.desc}
                         </p>
                       </div>
@@ -238,9 +238,9 @@ export const LightProgressiveWorkflow: React.FC = () => {
                     {!isEven ? (
                       <div
                         style={{
-                          backgroundColor: '#f8fafc',
+                          backgroundColor: 'var(--nt-surface-2, #f8fafc)',
                           borderRadius: '20px',
-                          border: '1px solid #e2e8f0',
+                          border: '1px solid var(--nt-border, #e2e8f0)',
                           padding: '2rem',
                           boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
                         }}
@@ -253,10 +253,10 @@ export const LightProgressiveWorkflow: React.FC = () => {
                             {st.tag}
                           </span>
                         </div>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)', marginBottom: '0.5rem' }}>
                           {st.title}
                         </h3>
-                        <p style={{ fontSize: '0.9375rem', color: '#475569', lineHeight: 1.6 }}>
+                        <p style={{ fontSize: '0.9375rem', color: 'var(--nt-muted, #475569)', lineHeight: 1.6 }}>
                           {st.desc}
                         </p>
                       </div>

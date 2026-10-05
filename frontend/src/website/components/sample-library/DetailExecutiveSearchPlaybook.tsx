@@ -6,25 +6,25 @@ export const DetailExecutiveSearchPlaybook: React.FC = () => {
     {
       num: '01',
       title: 'Confidential Market Mapping',
-      desc: 'We map the top 40 engineering leaders across target competitors under strict NDA within 5 business days.',
+      desc: 'We map relevant engineering leaders across target organisations under strict confidentiality as each mandate opens.',
       icon: Search,
     },
     {
       num: '02',
       title: 'Algorithmic & Leadership Defense',
-      desc: 'Candidates are interviewed by former Google/Goldman tech directors on architecture scale, board presence, and team scaling.',
+      desc: 'Candidates are interviewed by practitioner panels on architecture depth, leadership presence, and team scaling.',
       icon: Target,
     },
     {
       num: '03',
       title: 'Symmetrical Compensation Calibration',
-      desc: 'We balance US equity parity with local Indian tax optimizations to craft unrefusable offer packages.',
+      desc: 'We align cross-border compensation expectations with local structures to support successful offer closures.',
       icon: FileCheck,
     },
     {
       num: '04',
       title: 'Post-Placement 360 Governance',
-      desc: 'Quarterly check-ins with client board members and 12-month free executive replacement warranty.',
+      desc: 'Structured check-ins with hiring stakeholders through the joining period and beyond.',
       icon: Award,
     },
   ];

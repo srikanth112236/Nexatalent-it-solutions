@@ -12,7 +12,7 @@ export const JobsQuickApplicationDrawerModal: React.FC = () => {
   return (
     <div className="w-full bg-slate-900/5 p-4 sm:p-6 rounded-2xl border border-slate-200">
       <div className="text-xs font-mono font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center justify-between">
-        <span>40 · 60-Second Confidential Application Drawer</span>
+        <span>60-Second Confidential Application Drawer</span>
         <span className="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded text-[10px]">Frictionless Intake</span>
       </div>
 
@@ -35,7 +35,7 @@ export const JobsQuickApplicationDrawerModal: React.FC = () => {
             <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" />
             <h4 className="font-bold text-slate-900 text-lg">Application Encrypted & Dispatched</h4>
             <p className="text-xs text-slate-600 max-w-md mx-auto font-light leading-relaxed">
-              A NexaTalent Managing Partner will review your GitHub/dossier and reach out via Signal or WhatsApp within 24 hours.
+              A NexaTalent IT Solutions Managing Partner will review your GitHub/dossier and reach out via Signal or WhatsApp within 24 hours.
             </p>
           </div>
         ) : (

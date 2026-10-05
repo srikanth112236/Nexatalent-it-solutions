@@ -13,17 +13,42 @@ export default {
         'spin-slow': 'spin 12s linear infinite',
       },
       colors: {
+        /* NexaTalent logo-exact palette (sampled from NT monogram + wordmark).
+           NEXA navy → royal → TALENT bright blue → divider sky. */
+        nexa: {
+          950: '#060F2B',
+          900: '#0A1E4E',
+          800: '#102C6B',
+          700: '#0F42B0',
+          600: '#0B63E5',
+          500: '#1A86FF',
+          400: '#3FA9FF',
+          300: '#8ACBFF',
+          100: '#D8EBFF',
+          50: '#EFF5FF',
+        },
         brand: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
+          50: '#EFF5FF',
+          100: '#D8EBFF',
+          200: '#B3D7FF',
+          300: '#8ACBFF',
+          400: '#3FA9FF',
+          500: '#1A86FF',
+          600: '#0B63E5',
+          700: '#0F42B0',
+          800: '#102C6B',
+          900: '#0A1E4E',
+          950: '#060F2B',
         }
       },
+      fontFamily: {
+        manrope: ['"Manrope"', '"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+        heading: ['"Manrope"', '"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['"Manrope"', '"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+      },
       fontSize: {
-        'section-title': ['var(--section-title-size, clamp(1.5rem, 0.88rem + 2.65vw, 2.5rem))', { lineHeight: '1.15', letterSpacing: '-0.025em' }],
-        'section-subtitle': ['var(--section-subtitle-size, clamp(0.875rem, 0.82rem + 0.25vw, 1.05rem))', { lineHeight: '1.6' }],
+        'section-title': ['var(--section-title-size, clamp(1.35rem, 0.8rem + 2.1vw, 2.25rem))', { lineHeight: '1.15', letterSpacing: '-0.025em' }],
+        'section-subtitle': ['var(--section-subtitle-size, clamp(0.85rem, 0.8rem + 0.2vw, 1rem))', { lineHeight: '1.6' }],
       }
     },
   },

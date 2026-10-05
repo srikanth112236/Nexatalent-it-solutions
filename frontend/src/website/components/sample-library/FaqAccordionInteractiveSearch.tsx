@@ -8,19 +8,19 @@ export const FaqAccordionInteractiveSearch: React.FC = () => {
   const faqs = [
     {
       q: 'Who owns the intellectual property (IP) created by our GCC engineers?',
-      a: '100% of all intellectual property, source code, neural network weights, patents, and software artifacts belong directly to your US or UK parent entity. NexaTalent executes comprehensive tri-party assignment deeds vetted by Cooley LLP and Trilegal.',
+      a: '100% of all intellectual property, source code, neural network weights, patents, and software artifacts belong directly to your US or UK parent entity. NexaTalent IT Solutions executes comprehensive tri-party assignment deeds vetted by Cooley LLP and Trilegal.',
     },
     {
       q: 'Do we need to incorporate an Indian legal entity before hiring?',
-      a: 'No. You can start immediately under NexaTalent’s Employer of Record (EOR) structure. Once your headcount reaches 30–50 engineers, our legal team assists you in establishing your wholly-owned private limited subsidiary and transfers all employees with zero friction.',
+      a: 'No. You can start immediately under NexaTalent IT Solutions’s Employer of Record (EOR) structure. Once your headcount reaches 30–50 engineers, our legal team assists you in establishing your wholly-owned private limited subsidiary and transfers all employees with zero friction.',
     },
     {
       q: 'What happens if a placed engineer leaves or fails performance standards?',
       a: 'Every retained search placement includes a 90-day free replacement guarantee. If a candidate departs or is terminated for performance within 90 days, we conduct a prioritized search to replace them at zero additional fee.',
     },
     {
-      q: 'How does NexaTalent’s technical vetting compare to internal recruiters?',
-      a: 'Traditional agencies screen resumes with keyword matching. NexaTalent conducts rigorous live coding sandboxes and architecture defenses led by former Google, Goldman Sachs, and Citadel engineering directors. Only the top 1.5% pass to client interviews.',
+      q: 'How does NexaTalent IT Solutions’s technical vetting compare to internal recruiters?',
+      a: 'Traditional agencies screen resumes with keyword matching. NexaTalent IT Solutions conducts rigorous live coding sandboxes and architecture defenses led by former Google, Goldman Sachs, and Citadel engineering directors. Only the top 1.5% pass to client interviews.',
     },
   ];
 
@@ -29,7 +29,7 @@ export const FaqAccordionInteractiveSearch: React.FC = () => {
   return (
     <div className="w-full bg-slate-900/5 p-4 sm:p-6 rounded-2xl border border-slate-200">
       <div className="text-xs font-mono font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center justify-between">
-        <span>54 · Searchable Governance & Operational FAQ</span>
+        <span>Searchable Governance & Operational FAQ</span>
         <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-[10px]">Client Knowledge Base</span>
       </div>
 

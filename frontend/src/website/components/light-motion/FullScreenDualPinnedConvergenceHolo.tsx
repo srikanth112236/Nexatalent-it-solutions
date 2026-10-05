@@ -87,12 +87,12 @@ export const FullScreenDualPinnedConvergenceHolo: React.FC = () => {
 
           <div className="space-y-3 font-mono text-xs">
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex justify-between items-center">
-              <span className="text-slate-500">Active Capital Commitment</span>
-              <span className="font-extrabold text-blue-600 text-sm">$48.5M USD</span>
+              <span className="text-slate-500">Engagement Model</span>
+              <span className="font-extrabold text-blue-600 text-sm">Retained & Contract</span>
             </div>
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex justify-between items-center">
-              <span className="text-slate-500">Median Fill Time Target</span>
-              <span className="font-extrabold text-emerald-600 text-sm">14 Business Days</span>
+              <span className="text-slate-500">Hiring Visibility</span>
+              <span className="font-extrabold text-emerald-600 text-sm">Shortlist to Offer Tracking</span>
             </div>
           </div>
         </div>
@@ -122,12 +122,12 @@ export const FullScreenDualPinnedConvergenceHolo: React.FC = () => {
 
           <div className="space-y-3 font-mono text-xs text-left">
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex justify-between items-center">
-              <span className="text-slate-500">Pre-Vetted Talent Pool</span>
-              <span className="font-extrabold text-emerald-600 text-sm">42,800+ Engineers</span>
+              <span className="text-slate-500">Talent Network</span>
+              <span className="font-extrabold text-emerald-600 text-sm">Curated Engineering Pipeline</span>
             </div>
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex justify-between items-center">
-              <span className="text-slate-500">2-Year Retention Benchmark</span>
-              <span className="font-extrabold text-blue-600 text-sm">97.2% Certified</span>
+              <span className="text-slate-500">Screening Standard</span>
+              <span className="font-extrabold text-blue-600 text-sm">Structured Multi-Stage Review</span>
             </div>
           </div>
         </div>
@@ -154,30 +154,30 @@ export const FullScreenDualPinnedConvergenceHolo: React.FC = () => {
 
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-mono font-bold mb-3 border border-blue-200">
           <Activity className="w-3.5 h-3.5 text-blue-600" />
-          <span>BILATERAL CONVERGENCE ACTIVE</span>
+          <span>BILATERAL WORKFLOW ACTIVE</span>
         </div>
 
         <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mb-3">
-          Quantum Pod Launchpad
+          Integrated Hiring Pod
         </h2>
 
         <p className="text-slate-600 text-xs sm:text-sm leading-relaxed mb-6">
-          Western mandates and verified Indian talent squads mechanically lock into an integrated, zero-latency execution vehicle.
+          Employer requirements and assessed talent pipelines converge into one structured, trackable hiring workflow.
         </p>
 
         <div className="grid grid-cols-2 gap-3 mb-6 text-left">
           <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
-            <div className="text-[11px] font-mono text-slate-500 uppercase">Cost Delta</div>
-            <div className="text-xl font-bold text-emerald-600 font-mono">-64.8%</div>
+            <div className="text-[11px] font-mono text-slate-500 uppercase">Commercial Model</div>
+            <div className="text-xl font-bold text-emerald-600 font-mono">Transparent Options</div>
           </div>
           <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
-            <div className="text-[11px] font-mono text-slate-500 uppercase">Execution SLA</div>
-            <div className="text-xl font-bold text-blue-600 font-mono">100% Guaranteed</div>
+            <div className="text-[11px] font-mono text-slate-500 uppercase">Governance</div>
+            <div className="text-xl font-bold text-blue-600 font-mono">Audit-Trailed Process</div>
           </div>
         </div>
 
         <button className="w-full py-3.5 px-6 rounded-2xl bg-slate-900 text-white font-bold text-xs shadow-lg hover:bg-blue-600 transition-all flex items-center justify-center gap-2 cursor-pointer">
-          <span>Authorize Deployment Lock</span>
+          <span>Submit Hiring Requirement</span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>

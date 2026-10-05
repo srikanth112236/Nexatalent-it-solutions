@@ -163,7 +163,7 @@ export const DashboardShowcase: React.FC<DashboardShowcaseProps> = ({
                     fontWeight: 600,
                     cursor: 'pointer',
                     backgroundColor: 'transparent',
-                    color: activeTab === v.id ? '#ffffff' : 'var(--color-text-secondary)',
+                    color: activeTab === v.id ? 'var(--nt-surface, #ffffff)' : 'var(--color-text-secondary)',
                     transition: 'color 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                   }}
                 >

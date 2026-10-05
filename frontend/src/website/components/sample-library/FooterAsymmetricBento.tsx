@@ -22,11 +22,11 @@ export const FooterAsymmetricBento: React.FC = () => {
               Transforming Engineering Arbitrage into Sovereign Advantage.
             </h3>
             <p className="text-xs text-slate-500 leading-relaxed max-w-lg font-light">
-              NexaTalent partners with institutional private equity, public tech enterprises, and tier-1 scaleups to deploy sovereign engineering centers with zero execution drag.
+              NexaTalent IT Solutions partners with institutional private equity, public tech enterprises, and tier-1 scaleups to deploy sovereign engineering centers with zero execution drag.
             </p>
           </div>
           <div className="pt-6 flex items-center gap-4 text-xs font-mono text-slate-400">
-            <span>© 2026 NEXATALENT</span>
+            <span>© 2026 NEXATALENT IT SOLUTIONS</span>
             <span>•</span>
             <span>SOC 2 CERTIFIED</span>
             <span>•</span>

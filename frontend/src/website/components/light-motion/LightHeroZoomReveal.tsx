@@ -32,12 +32,12 @@ export const LightHeroZoomReveal: React.FC<LightHeroZoomRevealProps> = ({
       ref={containerRef}
       className="theme-light"
       style={{
-        backgroundColor: '#f8fafc',
-        color: '#0f172a',
+        backgroundColor: 'var(--nt-surface-2, #f8fafc)',
+        color: 'var(--nt-ink, #0f172a)',
         padding: '6rem 2rem 5rem 2rem',
         position: 'relative',
         overflow: 'hidden',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
         background: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(37, 99, 235, 0.12), rgba(248, 250, 252, 1))',
       }}
     >
@@ -78,7 +78,7 @@ export const LightHeroZoomReveal: React.FC<LightHeroZoomRevealProps> = ({
               fontWeight: 900,
               lineHeight: 1.1,
               letterSpacing: '-0.035em',
-              color: '#0f172a',
+              color: 'var(--nt-ink, #0f172a)',
             }}
           >
             {headline}
@@ -113,7 +113,7 @@ export const LightHeroZoomReveal: React.FC<LightHeroZoomRevealProps> = ({
           transition={{ duration: motionTokens.duration.standard, delay: 0.2 }}
           style={{
             fontSize: 'clamp(1rem, 2vw, 1.25rem)',
-            color: '#475569',
+            color: 'var(--nt-muted, #475569)',
             maxWidth: '720px',
             margin: '0 auto 2.5rem auto',
             lineHeight: 1.6,
@@ -157,8 +157,8 @@ export const LightHeroZoomReveal: React.FC<LightHeroZoomRevealProps> = ({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.5rem',
-              backgroundColor: '#ffffff',
-              color: '#334155',
+              backgroundColor: 'var(--nt-surface, #ffffff)',
+              color: 'var(--nt-ink-2, #334155)',
               padding: '0.875rem 1.75rem',
               borderRadius: '12px',
               fontWeight: 600,
@@ -180,8 +180,8 @@ export const LightHeroZoomReveal: React.FC<LightHeroZoomRevealProps> = ({
             maxWidth: '1020px',
             margin: '0 auto',
             borderRadius: '24px',
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
+            backgroundColor: 'var(--nt-surface, #ffffff)',
+            border: '1px solid var(--nt-border, #e2e8f0)',
             padding: '2.5rem',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.1)',
             textAlign: 'left',
@@ -192,7 +192,7 @@ export const LightHeroZoomReveal: React.FC<LightHeroZoomRevealProps> = ({
               <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Deterministic Screening Engine
               </div>
-              <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a' }}>
+              <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)' }}>
                 Principal Distributed Database Architect Calibration
               </h3>
             </div>
@@ -204,31 +204,31 @@ export const LightHeroZoomReveal: React.FC<LightHeroZoomRevealProps> = ({
 
           {/* Interactive Metric Strip inside Lighter Card */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
-            <div style={{ padding: '1.25rem', backgroundColor: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#64748b', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.35rem' }}>
+            <div style={{ padding: '1.25rem', backgroundColor: 'var(--nt-surface-2, #f8fafc)', borderRadius: '16px', border: '1px solid var(--nt-border, #e2e8f0)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--nt-muted, #64748b)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.35rem' }}>
                 <Zap size={14} color="#2563eb" />
                 <span>Turnaround Velocity</span>
               </div>
-              <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a' }}>38 Hours</div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)' }}>38 Hours</div>
               <div style={{ fontSize: '0.8125rem', color: '#16a34a', fontWeight: 600 }}>10h ahead of SLA</div>
             </div>
 
-            <div style={{ padding: '1.25rem', backgroundColor: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#64748b', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.35rem' }}>
+            <div style={{ padding: '1.25rem', backgroundColor: 'var(--nt-surface-2, #f8fafc)', borderRadius: '16px', border: '1px solid var(--nt-border, #e2e8f0)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--nt-muted, #64748b)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.35rem' }}>
                 <Shield size={14} color="#0891b2" />
                 <span>Replacement Warranty</span>
               </div>
-              <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a' }}>90 Days</div>
-              <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>Unconditional escrow backed</div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)' }}>90 Days</div>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--nt-muted, #64748b)' }}>Unconditional escrow backed</div>
             </div>
 
-            <div style={{ padding: '1.25rem', backgroundColor: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#64748b', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.35rem' }}>
+            <div style={{ padding: '1.25rem', backgroundColor: 'var(--nt-surface-2, #f8fafc)', borderRadius: '16px', border: '1px solid var(--nt-border, #e2e8f0)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--nt-muted, #64748b)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.35rem' }}>
                 <Sparkles size={14} color="#a855f7" />
                 <span>Direct Offer-to-Join</span>
               </div>
-              <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a' }}>94.8%</div>
-              <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>Proactive counter-offer defense</div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)' }}>94.8%</div>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--nt-muted, #64748b)' }}>Proactive counter-offer defense</div>
             </div>
           </div>
         </motion.div>

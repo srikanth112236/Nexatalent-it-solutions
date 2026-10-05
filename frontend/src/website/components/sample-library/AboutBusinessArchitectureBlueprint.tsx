@@ -54,7 +54,7 @@ export const AboutBusinessArchitectureBlueprint: React.FC = () => {
             <span>NexaScale GCC Operating Blueprint</span>
           </div>
           <h2 className="text-section-title font-bold text-slate-900 tracking-tight">
-            How NexaTalent Re-Engineered the GCC Paradigm
+            How NexaTalent IT Solutions Re-Engineered the GCC Paradigm
           </h2>
           <p className="text-sm text-slate-500 font-light mt-2">
             Click on each pillar below to inspect our sovereign infrastructure, IP protections, and economic model.

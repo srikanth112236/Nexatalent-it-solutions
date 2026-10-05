@@ -1,119 +1,58 @@
-import React, { useEffect, useRef } from 'react';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { DollarSign, Users, ArrowUpRight, TrendingUp } from 'lucide-react';
-
-gsap.registerPlugin(ScrollTrigger);
+import React from 'react';
+import { DollarSign, Users, TrendingUp } from 'lucide-react';
 
 export const FullScreenSplitDivergenceTalentArb: React.FC = () => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const leftPodRef = useRef<HTMLDivElement>(null);
-  const rightPodRef = useRef<HTMLDivElement>(null);
-  const bannerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: containerRef.current,
-          start: 'top top',
-          end: '+=150%',
-          pin: true,
-          scrub: 1,
-        },
-      });
-
-      tl.fromTo(
-        leftPodRef.current,
-        { xPercent: 50, opacity: 0.2 },
-        { xPercent: 0, opacity: 1, ease: 'power2.out' },
-        0
-      )
-        .fromTo(
-          rightPodRef.current,
-          { xPercent: -50, opacity: 0.2 },
-          { xPercent: 0, opacity: 1, ease: 'power2.out' },
-          0
-        )
-        .fromTo(
-          bannerRef.current,
-          { scale: 0.85, opacity: 0 },
-          { scale: 1, opacity: 1, ease: 'back.out(1.5)' },
-          0.3
-        );
-    }, containerRef);
-
-    return () => ctx.revert();
-  }, []);
-
   return (
-    <section
-      ref={containerRef}
-      className="relative w-screen min-h-screen bg-slate-50 text-slate-900 overflow-hidden flex flex-col justify-center items-center m-0 p-0"
-      style={{ width: '100vw', maxWidth: '100vw' }}
-    >
-      {/* Top Banner */}
-      <div ref={bannerRef} className="relative z-30 mb-8 text-center px-6">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono text-xs font-bold mb-3">
-          <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-          <span>PATTERN 20 · 4X TALENT MULTIPLIER DIVERGENCE</span>
-        </div>
-        <h2 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tight">
-          1 US Principal Budget = <span className="text-emerald-600">4 Elite GCC Engineers</span>
-        </h2>
-      </div>
-
-      {/* Symmetrically Diverged Halves */}
-      <div className="relative z-20 w-full px-8 md:px-16 grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-16">
-        {/* Left Diverged Pod: 2 Senior Backend Architects */}
-        <div
-          ref={leftPodRef}
-          className="p-8 lg:p-10 rounded-3xl bg-white border border-slate-200 shadow-xl shadow-slate-200/50 backdrop-blur-xl"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-mono font-bold text-blue-600 uppercase">
-              GCC POD SQUAD A
-            </span>
-            <Users className="w-5 h-5 text-blue-600" />
+    <section className="relative w-full py-20 px-6 md:px-16 bg-slate-50 text-slate-900 border-b border-slate-200 flex flex-col justify-center items-center text-center">
+      <div className="max-w-5xl mx-auto space-y-8">
+        <div className="text-center space-y-3">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono text-xs font-bold">
+            <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+            <span>PAYROLL COST ARBITRAGE MATRIX</span>
           </div>
-          <h3 className="text-2xl font-black text-slate-900 mb-2">2x Senior Backend Architects</h3>
-          <p className="text-slate-600 text-sm mb-6">
-            Leading high-throughput distributed database replication and gRPC microservices.
+          <h2 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tight">
+            High-Impact Tech Talent at 60% Lower Cost
+          </h2>
+          <p className="text-slate-600 text-sm md:text-base max-w-2xl mx-auto leading-relaxed font-medium">
+            Compare traditional US/UK local hiring overhead versus NexaTalent IT Solutions offshore engineering pod model.
           </p>
-          <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200 font-mono text-xs">
-            <span className="text-slate-500">Combined Allocation</span>
-            <span className="text-emerald-600 font-bold text-sm">$180,000 / Year</span>
-          </div>
         </div>
 
-        {/* Right Diverged Pod: 1 AI ML Lead + 1 DevOps Lead */}
-        <div
-          ref={rightPodRef}
-          className="p-8 lg:p-10 rounded-3xl bg-white border border-slate-200 shadow-xl shadow-slate-200/50 backdrop-blur-xl"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-mono font-bold text-emerald-600 uppercase">
-              GCC POD SQUAD B
-            </span>
-            <Users className="w-5 h-5 text-emerald-600" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
+          <div className="p-8 rounded-3xl bg-white border border-slate-200 shadow-xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-red-50 text-red-600 rounded-2xl">
+                <DollarSign className="w-6 h-6" />
+              </div>
+              <div>
+                <h4 className="font-bold text-lg text-slate-900">US / UK Local Hiring</h4>
+                <p className="text-xs text-slate-500">$160,000+ Average Annual Salary</p>
+              </div>
+            </div>
+            <ul className="text-xs text-slate-600 space-y-2 border-t pt-3">
+              <li>• 60 to 90 Days Average Time-to-Hire</li>
+              <li>• High recruiter markup fees (20-30%)</li>
+              <li>• Complex local benefits & healthcare liabilities</li>
+            </ul>
           </div>
-          <h3 className="text-2xl font-black text-slate-900 mb-2">1x AI Lead + 1x SRE Architect</h3>
-          <p className="text-slate-600 text-sm mb-6">
-            Managing inference pipeline optimization, Terraform automation, and 99.999% uptime.
-          </p>
-          <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200 font-mono text-xs">
-            <span className="text-slate-500">Combined Allocation</span>
-            <span className="text-emerald-600 font-bold text-sm">$195,000 / Year</span>
+
+          <div className="p-8 rounded-3xl bg-emerald-50 border border-emerald-200 shadow-xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-emerald-600 text-white rounded-2xl">
+                <Users className="w-6 h-6" />
+              </div>
+              <div>
+                <h4 className="font-bold text-lg text-emerald-950">NexaTalent GCC Offshore Pod</h4>
+                <p className="text-xs text-emerald-700 font-bold">$65,000 Average Annual Cost (Save 60%)</p>
+              </div>
+            </div>
+            <ul className="text-xs text-emerald-800 space-y-2 border-t border-emerald-200 pt-3">
+              <li>✓ 72-Hour Rapid Matching & Deployment</li>
+              <li>✓ 14-Day Zero-Risk Engineering Trial</li>
+              <li>✓ Full EOR compliance, IP transfer, and hardware setup</li>
+            </ul>
           </div>
         </div>
-      </div>
-
-      <div className="relative z-20 mt-8 flex items-center gap-2 text-xs font-mono text-slate-500">
-        <DollarSign className="w-4 h-4 text-emerald-600" />
-        <span>Total 4-Engineer GCC Squad: $375K vs Bay Area 1-Engineer: $420K</span>
-        <ArrowUpRight className="w-4 h-4 text-blue-600 ml-2" />
       </div>
     </section>
   );

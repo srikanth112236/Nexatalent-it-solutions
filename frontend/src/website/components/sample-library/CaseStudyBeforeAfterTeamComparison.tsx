@@ -19,7 +19,7 @@ export const CaseStudyBeforeAfterTeamComparison: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Before */}
           <div className="p-6 rounded-2xl bg-rose-50/40 border border-rose-200">
-            <span className="text-xs font-mono font-bold text-rose-700 uppercase block mb-3">Before NexaTalent (Legacy IT Outsourcing)</span>
+            <span className="text-xs font-mono font-bold text-rose-700 uppercase block mb-3">Before NexaTalent IT Solutions (Legacy IT Outsourcing)</span>
             <ul className="space-y-3 text-xs text-slate-600">
               <li className="flex items-start gap-2">
                 <XCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
@@ -42,7 +42,7 @@ export const CaseStudyBeforeAfterTeamComparison: React.FC = () => {
 
           {/* After */}
           <div className="p-6 rounded-2xl bg-emerald-50/50 border border-emerald-300 shadow-sm">
-            <span className="text-xs font-mono font-bold text-emerald-800 uppercase block mb-3">After NexaTalent (Sovereign GCC Center)</span>
+            <span className="text-xs font-mono font-bold text-emerald-800 uppercase block mb-3">After NexaTalent IT Solutions (Sovereign GCC Center)</span>
             <ul className="space-y-3 text-xs text-slate-700">
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />

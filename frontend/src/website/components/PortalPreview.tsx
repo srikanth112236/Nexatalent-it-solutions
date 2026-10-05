@@ -108,7 +108,7 @@ export const PortalPreview: React.FC = () => {
                 borderRadius: 'var(--radius-pill)',
                 border: activePortal === p ? '1px solid transparent' : '1px solid var(--color-border)',
                 backgroundColor: 'transparent',
-                color: activePortal === p ? '#ffffff' : 'var(--color-text-muted)',
+                color: activePortal === p ? 'var(--nt-surface, #ffffff)' : 'var(--color-text-muted)',
                 fontWeight: 600,
                 fontSize: '0.9rem',
                 cursor: 'pointer',

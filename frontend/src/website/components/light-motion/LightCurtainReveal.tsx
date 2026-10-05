@@ -64,7 +64,7 @@ export const LightCurtainReveal: React.FC = () => {
   }, []);
 
   return (
-    <div ref={containerRef} className="theme-light" style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '6rem 2rem', borderBottom: '1px solid #e2e8f0' }}>
+    <div ref={containerRef} className="theme-light" style={{ backgroundColor: 'var(--nt-surface, #ffffff)', color: 'var(--nt-ink, #0f172a)', padding: '6rem 2rem', borderBottom: '1px solid var(--nt-border, #e2e8f0)' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
@@ -86,10 +86,10 @@ export const LightCurtainReveal: React.FC = () => {
             <Sparkles size={14} />
             Pattern 17 & 18 · Horizontal & Vertical Curtain Reveals
           </div>
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a' }}>
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)' }}>
             Unveiling Proprietary Calibration Systems
           </h2>
-          <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
+          <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
             Scroll down to watch split curtains slide outward to reveal technical architecture and quantified outcomes.
           </p>
         </div>
@@ -107,9 +107,9 @@ export const LightCurtainReveal: React.FC = () => {
               borderRadius: '24px',
               overflow: 'hidden',
               minHeight: '380px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--nt-border, #e2e8f0)',
               boxShadow: '0 20px 40px -15px rgba(0,0,0,0.08)',
-              backgroundColor: '#f8fafc',
+              backgroundColor: 'var(--nt-surface-2, #f8fafc)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -120,10 +120,10 @@ export const LightCurtainReveal: React.FC = () => {
               <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto' }}>
                 <Terminal size={24} />
               </div>
-              <h3 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.75rem' }}>
+              <h3 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)', marginBottom: '0.75rem' }}>
                 Semantic Vector Scoring Algorithm Unveiled
               </h3>
-              <p style={{ color: '#475569', fontSize: '1rem', lineHeight: 1.6, marginBottom: '2rem' }}>
+              <p style={{ color: 'var(--nt-muted, #475569)', fontSize: '1rem', lineHeight: 1.6, marginBottom: '2rem' }}>
                 Deep embedding matches candidates on actual concurrency code, open source pull requests, and verified system limits. 98.6% candidate alignment on first pass.
               </p>
               <Link
@@ -167,7 +167,7 @@ export const LightCurtainReveal: React.FC = () => {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', fontWeight: 700, color: '#94a3b8' }}>
                 <Eye size={16} />
-                <span>NexaTalent Guard</span>
+                <span>NexaTalent IT Solutions Guard</span>
               </div>
             </div>
 
@@ -210,7 +210,7 @@ export const LightCurtainReveal: React.FC = () => {
               borderRadius: '24px',
               overflow: 'hidden',
               minHeight: '380px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--nt-border, #e2e8f0)',
               boxShadow: '0 20px 40px -15px rgba(0,0,0,0.08)',
               backgroundColor: '#ecfdf5',
               display: 'flex',

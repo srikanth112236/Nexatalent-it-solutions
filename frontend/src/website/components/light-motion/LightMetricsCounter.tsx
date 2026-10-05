@@ -14,10 +14,10 @@ interface MetricItem {
 }
 
 const metrics: MetricItem[] = [
-  { id: 'm1', target: 48, suffix: 'h', label: 'Shortlist Delivery SLA', sublabel: 'Contractually guaranteed or 25% credit', icon: Zap, accent: '#2563eb' },
-  { id: 'm2', target: 94, suffix: '.8%', label: 'Offer-to-Join Ratio', sublabel: 'Proactive counter-offer defense', icon: Users, accent: '#059669' },
-  { id: 'm3', target: 90, suffix: ' Days', label: 'Unconditional Warranty', sublabel: '100% escrow-backed replacement', icon: ShieldCheck, accent: '#7c3aed' },
-  { id: 'm4', target: 120, prefix: '', suffix: '+', label: 'Tier-1 Tech Partners', sublabel: 'Unicorns, GCCs & HFT funds', icon: Award, accent: '#ea580c' },
+  { id: 'm1', target: 13, suffix: '', label: 'Lifecycle Stages Tracked', sublabel: 'Requirement to joining in one flow', icon: Zap, accent: '#2563eb' },
+  { id: 'm2', target: 5, suffix: '', label: 'Role-Specific Portals', sublabel: 'Admin, employee, recruiter, employer, candidate', icon: Users, accent: '#059669' },
+  { id: 'm3', target: 4, suffix: '', label: 'Screening Gates', sublabel: 'Architecture, systems, leadership, verification', icon: ShieldCheck, accent: '#7c3aed' },
+  { id: 'm4', target: 6, suffix: '', label: 'Specialist Practice Domains', sublabel: 'AI, systems, fintech, cloud, data, security', icon: Award, accent: '#ea580c' },
 ];
 
 export const LightMetricsCounter: React.FC = () => {
@@ -52,8 +52,8 @@ export const LightMetricsCounter: React.FC = () => {
       ref={containerRef}
       className="theme-light"
       style={{
-        backgroundColor: '#f8fafc',
-        borderBottom: '1px solid #e2e8f0',
+        backgroundColor: 'var(--nt-surface-2, #f8fafc)',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
         padding: '5rem 2rem',
       }}
     >
@@ -74,13 +74,13 @@ export const LightMetricsCounter: React.FC = () => {
           }}
         >
           <Sparkles size={14} />
-          <span>03 / 40 · VERIFIED PERFORMANCE METRICS</span>
+          <span>NEXATALENT VERIFIED PERFORMANCE METRICS</span>
         </div>
 
-        <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a', marginBottom: '0.75rem' }}>
+        <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)', marginBottom: '0.75rem' }}>
           Numbers That Guarantee Accountability
         </h2>
-        <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0 auto 3.5rem auto', lineHeight: 1.6 }}>
+        <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0 auto 3.5rem auto', lineHeight: 1.6 }}>
           We replace agency guesswork with strict, contractually enforced engineering milestones.
         </p>
 
@@ -96,9 +96,9 @@ export const LightMetricsCounter: React.FC = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: idx * 0.1 }}
                 style={{
-                  backgroundColor: '#ffffff',
+                  backgroundColor: 'var(--nt-surface, #ffffff)',
                   borderRadius: '20px',
-                  border: '1px solid #e2e8f0',
+                  border: '1px solid var(--nt-border, #e2e8f0)',
                   padding: '2.5rem 2rem',
                   boxShadow: '0 10px 30px -10px rgba(0,0,0,0.05)',
                   textAlign: 'left',
@@ -124,7 +124,7 @@ export const LightMetricsCounter: React.FC = () => {
                   style={{
                     fontSize: 'clamp(2.5rem, 4vw, 3.25rem)',
                     fontWeight: 900,
-                    color: '#0f172a',
+                    color: 'var(--nt-ink, #0f172a)',
                     fontVariantNumeric: 'tabular-nums',
                     lineHeight: 1.1,
                     marginBottom: '0.5rem',
@@ -139,7 +139,7 @@ export const LightMetricsCounter: React.FC = () => {
                   {m.label}
                 </div>
 
-                <p style={{ fontSize: '0.8125rem', color: '#64748b', lineHeight: 1.5, margin: 0 }}>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--nt-muted, #64748b)', lineHeight: 1.5, margin: 0 }}>
                   {m.sublabel}
                 </p>
               </motion.div>

@@ -62,7 +62,7 @@ export const FullScreenHorizontalSplitCurtainLouver: React.FC = () => {
           GCC Executive Advisory Council
         </h2>
         <p className="text-slate-600 text-sm md:text-base max-w-2xl mx-auto mb-10 leading-relaxed">
-          The architectural Venetian louvers part horizontally, presenting the founding leaders and veteran site directors steering NexaTalent GCC practices.
+          The architectural Venetian louvers part horizontally, presenting the founding leaders and veteran site directors steering NexaTalent IT Solutions GCC practices.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">

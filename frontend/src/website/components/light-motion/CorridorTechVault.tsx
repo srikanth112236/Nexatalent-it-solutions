@@ -107,7 +107,7 @@ export const CorridorTechVault: React.FC = () => {
             Specialized Deep-Tech Architectural Vault
           </h2>
           <p className="text-lg text-slate-600">
-            A 3D perspective traversal across the four deep-technology domains where NexaTalent holds exclusive candidate access.
+            A 3D perspective traversal across the four deep-technology domains where NexaTalent IT Solutions holds exclusive candidate access.
           </p>
         </div>
 

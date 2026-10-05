@@ -58,7 +58,7 @@ export const Testimonial: React.FC<TestimonialProps> = ({
       rating: 5,
       highlightStat: '14 Core Hires in 42 Days',
       quote:
-        'NexaTalent eliminated 80% of our interview fatigue. Every candidate presented was already technically qualified at our high standard. The best recruitment partnership we have had.',
+        'NexaTalent IT Solutions eliminated 80% of our interview fatigue. Every candidate presented was already technically qualified at our high standard. The best recruitment partnership we have had.',
       verified: true,
     },
     {
@@ -69,18 +69,18 @@ export const Testimonial: React.FC<TestimonialProps> = ({
       rating: 5,
       highlightStat: '100% SLA Fulfillment',
       quote:
-        'Building our India development center was a high-stakes initiative. NexaTalent’s calibrated shortlists and market intelligence gave our board absolute confidence.',
+        'Building our India development center was a high-stakes initiative. NexaTalent IT Solutions’s calibrated shortlists and market intelligence gave our board absolute confidence.',
       verified: true,
     },
     {
       id: 't-3',
       name: 'Arjun Nambiar',
       role: 'Principal Distributed Systems Engineer',
-      company: 'Placed via NexaTalent at Tier-1 FinTech',
+      company: 'Placed via NexaTalent IT Solutions at Tier-1 FinTech',
       rating: 5,
       highlightStat: '+65% Comp Growth',
       quote:
-        'The recruiters at NexaTalent actually understand technical depth. No generic spam, full transparency on company culture, and seamless negotiation throughout.',
+        'The recruiters at NexaTalent IT Solutions actually understand technical depth. No generic spam, full transparency on company culture, and seamless negotiation throughout.',
       verified: true,
     },
   ],

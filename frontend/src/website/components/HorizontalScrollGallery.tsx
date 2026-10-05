@@ -26,7 +26,7 @@ export interface HorizontalScrollGalleryProps {
 export const HorizontalScrollGallery: React.FC<HorizontalScrollGalleryProps> = ({
   badge = 'Impact Showcase',
   title = 'Engineered Across High-Performance Engineering Disciplines',
-  subtitle = 'Swipe through key architectural domains where NexaTalent consistently delivers market-beating talent outcomes.',
+  subtitle = 'Swipe through key architectural domains where NexaTalent IT Solutions consistently delivers market-beating talent outcomes.',
   items = [
     {
       id: 'dist-sys',

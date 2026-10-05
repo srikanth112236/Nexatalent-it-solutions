@@ -33,7 +33,7 @@ export const RecruitmentWorkflow: React.FC = () => {
           transition={{ duration: 0.6, delay: 0.1, ease: motionTokens.ease.standard }}
           style={{ fontSize: 'clamp(2rem, 3.5vw, 3rem)', fontWeight: 800, margin: '0.5rem 0 1rem 0', color: '#ffffff' }}
         >
-          The NexaTalent Six-Stage Hiring Protocol
+          The NexaTalent IT Solutions Six-Stage Hiring Protocol
         </motion.h2>
 
         <motion.p
@@ -140,7 +140,7 @@ export const RecruitmentWorkflow: React.FC = () => {
                   fontSize: '1.25rem',
                   fontWeight: 700,
                   marginBottom: '0.625rem',
-                  color: isSelected ? '#ffffff' : 'var(--color-text)',
+                  color: isSelected ? 'var(--nt-surface, #ffffff)' : 'var(--color-text)',
                   transition: 'color 0.2s ease',
                 }}
               >

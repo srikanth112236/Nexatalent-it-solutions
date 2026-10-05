@@ -78,31 +78,31 @@ export const FullScreenSplitDivergenceArchitecturalWings: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
           <div className="p-8 rounded-3xl bg-white border border-slate-200 shadow-xl shadow-slate-200/50">
             <span className="text-xs font-mono text-blue-600 font-bold uppercase">Candidate Track 01</span>
-            <h4 className="text-xl font-bold text-slate-900 mt-1 mb-2">Staff LLM Core Lead</h4>
-            <p className="text-xs text-slate-600 mb-4 leading-relaxed">Architected distributed model serving handling 50M tokens/min.</p>
+            <h4 className="text-xl font-bold text-slate-900 mt-1 mb-2">AI & Platform Architecture</h4>
+            <p className="text-xs text-slate-600 mb-4 leading-relaxed">Staff-level architects assessed on distributed systems design and production ownership.</p>
             <div className="text-xs font-mono text-emerald-600 font-bold flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4" />
-              <span>Available in 14 Days</span>
+              <span>Structured Technical Screening</span>
             </div>
           </div>
 
           <div className="p-8 rounded-3xl bg-white border border-slate-200 shadow-xl shadow-slate-200/50">
             <span className="text-xs font-mono text-indigo-600 font-bold uppercase">Candidate Track 02</span>
-            <h4 className="text-xl font-bold text-slate-900 mt-1 mb-2">Principal Rust Systems</h4>
-            <p className="text-xs text-slate-600 mb-4 leading-relaxed">Zero-copy network protocols & high-throughput distributed memory caches.</p>
+            <h4 className="text-xl font-bold text-slate-900 mt-1 mb-2">Systems & Infrastructure</h4>
+            <p className="text-xs text-slate-600 mb-4 leading-relaxed">Concurrency, networking fundamentals and performance-aware engineering reviews.</p>
             <div className="text-xs font-mono text-emerald-600 font-bold flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4" />
-              <span>Pass Score: 99.4%</span>
+              <span>Multi-Stage Evaluation</span>
             </div>
           </div>
 
           <div className="p-8 rounded-3xl bg-white border border-slate-200 shadow-xl shadow-slate-200/50">
             <span className="text-xs font-mono text-teal-600 font-bold uppercase">Candidate Track 03</span>
-            <h4 className="text-xl font-bold text-slate-900 mt-1 mb-2">Director of Site Operations</h4>
-            <p className="text-xs text-slate-600 mb-4 leading-relaxed">Ex-Amazon Bangalore site leader with proven 1,500-headcount ramp experience.</p>
+            <h4 className="text-xl font-bold text-slate-900 mt-1 mb-2">Engineering Leadership</h4>
+            <p className="text-xs text-slate-600 mb-4 leading-relaxed">Directors and site leaders assessed on delivery record and team-building depth.</p>
             <div className="text-xs font-mono text-emerald-600 font-bold flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4" />
-              <span>Direct Board Dialogue</span>
+              <span>Reference-Checked Profiles</span>
             </div>
           </div>
         </div>

@@ -6,7 +6,7 @@ export const JobsInterviewProcessRoadmap: React.FC = () => {
     {
       day: 'Day 1-3',
       title: 'Partner Intake & Technical Deep-Dive',
-      desc: '30-minute confidential discussion with a NexaTalent technical partner. We align on your career trajectory, compensation floors, and target architecture.',
+      desc: '30-minute confidential discussion with a NexaTalent IT Solutions technical partner. We align on your career trajectory, compensation floors, and target architecture.',
     },
     {
       day: 'Day 4-7',
@@ -28,7 +28,7 @@ export const JobsInterviewProcessRoadmap: React.FC = () => {
   return (
     <div className="w-full bg-slate-900/5 p-4 sm:p-6 rounded-2xl border border-slate-200">
       <div className="text-xs font-mono font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center justify-between">
-        <span>34 · 21-Day Candidate Interview Process Roadmap</span>
+        <span>21-Day Candidate Interview Process Roadmap</span>
         <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-[10px]">Zero Redundancy</span>
       </div>
 

@@ -40,15 +40,15 @@ export const LightDashboardAssembly: React.FC = () => {
       ref={containerRef}
       className="theme-light"
       style={{
-        backgroundColor: '#ffffff',
-        color: '#0f172a',
+        backgroundColor: 'var(--nt-surface, #ffffff)',
+        color: 'var(--nt-ink, #0f172a)',
         padding: '5rem 2rem',
         position: 'relative',
         minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
       }}
     >
       <div style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
@@ -61,22 +61,22 @@ export const LightDashboardAssembly: React.FC = () => {
               gap: '0.4rem',
               padding: '0.35rem 0.85rem',
               borderRadius: '9999px',
-              backgroundColor: 'rgba(37, 99, 235, 0.08)',
-              border: '1px solid rgba(37, 99, 235, 0.25)',
+              backgroundColor: '#EFF6FF',
+              border: '1px solid #BFDBFE',
               fontSize: '0.8125rem',
-              fontWeight: 700,
-              color: '#2563eb',
+              fontWeight: 800,
+              color: '#0265FF',
               marginBottom: '1rem',
             }}
           >
             <LayoutDashboard size={14} />
-            S07 & P04 Scroll-Scrubbed Dashboard Assembly Pattern
+            <span>REAL-TIME HIRING TELEMETRY DASHBOARD</span>
           </div>
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a' }}>
-            Synchronous Talent Operating System
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0F172A' }}>
+            Real-Time Talent Operating Platform
           </h2>
-          <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
-            Scroll down to watch UI fragments assemble into a live employer control dashboard.
+          <p style={{ color: '#475569', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
+            Our automated hiring engine streamlines candidate sourcing, technical vetting, and SLA tracking in real time.
           </p>
         </div>
 
@@ -87,7 +87,7 @@ export const LightDashboardAssembly: React.FC = () => {
             maxWidth: '1080px',
             margin: '0 auto',
             borderRadius: '24px',
-            backgroundColor: '#f8fafc',
+            backgroundColor: 'var(--nt-surface-2, #f8fafc)',
             border: '1px solid #cbd5e1',
             padding: '2.5rem',
             boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.1)',
@@ -103,10 +103,10 @@ export const LightDashboardAssembly: React.FC = () => {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--nt-surface, #ffffff)',
               borderRadius: '16px',
               padding: '1.25rem 1.75rem',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--nt-border, #e2e8f0)',
               boxShadow: '0 4px 12px -2px rgba(0,0,0,0.03)',
               flexWrap: 'wrap',
               gap: '1rem',
@@ -115,8 +115,8 @@ export const LightDashboardAssembly: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#16a34a', boxShadow: '0 0 8px #16a34a' }} />
               <div>
-                <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#0f172a' }}>Live Client SLA Engine</span>
-                <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '0.5rem' }}>Active Mandates: 4</span>
+                <span style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)' }}>Live Client SLA Engine</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--nt-muted, #64748b)', marginLeft: '0.5rem' }}>Active Mandates: 4</span>
               </div>
             </div>
 
@@ -158,15 +158,15 @@ export const LightDashboardAssembly: React.FC = () => {
             <div
               className="dash-piece-left"
               style={{
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--nt-surface, #ffffff)',
                 borderRadius: '18px',
-                border: '1px solid #e2e8f0',
+                border: '1px solid var(--nt-border, #e2e8f0)',
                 padding: '1.75rem',
                 boxShadow: '0 4px 12px -2px rgba(0,0,0,0.03)',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
+                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)' }}>
                   Calibrated Candidate Bench
                 </h4>
                 <Users size={18} color="#2563eb" />
@@ -178,10 +178,10 @@ export const LightDashboardAssembly: React.FC = () => {
                   { name: 'Sarah L.', role: 'Principal DB Architect', match: '96%', status: 'Interview Stage 2' },
                   { name: 'Karthik V.', role: 'Head of Infrastructure', match: '94%', status: 'Offer Lock Pending' },
                 ].map((c, idx) => (
-                  <div key={idx} style={{ padding: '0.85rem', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div key={idx} style={{ padding: '0.85rem', backgroundColor: 'var(--nt-surface-2, #f8fafc)', borderRadius: '12px', border: '1px solid var(--nt-border, #e2e8f0)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.875rem', color: '#0f172a' }}>{c.name} · {c.role}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.15rem' }}>{c.status}</div>
+                      <div style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--nt-ink, #0f172a)' }}>{c.name} · {c.role}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--nt-muted, #64748b)', marginTop: '0.15rem' }}>{c.status}</div>
                     </div>
                     <span style={{ fontSize: '0.75rem', fontWeight: 800, backgroundColor: '#ecfdf5', color: '#059669', padding: '0.2rem 0.5rem', borderRadius: '6px' }}>
                       {c.match} Match
@@ -195,9 +195,9 @@ export const LightDashboardAssembly: React.FC = () => {
             <div
               className="dash-piece-right"
               style={{
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--nt-surface, #ffffff)',
                 borderRadius: '18px',
-                border: '1px solid #e2e8f0',
+                border: '1px solid var(--nt-border, #e2e8f0)',
                 padding: '1.75rem',
                 boxShadow: '0 4px 12px -2px rgba(0,0,0,0.03)',
                 display: 'flex',
@@ -207,21 +207,21 @@ export const LightDashboardAssembly: React.FC = () => {
             >
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                  <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
+                  <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)' }}>
                     SLA Velocity Metrics
                   </h4>
                   <Activity size={18} color="#16a34a" />
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div style={{ padding: '1rem', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '0.6875rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Avg First Shortlist</div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', marginTop: '0.25rem' }}>36h</div>
+                  <div style={{ padding: '1rem', backgroundColor: 'var(--nt-surface-2, #f8fafc)', borderRadius: '12px', border: '1px solid var(--nt-border, #e2e8f0)' }}>
+                    <div style={{ fontSize: '0.6875rem', color: 'var(--nt-muted, #64748b)', textTransform: 'uppercase', fontWeight: 700 }}>Avg First Shortlist</div>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)', marginTop: '0.25rem' }}>36h</div>
                     <div style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 600 }}>SLA Target: 48h</div>
                   </div>
-                  <div style={{ padding: '1rem', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '0.6875rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Pass Through Rate</div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', marginTop: '0.25rem' }}>88%</div>
+                  <div style={{ padding: '1rem', backgroundColor: 'var(--nt-surface-2, #f8fafc)', borderRadius: '12px', border: '1px solid var(--nt-border, #e2e8f0)' }}>
+                    <div style={{ fontSize: '0.6875rem', color: 'var(--nt-muted, #64748b)', textTransform: 'uppercase', fontWeight: 700 }}>Pass Through Rate</div>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)', marginTop: '0.25rem' }}>88%</div>
                     <div style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: 600 }}>3 of 4 Advance</div>
                   </div>
                 </div>

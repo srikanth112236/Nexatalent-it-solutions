@@ -42,15 +42,15 @@ export const LightSplitScreenConvergence: React.FC = () => {
       ref={containerRef}
       className="theme-light"
       style={{
-        backgroundColor: '#f8fafc',
-        color: '#0f172a',
+        backgroundColor: 'var(--nt-surface-2, #f8fafc)',
+        color: 'var(--nt-ink, #0f172a)',
         padding: '5rem 2rem',
         position: 'relative',
         minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
         overflow: 'hidden',
       }}
     >
@@ -75,10 +75,10 @@ export const LightSplitScreenConvergence: React.FC = () => {
             <Sparkles size={14} />
             Pattern 19 & 20 · Split-Screen Convergence & Divergence
           </div>
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a' }}>
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)' }}>
             Two Sides of the Market, One Unified OS
           </h2>
-          <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
+          <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
             Watch employer hiring demands and candidate career aspirations converge into our synchronized talent platform.
           </p>
         </div>
@@ -92,9 +92,9 @@ export const LightSplitScreenConvergence: React.FC = () => {
               position: 'absolute',
               left: '4%',
               width: '44%',
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--nt-surface, #ffffff)',
               borderRadius: '24px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--nt-border, #e2e8f0)',
               padding: '2.5rem',
               boxShadow: '0 20px 40px -15px rgba(0,0,0,0.06)',
             }}
@@ -103,10 +103,10 @@ export const LightSplitScreenConvergence: React.FC = () => {
               <Building2 size={18} />
               <span>EMPLOYER ECOSYSTEM</span>
             </div>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.75rem' }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)', marginBottom: '0.75rem' }}>
               High-Velocity Technical Mandates
             </h3>
-            <p style={{ color: '#475569', fontSize: '0.9375rem', lineHeight: 1.6 }}>
+            <p style={{ color: 'var(--nt-muted, #475569)', fontSize: '0.9375rem', lineHeight: 1.6 }}>
               48-hour shortlist SLAs, pre-vetted concurrency architecture scorecards, and zero unmanaged agency black boxes.
             </p>
           </div>
@@ -118,9 +118,9 @@ export const LightSplitScreenConvergence: React.FC = () => {
               position: 'absolute',
               right: '4%',
               width: '44%',
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--nt-surface, #ffffff)',
               borderRadius: '24px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--nt-border, #e2e8f0)',
               padding: '2.5rem',
               boxShadow: '0 20px 40px -15px rgba(0,0,0,0.06)',
             }}
@@ -129,10 +129,10 @@ export const LightSplitScreenConvergence: React.FC = () => {
               <UserCheck size={18} />
               <span>CANDIDATE ADVOCACY</span>
             </div>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.75rem' }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)', marginBottom: '0.75rem' }}>
               Confidential Career Representation
             </h3>
-            <p style={{ color: '#475569', fontSize: '0.9375rem', lineHeight: 1.6 }}>
+            <p style={{ color: 'var(--nt-muted, #475569)', fontSize: '0.9375rem', lineHeight: 1.6 }}>
               100% privacy, top-tier compensation benchmarking, equity upside analysis, and direct introductions to CTOs.
             </p>
           </div>
@@ -145,7 +145,7 @@ export const LightSplitScreenConvergence: React.FC = () => {
               zIndex: 10,
               maxWidth: '650px',
               width: '100%',
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--nt-surface, #ffffff)',
               borderRadius: '28px',
               border: '2px solid #2563eb',
               padding: '3rem 2.5rem',
@@ -157,10 +157,10 @@ export const LightSplitScreenConvergence: React.FC = () => {
               <Zap size={14} />
               SYNCHRONOUS RESOLUTION
             </div>
-            <h3 style={{ fontSize: '2rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.75rem' }}>
-              The NexaTalent Operating System
+            <h3 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)', marginBottom: '0.75rem' }}>
+              The NexaTalent IT Solutions Operating System
             </h3>
-            <p style={{ color: '#475569', fontSize: '1rem', lineHeight: 1.6, marginBottom: '2rem' }}>
+            <p style={{ color: 'var(--nt-muted, #475569)', fontSize: '1rem', lineHeight: 1.6, marginBottom: '2rem' }}>
               Aligning client velocity with candidate ambitions into a calibrated, deterministic matching infrastructure.
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
@@ -203,7 +203,7 @@ export const LightSplitScreenConvergence: React.FC = () => {
                 <ArrowRight size={16} />
               </Link>
             </div>
-            <div style={{ marginTop: '1.75rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.4rem', color: '#64748b', fontSize: '0.8125rem' }}>
+            <div style={{ marginTop: '1.75rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.4rem', color: 'var(--nt-muted, #64748b)', fontSize: '0.8125rem' }}>
               <ShieldCheck size={16} color="#16a34a" />
               <span>94.8% Offer Acceptance Rate across 1,800+ placements</span>
             </div>

@@ -15,8 +15,8 @@ export const LightLocationExplorer: React.FC = () => {
     <section
       className="theme-light"
       style={{
-        backgroundColor: '#f8fafc',
-        borderBottom: '1px solid #e2e8f0',
+        backgroundColor: 'var(--nt-surface-2, #f8fafc)',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
         padding: '6rem 2rem',
       }}
     >
@@ -37,13 +37,13 @@ export const LightLocationExplorer: React.FC = () => {
           }}
         >
           <Sparkles size={14} />
-          <span>27 / 40 · GLOBAL TALENT HUBS</span>
+          <span>NEXATALENT GLOBAL TALENT HUBS</span>
         </div>
 
-        <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a', marginBottom: '0.75rem' }}>
+        <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)', marginBottom: '0.75rem' }}>
           Cross-Border Engineering Hub Intelligence
         </h2>
-        <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0 auto 4rem auto', lineHeight: 1.6 }}>
+        <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0 auto 4rem auto', lineHeight: 1.6 }}>
           Calibrated compensation ranges and verified senior engineering talent density across top technology capitals.
         </p>
 
@@ -54,9 +54,9 @@ export const LightLocationExplorer: React.FC = () => {
               key={idx}
               whileHover={{ y: -6, boxShadow: '0 20px 40px -15px rgba(0,0,0,0.08)' }}
               style={{
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--nt-surface, #ffffff)',
                 borderRadius: '24px',
-                border: '1px solid #e2e8f0',
+                border: '1px solid var(--nt-border, #e2e8f0)',
                 padding: '2.5rem 2rem',
                 display: 'flex',
                 flexDirection: 'column',
@@ -70,16 +70,16 @@ export const LightLocationExplorer: React.FC = () => {
                   <span>{hub.country.toUpperCase()}</span>
                 </div>
 
-                <h3 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)', marginBottom: '0.5rem' }}>
                   {hub.city}
                 </h3>
 
-                <p style={{ color: '#475569', fontSize: '0.875rem', lineHeight: 1.5, marginBottom: '1.75rem' }}>
+                <p style={{ color: 'var(--nt-muted, #475569)', fontSize: '0.875rem', lineHeight: 1.5, marginBottom: '1.75rem' }}>
                   {hub.specialty}
                 </p>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem', backgroundColor: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8125rem', color: '#64748b' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem', backgroundColor: 'var(--nt-surface-2, #f8fafc)', padding: '1.25rem', borderRadius: '16px', border: '1px solid var(--nt-border, #e2e8f0)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8125rem', color: 'var(--nt-muted, #64748b)' }}>
                     <Users size={15} color={hub.accent} />
                     <span>{hub.roles}</span>
                   </div>
@@ -90,7 +90,7 @@ export const LightLocationExplorer: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ paddingTop: '1.25rem', borderTop: '1px solid #e2e8f0' }}>
+              <div style={{ paddingTop: '1.25rem', borderTop: '1px solid var(--nt-border, #e2e8f0)' }}>
                 <Link
                   to={`/jobs?location=${encodeURIComponent(hub.city)}`}
                   style={{

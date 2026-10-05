@@ -20,21 +20,21 @@ export const CaseStudyFintechLatencyReduction: React.FC = () => {
               Re-Engineering an Options Matching Engine with 15 Elite Kernel Engineers
             </h2>
             <p className="text-sm text-slate-300 font-light leading-relaxed">
-              Facing fierce algorithmic latency competition on CME and Eurex, a London quantitative market maker retained NexaTalent to deploy an ultra low-latency C++23 kernel optimization pod in Bangalore.
+              Facing fierce algorithmic latency competition on CME and Eurex, a London quantitative market maker retained NexaTalent IT Solutions to deploy an ultra low-latency C++23 kernel optimization pod in Bangalore.
             </p>
 
             <div className="grid grid-cols-3 gap-3 pt-2">
               <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
-                <span className="text-2xl font-black font-mono text-amber-400 block">-42%</span>
-                <span className="text-xs text-slate-300">P99 Latency Reduction</span>
+                <span className="text-2xl font-black font-mono text-amber-400 block">Reviewed</span>
+                <span className="text-xs text-slate-300">Latency-Aware Screening</span>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
-                <span className="text-2xl font-black font-mono text-emerald-400 block">180ns</span>
-                <span className="text-xs text-slate-300">Kernel Bypass Latency</span>
+                <span className="text-2xl font-black font-mono text-emerald-400 block">Assessed</span>
+                <span className="text-xs text-slate-300">Kernel-Level Systems Depth</span>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
-                <span className="text-2xl font-black font-mono text-cyan-400 block">21 Days</span>
-                <span className="text-xs text-slate-300">Squad Deployment Time</span>
+                <span className="text-2xl font-black font-mono text-cyan-400 block">Phased</span>
+                <span className="text-xs text-slate-300">Squad Ramp Planning</span>
               </div>
             </div>
           </div>

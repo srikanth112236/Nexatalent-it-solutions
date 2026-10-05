@@ -13,8 +13,8 @@ export const LightLogoTicker: React.FC = () => {
     <section
       className="theme-light"
       style={{
-        backgroundColor: '#ffffff',
-        borderBottom: '1px solid #e2e8f0',
+        backgroundColor: 'var(--nt-surface, #ffffff)',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
         padding: '3.5rem 2rem',
         overflow: 'hidden',
         textAlign: 'center',
@@ -37,9 +37,9 @@ export const LightLogoTicker: React.FC = () => {
           }}
         >
           <Sparkles size={13} />
-          <span>02 / 40 · CLIENT PARTNERSHIPS</span>
+          <span>NEXATALENT CLIENT PARTNERSHIPS</span>
         </div>
-        <p style={{ fontSize: '0.875rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        <p style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--nt-muted, #64748b)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           Trusted by Tier-1 Engineering Leaders & Venture-Backed Unicorns
         </p>
       </div>
@@ -57,9 +57,9 @@ export const LightLogoTicker: React.FC = () => {
               style={{
                 padding: '0.85rem 1.75rem',
                 borderRadius: '14px',
-                backgroundColor: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                color: '#334155',
+                backgroundColor: 'var(--nt-surface-2, #f8fafc)',
+                border: '1px solid var(--nt-border, #e2e8f0)',
+                color: 'var(--nt-ink-2, #334155)',
                 fontWeight: 800,
                 fontSize: '0.9375rem',
                 whiteSpace: 'nowrap',
@@ -85,9 +85,9 @@ export const LightLogoTicker: React.FC = () => {
               style={{
                 padding: '0.85rem 1.75rem',
                 borderRadius: '14px',
-                backgroundColor: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                color: '#334155',
+                backgroundColor: 'var(--nt-surface-2, #f8fafc)',
+                border: '1px solid var(--nt-border, #e2e8f0)',
+                color: 'var(--nt-ink-2, #334155)',
                 fontWeight: 800,
                 fontSize: '0.9375rem',
                 whiteSpace: 'nowrap',

@@ -22,8 +22,8 @@ export const LightHiringIntakeForm: React.FC = () => {
     <section
       className="theme-light"
       style={{
-        backgroundColor: '#f8fafc',
-        borderBottom: '1px solid #e2e8f0',
+        backgroundColor: 'var(--nt-surface-2, #f8fafc)',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
         padding: '6rem 2rem',
       }}
     >
@@ -44,20 +44,20 @@ export const LightHiringIntakeForm: React.FC = () => {
           }}
         >
           <Sparkles size={14} />
-          <span>29 / 40 · 48H MANDATE CONFIGURATOR</span>
+          <span>NEXATALENT 48H MANDATE CONFIGURATOR</span>
         </div>
 
-        <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a', marginBottom: '0.75rem' }}>
+        <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)', marginBottom: '0.75rem' }}>
           Configure Your Hiring Mandate
         </h2>
-        <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0 auto 3.5rem auto', lineHeight: 1.6 }}>
+        <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0 auto 3.5rem auto', lineHeight: 1.6 }}>
           Define role specifications and lock your contractually guaranteed 48-hour calibration delivery SLA.
         </p>
 
         {/* Multi-Step Form Card */}
         <div
           style={{
-            backgroundColor: '#ffffff',
+            backgroundColor: 'var(--nt-surface, #ffffff)',
             borderRadius: '24px',
             border: '1px solid #cbd5e1',
             padding: '3.5rem 3rem',
@@ -67,7 +67,7 @@ export const LightHiringIntakeForm: React.FC = () => {
         >
           {/* Progress Indicator */}
           <div style={{ marginBottom: '2.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', fontWeight: 700, color: '#64748b', marginBottom: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', fontWeight: 700, color: 'var(--nt-muted, #64748b)', marginBottom: '0.5rem' }}>
               <span>Step {step} of 3: {step === 1 ? 'Technical Discipline' : step === 2 ? 'Seniority & Timeline' : 'Contact Credentials'}</span>
               <span style={{ color: '#2563eb' }}>{step === 1 ? '33%' : step === 2 ? '66%' : '100%'}</span>
             </div>
@@ -85,10 +85,10 @@ export const LightHiringIntakeForm: React.FC = () => {
               <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem auto' }}>
                 <CheckCircle2 size={36} />
               </div>
-              <h3 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.75rem' }}>
+              <h3 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)', marginBottom: '0.75rem' }}>
                 Mandate Successfully Configured
               </h3>
-              <p style={{ color: '#475569', fontSize: '1rem', lineHeight: 1.6, maxWidth: '520px', margin: '0 auto 2rem auto' }}>
+              <p style={{ color: 'var(--nt-muted, #475569)', fontSize: '1rem', lineHeight: 1.6, maxWidth: '520px', margin: '0 auto 2rem auto' }}>
                 Your dedicated Practice Lead has been assigned. You will receive 3 calibrated dossiers within our guaranteed 48-hour SLA window.
               </p>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: '#16a34a', fontWeight: 700, fontSize: '0.875rem' }}>
@@ -107,7 +107,7 @@ export const LightHiringIntakeForm: React.FC = () => {
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.25 }}
                   >
-                    <label style={{ display: 'block', fontSize: '0.9375rem', fontWeight: 800, color: '#0f172a', marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.9375rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)', marginBottom: '1rem' }}>
                       Select Engineering Practice Domain:
                     </label>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2.5rem' }}>
@@ -119,7 +119,7 @@ export const LightHiringIntakeForm: React.FC = () => {
                           style={{
                             padding: '1rem',
                             borderRadius: '14px',
-                            border: formData.practice === p ? '2px solid #2563eb' : '1px solid #e2e8f0',
+                            border: formData.practice === p ? '2px solid #2563eb' : '1px solid var(--nt-border, #e2e8f0)',
                             backgroundColor: formData.practice === p ? '#eff6ff' : '#f8fafc',
                             color: formData.practice === p ? '#2563eb' : '#334155',
                             fontWeight: 700,
@@ -166,7 +166,7 @@ export const LightHiringIntakeForm: React.FC = () => {
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.25 }}
                   >
-                    <label style={{ display: 'block', fontSize: '0.9375rem', fontWeight: 800, color: '#0f172a', marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.9375rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)', marginBottom: '1rem' }}>
                       Target Seniority Level:
                     </label>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2.5rem' }}>
@@ -178,7 +178,7 @@ export const LightHiringIntakeForm: React.FC = () => {
                           style={{
                             padding: '1rem',
                             borderRadius: '14px',
-                            border: formData.seniority === s ? '2px solid #2563eb' : '1px solid #e2e8f0',
+                            border: formData.seniority === s ? '2px solid #2563eb' : '1px solid var(--nt-border, #e2e8f0)',
                             backgroundColor: formData.seniority === s ? '#eff6ff' : '#f8fafc',
                             color: formData.seniority === s ? '#2563eb' : '#334155',
                             fontWeight: 700,
@@ -200,8 +200,8 @@ export const LightHiringIntakeForm: React.FC = () => {
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '0.4rem',
-                          backgroundColor: '#ffffff',
-                          color: '#475569',
+                          backgroundColor: 'var(--nt-surface, #ffffff)',
+                          color: 'var(--nt-muted, #475569)',
                           border: '1px solid #cbd5e1',
                           padding: '0.75rem 1.5rem',
                           borderRadius: '12px',
@@ -247,7 +247,7 @@ export const LightHiringIntakeForm: React.FC = () => {
                   >
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '2.5rem' }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, color: '#334155', marginBottom: '0.4rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, color: 'var(--nt-ink-2, #334155)', marginBottom: '0.4rem' }}>
                           Company Name:
                         </label>
                         <input
@@ -263,14 +263,14 @@ export const LightHiringIntakeForm: React.FC = () => {
                             border: '1px solid #cbd5e1',
                             outline: 'none',
                             fontSize: '0.9375rem',
-                            color: '#0f172a',
-                            backgroundColor: '#f8fafc',
+                            color: 'var(--nt-ink, #0f172a)',
+                            backgroundColor: 'var(--nt-surface-2, #f8fafc)',
                           }}
                         />
                       </div>
 
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, color: '#334155', marginBottom: '0.4rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, color: 'var(--nt-ink-2, #334155)', marginBottom: '0.4rem' }}>
                           Work Email (for Encrypted Portal Access):
                         </label>
                         <input
@@ -286,8 +286,8 @@ export const LightHiringIntakeForm: React.FC = () => {
                             border: '1px solid #cbd5e1',
                             outline: 'none',
                             fontSize: '0.9375rem',
-                            color: '#0f172a',
-                            backgroundColor: '#f8fafc',
+                            color: 'var(--nt-ink, #0f172a)',
+                            backgroundColor: 'var(--nt-surface-2, #f8fafc)',
                           }}
                         />
                       </div>
@@ -301,8 +301,8 @@ export const LightHiringIntakeForm: React.FC = () => {
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '0.4rem',
-                          backgroundColor: '#ffffff',
-                          color: '#475569',
+                          backgroundColor: 'var(--nt-surface, #ffffff)',
+                          color: 'var(--nt-muted, #475569)',
                           border: '1px solid #cbd5e1',
                           padding: '0.75rem 1.5rem',
                           borderRadius: '12px',

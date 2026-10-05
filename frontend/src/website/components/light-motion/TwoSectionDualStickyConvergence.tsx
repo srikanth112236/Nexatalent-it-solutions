@@ -108,14 +108,14 @@ export const TwoSectionDualStickyConvergence: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Panel: The NexaTalent Solution */}
+          {/* Right Panel: The NexaTalent IT Solutions Solution */}
           <div
             ref={rightPanelRef}
             className="p-8 rounded-3xl bg-white border border-blue-300 shadow-xl shadow-blue-500/10 space-y-4"
           >
             <div className="flex items-center justify-between">
               <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-black uppercase border border-blue-200">
-                Right Section: NexaTalent Pod
+                Right Section: NexaTalent IT Solutions Pod
               </span>
               <span className="text-xs font-mono font-bold text-blue-600">72-Hour Contractual SLA</span>
             </div>

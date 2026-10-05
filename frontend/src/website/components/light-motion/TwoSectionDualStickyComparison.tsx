@@ -88,7 +88,7 @@ export const TwoSectionDualStickyComparison: React.FC = () => {
             <div className="relative pl-6">
               <Quote className="w-5 h-5 text-blue-500 absolute left-0 top-0" />
               <p className="text-sm md:text-base text-slate-700 italic leading-relaxed">
-                "Within 45 days, NexaTalent built an elite 35-engineer low-latency C++ and FPGA trading pod in Bangalore. Their technical depth ensured zero training lag."
+                "Within 45 days, NexaTalent IT Solutions built an elite 35-engineer low-latency C++ and FPGA trading pod in Bangalore. Their technical depth ensured zero training lag."
               </p>
             </div>
 

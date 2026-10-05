@@ -25,8 +25,8 @@ const chapters: ChapterPanel[] = [
     category: 'High-Frequency FinTech & Crypto',
     title: 'Sub-Microsecond Trading Engines & Quantitative Architecture',
     description: 'Placing Staff and Principal Engineers specializing in kernel-bypass networking, FPGA acceleration, modern C++20, and ultra-low latency exchange gateways.',
-    metric: '< 850ns',
-    metricLabel: 'Execution Latency Threshold',
+    metric: 'Assessed',
+    metricLabel: 'Low-Latency Systems Practice',
     badge: 'FinTech Vertical Practice',
     accent: '#2563eb',
   },
@@ -36,8 +36,8 @@ const chapters: ChapterPanel[] = [
     category: 'Foundation AI & LLM Systems',
     title: 'Distributed vLLM Clusters & GPU Inference Optimization',
     description: 'Specialists scaling Megatron-LM, TensorRT-LLM, model distillation, and low-latency embeddings inference for tier-1 generative AI enterprises.',
-    metric: '10x',
-    metricLabel: 'Inference Throughput Boost',
+    metric: 'Scaled',
+    metricLabel: 'AI Systems Delivery',
     badge: 'AI Systems Practice',
     accent: '#0891b2',
   },
@@ -92,7 +92,7 @@ export const LightHorizontalStory: React.FC = () => {
   }, []);
 
   return (
-    <div ref={triggerRef} className="theme-light" style={{ overflow: 'hidden', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+    <div ref={triggerRef} className="theme-light" style={{ overflow: 'hidden', backgroundColor: 'var(--nt-surface-2, #f8fafc)', borderBottom: '1px solid var(--nt-border, #e2e8f0)' }}>
       <section
         style={{
           padding: '4rem 2rem 2rem 2rem',
@@ -119,10 +119,10 @@ export const LightHorizontalStory: React.FC = () => {
           <Sparkles size={14} />
           S02 & S03 Horizontal Full-Screen Panels with Parallax
         </div>
-        <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a' }}>
+        <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)' }}>
           Explore Key Architectural Practices
         </h2>
-        <p style={{ color: '#64748b', fontSize: '1rem', marginTop: '0.5rem' }}>
+        <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1rem', marginTop: '0.5rem' }}>
           Scroll down vertically to journey horizontally through our core engineering specializations.
         </p>
       </section>
@@ -155,9 +155,9 @@ export const LightHorizontalStory: React.FC = () => {
               style={{
                 width: '100%',
                 maxWidth: '1000px',
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--nt-surface, #ffffff)',
                 borderRadius: '28px',
-                border: '1px solid #e2e8f0',
+                border: '1px solid var(--nt-border, #e2e8f0)',
                 padding: '3.5rem',
                 boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.08)',
                 display: 'grid',
@@ -186,15 +186,15 @@ export const LightHorizontalStory: React.FC = () => {
                   </span>
                 </div>
 
-                <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--nt-muted, #64748b)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
                   {chap.category}
                 </div>
 
-                <h3 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.25, marginBottom: '1rem' }}>
+                <h3 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)', lineHeight: 1.25, marginBottom: '1rem' }}>
                   {chap.title}
                 </h3>
 
-                <p style={{ color: '#475569', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '2rem' }}>
+                <p style={{ color: 'var(--nt-muted, #475569)', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '2rem' }}>
                   {chap.description}
                 </p>
 
@@ -222,9 +222,9 @@ export const LightHorizontalStory: React.FC = () => {
               {/* Right Side Visual Block */}
               <div
                 style={{
-                  backgroundColor: '#f8fafc',
+                  backgroundColor: 'var(--nt-surface-2, #f8fafc)',
                   borderRadius: '20px',
-                  border: '1px solid #e2e8f0',
+                  border: '1px solid var(--nt-border, #e2e8f0)',
                   padding: '2.5rem',
                   textAlign: 'center',
                 }}
@@ -248,10 +248,10 @@ export const LightHorizontalStory: React.FC = () => {
                   {idx === 3 && <Globe2 size={30} />}
                 </div>
 
-                <div style={{ fontSize: '3.5rem', fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>
+                <div style={{ fontSize: '3.5rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)', lineHeight: 1 }}>
                   {chap.metric}
                 </div>
-                <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#64748b', marginTop: '0.5rem', textTransform: 'uppercase' }}>
+                <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--nt-muted, #64748b)', marginTop: '0.5rem', textTransform: 'uppercase' }}>
                   {chap.metricLabel}
                 </div>
 

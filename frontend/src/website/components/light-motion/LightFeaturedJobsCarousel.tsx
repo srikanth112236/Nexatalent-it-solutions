@@ -22,8 +22,8 @@ export const LightFeaturedJobsCarousel: React.FC = () => {
     <section
       className="theme-light"
       style={{
-        backgroundColor: '#ffffff',
-        borderBottom: '1px solid #e2e8f0',
+        backgroundColor: 'var(--nt-surface, #ffffff)',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
         padding: '6rem 2rem',
       }}
     >
@@ -44,14 +44,14 @@ export const LightFeaturedJobsCarousel: React.FC = () => {
           }}
         >
           <Sparkles size={14} />
-          <span>22 / 40 · LEADERSHIP SPOTLIGHT CAROUSEL</span>
+          <span>LEADERSHIP SPOTLIGHT CAROUSEL</span>
         </div>
 
-        <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a', marginBottom: '0.75rem' }}>
+        <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)', marginBottom: '0.75rem' }}>
           Senior Executive & Staff Appointments
         </h2>
-        <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0 auto 3.5rem auto', lineHeight: 1.6 }}>
-          Exclusive confidential searches led directly by NexaTalent Managing Partners.
+        <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0 auto 3.5rem auto', lineHeight: 1.6 }}>
+          Exclusive confidential searches led directly by NexaTalent IT Solutions Managing Partners.
         </p>
 
         {/* Carousel Card Container */}
@@ -64,7 +64,7 @@ export const LightFeaturedJobsCarousel: React.FC = () => {
               exit={{ opacity: 0, x: -30 }}
               transition={{ duration: 0.3 }}
               style={{
-                backgroundColor: '#f8fafc',
+                backgroundColor: 'var(--nt-surface-2, #f8fafc)',
                 borderRadius: '24px',
                 border: '1px solid #cbd5e1',
                 padding: '3rem 2.5rem',
@@ -76,20 +76,20 @@ export const LightFeaturedJobsCarousel: React.FC = () => {
                 <span style={{ fontSize: '0.75rem', fontWeight: 800, backgroundColor: '#eff6ff', color: '#2563eb', padding: '0.25rem 0.75rem', borderRadius: '9999px' }}>
                   Exclusive Retained Search · Confidential
                 </span>
-                <span style={{ fontSize: '0.8125rem', color: '#64748b', fontWeight: 600 }}>
+                <span style={{ fontSize: '0.8125rem', color: 'var(--nt-muted, #64748b)', fontWeight: 600 }}>
                   Role {currentIndex + 1} of {carouselRoles.length}
                 </span>
               </div>
 
-              <h3 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.5rem' }}>
+              <h3 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)', marginBottom: '0.5rem' }}>
                 {role.title}
               </h3>
-              <div style={{ fontSize: '1.0625rem', color: '#475569', fontWeight: 600, marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: '1.0625rem', color: 'var(--nt-muted, #475569)', fontWeight: 600, marginBottom: '1.5rem' }}>
                 {role.company}
               </div>
 
               <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', marginBottom: '1.75rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#64748b', fontSize: '0.9375rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--nt-muted, #64748b)', fontSize: '0.9375rem' }}>
                   <MapPin size={16} color="#2563eb" />
                   <span>{role.location}</span>
                 </div>
@@ -101,13 +101,13 @@ export const LightFeaturedJobsCarousel: React.FC = () => {
 
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '2.5rem' }}>
                 {role.stack.map((s, idx) => (
-                  <span key={idx} style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', color: '#334155', fontSize: '0.8125rem', fontWeight: 700, padding: '0.3rem 0.75rem', borderRadius: '8px' }}>
+                  <span key={idx} style={{ backgroundColor: 'var(--nt-surface, #ffffff)', border: '1px solid var(--nt-border, #e2e8f0)', color: 'var(--nt-ink-2, #334155)', fontSize: '0.8125rem', fontWeight: 700, padding: '0.3rem 0.75rem', borderRadius: '8px' }}>
                     {s}
                   </span>
                 ))}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--nt-border, #e2e8f0)', paddingTop: '1.5rem' }}>
                 <Link
                   to="/employers"
                   style={{
@@ -132,13 +132,13 @@ export const LightFeaturedJobsCarousel: React.FC = () => {
                       width: '40px',
                       height: '40px',
                       borderRadius: '50%',
-                      backgroundColor: '#ffffff',
+                      backgroundColor: 'var(--nt-surface, #ffffff)',
                       border: '1px solid #cbd5e1',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
-                      color: '#334155',
+                      color: 'var(--nt-ink-2, #334155)',
                     }}
                   >
                     <ChevronLeft size={18} />

@@ -120,14 +120,14 @@ export const FullScreenVerticalParallaxMesh: React.FC = () => {
       >
         <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-2xl max-w-sm">
           <div className="text-xs font-mono opacity-80 uppercase mb-1">Speed Tier 02 · Mid-Plane</div>
-          <div className="text-2xl font-black mb-1">99.999% Vetting SLA</div>
-          <div className="text-xs text-blue-100">Zero candidate bounce rate recorded across 42 GCC setups.</div>
+          <div className="text-2xl font-black mb-1">Structured Vetting Flow</div>
+          <div className="text-xs text-blue-100">Documented evaluation stages across every mandate.</div>
         </div>
 
         <div className="p-6 rounded-2xl bg-slate-900 text-white shadow-2xl max-w-sm">
           <div className="text-xs font-mono text-emerald-400 uppercase mb-1">Speed Tier 02 · Mid-Plane</div>
-          <div className="text-2xl font-black mb-1">$1.4M / Team Arbitrage</div>
-          <div className="text-xs text-slate-400">Direct annual net savings compared to equivalent Bay Area engineering squads.</div>
+          <div className="text-2xl font-black mb-1">Transparent Commercials</div>
+          <div className="text-xs text-slate-400">Rate-card benchmarking against single-market hiring.</div>
         </div>
       </div>
 
@@ -137,7 +137,7 @@ export const FullScreenVerticalParallaxMesh: React.FC = () => {
         className="relative z-0 w-full text-center pointer-events-none select-none my-8 opacity-10"
       >
         <span className="text-7xl md:text-[180px] font-black tracking-tighter text-slate-900 uppercase">
-          NEXATALENT
+          NEXATALENT IT SOLUTIONS
         </span>
       </div>
     </section>

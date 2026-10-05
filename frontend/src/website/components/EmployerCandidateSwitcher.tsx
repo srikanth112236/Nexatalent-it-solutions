@@ -74,7 +74,7 @@ export const EmployerCandidateSwitcher: React.FC = () => {
                   borderRadius: 'var(--radius-pill)',
                   border: 'none',
                   backgroundColor: 'transparent',
-                  color: isActive ? '#ffffff' : 'var(--color-text-muted)',
+                  color: isActive ? 'var(--nt-surface, #ffffff)' : 'var(--color-text-muted)',
                   fontWeight: 700,
                   fontSize: '0.9rem',
                   cursor: 'pointer',

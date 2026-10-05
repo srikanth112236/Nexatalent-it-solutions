@@ -61,7 +61,7 @@ export const DetailInteractiveFeatureComparisonTable: React.FC = () => {
             <span>Market Differentiation</span>
           </div>
           <h2 className="text-section-title font-bold text-slate-900 tracking-tight">
-            NexaTalent vs. Traditional Headhunters vs. Big IT Outsourcers
+            NexaTalent IT Solutions vs. Traditional Headhunters vs. Big IT Outsourcers
           </h2>
           <p className="text-xs text-slate-500 mt-2 font-light">
             Compare delivery architecture, IP protection, and fee structures side-by-side.
@@ -75,7 +75,7 @@ export const DetailInteractiveFeatureComparisonTable: React.FC = () => {
                 <th className="py-4 px-4 font-bold text-slate-900">Key Operating Criteria</th>
                 <th className="py-4 px-4 font-medium text-slate-500 text-center">Traditional Headhunters</th>
                 <th className="py-4 px-4 font-medium text-slate-500 text-center">Big-4 IT Outsourcers</th>
-                <th className="py-4 px-4 font-black text-blue-700 bg-blue-50/80 rounded-t-xl text-center">NexaTalent Engine</th>
+                <th className="py-4 px-4 font-black text-blue-700 bg-blue-50/80 rounded-t-xl text-center">NexaTalent IT Solutions Engine</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

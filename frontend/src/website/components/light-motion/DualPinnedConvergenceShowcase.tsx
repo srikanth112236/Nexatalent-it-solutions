@@ -118,15 +118,15 @@ export const DualPinnedConvergenceShowcase: React.FC = () => {
           <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400">
             <span className="flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-emerald-500" />
-              <span>72-Hour Contractual SLA</span>
+              <span>Milestone-Tracked Delivery</span>
             </span>
             <span className="flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-emerald-500" />
-              <span>180-Day Comprehensive Warranty</span>
+              <span>Documented Replacement Terms</span>
             </span>
             <span className="flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-emerald-500" />
-              <span>SOC2 Type II Protected</span>
+              <span>Verification-Led Screening</span>
             </span>
           </div>
 

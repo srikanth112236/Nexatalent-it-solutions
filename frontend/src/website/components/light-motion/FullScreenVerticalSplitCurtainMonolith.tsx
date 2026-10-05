@@ -98,7 +98,7 @@ export const FullScreenVerticalSplitCurtainMonolith: React.FC = () => {
           </span>
         </div>
         <div className="text-2xl md:text-4xl font-black text-slate-900 tracking-tight">
-          NexaTalent Continental Axis
+          NexaTalent IT Solutions Continental Axis
         </div>
       </div>
 

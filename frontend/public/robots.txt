@@ -1,0 +1,51 @@
+# NexaTalent IT Solutions - Production Robots.txt
+# Technical SEO & Crawl Governance
+User-agent: *
+Allow: /
+Allow: /about
+Allow: /why-nexatalent
+Allow: /solutions
+Allow: /solutions/*
+Allow: /industries
+Allow: /industries/*
+Allow: /jobs
+Allow: /jobs/*
+Allow: /employers
+Allow: /hire-talent
+Allow: /candidates
+Allow: /partners
+Allow: /vendor-empanelment
+Allow: /case-studies
+Allow: /case-studies/*
+Allow: /insights
+Allow: /insights/*
+Allow: /locations
+Allow: /locations/*
+Allow: /contact
+Allow: /privacy-policy
+Allow: /terms
+Allow: /cookie-policy
+Allow: /accessibility
+Allow: /data-protection
+Allow: /disclaimer
+
+# Disallow Internal Protected Portals and Authentication Endpoints
+Disallow: /superadmin
+Disallow: /superadmin/*
+Disallow: /employee
+Disallow: /employee/*
+Disallow: /recruiter
+Disallow: /recruiter/*
+Disallow: /employer
+Disallow: /employer/*
+Disallow: /candidate
+Disallow: /candidate/*
+Disallow: /login
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /verify-account
+Disallow: /api/
+Disallow: /admin/
+
+# Sitemap Location
+Sitemap: https://nexatalent.com/sitemap.xml

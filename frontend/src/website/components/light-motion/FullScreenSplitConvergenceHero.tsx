@@ -106,7 +106,7 @@ export const FullScreenSplitConvergenceHero: React.FC = () => {
             Pre-vetted engineering directors and Staff architects ready to execute high-impact roadmaps on Day 1.
           </p>
           <div className="p-5 rounded-2xl bg-white border border-slate-200 font-mono text-xs text-slate-700 space-y-2 text-left">
-            <div>NexaTalent Calibrated Comp: <span className="text-emerald-600 font-bold">₹1.25 Cr ($150K)</span></div>
+            <div>NexaTalent IT Solutions Calibrated Comp: <span className="text-emerald-600 font-bold">₹1.25 Cr ($150K)</span></div>
             <div>Time to Deploy: <span className="text-blue-600 font-bold">14 Days</span></div>
           </div>
         </div>

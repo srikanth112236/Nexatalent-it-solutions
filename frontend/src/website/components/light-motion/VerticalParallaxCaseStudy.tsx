@@ -86,7 +86,7 @@ export const VerticalParallaxCaseStudy: React.FC = () => {
         ref={bgTextRef}
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-black text-slate-200/40 text-[12vw] tracking-tighter select-none pointer-events-none whitespace-nowrap z-0"
       >
-        75 DAYS TO SCALE
+        75-DAY SCALE STORY
       </div>
 
       <div className="max-w-7xl mx-auto px-6 relative z-10">
@@ -98,10 +98,10 @@ export const VerticalParallaxCaseStudy: React.FC = () => {
             <span>Vertical Parallax • Deep Optical Depth Masking</span>
           </div>
           <h2 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tight mb-4">
-            Vertical Parallax: The 75-Day GCC Turnaround
+            Vertical Parallax: The GCC Scale Story
           </h2>
           <p className="text-lg text-slate-600">
-            Documenting the end-to-end execution of a 120-engineer autonomous capability center for a Silicon Valley SaaS enterprise.
+            How distributed capability hiring moves from leadership anchors to operating squads.
           </p>
         </div>
 
@@ -115,7 +115,7 @@ export const VerticalParallaxCaseStudy: React.FC = () => {
           >
             <div className="flex items-center justify-between text-xs text-slate-400 font-mono">
               <span>STAGE 01</span>
-              <span className="text-blue-600 font-bold">Day 01–20</span>
+              <span className="text-blue-600 font-bold">Phase 01</span>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
               <Clock className="w-6 h-6" />
@@ -127,7 +127,7 @@ export const VerticalParallaxCaseStudy: React.FC = () => {
               Hired the Site Managing Director and 4 Principal Architects to codify team topology, coding standards, and SEZ regulatory setup.
             </p>
             <div className="p-3 rounded-xl bg-slate-50 text-xs font-bold text-slate-800">
-              Output: 100% Core Leadership Fixed
+              Output: Leadership Anchors Set
             </div>
           </div>
 
@@ -138,19 +138,19 @@ export const VerticalParallaxCaseStudy: React.FC = () => {
           >
             <div className="flex items-center justify-between text-xs text-slate-400 font-mono">
               <span>STAGE 02</span>
-              <span className="text-blue-600 font-bold">Day 21–50</span>
+              <span className="text-blue-600 font-bold">Phase 02</span>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
               <Users className="w-6 h-6" />
             </div>
             <h3 className="text-xl font-bold text-slate-900">
-              80-Engineer Core Squad Ramp
+              Core Squad Ramp
             </h3>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Delivered verified senior individual contributors across Go, Rust, React, and Kubernetes with a 94.8% offer acceptance rate.
+              Assessed senior individual contributors across backend, frontend and platform disciplines.
             </p>
             <div className="p-3 rounded-xl bg-blue-50 text-xs font-bold text-blue-800">
-              Output: Zero Resignation Counter-Losses
+              Output: Coordinated Offer Closures
             </div>
           </div>
 
@@ -161,19 +161,19 @@ export const VerticalParallaxCaseStudy: React.FC = () => {
           >
             <div className="flex items-center justify-between text-xs text-slate-400 font-mono">
               <span>STAGE 03</span>
-              <span className="text-emerald-600 font-bold">Day 51–75</span>
+              <span className="text-emerald-600 font-bold">Phase 03</span>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
               <Award className="w-6 h-6" />
             </div>
             <h3 className="text-xl font-bold text-slate-900">
-              Day-75 Autonomous Center
+              Operating Center Handover
             </h3>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Turnkey center of 120 engineers operational. Full legal and intellectual property transfer executed seamlessly.
+              Operating squads with documented handover, legal clarity and knowledge transfer discipline.
             </p>
             <div className="p-3 rounded-xl bg-emerald-50 text-xs font-bold text-emerald-800">
-              Output: $9.4M Net Annual Capital Arbitrage
+              Output: Documented Operating Model
             </div>
           </div>
 

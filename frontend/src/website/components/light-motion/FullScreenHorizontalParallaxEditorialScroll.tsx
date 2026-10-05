@@ -14,7 +14,7 @@ interface EditorialSlide {
 }
 
 const SLIDES: EditorialSlide[] = [
-  { num: '01', quote: 'NexaTalent built our 80-person autonomous AI infrastructure center in Hyderabad in 70 days flat. Zero disruption to our San Francisco core sprints.', author: 'Marcus Vance', org: 'CTO, Global AI Infrastructure Unicorn', stat: '70-Day Delivery' },
+  { num: '01', quote: 'NexaTalent IT Solutions built our 80-person autonomous AI infrastructure center in Hyderabad in 70 days flat. Zero disruption to our San Francisco core sprints.', author: 'Marcus Vance', org: 'CTO, Global AI Infrastructure Unicorn', stat: '70-Day Delivery' },
   { num: '02', quote: 'The caliber of Principal Rust & C++ architects in their Bangalore pool exceeded our Wall Street expectations. Our execution latency dropped 38%.', author: 'Elena Rostova', org: 'Head of Quantitative Systems, High-Frequency Fund', stat: '-38% Latency' },
   { num: '03', quote: 'Their legal non-compete quarantine and hardware VDI enclaves made board-level SOC 2 compliance effortless across both our London and India hubs.', author: 'David Sterling', org: 'Chief Information Security Officer, Tier-1 FinTech', stat: '100% Board Pass' },
 ];

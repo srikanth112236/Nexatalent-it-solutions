@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Logo } from './Logo';
 
 export function WebsiteHeader() {
   return (
@@ -19,8 +20,8 @@ export function WebsiteHeader() {
         justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '2.5rem' }}>
-          <Link to="/" style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em', color: '#ffffff' }}>
-            Nexa<span style={{ color: 'var(--color-primary, #3b82f6)' }}>Talent</span>
+          <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', lineHeight: 0 }} aria-label="NexaTalent IT Solutions home">
+            <Logo height={40} onDark />
           </Link>
           <nav style={{ display: 'flex', gap: '1.5rem', fontSize: '0.9rem', fontWeight: 500, color: 'var(--color-text-muted, #94a3b8)' }}>
             <Link to="/solutions" style={{ transition: 'color 0.2s' }}>Solutions</Link>

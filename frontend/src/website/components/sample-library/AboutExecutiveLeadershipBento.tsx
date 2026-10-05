@@ -4,35 +4,35 @@ import { Linkedin, Award, ArrowUpRight } from 'lucide-react';
 export const AboutExecutiveLeadershipBento: React.FC = () => {
   const leaders = [
     {
-      name: 'Vikramaditya Sharma',
-      role: 'Managing Partner & Co-Founder',
-      pedigree: 'Ex-Goldman Sachs Tech MD • 18 yrs GCC Leadership',
-      bio: 'Pioneered GCC infrastructure transformations across 14 enterprise banks and tech platforms in Bangalore & London.',
-      initials: 'VS',
+      name: 'Executive Search Practice',
+      role: 'Confidential Leadership Mandates',
+      pedigree: 'Retained Search • Structured Assessment',
+      bio: 'Partner-led search across engineering leadership roles with documented evaluation criteria at every stage.',
+      initials: 'ES',
       tag: 'FINTECH & BANKING ARCHITECTURE',
     },
     {
-      name: 'Ananya Deshmukh, PhD',
-      role: 'Head of Executive Search & AI Guild',
-      pedigree: 'Ex-Google Research • IIT Bombay • Stanford Post-Doc',
-      bio: 'Directs the confidential search practice for Principal AI Researchers, Staff ML Infra architects, and foundation model squads.',
-      initials: 'AD',
+      name: 'AI & Platform Practice',
+      role: 'Specialist Technical Screening',
+      pedigree: 'Architecture Reviews • Systems Depth',
+      bio: 'Practitioner interview panels for AI infrastructure, distributed systems and platform engineering roles.',
+      initials: 'AI',
       tag: 'AI INFRASTRUCTURE & LLMS',
     },
     {
-      name: 'Marcus Vance',
-      role: 'Partner, North America & EMEA',
-      pedigree: 'Ex-McKinsey & Co. Partner • Silicon Valley Lead',
-      bio: 'Advises US enterprise boards, PE operating partners, and CTOs on cross-border talent arbitrage and entity formation.',
-      initials: 'MV',
+      name: 'Cross-Border Advisory',
+      role: 'Employer Guidance & Entity Support',
+      pedigree: 'GCC Models • Compliance Coordination',
+      bio: 'Advisory support for distributed hiring, entity considerations and cross-border team structures.',
+      initials: 'CB',
       tag: 'CROSS-BORDER ADVISORY',
     },
     {
-      name: 'Suresh Nambiar',
-      role: 'VP Infrastructure & Legal Compliance',
-      pedigree: 'Ex-Infosys Legal Counsel • RBI FEMA Compliance Officer',
-      bio: 'Architected our proprietary IP assignment framework, transfer pricing guidelines, and SOC-2 Type II audit pipelines.',
-      initials: 'SN',
+      name: 'Governance & Compliance',
+      role: 'Documentation & Verification',
+      pedigree: 'Reference Checks • Audit Trails',
+      bio: 'Verification workflows, documentation discipline and placement governance across every mandate.',
+      initials: 'GV',
       tag: 'GOVERNANCE & RISK ESCROW',
     },
   ];
@@ -56,7 +56,7 @@ export const AboutExecutiveLeadershipBento: React.FC = () => {
             </h2>
           </div>
           <p className="text-xs text-slate-500 max-w-md font-light">
-            Our partners have collectively built 40+ engineering organizations from inception to public listing across India, the US, and Europe.
+            Our practice leads combine recruitment craft with engineering literacy across India, the US, and Europe.
           </p>
         </div>
 

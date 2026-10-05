@@ -22,12 +22,12 @@ export const LightHeroParallaxImage: React.FC = () => {
       ref={containerRef}
       className="theme-light"
       style={{
-        backgroundColor: '#ffffff',
-        color: '#0f172a',
+        backgroundColor: 'var(--nt-surface, #ffffff)',
+        color: 'var(--nt-ink, #0f172a)',
         padding: '6rem 2rem 7rem 2rem',
         position: 'relative',
         overflow: 'hidden',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
       }}
     >
       {/* Background Decorative Mesh Parallax */}
@@ -64,11 +64,11 @@ export const LightHeroParallaxImage: React.FC = () => {
             Hero Parallax & Multi-Layer Depth Scrolling
           </div>
 
-          <h2 style={{ fontSize: 'clamp(2.25rem, 5vw, 4rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a', lineHeight: 1.15 }}>
+          <h2 style={{ fontSize: 'clamp(2.25rem, 5vw, 4rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)', lineHeight: 1.15 }}>
             Precision Calibration Engineered for Scale
           </h2>
 
-          <p style={{ color: '#64748b', fontSize: '1.125rem', maxWidth: '680px', margin: '1rem auto 2.5rem auto', lineHeight: 1.6 }}>
+          <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.125rem', maxWidth: '680px', margin: '1rem auto 2.5rem auto', lineHeight: 1.6 }}>
             Multi-layer parallax surfaces demonstrate talent benchmarking depth with high-velocity 48-hour delivery.
           </p>
 
@@ -103,7 +103,7 @@ export const LightHeroParallaxImage: React.FC = () => {
               y: foregroundImageY,
               width: '100%',
               maxWidth: '820px',
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--nt-surface, #ffffff)',
               borderRadius: '28px',
               border: '1px solid #cbd5e1',
               padding: '3rem',
@@ -112,16 +112,16 @@ export const LightHeroParallaxImage: React.FC = () => {
               zIndex: 3,
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: '1px solid var(--nt-border, #e2e8f0)', paddingBottom: '1.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Layers size={22} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
-                    NexaTalent Unified Intelligence Engine
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)' }}>
+                    NexaTalent IT Solutions Unified Intelligence Engine
                   </h3>
-                  <span style={{ fontSize: '0.8125rem', color: '#64748b' }}>Real-Time Synchronization: Active</span>
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--nt-muted, #64748b)' }}>Real-Time Synchronization: Active</span>
                 </div>
               </div>
 
@@ -131,22 +131,22 @@ export const LightHeroParallaxImage: React.FC = () => {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
-              <div style={{ padding: '1.25rem', backgroundColor: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Time to Calibration</div>
+              <div style={{ padding: '1.25rem', backgroundColor: 'var(--nt-surface-2, #f8fafc)', borderRadius: '16px', border: '1px solid var(--nt-border, #e2e8f0)' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--nt-muted, #64748b)', textTransform: 'uppercase' }}>Time to Calibration</div>
                 <div style={{ fontSize: '2rem', fontWeight: 900, color: '#2563eb', marginTop: '0.25rem' }}>36h</div>
                 <div style={{ fontSize: '0.8125rem', color: '#16a34a', fontWeight: 600 }}>12h Ahead of SLA</div>
               </div>
 
-              <div style={{ padding: '1.25rem', backgroundColor: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Verified Bench</div>
-                <div style={{ fontSize: '2rem', fontWeight: 900, color: '#0f172a', marginTop: '0.25rem' }}>45,000+</div>
-                <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>Top 3.5% Engineers</div>
+              <div style={{ padding: '1.25rem', backgroundColor: 'var(--nt-surface-2, #f8fafc)', borderRadius: '16px', border: '1px solid var(--nt-border, #e2e8f0)' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--nt-muted, #64748b)', textTransform: 'uppercase' }}>Verified Bench</div>
+                <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)', marginTop: '0.25rem' }}>45,000+</div>
+                <div style={{ fontSize: '0.8125rem', color: 'var(--nt-muted, #64748b)' }}>Top 3.5% Engineers</div>
               </div>
 
-              <div style={{ padding: '1.25rem', backgroundColor: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Warranty Escrow</div>
+              <div style={{ padding: '1.25rem', backgroundColor: 'var(--nt-surface-2, #f8fafc)', borderRadius: '16px', border: '1px solid var(--nt-border, #e2e8f0)' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--nt-muted, #64748b)', textTransform: 'uppercase' }}>Warranty Escrow</div>
                 <div style={{ fontSize: '2rem', fontWeight: 900, color: '#16a34a', marginTop: '0.25rem' }}>90 Days</div>
-                <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>Full Replacement</div>
+                <div style={{ fontSize: '0.8125rem', color: 'var(--nt-muted, #64748b)' }}>Full Replacement</div>
               </div>
             </div>
           </motion.div>
@@ -158,7 +158,7 @@ export const LightHeroParallaxImage: React.FC = () => {
               position: 'absolute',
               left: '-20px',
               bottom: '-30px',
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--nt-surface, #ffffff)',
               borderRadius: '20px',
               border: '2px solid #2563eb',
               padding: '1.25rem 1.75rem',
@@ -173,7 +173,7 @@ export const LightHeroParallaxImage: React.FC = () => {
               <Cpu size={22} />
             </div>
             <div>
-              <div style={{ fontSize: '0.9375rem', fontWeight: 800, color: '#0f172a' }}>Distributed DB Architect</div>
+              <div style={{ fontSize: '0.9375rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)' }}>Distributed DB Architect</div>
               <div style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 700 }}>48h Shortlist Verified</div>
             </div>
           </motion.div>
@@ -185,7 +185,7 @@ export const LightHeroParallaxImage: React.FC = () => {
               position: 'absolute',
               right: '-20px',
               top: '40px',
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--nt-surface, #ffffff)',
               borderRadius: '20px',
               border: '1px solid #cbd5e1',
               padding: '1.25rem 1.75rem',
@@ -200,14 +200,14 @@ export const LightHeroParallaxImage: React.FC = () => {
               <Award size={22} />
             </div>
             <div>
-              <div style={{ fontSize: '0.9375rem', fontWeight: 800, color: '#0f172a' }}>SOC-2 & ISO 27001</div>
-              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Enterprise Security Tier</div>
+              <div style={{ fontSize: '0.9375rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)' }}>SOC-2 & ISO 27001</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--nt-muted, #64748b)' }}>Enterprise Security Tier</div>
             </div>
           </motion.div>
         </div>
 
         {/* Bottom Trust Guarantee */}
-        <div style={{ marginTop: '5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '2rem', flexWrap: 'wrap', color: '#475569', fontSize: '0.875rem', fontWeight: 600 }}>
+        <div style={{ marginTop: '5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '2rem', flexWrap: 'wrap', color: 'var(--nt-muted, #475569)', fontSize: '0.875rem', fontWeight: 600 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <ShieldCheck size={18} color="#16a34a" />
             <span>Guaranteed 48-Hour SLA</span>

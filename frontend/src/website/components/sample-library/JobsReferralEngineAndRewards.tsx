@@ -5,7 +5,7 @@ export const JobsReferralEngineAndRewards: React.FC = () => {
   return (
     <div className="w-full bg-slate-900/5 p-4 sm:p-6 rounded-2xl border border-slate-200">
       <div className="text-xs font-mono font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center justify-between">
-        <span>38 · Institutional Candidate Referral Engine</span>
+        <span>Institutional Candidate Referral Engine</span>
         <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[10px]">$5,000 / ₹4,00,000 Bounty</span>
       </div>
 
@@ -21,7 +21,7 @@ export const JobsReferralEngineAndRewards: React.FC = () => {
             </h2>
             <p className="text-sm text-slate-600 font-light leading-relaxed">
               Know an exceptional distributed systems architect, C++ quant engineer, or ML infrastructure lead? 
-              Refer them to NexaTalent’s private retained mandates. When they are placed, we disburse your bounty within 14 days of start date.
+              Refer them to NexaTalent IT Solutions' private retained mandates. When they are placed, we disburse your bounty within 14 days of start date.
             </p>
 
             <div className="grid grid-cols-3 gap-3 pt-2">

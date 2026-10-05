@@ -14,8 +14,8 @@ export const LightDirectContactSection: React.FC = () => {
     <section
       className="theme-light"
       style={{
-        backgroundColor: '#ffffff',
-        borderBottom: '1px solid #e2e8f0',
+        backgroundColor: 'var(--nt-surface, #ffffff)',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
         padding: '6rem 2rem',
       }}
     >
@@ -37,13 +37,13 @@ export const LightDirectContactSection: React.FC = () => {
             }}
           >
             <Sparkles size={14} />
-            <span>30 / 40 · EXECUTIVE ADVISORY INTAKE</span>
+            <span>NEXATALENT EXECUTIVE ADVISORY INTAKE</span>
           </div>
 
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a', marginBottom: '0.75rem' }}>
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)', marginBottom: '0.75rem' }}>
             Speak Directly with a Practice Lead
           </h2>
-          <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0 auto', lineHeight: 1.6 }}>
+          <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0 auto', lineHeight: 1.6 }}>
             Connect with a Senior Managing Partner who understands your technical architecture and compensation bands.
           </p>
         </div>
@@ -51,21 +51,21 @@ export const LightDirectContactSection: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '3.5rem', alignItems: 'center' }}>
           {/* Left Details Panel */}
           <div>
-            <h3 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)', marginBottom: '1rem' }}>
               Direct Executive Access
             </h3>
-            <p style={{ color: '#475569', fontSize: '1rem', lineHeight: 1.6, marginBottom: '2.5rem' }}>
+            <p style={{ color: 'var(--nt-muted, #475569)', fontSize: '1rem', lineHeight: 1.6, marginBottom: '2.5rem' }}>
               Zero junior account coordinators. Every conversation is handled by former engineering leaders with deep networks across Bangalore, Hyderabad, London, and Silicon Valley.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: '#eff6ff', color: '#0265FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Mail size={20} />
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Direct Partner Desk</div>
-                  <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#0f172a' }}>partners@nexatalent.com</div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Executive Email Desk</div>
+                  <a href="mailto:ceo@nexatalentitsolution.com" style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#0265FF', textDecoration: 'none' }}>ceo@nexatalentitsolution.com</a>
                 </div>
               </div>
 
@@ -74,8 +74,8 @@ export const LightDirectContactSection: React.FC = () => {
                   <Phone size={20} />
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Priority Hotline</div>
-                  <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#0f172a' }}>+91 (80) 4122-8900</div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Direct Hotline / WhatsApp</div>
+                  <a href="tel:+917019696166" style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#0F172A', textDecoration: 'none' }}>+91 70196 96166</a>
                 </div>
               </div>
 
@@ -84,8 +84,8 @@ export const LightDirectContactSection: React.FC = () => {
                   <MapPin size={20} />
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>India Headquarters</div>
-                  <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#0f172a' }}>Indiranagar, Bangalore · 560038</div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Corporate HQ & Registered Office</div>
+                  <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.4 }}>4th & 7th Floor, Skyline Icon, Andheri - Kurla Rd, Chimatpada, Marol, Andheri East, Mumbai, MH 400059</div>
                 </div>
               </div>
             </div>
@@ -95,7 +95,7 @@ export const LightDirectContactSection: React.FC = () => {
           <motion.div
             whileHover={{ y: -4 }}
             style={{
-              backgroundColor: '#f8fafc',
+              backgroundColor: 'var(--nt-surface-2, #f8fafc)',
               borderRadius: '24px',
               border: '1px solid #cbd5e1',
               padding: '3rem 2.5rem',
@@ -107,17 +107,17 @@ export const LightDirectContactSection: React.FC = () => {
                 <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto' }}>
                   <CheckCircle2 size={32} />
                 </div>
-                <h4 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.5rem' }}>
+                <h4 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)', marginBottom: '0.5rem' }}>
                   Inquiry Dispatched
                 </h4>
-                <p style={{ color: '#475569', fontSize: '0.875rem', lineHeight: 1.5 }}>
+                <p style={{ color: 'var(--nt-muted, #475569)', fontSize: '0.875rem', lineHeight: 1.5 }}>
                   A Practice Lead will contact your office within 2 business hours.
                 </p>
               </div>
             ) : (
               <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: 'var(--nt-ink-2, #334155)', marginBottom: '0.35rem' }}>
                     Full Name:
                   </label>
                   <input
@@ -130,15 +130,15 @@ export const LightDirectContactSection: React.FC = () => {
                       borderRadius: '10px',
                       border: '1px solid #cbd5e1',
                       outline: 'none',
-                      backgroundColor: '#ffffff',
+                      backgroundColor: 'var(--nt-surface, #ffffff)',
                       fontSize: '0.875rem',
-                      color: '#0f172a',
+                      color: 'var(--nt-ink, #0f172a)',
                     }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: 'var(--nt-ink-2, #334155)', marginBottom: '0.35rem' }}>
                     Corporate Work Email:
                   </label>
                   <input
@@ -151,15 +151,15 @@ export const LightDirectContactSection: React.FC = () => {
                       borderRadius: '10px',
                       border: '1px solid #cbd5e1',
                       outline: 'none',
-                      backgroundColor: '#ffffff',
+                      backgroundColor: 'var(--nt-surface, #ffffff)',
                       fontSize: '0.875rem',
-                      color: '#0f172a',
+                      color: 'var(--nt-ink, #0f172a)',
                     }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: 'var(--nt-ink-2, #334155)', marginBottom: '0.35rem' }}>
                     Hiring Objective / Mandate Details:
                   </label>
                   <textarea
@@ -172,9 +172,9 @@ export const LightDirectContactSection: React.FC = () => {
                       borderRadius: '10px',
                       border: '1px solid #cbd5e1',
                       outline: 'none',
-                      backgroundColor: '#ffffff',
+                      backgroundColor: 'var(--nt-surface, #ffffff)',
                       fontSize: '0.875rem',
-                      color: '#0f172a',
+                      color: 'var(--nt-ink, #0f172a)',
                       resize: 'none',
                     }}
                   />

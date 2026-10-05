@@ -25,10 +25,10 @@ const SERVICE_TIERS: TierModel[] = [
     description: 'Zero upfront commitment. Ideal for scaling specialized mid-to-senior individual contributor roles with immediate velocity.',
     recommendedFor: 'Series A–C Startups & Mid-Market',
     commitment: 'Success Fee Only',
-    sla: '5 Business Days to Shortlist',
-    warranty: '90-Day Free Replacement',
+    sla: 'Calibrated Shortlist Flow',
+    warranty: 'Defined Replacement Terms',
     features: [
-      'Access to vetted 0.5% talent pipeline',
+      'Access to assessed talent pipeline',
       'System Architecture technical evaluation',
       'Direct interview orchestration & calibration',
       'Standard reference & credential check',
@@ -40,17 +40,17 @@ const SERVICE_TIERS: TierModel[] = [
     name: 'Retained Executive',
     badge: 'Most Popular',
     headline: 'Dedicated Director & C-Suite Search',
-    description: 'Guaranteed delivery with an exclusive senior partner pod dedicated to confidential leadership and VP-level mandates.',
+    description: 'Dedicated delivery with an exclusive senior partner pod for confidential leadership and VP-level mandates.',
     recommendedFor: 'Enterprise Scale-ups & Global MNCs',
     commitment: 'Structured 3-Stage Retainer',
-    sla: '72-Hour Priority Shortlist',
-    warranty: '180-Day Leadership Warranty',
+    sla: 'Priority Shortlist Flow',
+    warranty: 'Defined Leadership Terms',
     features: [
       'Dedicated Partner-led search team',
       'Confidential headhunting & market mapping',
       'Deep psychometric & leadership assessment',
       'Custom compensation & equity benchmarking',
-      '180-Day executive retention guarantee',
+      'Defined executive tenure terms',
       'Weekly transparent board-level pipeline reports'
     ],
     popular: true
@@ -60,18 +60,18 @@ const SERVICE_TIERS: TierModel[] = [
     name: 'GCC Turnkey / BOT',
     badge: 'Strategic Enterprise',
     headline: 'Build-Operate-Transfer Capability Center',
-    description: 'End-to-end talent and operational engine to launch 50–500 engineer centers of excellence in India with full IP governance.',
+    description: 'End-to-end talent and operational engine to launch capability centers of excellence in India with documented IP governance.',
     recommendedFor: 'Global Enterprises & Fortune 500',
     commitment: 'Monthly Platform + Volume Model',
-    sla: 'Squad Deployed in 21 Days',
+    sla: 'Phased Squad Deployment',
     warranty: 'Continuous Talent Assurance',
     features: [
-      'Complete legal entity & SEZ compliance advisory',
+      'Complete legal entity & compliance advisory',
       'Turnkey facility & hardware infrastructure',
       'Employer-of-Record (EOR) transition management',
-      'Full leadership + 50+ engineer squad buildout',
-      '100% intellectual property transfer on day 1',
-      'Optional entity transfer at 12–36 months'
+      'Leadership + engineer squad buildout',
+      'Documented intellectual property transfer process',
+      'Optional entity transfer per agreement term'
     ]
   }
 ];

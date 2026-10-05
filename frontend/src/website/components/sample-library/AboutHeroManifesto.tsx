@@ -16,7 +16,7 @@ export const AboutHeroManifesto: React.FC = () => {
         <div className="relative z-10 max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200/80 text-blue-700 text-xs font-semibold mb-6">
             <Award className="w-4 h-4 text-blue-600" />
-            <span>The NexaTalent Operating Manifesto</span>
+            <span>The NexaTalent IT Solutions Operating Manifesto</span>
           </div>
 
           <h2 className="text-section-title font-black text-slate-900 tracking-tight leading-tight mb-6">
@@ -28,7 +28,7 @@ export const AboutHeroManifesto: React.FC = () => {
 
           <p className="text-base sm:text-lg text-slate-600 font-light leading-relaxed max-w-3xl mx-auto mb-10">
             For three decades, global tech enterprises treated offshore engineering as a cost-cutting compromise. 
-            NexaTalent was founded on the opposite premise: that India's premier engineering hubs represent the highest-density concentration of distributed systems architects, low-latency quant developers, and AI researchers on earth.
+            NexaTalent IT Solutions was founded on the opposite premise: that India's premier engineering hubs represent the highest-density concentration of distributed systems architects, low-latency quant developers, and AI researchers on earth.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-6 border-t border-slate-200/80 text-left">

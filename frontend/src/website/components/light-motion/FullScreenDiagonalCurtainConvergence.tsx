@@ -59,7 +59,7 @@ export const FullScreenDiagonalCurtainConvergence: React.FC = () => {
         </div>
 
         <h2 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tight mb-4">
-          The NexaTalent Diamond Standard
+          The NexaTalent IT Solutions Diamond Standard
         </h2>
         <p className="text-slate-600 text-sm md:text-base max-w-xl mx-auto mb-8 leading-relaxed">
           Both diagonal planes part to reveal the quintessential sovereign talent standard: zero equity compromise, zero IP vulnerability, 100% execution confidence.

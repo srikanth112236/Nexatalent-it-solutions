@@ -110,7 +110,7 @@ export const PinnedSpeedometerGauge: React.FC = () => {
 
             <div className="mt-6 pt-4 border-t border-slate-200/80 w-full flex items-center justify-between text-xs text-slate-600">
               <span>Standard: 65 Days</span>
-              <span className="font-bold text-blue-600">NexaTalent: &lt;72 Hours</span>
+              <span className="font-bold text-blue-600">NexaTalent IT Solutions: &lt;72 Hours</span>
             </div>
           </div>
 
@@ -166,7 +166,7 @@ export const PinnedSpeedometerGauge: React.FC = () => {
 
             <div className="mt-6 pt-4 border-t border-slate-200/80 w-full flex items-center justify-between text-xs text-slate-600">
               <span>Industry Avg: 52%</span>
-              <span className="font-bold text-emerald-600">NexaTalent: 94.8%</span>
+              <span className="font-bold text-emerald-600">NexaTalent IT Solutions: 94.8%</span>
             </div>
           </div>
 

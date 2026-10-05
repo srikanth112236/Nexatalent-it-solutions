@@ -16,12 +16,12 @@ interface FloatingMetric {
 }
 
 const FLOATING_METRICS: FloatingMetric[] = [
-  { value: '72 Hours', label: 'Shortlist Delivery SLA', sub: 'Contractually bound guarantee', speed: 1.2, rotate: -4, accent: '#2563eb', icon: Zap },
-  { value: '94.8%', label: 'Offer Acceptance Rate', sub: 'Zero lost to counter-offers', speed: 0.6, rotate: 3, accent: '#10b981', icon: Award },
-  { value: '180 Days', label: 'Unconditional Warranty', sub: 'Comprehensive replacement protection', speed: 1.5, rotate: -2, accent: '#7c3aed', icon: ShieldCheck },
-  { value: '< 850ns', label: 'P99 Execution Threshold', sub: 'Quant & HFT verified benchmarks', speed: 0.8, rotate: 4, accent: '#0891b2', icon: Zap },
-  { value: '75 Days', label: '120-Engineer GCC Launch', sub: 'Turnkey center operational', speed: 1.4, rotate: -3, accent: '#ea580c', icon: Users },
-  { value: 'Top 0.5%', label: 'Candidate Acceptance', sub: 'Rigorous architectural evaluation', speed: 0.9, rotate: 2, accent: '#2563eb', icon: TrendingUp },
+  { value: 'Structured', label: 'Shortlist Pipelines', sub: 'Requirement to shortlist workflow', speed: 1.2, rotate: -4, accent: '#2563eb', icon: Zap },
+  { value: 'Coordinated', label: 'Interview Flow', sub: 'Scheduling, feedback and offer stages', speed: 0.6, rotate: 3, accent: '#10b981', icon: Award },
+  { value: 'Governed', label: 'Placement Tracking', sub: 'Offer to joining visibility', speed: 1.5, rotate: -2, accent: '#7c3aed', icon: ShieldCheck },
+  { value: 'Rigorous', label: 'Technical Screening', sub: 'Systems and architecture reviews', speed: 0.8, rotate: 4, accent: '#0891b2', icon: Zap },
+  { value: 'Scaled', label: 'GCC Hiring', sub: 'Captive and distributed team hiring', speed: 1.4, rotate: -3, accent: '#ea580c', icon: Users },
+  { value: 'Curated', label: 'Talent Pool', sub: 'Searchable assessed candidate profiles', speed: 0.9, rotate: 2, accent: '#2563eb', icon: TrendingUp },
 ];
 
 export const ParallaxDepthFloatMatrix: React.FC = () => {

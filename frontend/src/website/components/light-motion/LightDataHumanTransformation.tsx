@@ -34,11 +34,11 @@ export const LightDataHumanTransformation: React.FC = () => {
       ref={containerRef}
       className="theme-light"
       style={{
-        backgroundColor: '#f8fafc',
-        color: '#0f172a',
+        backgroundColor: 'var(--nt-surface-2, #f8fafc)',
+        color: 'var(--nt-ink, #0f172a)',
         padding: '6rem 2rem',
         position: 'relative',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
       }}
     >
       <div style={{ maxWidth: '1100px', margin: '0 auto', textAlign: 'center' }}>
@@ -62,10 +62,10 @@ export const LightDataHumanTransformation: React.FC = () => {
             <Sparkles size={14} />
             Pattern 38 & 39 · Data to Human Transformation
           </div>
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a' }}>
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)' }}>
             Algorithmic Rigor Backed by Human Empathy
           </h2>
-          <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
+          <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
             AI surfaces the technical probability. Senior Partner recruiters manage the human nuances, psychology, and career aspirations.
           </p>
         </div>
@@ -76,8 +76,8 @@ export const LightDataHumanTransformation: React.FC = () => {
             maxWidth: '880px',
             margin: '0 auto',
             borderRadius: '24px',
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
+            backgroundColor: 'var(--nt-surface, #ffffff)',
+            border: '1px solid var(--nt-border, #e2e8f0)',
             padding: '3rem 2.5rem',
             boxShadow: '0 20px 45px -15px rgba(0, 0, 0, 0.06)',
             position: 'relative',
@@ -92,7 +92,7 @@ export const LightDataHumanTransformation: React.FC = () => {
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
               {['Vector Cosine: 0.984', 'Concurrency Latency: < 2ms', 'Repo PRs: 412 Verified', 'Comp Expectation: Locked'].map((tag, idx) => (
-                <span key={idx} style={{ backgroundColor: '#f1f5f9', color: '#475569', fontSize: '0.8125rem', fontWeight: 600, padding: '0.35rem 0.85rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <span key={idx} style={{ backgroundColor: 'var(--nt-surface-3, #f1f5f9)', color: 'var(--nt-muted, #475569)', fontSize: '0.8125rem', fontWeight: 600, padding: '0.35rem 0.85rem', borderRadius: '8px', border: '1px solid var(--nt-border, #e2e8f0)' }}>
                   {tag}
                 </span>
               ))}
@@ -115,7 +115,7 @@ export const LightDataHumanTransformation: React.FC = () => {
                 width: '56px',
                 height: '56px',
                 borderRadius: '16px',
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--nt-surface, #ffffff)',
                 color: '#2563eb',
                 display: 'flex',
                 alignItems: 'center',
@@ -127,11 +127,11 @@ export const LightDataHumanTransformation: React.FC = () => {
               <Users size={28} />
             </div>
 
-            <h4 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.75rem' }}>
+            <h4 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)', marginBottom: '0.75rem' }}>
               STEP 02: Dedicated Partner Representation
             </h4>
 
-            <p style={{ color: '#334155', fontSize: '0.9375rem', lineHeight: 1.6, maxWidth: '620px', margin: '0 auto 1.5rem auto' }}>
+            <p style={{ color: 'var(--nt-ink-2, #334155)', fontSize: '0.9375rem', lineHeight: 1.6, maxWidth: '620px', margin: '0 auto 1.5rem auto' }}>
               We never let algorithms make hiring decisions. A dedicated Senior Practice Lead conducts direct interviews, prepares candidates for system rounds, coordinates buyouts, and defends against counter-offers.
             </p>
 

@@ -42,34 +42,34 @@
   /* ------------------------------------------------------------------------
      2. Color Tokens (Semantic & Theme)
      ------------------------------------------------------------------------ */
-  /* Canvas & Surfaces */
-  --color-bg: #090d16;
-  --color-surface: #111726;
-  --color-surface-raised: #182238;
-  --color-surface-hover: #1f2b47;
-  --color-surface-active: #253456;
-  --color-surface-glass: rgba(17, 23, 38, 0.75);
+  /* Canvas & Surfaces — clean crisp light surfaces */
+  --color-bg: #FFFFFF;
+  --color-surface: #FFFFFF;
+  --color-surface-raised: #F8FAFC;
+  --color-surface-hover: #F1F5F9;
+  --color-surface-active: #E2E8F0;
+  --color-surface-glass: rgba(255, 255, 255, 0.95);
 
-  /* Text & Foreground */
-  --color-text: #f8fafc;
-  --color-text-muted: #94a3b8;
-  --color-text-subtle: #64748b;
-  --color-text-inverse: #090d16;
+  /* Text & Foreground — WCAG AAA Deep Brand Navy from Logo */
+  --color-text: #002559;
+  --color-text-muted: #475569;
+  --color-text-subtle: #64748B;
+  --color-text-inverse: #FFFFFF;
 
   /* Borders & Dividers */
-  --color-border: #1e293b;
-  --color-border-subtle: #141c2e;
-  --color-border-strong: #334155;
-  --color-border-focus: #3b82f6;
+  --color-border: #E2E8F0;
+  --color-border-subtle: #F1F5F9;
+  --color-border-strong: #0060E6;
+  --color-border-focus: #0060E6;
 
-  /* Brand Accents */
-  --color-primary: #3b82f6;
-  --color-primary-hover: #2563eb;
-  --color-primary-active: #1d4ed8;
-  --color-primary-glow: rgba(59, 130, 246, 0.25);
-  --color-accent: #06b6d4;
-  --color-accent-hover: #0891b2;
-  --color-accent-glow: rgba(6, 182, 212, 0.2);
+  /* Brand Accents — LOGO PALETTE: Navy #002559 + Tech Blue #0060E6 + Accent #0080FB */
+  --color-primary: #0060E6;
+  --color-primary-hover: #004FBF;
+  --color-primary-active: #003F99;
+  --color-primary-glow: rgba(0, 96, 230, 0.16);
+  --color-accent: #0080FB;
+  --color-accent-hover: #0060E6;
+  --color-accent-glow: rgba(0, 128, 251, 0.16);
 
   /* Functional Status */
   --color-success: #10b981;
@@ -120,8 +120,8 @@
   --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 12px 24px -4px rgba(0, 0, 0, 0.55);
   --shadow-xl: 0 20px 40px -8px rgba(0, 0, 0, 0.7);
-  --shadow-glow-primary: 0 0 30px -5px rgba(59, 130, 246, 0.35);
-  --shadow-glow-accent: 0 0 30px -5px rgba(6, 182, 212, 0.3);
+  --shadow-glow-primary: 0 0 30px -5px rgba(26, 134, 255, 0.4);
+  --shadow-glow-accent: 0 0 30px -5px rgba(63, 169, 255, 0.35);
 
   /* ------------------------------------------------------------------------
      6. Layout & Breakpoint Boundaries
@@ -153,42 +153,42 @@
      ------------------------------------------------------------------------ */
   --focus-ring-offset: 2px;
   --focus-ring-width: 2px;
-  --focus-ring-color: #3b82f6;
+  --focus-ring-color: #0B63E5;
   --touch-target-min: 44px;
 }
 
-/* Light Theme Variables */
+/* Light Theme Variables — same logo hues, light surfaces */
 [data-theme="light"], .theme-light {
-  --color-bg: #f8fafc;
+  --color-bg: #EFF5FF;
   --color-surface: #ffffff;
-  --color-surface-raised: #f1f5f9;
-  --color-surface-hover: #e2e8f0;
-  --color-surface-active: #cbd5e1;
+  --color-surface-raised: #D8EBFF;
+  --color-surface-hover: #B3D7FF;
+  --color-surface-active: #8ACBFF;
   --color-surface-glass: rgba(255, 255, 255, 0.88);
 
-  --color-text: #0f172a;
-  --color-text-muted: #475569;
-  --color-text-subtle: #64748b;
+  --color-text: #0A1E4E;
+  --color-text-muted: #102C6B;
+  --color-text-subtle: #4A5F86;
   --color-text-inverse: #ffffff;
 
-  --color-border: #e2e8f0;
-  --color-border-subtle: #f1f5f9;
-  --color-border-strong: #cbd5e1;
-  --color-border-focus: #2563eb;
+  --color-border: #B3D7FF;
+  --color-border-subtle: #D8EBFF;
+  --color-border-strong: #0B63E5;
+  --color-border-focus: #0B63E5;
 
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-active: #1e40af;
-  --color-primary-glow: rgba(37, 99, 235, 0.15);
-  --color-accent: #0891b2;
-  --color-accent-hover: #0e7490;
-  --color-accent-glow: rgba(8, 145, 178, 0.15);
+  --color-primary: #0B63E5;
+  --color-primary-hover: #0A53C4;
+  --color-primary-active: #0F42B0;
+  --color-primary-glow: rgba(11, 99, 229, 0.16);
+  --color-accent: #0B63E5;
+  --color-accent-hover: #0F42B0;
+  --color-accent-glow: rgba(26, 134, 255, 0.16);
 
   --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.06);
-  --shadow-glow-primary: 0 10px 30px -5px rgba(37, 99, 235, 0.18);
+  --shadow-glow-primary: 0 10px 30px -5px rgba(11, 99, 229, 0.22);
 }
 
 /* Base Document Reset using Tokens */
@@ -200,7 +200,7 @@
 
 html {
   font-family: var(--font-family-sans);
-  color-scheme: dark;
+  color-scheme: light;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;

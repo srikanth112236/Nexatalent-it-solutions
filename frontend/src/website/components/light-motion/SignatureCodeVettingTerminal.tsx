@@ -245,7 +245,7 @@ export const SignatureCodeVettingTerminal: React.FC = () => {
             <div className="mt-4 pt-4 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-3">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>Verified by NexaTalent Principal Staff Engineering Review Board</span>
+                <span>Verified by NexaTalent IT Solutions Principal Staff Engineering Review Board</span>
               </div>
               <span className="text-slate-500 font-mono">Status: READY_FOR_ENTERPRISE_SHORTLIST</span>
             </div>

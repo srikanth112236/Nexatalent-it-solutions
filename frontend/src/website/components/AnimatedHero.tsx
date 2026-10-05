@@ -16,7 +16,7 @@ export interface AnimatedHeroProps {
 }
 
 export const AnimatedHero: React.FC<AnimatedHeroProps> = ({
-  badgeText = 'NexaTalent Intelligence Operating System',
+  badgeText = 'NexaTalent IT Solutions Intelligence Operating System',
   headline = 'Precision Hiring Powered by Global Tech Architecture',
   subheadline = 'Connecting venture-backed enterprises, scale-ups, and global GCC hubs with verified elite engineering and leadership talent.',
   primaryCtaText = 'Request Specialist Talent',

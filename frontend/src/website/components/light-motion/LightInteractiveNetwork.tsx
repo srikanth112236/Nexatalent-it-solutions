@@ -86,7 +86,7 @@ export const LightInteractiveNetwork: React.FC = () => {
 
         // Node Label Text
         ctx.font = 'bold 11px sans-serif';
-        ctx.fillStyle = isHovered ? '#ffffff' : '#0f172a';
+        ctx.fillStyle = isHovered ? 'var(--nt-surface, #ffffff)' : '#0f172a';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(node.city.substring(0, 3).toUpperCase(), node.x, node.y);
@@ -121,11 +121,11 @@ export const LightInteractiveNetwork: React.FC = () => {
     <section
       className="theme-light"
       style={{
-        backgroundColor: '#f8fafc',
-        color: '#0f172a',
+        backgroundColor: 'var(--nt-surface-2, #f8fafc)',
+        color: 'var(--nt-ink, #0f172a)',
         padding: '6rem 2rem',
         position: 'relative',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
       }}
     >
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -149,10 +149,10 @@ export const LightInteractiveNetwork: React.FC = () => {
             <Network size={14} />
             S06 & E03 Interactive Talent Network Activation
           </div>
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a' }}>
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)' }}>
             Live Cross-Border Engineering Network
           </h2>
-          <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
+          <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
             Hover over global talent hub nodes to inspect calibrated engineering clusters, live active mandates, and specialization rubrics.
           </p>
         </div>
@@ -160,9 +160,9 @@ export const LightInteractiveNetwork: React.FC = () => {
         {/* Network Canvas & Details Overlay */}
         <div
           style={{
-            backgroundColor: '#ffffff',
+            backgroundColor: 'var(--nt-surface, #ffffff)',
             borderRadius: '24px',
-            border: '1px solid #e2e8f0',
+            border: '1px solid var(--nt-border, #e2e8f0)',
             padding: '2.5rem',
             boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.06)',
             display: 'grid',
@@ -185,8 +185,8 @@ export const LightInteractiveNetwork: React.FC = () => {
                 height: 'auto',
                 cursor: 'pointer',
                 borderRadius: '16px',
-                backgroundColor: '#f8fafc',
-                border: '1px solid #e2e8f0',
+                backgroundColor: 'var(--nt-surface-2, #f8fafc)',
+                border: '1px solid var(--nt-border, #e2e8f0)',
               }}
             />
           </div>
@@ -203,7 +203,7 @@ export const LightInteractiveNetwork: React.FC = () => {
             {hoveredNode ? (
               <div
                 style={{
-                  backgroundColor: '#f8fafc',
+                  backgroundColor: 'var(--nt-surface-2, #f8fafc)',
                   border: `2px solid ${hoveredNode.color}`,
                   borderRadius: '20px',
                   padding: '2rem',
@@ -211,10 +211,10 @@ export const LightInteractiveNetwork: React.FC = () => {
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                   <div>
-                    <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a' }}>
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)' }}>
                       {hoveredNode.city}
                     </h3>
-                    <span style={{ fontSize: '0.875rem', color: '#64748b' }}>{hoveredNode.country}</span>
+                    <span style={{ fontSize: '0.875rem', color: 'var(--nt-muted, #64748b)' }}>{hoveredNode.country}</span>
                   </div>
                   <span
                     style={{
@@ -230,11 +230,11 @@ export const LightInteractiveNetwork: React.FC = () => {
                   </span>
                 </div>
 
-                <div style={{ fontSize: '0.875rem', color: '#475569', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+                <div style={{ fontSize: '0.875rem', color: 'var(--nt-muted, #475569)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
                   <strong>Practice Domain:</strong> {hoveredNode.specialty}
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.8125rem', color: '#1e293b' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.8125rem', color: 'var(--nt-ink-2, #1e293b)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <CheckCircle2 size={14} color="#16a34a" />
                     <span>Ex-FAANG / Tier-1 Principal Engineer Panel</span>
@@ -248,7 +248,7 @@ export const LightInteractiveNetwork: React.FC = () => {
             ) : (
               <div
                 style={{
-                  backgroundColor: '#f8fafc',
+                  backgroundColor: 'var(--nt-surface-2, #f8fafc)',
                   border: '1px dashed #cbd5e1',
                   borderRadius: '20px',
                   padding: '2.5rem',
@@ -256,10 +256,10 @@ export const LightInteractiveNetwork: React.FC = () => {
                 }}
               >
                 <MapPin size={36} color="#94a3b8" style={{ margin: '0 auto 1rem auto' }} />
-                <h4 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.5rem' }}>
+                <h4 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--nt-ink, #0f172a)', marginBottom: '0.5rem' }}>
                   Hover Any Node on Canvas
                 </h4>
-                <p style={{ fontSize: '0.875rem', color: '#64748b', lineHeight: 1.5 }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--nt-muted, #64748b)', lineHeight: 1.5 }}>
                   Move your cursor over Bangalore, Hyderabad, London, or San Francisco to inspect live regional engineering pods.
                 </p>
               </div>

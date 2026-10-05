@@ -71,7 +71,7 @@ export const FullScreenDualPinnedConvergenceIrisAperture: React.FC = () => {
             Multi-agent evaluation challenging candidates through live system outage scenarios, architectural trade-offs, and executive conflict resolution.
           </p>
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 font-mono text-xs text-slate-700">
-            Pass Rate: Top 0.8% of 24,000 Screened
+            Pass Review: Structured Multi-Stage Screening
           </div>
         </div>
         <div className="text-xs font-mono text-slate-400">

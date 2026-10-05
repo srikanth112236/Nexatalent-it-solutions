@@ -25,7 +25,7 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
   items = [
     {
       category: 'Enterprise',
-      question: 'How quickly does NexaTalent present verified candidates for a senior role?',
+      question: 'How quickly does NexaTalent IT Solutions present verified candidates for a senior role?',
       answer:
         'Our standard SLA is 48 to 72 hours for an initial calibration shortlist of 3 to 5 vetted senior engineers. For niche or executive searches, full pipeline delivery is completed within 7 business days.',
     },
@@ -43,9 +43,9 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
     },
     {
       category: 'Candidates',
-      question: 'Is there any fee or cost for candidates using NexaTalent?',
+      question: 'Is there any fee or cost for candidates using NexaTalent IT Solutions?',
       answer:
-        'No. NexaTalent is 100% free for candidates. We provide dedicated career representation, compensation benchmarking, interview prep, and offer negotiation advisory at no cost.',
+        'No. NexaTalent IT Solutions is 100% free for candidates. We provide dedicated career representation, compensation benchmarking, interview prep, and offer negotiation advisory at no cost.',
     },
     {
       category: 'Enterprise',

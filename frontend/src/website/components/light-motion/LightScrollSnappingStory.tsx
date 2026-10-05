@@ -33,11 +33,11 @@ export const LightScrollSnappingStory: React.FC = () => {
       ref={containerRef}
       className="theme-light"
       style={{
-        backgroundColor: '#ffffff',
-        color: '#0f172a',
+        backgroundColor: 'var(--nt-surface, #ffffff)',
+        color: 'var(--nt-ink, #0f172a)',
         padding: '6rem 2rem',
         position: 'relative',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
         transition: 'background-color 0.3s ease',
       }}
     >
@@ -62,10 +62,10 @@ export const LightScrollSnappingStory: React.FC = () => {
             <Sparkles size={14} />
             Pattern 42 & 43 · Scroll Snapping & Progressive Color Transformation
           </div>
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a' }}>
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)' }}>
             Seamless Environmental Progression
           </h2>
-          <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
+          <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
             Notice the subtle background atmospheric shift from pure crisp white into soft trust azure as you scroll through our key metrics.
           </p>
         </div>
@@ -81,9 +81,9 @@ export const LightScrollSnappingStory: React.FC = () => {
         >
           <div
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--nt-surface, #ffffff)',
               borderRadius: '20px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--nt-border, #e2e8f0)',
               padding: '2.5rem',
               boxShadow: '0 10px 30px -10px rgba(0,0,0,0.06)',
             }}
@@ -91,22 +91,22 @@ export const LightScrollSnappingStory: React.FC = () => {
             <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>
               <Zap size={20} />
             </div>
-            <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.25rem' }}>
+            <div style={{ fontSize: '2.5rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)', marginBottom: '0.25rem' }}>
               48 Hours
             </div>
             <h4 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#2563eb', marginBottom: '0.75rem' }}>
               First Shortlist SLA
             </h4>
-            <p style={{ fontSize: '0.9375rem', color: '#475569', lineHeight: 1.6 }}>
+            <p style={{ fontSize: '0.9375rem', color: 'var(--nt-muted, #475569)', lineHeight: 1.6 }}>
               Receive 3 to 5 interview-ready engineering candidates within 48 hours of mandate configuration.
             </p>
           </div>
 
           <div
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--nt-surface, #ffffff)',
               borderRadius: '20px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--nt-border, #e2e8f0)',
               padding: '2.5rem',
               boxShadow: '0 10px 30px -10px rgba(0,0,0,0.06)',
             }}
@@ -114,22 +114,22 @@ export const LightScrollSnappingStory: React.FC = () => {
             <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>
               <ShieldCheck size={20} />
             </div>
-            <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.25rem' }}>
+            <div style={{ fontSize: '2.5rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)', marginBottom: '0.25rem' }}>
               90 Days
             </div>
             <h4 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#059669', marginBottom: '0.75rem' }}>
               Escrow Replacement Guarantee
             </h4>
-            <p style={{ fontSize: '0.9375rem', color: '#475569', lineHeight: 1.6 }}>
+            <p style={{ fontSize: '0.9375rem', color: 'var(--nt-muted, #475569)', lineHeight: 1.6 }}>
               Unconditional warranty on every placement. Immediate priority escalation at zero extra cost.
             </p>
           </div>
 
           <div
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--nt-surface, #ffffff)',
               borderRadius: '20px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--nt-border, #e2e8f0)',
               padding: '2.5rem',
               boxShadow: '0 10px 30px -10px rgba(0,0,0,0.06)',
             }}
@@ -137,13 +137,13 @@ export const LightScrollSnappingStory: React.FC = () => {
             <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#faf5ff', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>
               <CheckCircle2 size={20} />
             </div>
-            <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.25rem' }}>
+            <div style={{ fontSize: '2.5rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)', marginBottom: '0.25rem' }}>
               94.8%
             </div>
             <h4 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#7c3aed', marginBottom: '0.75rem' }}>
               Offer Acceptance Ratio
             </h4>
-            <p style={{ fontSize: '0.9375rem', color: '#475569', lineHeight: 1.6 }}>
+            <p style={{ fontSize: '0.9375rem', color: 'var(--nt-muted, #475569)', lineHeight: 1.6 }}>
               Rigorous pre-closing alignment ensures almost zero offer drop-off or counter-offer leakage.
             </p>
           </div>

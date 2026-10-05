@@ -82,15 +82,15 @@ export const LightPerspectiveCorridor: React.FC = () => {
       ref={containerRef}
       className="theme-light"
       style={{
-        backgroundColor: '#ffffff',
-        color: '#0f172a',
+        backgroundColor: 'var(--nt-surface, #ffffff)',
+        color: 'var(--nt-ink, #0f172a)',
         padding: '5rem 2rem',
         position: 'relative',
         minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
         perspective: '1200px',
         overflow: 'hidden',
       }}
@@ -116,10 +116,10 @@ export const LightPerspectiveCorridor: React.FC = () => {
             <Compass size={14} />
             P01, P02 & P03 Perspective Corridor & Depth Tunnel Pattern
           </div>
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a' }}>
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)' }}>
             Traversing the Depth of Candidate Calibration
           </h2>
-          <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
+          <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
             Scroll down to advance through the perspective corridor from input rubrics to verified 48-hour shortlist delivery.
           </p>
         </div>
@@ -144,7 +144,7 @@ export const LightPerspectiveCorridor: React.FC = () => {
               style={{
                 position: 'absolute',
                 width: '100%',
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--nt-surface, #ffffff)',
                 borderRadius: '28px',
                 border: `2px solid ${m.accent}`,
                 padding: '3rem 2.5rem',
@@ -171,19 +171,19 @@ export const LightPerspectiveCorridor: React.FC = () => {
                 </span>
               </div>
 
-              <h3 style={{ fontSize: '1.875rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.75rem' }}>
+              <h3 style={{ fontSize: '1.875rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)', marginBottom: '0.75rem' }}>
                 {m.title}
               </h3>
 
-              <p style={{ color: '#475569', fontSize: '1rem', lineHeight: 1.6, maxWidth: '580px', margin: '0 auto 2rem auto' }}>
+              <p style={{ color: 'var(--nt-muted, #475569)', fontSize: '1rem', lineHeight: 1.6, maxWidth: '580px', margin: '0 auto 2rem auto' }}>
                 {m.subtitle}
               </p>
 
               <div
                 style={{
-                  backgroundColor: '#f8fafc',
+                  backgroundColor: 'var(--nt-surface-2, #f8fafc)',
                   borderRadius: '16px',
-                  border: '1px solid #e2e8f0',
+                  border: '1px solid var(--nt-border, #e2e8f0)',
                   padding: '1.5rem',
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -194,7 +194,7 @@ export const LightPerspectiveCorridor: React.FC = () => {
                   <div style={{ fontSize: '2.5rem', fontWeight: 900, color: m.accent, lineHeight: 1 }}>
                     {m.metric}
                   </div>
-                  <div style={{ fontSize: '0.8125rem', color: '#64748b', fontWeight: 600, marginTop: '0.25rem' }}>
+                  <div style={{ fontSize: '0.8125rem', color: 'var(--nt-muted, #64748b)', fontWeight: 600, marginTop: '0.25rem' }}>
                     {m.metricLabel}
                   </div>
                 </div>
@@ -204,7 +204,7 @@ export const LightPerspectiveCorridor: React.FC = () => {
                     <CheckCircle2 size={16} />
                     <span>Quality Calibrated</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#64748b', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--nt-muted, #64748b)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
                     <Shield size={14} />
                     <span>Escrow Warranty Insured</span>
                   </div>

@@ -4,18 +4,18 @@ import { Play, Award, CheckCircle2 } from 'lucide-react';
 export const CaseStudyVideoTestimonialBento: React.FC = () => {
   const testimonials = [
     {
-      author: 'David Chen',
-      role: 'Chief Technology Officer',
-      company: 'Enterprise Distributed DB Platform (SF)',
-      quote: 'We spent 9 months trying to recruit Staff C++ engineers in the Bay Area. NexaTalent placed 4 exceptional architects in Bangalore who shipped our storage engine release ahead of schedule.',
-      metric: '4 Staff Engineers Placed',
+      author: 'Technology Leadership',
+      role: 'Representative engagement perspective',
+      company: 'Distributed Systems Hiring',
+      quote: 'Employers typically ask for architecture depth first: structured screening, documented evaluation criteria and a visible shortlist-to-interview flow.',
+      metric: 'Architecture-Led Screening',
     },
     {
-      author: 'Sarah Jenkins',
-      role: 'VP of People & Talent',
-      company: 'Series D FinTech ($1.2B Valuation)',
-      quote: 'The legal entity, compliance, and IP assignment was completely friction-free. We had our Bangalore development center operational in 68 days with zero legal head scratching.',
-      metric: '68-Day Turnkey Hub',
+      author: 'People & Talent Leadership',
+      role: 'Representative engagement perspective',
+      company: 'GCC Center Hiring',
+      quote: 'For distributed centers, employers value entity guidance, documentation discipline and milestone-tracked hiring above everything else.',
+      metric: 'Milestone-Tracked Hiring',
     },
   ];
 
@@ -30,10 +30,10 @@ export const CaseStudyVideoTestimonialBento: React.FC = () => {
         <div className="text-center max-w-2xl mx-auto mb-10">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold mb-3">
             <Award className="w-3.5 h-3.5" />
-            <span>Verified Client Testimonials</span>
+              <span>Engagement Perspectives</span>
           </div>
           <h2 className="text-section-title font-bold text-slate-900 tracking-tight">
-            Hear Directly from Engineering VPs and CTOs
+            Hear How Hiring Teams Evaluate Us
           </h2>
         </div>
 

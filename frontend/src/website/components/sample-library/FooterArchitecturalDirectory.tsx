@@ -1,13 +1,15 @@
 import React from 'react';
 import { Layers, ArrowRight } from 'lucide-react';
 
-export const FooterArchitecturalDirectory: React.FC = () => {
+export const FooterArchitecturalDirectory: React.FC<{ bare?: boolean }> = ({ bare = false }) => {
   return (
-    <div className="w-full bg-slate-900/5 p-4 sm:p-6 rounded-2xl border border-slate-200">
+    <div className={bare ? 'w-full' : 'w-full bg-slate-900/5 p-4 sm:p-6 rounded-2xl border border-slate-200'}>
+      {!bare && (
       <div className="text-xs font-mono font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center justify-between">
         <span>10 · Comprehensive Architectural Directory Footer</span>
         <span className="text-sky-600 bg-sky-50 px-2 py-0.5 rounded text-[10px]">Deep Practice Taxonomy</span>
       </div>
+      )}
 
       <footer className="max-w-7xl mx-auto rounded-3xl bg-white border border-slate-200 p-8 sm:p-12 shadow-sm text-slate-700">
         
@@ -96,7 +98,7 @@ export const FooterArchitecturalDirectory: React.FC = () => {
 
         {/* Bottom Bar */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400">
-          <div>NexaTalent Directory Index • Version 2026.3 • Updated Weekly</div>
+          <div>NexaTalent IT Solutions Directory Index • Version 2026.3 • Updated Weekly</div>
           <div className="flex gap-4 mt-2 sm:mt-0">
             <span className="hover:text-slate-600 cursor-pointer">Tax Identification #29AABCV7291K</span>
             <span className="hover:text-slate-600 cursor-pointer">ISO 9001:2015</span>

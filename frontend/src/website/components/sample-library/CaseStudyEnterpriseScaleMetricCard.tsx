@@ -20,7 +20,7 @@ export const CaseStudyEnterpriseScaleMetricCard: React.FC = () => {
               Building a 250-Engineer Bangalore AI Center in 90 Days
             </h2>
             <p className="text-sm text-slate-600 font-light leading-relaxed">
-              When a NYSE-listed cloud enterprise needed to accelerate foundation model training while reducing high-velocity Bay Area burn, NexaTalent designed, incorporated, and staffed their sovereign Indian capability center.
+              When a NYSE-listed cloud enterprise needed to accelerate foundation model training while reducing high-velocity Bay Area burn, NexaTalent IT Solutions designed, incorporated, and staffed their sovereign Indian capability center.
             </p>
 
             <div className="grid grid-cols-3 gap-4 pt-2">
@@ -42,7 +42,7 @@ export const CaseStudyEnterpriseScaleMetricCard: React.FC = () => {
           <div className="lg:col-span-5 p-6 sm:p-8 rounded-2xl bg-slate-950 text-white border border-slate-800 space-y-4">
             <span className="text-xs font-mono text-slate-400 uppercase tracking-widest block">Executive Testimonial</span>
             <blockquote className="text-sm text-slate-300 italic leading-relaxed font-light">
-              "NexaTalent delivered what our internal corporate development team estimated would take 18 months. Their technical vetting bar is indistinguishable from our Mountain View headquarters."
+              "NexaTalent IT Solutions delivered what our internal corporate development team estimated would take 18 months. Their technical vetting bar is indistinguishable from our Mountain View headquarters."
             </blockquote>
             <div className="pt-2 border-t border-slate-800">
               <div className="font-bold text-white text-xs">SVP of Global Engineering</div>

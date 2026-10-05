@@ -4,38 +4,38 @@ import { UserCheck, ArrowRight, Clock, Star } from 'lucide-react';
 export const JobsTalentBenchSpotlight: React.FC = () => {
   const bench = [
     {
-      id: 'CANDIDATE #A892',
+      id: 'PROFILE · DISTRIBUTED SYSTEMS',
       role: 'Staff Distributed Systems Engineer',
-      background: '11 Yrs • Ex-Uber / Ex-Salesforce Core Platform',
+      background: 'Deep tenure • Core platform engineering',
       stack: ['Go', 'Raft Consensus', 'Kafka', 'RocksDB'],
-      availability: 'Available in 14 Days',
-      location: 'Bangalore (Indiranagar)',
-      rating: 'Top 0.5% Sandbox Score',
+      availability: 'Notice-period mapped',
+      location: 'India (Hybrid)',
+      rating: 'Architecture Review Cleared',
     },
     {
-      id: 'CANDIDATE #M401',
-      role: 'Principal LLM Research Engineer',
-      background: '9 Yrs • PhD IIT Delhi • Ex-Microsoft Research',
+      id: 'PROFILE · AI RESEARCH ENGINEERING',
+      role: 'Senior LLM Systems Engineer',
+      background: 'Research depth • Production model systems',
       stack: ['PyTorch', 'Megatron-LM', 'CUDA C++', 'Triton'],
-      availability: 'Available in 21 Days',
-      location: 'Bangalore (Hybrid)',
-      rating: 'Top 1% Sandbox Score',
+      availability: 'Notice-period mapped',
+      location: 'India (Hybrid)',
+      rating: 'Systems Review Cleared',
     },
     {
-      id: 'CANDIDATE #Q718',
-      role: 'Ultra Low-Latency C++ Architect',
-      background: '8 Yrs • Ex-Tower Research • Ex-Optiver',
+      id: 'PROFILE · LOW-LATENCY SYSTEMS',
+      role: 'Low-Latency C++ Engineer',
+      background: 'Performance focus • Exchange-adjacent systems',
       stack: ['C++20/23', 'Solarflare OpenOnload', 'SIMD', 'FIX Protocol'],
-      availability: 'Immediate Start',
-      location: 'London / Bangalore Remote',
-      rating: 'Top 0.8% Sandbox Score',
+      availability: 'Availability on request',
+      location: 'UK / India (Remote options)',
+      rating: 'Systems Review Cleared',
     },
   ];
 
   return (
     <div className="w-full bg-slate-900/5 p-4 sm:p-6 rounded-2xl border border-slate-200">
       <div className="text-xs font-mono font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center justify-between">
-        <span>35 · Anonymized Sovereign Talent Bench Spotlight</span>
+        <span>Anonymized Sovereign Talent Bench Spotlight</span>
         <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[10px]">Instant Employer Hire</span>
       </div>
 

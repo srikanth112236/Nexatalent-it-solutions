@@ -77,7 +77,7 @@ export const LightEditorialInsightCard: React.FC = () => {
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold mb-4">
               <BookOpen className="w-3.5 h-3.5" />
-              <span>NexaTalent Research & Thought Leadership</span>
+              <span>NexaTalent IT Solutions Research & Thought Leadership</span>
             </div>
             <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 tracking-tight">
               Executive Perspectives & Market Intelligence

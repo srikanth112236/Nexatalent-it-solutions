@@ -99,7 +99,7 @@ export const OneSideStickySplitMilestones: React.FC = () => {
 
               <div>
                 <h3 className="text-2xl font-black text-slate-900 leading-snug">
-                  NexaTalent Executive Search Engine
+                  NexaTalent IT Solutions Executive Search Engine
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
                   Dedicated Managing Partner Pod Assigned per Mandate

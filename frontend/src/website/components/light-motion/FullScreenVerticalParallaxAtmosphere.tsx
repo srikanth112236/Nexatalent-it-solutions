@@ -104,7 +104,7 @@ export const FullScreenVerticalParallaxAtmosphere: React.FC = () => {
           </div>
           <h3 className="text-2xl font-black text-slate-900 mb-2">Ex-FAANG Machine Learning Lead</h3>
           <p className="text-slate-600 text-xs leading-relaxed mb-4">
-            Spearheaded 100B+ parameter distributed model training cluster. Cleared all 4 stages of NexaTalent architectural assessment.
+            Spearheaded 100B+ parameter distributed model training cluster. Cleared all 4 stages of NexaTalent IT Solutions architectural assessment.
           </p>
           <div className="flex items-center gap-2 text-xs font-mono text-emerald-600 font-bold">
             <CheckCircle2 className="w-4 h-4" />

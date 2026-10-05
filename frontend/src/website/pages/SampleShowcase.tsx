@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { motion, useScroll, useSpring } from 'framer-motion';
 import { 
   Sparkles, 
@@ -133,8 +133,33 @@ import {
   LightFinalCTAExpansion,
 } from '../components/light-motion';
 
+// 20 Brand-New 2026 Signature Hero Archetypes
+import {
+  Hero01CaliperMonolith,
+  Hero02ArchitecturalParallax,
+  Hero03QuantumH100Cinema,
+  Hero04EditorialIvoryLuxury,
+  Hero05BentoHorizonMorph,
+  Hero06CaliperRadarLock,
+  Hero07VerticalFilmstripParallax,
+  Hero08CyberPhysicalCampus,
+  Hero09KineticTypographicManifesto,
+  Hero10GlobalOrbitalFlightpath,
+  Hero11SwissGridDataLens,
+  Hero12BiometricVaultPasskey,
+  Hero13InteractivePodConfigurator,
+  Hero14WaterfallCascadeParallax,
+  Hero15NeumorphicQuartzFrosted,
+  Hero16TerminalSREOrchestrator,
+  Hero17ApertureCaliperShutter,
+  Hero18DualPerspectiveKinetic,
+  Hero19Curtain3DDepthParallax,
+  Hero20InstitutionalMediaBrief,
+} from '../components/hero-collection';
+
+
 interface SectionBannerProps {
-  index: number;
+  index: number | string;
   id: string;
   name: string;
   tech: string;
@@ -142,8 +167,34 @@ interface SectionBannerProps {
   isSpecial?: boolean;
 }
 
-const LightSectionDivider: React.FC<SectionBannerProps> = ({ id }) => (
-  <div id={id} className="sr-only" aria-hidden="true" />
+const LightSectionDivider: React.FC<SectionBannerProps> = ({ index, id, name, tech, description, isSpecial }) => (
+  <div id={id} className="max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-6 scroll-mt-24">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b-2 border-slate-200 gap-3">
+      <div className="flex items-center gap-3.5">
+        <span className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-mono text-xs font-black flex items-center justify-center shrink-0 shadow-sm shadow-blue-500/20">
+          {typeof index === 'number' ? (index < 10 ? `0${index}` : index) : index}
+        </span>
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="text-base sm:text-xl font-black text-slate-900 tracking-tight">
+              {name}
+            </h3>
+            {isSpecial && (
+              <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
+                SIGNATURE ARCHETYPE
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-slate-500 font-normal mt-0.5">{description}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 font-mono text-xs shrink-0 self-start sm:self-auto">
+        <span className="px-3 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 font-semibold">
+          {tech}
+        </span>
+      </div>
+    </div>
+  </div>
 );
 
 export const SampleShowcase: React.FC = () => {
@@ -155,11 +206,19 @@ export const SampleShowcase: React.FC = () => {
     restDelta: 0.001
   });
 
-  useEffect(() => {
+    useEffect(() => {
     // Refresh GSAP ScrollTrigger after mount and layout settlement
-    const timer = setTimeout(() => {
+    const timer1 = setTimeout(() => {
       ScrollTrigger.refresh();
-    }, 600);
+    }, 400);
+    const timer2 = setTimeout(() => {
+      ScrollTrigger.refresh();
+    }, 1200);
+
+    const handleResize = () => {
+      ScrollTrigger.refresh();
+    };
+    window.addEventListener('resize', handleResize, { passive: true });
 
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 400);
@@ -167,7 +226,9 @@ export const SampleShowcase: React.FC = () => {
     window.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
-      clearTimeout(timer);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      window.removeEventListener('resize', handleResize);
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
@@ -200,7 +261,7 @@ export const SampleShowcase: React.FC = () => {
             className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold mb-6 shadow-xs"
           >
             <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-            <span>NexaTalent Production Motion Showcase • 120 Complete Sections</span>
+            <span>NexaTalent IT Solutions Production Motion Showcase ÔÇó 120 Complete Sections</span>
           </motion.div>
 
           <motion.h1
@@ -257,6 +318,300 @@ export const SampleShowcase: React.FC = () => {
 
       {/* 66 SEQUENTIAL SECTIONS */}
       <main className="relative">
+
+        {/* ========================================================================= */}
+        {/* NEW 2026 SIGNATURE HERO COLLECTION (20 HEROES)                            */}
+        {/* ========================================================================= */}
+        <div className="bg-slate-900 text-white py-14 px-6 border-y border-slate-800 my-8">
+          <div className="max-w-7xl mx-auto text-center space-y-3">
+            <span className="text-xs font-mono uppercase tracking-widest text-cyan-400 font-bold">
+              ★ 20 NEW SIGNATURE HERO SECTIONS (2026 COLLECTION)
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-black text-white">
+              Caliper Reveals, Full-Screen Vertical Parallax & Interactive Simulators
+            </h2>
+            <p className="text-sm text-slate-400 max-w-2xl mx-auto font-light">
+              Brand-new creative motion archetypes engineered with precision caliper split mechanics, vertical parallax filmstrips, CAD toggles, and live headcount calculators.
+            </p>
+          </div>
+        </div>
+
+        {/* Hero 01 */}
+        <section id="hero-01">
+          <LightSectionDivider
+            index="H-01"
+            id="bar-hero-01"
+            name="Sovereign Dual-Monolith Caliper Split Reveal"
+            tech="Framer Motion Caliper Split + Ruler Gauge"
+            description="Precision hydraulic caliper jaws split vertically on scroll/hover revealing an inner sovereign GCC operations hub"
+            isSpecial
+          />
+          <Hero01CaliperMonolith />
+        </section>
+
+        {/* Hero 02 */}
+        <section id="hero-02">
+          <LightSectionDivider
+            index="H-02"
+            id="bar-hero-02"
+            name="Multi-Plane Architectural Blueprint Vertical Parallax"
+            tech="useScroll Differential Parallax + CAD Elevation"
+            description="Multi-layer CAD blueprint elevation grids floating at varying vertical parallax velocities"
+            isSpecial
+          />
+          <Hero02ArchitecturalParallax />
+        </section>
+
+        {/* Hero 03 */}
+        <section id="hero-03">
+          <LightSectionDivider
+            index="H-03"
+            id="bar-hero-03"
+            name="Quantum H100 GPU Cluster Dark Cinema"
+            tech="Obsidian Glow + Live GPU Cluster Telemetry"
+            description="Volumetric glowing ambient lighting with live GPU cluster telemetry and AI squad intake"
+            isSpecial
+          />
+          <Hero03QuantumH100Cinema />
+        </section>
+
+        {/* Hero 04 */}
+        <section id="hero-04">
+          <LightSectionDivider
+            index="H-04"
+            id="bar-hero-04"
+            name="Editorial Ivory Luxury Typography & Portrait"
+            tech="Warm Parchment + High-Fashion Serif Editorial"
+            description="Warm ivory parchment aesthetic with serif headlines, asymmetric executive photography, and gold seals"
+            isSpecial
+          />
+          <Hero04EditorialIvoryLuxury />
+        </section>
+
+        {/* Hero 05 */}
+        <section id="hero-05">
+          <LightSectionDivider
+            index="H-05"
+            id="bar-hero-05"
+            name="Bento Horizon Dynamic Morphing Interface"
+            tech="Framer Motion Spring Morph + Hover 3D Tilt"
+            description="Interactive morphing bento cards that react on hover with live salary arbitrage gauges and candidate pills"
+            isSpecial
+          />
+          <Hero05BentoHorizonMorph />
+        </section>
+
+        {/* Hero 06 */}
+        <section id="hero-06">
+          <LightSectionDivider
+            index="H-06"
+            id="bar-hero-06"
+            name="Caliper Pinned Geospatial Radar Target Lock"
+            tech="Caliper Clamp + Rotating Radar Sweep"
+            description="Dual vertical caliper measurement clamps locking onto a revolving talent radar across 4 global hubs"
+            isSpecial
+          />
+          <Hero06CaliperRadarLock />
+        </section>
+
+        {/* Hero 07 */}
+        <section id="hero-07">
+          <LightSectionDivider
+            index="H-07"
+            id="bar-hero-07"
+            name="Full-Screen Vertical Parallax Filmstrip"
+            tech="Dual Counter-Scrolling Vertical Parallax"
+            description="Dual counter-scrolling filmstrip ribbons featuring high-definition tech campuses and engineering squads"
+            isSpecial
+          />
+          <Hero07VerticalFilmstripParallax />
+        </section>
+
+        {/* Hero 08 */}
+        <section id="hero-08">
+          <LightSectionDivider
+            index="H-08"
+            id="bar-hero-08"
+            name="Cyber-Physical GCC Campus Blueprint & CAD"
+            tech="Interactive CAD Wireframe Toggle"
+            description="Interactive CAD wireframe overlay that toggles directly into a photorealistic Class-A engineering campus"
+            isSpecial
+          />
+          <Hero08CyberPhysicalCampus />
+        </section>
+
+        {/* Hero 09 */}
+        <section id="hero-09">
+          <LightSectionDivider
+            index="H-09"
+            id="bar-hero-09"
+            name="Split Editorial Kinetic Typographic Manifesto"
+            tech="Continuous CSS GPU Marquee Ticker"
+            description="Ultra-bold typographic kinetic statement with continuous marquee ticker and instant executive brief form"
+            isSpecial
+          />
+          <Hero09KineticTypographicManifesto />
+        </section>
+
+        {/* Hero 10 */}
+        <section id="hero-10">
+          <LightSectionDivider
+            index="H-10"
+            id="bar-hero-10"
+            name="Holographic Global Orbital Flightpath Radar"
+            tech="3D Spherical Orbital Radar + Talent Corridor Router"
+            description="3D spherical orbital radar tracking real-time talent migration corridors from Silicon Valley and London to India"
+            isSpecial
+          />
+          <Hero10GlobalOrbitalFlightpath />
+        </section>
+
+        {/* Hero 11 */}
+        <section id="hero-11">
+          <LightSectionDivider
+            index="H-11"
+            id="bar-hero-11"
+            name="Swiss Grid & Deterministic Data Lens"
+            tech="Stark Swiss Modernist Minimal + Hairline Grids"
+            description="Stark black-and-white Swiss modernist aesthetic with fine hairline grids, crosshairs, and candidate data lenses"
+            isSpecial
+          />
+          <Hero11SwissGridDataLens />
+        </section>
+
+        {/* Hero 12 */}
+        <section id="hero-12">
+          <LightSectionDivider
+            index="H-12"
+            id="bar-hero-12"
+            name="Executive Biometric Vault Passkey & Decryptor"
+            tech="Interactive Biometric Scanner + SHA-256 Decrypt"
+            description="Interactive fingerprint passkey scanner that simulates cryptographic decryption of confidential C-suite mandates"
+            isSpecial
+          />
+          <Hero12BiometricVaultPasskey />
+        </section>
+
+        {/* Hero 13 */}
+        <section id="hero-13">
+          <LightSectionDivider
+            index="H-13"
+            id="bar-hero-13"
+            name="Real-Time Interactive Pod Headcount Configurator"
+            tech="Interactive Dynamic Slider Simulator"
+            description="Live interactive slider (25 to 500 seats) calculating instant ramp timelines, CapEx savings, and squad balance"
+            isSpecial
+          />
+          <Hero13InteractivePodConfigurator />
+        </section>
+
+        {/* Hero 14 */}
+        <section id="hero-14">
+          <LightSectionDivider
+            index="H-14"
+            id="bar-hero-14"
+            name="Vertical Cascading Waterfall Talent Parallax"
+            tech="Differential Vertical Waterfall Parallax"
+            description="Vertical cascade of verified talent profiles with differential parallax speed and glass refraction blur"
+            isSpecial
+          />
+          <Hero14WaterfallCascadeParallax />
+        </section>
+
+        {/* Hero 15 */}
+        <section id="hero-15">
+          <LightSectionDivider
+            index="H-15"
+            id="bar-hero-15"
+            name="Frosted Neumorphic Quartz Glass Architecture"
+            tech="Frosted Quartz Glass + Pastel Ambient Orbs"
+            description="Multi-layered frosted quartz glass panels with iridescent pastel ambient lighting and floating 3D depth"
+            isSpecial
+          />
+          <Hero15NeumorphicQuartzFrosted />
+        </section>
+
+        {/* Hero 16 */}
+        <section id="hero-16">
+          <LightSectionDivider
+            index="H-16"
+            id="bar-hero-16"
+            name="Monospace Terminal SRE Pod Orchestrator"
+            tech="Interactive Developer CLI Terminal"
+            description="Interactive developer terminal with runnable $ nexactl deploy commands and live cluster build telemetry"
+            isSpecial
+          />
+          <Hero16TerminalSREOrchestrator />
+        </section>
+
+        {/* Hero 17 */}
+        <section id="hero-17">
+          <LightSectionDivider
+            index="H-17"
+            id="bar-hero-17"
+            name="Mechanical Caliper Aperture Shutter Reveal"
+            tech="Optical Aperture Blade Expansion Reveal"
+            description="Mechanical camera aperture expanding outward on hover/scroll to reveal real-time engineering floor operations"
+            isSpecial
+          />
+          <Hero17ApertureCaliperShutter />
+        </section>
+
+        {/* Hero 18 */}
+        <section id="hero-18">
+          <LightSectionDivider
+            index="H-18"
+            id="bar-hero-18"
+            name="Dual-Perspective Employer vs Candidate Kinetic"
+            tech="Kinetic Universe Split Mode Switcher"
+            description="Split-mode toggle that slides the entire visual universe from Employer Sovereign GCC mode to Candidate Fellowship"
+            isSpecial
+          />
+          <Hero18DualPerspectiveKinetic />
+        </section>
+
+        {/* Hero 19 */}
+        <section id="hero-19">
+          <LightSectionDivider
+            index="H-19"
+            id="bar-hero-19"
+            name="Curtain Depth 3D Parallax Layer Stacking"
+            tech="3D Multi-Plane Depth Curtain Layers"
+            description="Three-dimensional depth layers peeling back vertically like structural curtains to expose institutional rigor"
+            isSpecial
+          />
+          <Hero19Curtain3DDepthParallax />
+        </section>
+
+        {/* Hero 20 */}
+        <section id="hero-20">
+          <LightSectionDivider
+            index="H-20"
+            id="bar-hero-20"
+            name="Institutional Bloomberg/Forbes Media Brief"
+            tech="Macroeconomic Financial Institutional"
+            description="Financial publication credibility layout with macroeconomic GCC market migration analysis and CEO keynote video card"
+            isSpecial
+          />
+          <Hero20InstitutionalMediaBrief />
+        </section>
+
+        {/* ========================================================================= */}
+        {/* EXISTING 120 PRODUCTION MOTION SECTIONS (SECTIONS 01 TO 120)              */}
+        {/* ========================================================================= */}
+        <div className="bg-slate-100 text-slate-900 py-12 px-6 border-y border-slate-200 my-8">
+          <div className="max-w-7xl mx-auto text-center space-y-3">
+            <span className="text-xs font-mono uppercase tracking-widest text-blue-600 font-bold">
+              ★ 120 PRODUCTION MOTION & CORRIDOR SECTIONS
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-black text-slate-900">
+              Complete Living Component & Motion Showcase
+            </h2>
+            <p className="text-sm text-slate-600 max-w-2xl mx-auto font-light">
+              All 120 light-theme modern components with visible section title headers, technology badges, interactive corridors, sticky pins, and parallax systems.
+            </p>
+          </div>
+        </div>
 
         {/* 01: Hero Center Zoom & Content Reveal */}
         <section id="sec-01">
@@ -510,14 +865,14 @@ export const SampleShowcase: React.FC = () => {
           <LightMagneticCardAccordion />
         </section>
 
-        {/* 22: Conventional vs NexaTalent Matrix */}
+        {/* 22: Conventional vs NexaTalent IT Solutions Matrix */}
         <section id="sec-22">
           <LightSectionDivider
             index={22}
             id="bar-22"
             name="Before & After Precision Matrix"
             tech="Interactive Column Comparison"
-            description="Direct comparison between traditional staffing agencies and NexaTalent GCC pods"
+            description="Direct comparison between traditional staffing agencies and NexaTalent IT Solutions GCC pods"
           />
           <LightBeforeAfterMatrix />
         </section>
@@ -811,7 +1166,7 @@ export const SampleShowcase: React.FC = () => {
             id="bar-46"
             name="Interactive Talent Velocity Slider"
             tech="Draggable Split-Screen Slider"
-            description="Direct comparison between traditional staffing agencies and NexaTalent pods"
+            description="Direct comparison between traditional staffing agencies and NexaTalent IT Solutions pods"
             isSpecial={true}
           />
           <SignatureTalentComparisonSlider />
@@ -1043,7 +1398,7 @@ export const SampleShowcase: React.FC = () => {
           <LightSectionDivider
             index={64}
             id="bar-64"
-            name="Pinned Section: 360° Radial Progress Dial"
+            name="Pinned Section: 360┬░ Radial Progress Dial"
             tech="Pinned SVG Radial Progress Scrub"
             description="Central 360-degree circular dial fills 0% to 100% on scroll, unlocking legal covenants"
             isSpecial={true}
@@ -1064,12 +1419,12 @@ export const SampleShowcase: React.FC = () => {
           <DualPinnedConvergenceShowcase />
         </section>
 
-        {/* 66: Pinned 360° Radial Variation 1: Gyroscopic Orbital Dial */}
+        {/* 66: Pinned 360┬░ Radial Variation 1: Gyroscopic Orbital Dial */}
         <section id="sec-66">
           <LightSectionDivider
             index={66}
             id="bar-66"
-            name="Pinned 360° Radial: Gyroscopic Orbital Dial"
+            name="Pinned 360┬░ Radial: Gyroscopic Orbital Dial"
             tech="GSAP Pin + Orbital Trigonometry"
             description="Triple-orbital gyroscopic counter-rotating candidate vetting dial"
             isSpecial={true}
@@ -1077,12 +1432,12 @@ export const SampleShowcase: React.FC = () => {
           <PinnedOrbitalHologramDial />
         </section>
 
-        {/* 67: Pinned 360° Radial Variation 2: Hexagonal Radar */}
+        {/* 67: Pinned 360┬░ Radial Variation 2: Hexagonal Radar */}
         <section id="sec-67">
           <LightSectionDivider
             index={67}
             id="bar-67"
-            name="Pinned 360° Radial: Hexagonal Caliper Radar"
+            name="Pinned 360┬░ Radial: Hexagonal Caliper Radar"
             tech="GSAP Pin + Polygonal Polar Scrub"
             description="6-axis expanding hexagonal caliper telemetry radar"
             isSpecial={true}
@@ -1090,12 +1445,12 @@ export const SampleShowcase: React.FC = () => {
           <PinnedRadialHexagonRadar />
         </section>
 
-        {/* 68: Pinned 360° Radial Variation 3: Precision Tachometer Gauge */}
+        {/* 68: Pinned 360┬░ Radial Variation 3: Precision Tachometer Gauge */}
         <section id="sec-68">
           <LightSectionDivider
             index={68}
             id="bar-68"
-            name="Pinned 360° Radial: Precision Speedometer Gauge"
+            name="Pinned 360┬░ Radial: Precision Speedometer Gauge"
             tech="Dual Arc Sweep + Dynamic Needle Pin"
             description="Dual precision tachometers tracking GCC ramp speed and talent yield"
             isSpecial={true}
@@ -1187,7 +1542,7 @@ export const SampleShowcase: React.FC = () => {
             index={75}
             id="bar-75"
             name="Signature: 3D Flip Specification Cards"
-            tech="180° CSS 3D Preserve-3D Flip"
+            tech="180┬░ CSS 3D Preserve-3D Flip"
             description="Interactive card flip revealing deep technical specs and metrics"
             isSpecial={true}
           />
@@ -1510,7 +1865,7 @@ export const SampleShowcase: React.FC = () => {
                 <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-black text-white text-base">
                   N
                 </div>
-                <span className="font-extrabold text-xl tracking-tight text-white">NexaTalent</span>
+                <span className="font-extrabold text-xl tracking-tight text-white">NexaTalent IT Solutions</span>
               </div>
               <p className="text-slate-400 text-xs leading-relaxed">
                 The premier talent infrastructure and executive search firm for Global Capability Centers, 
@@ -1531,10 +1886,10 @@ export const SampleShowcase: React.FC = () => {
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-4">Talent Hubs</h4>
               <ul className="space-y-2 text-xs text-slate-400">
-                <li className="hover:text-white transition-colors cursor-pointer">Bangalore • Indiranagar & Outer Ring Rd</li>
-                <li className="hover:text-white transition-colors cursor-pointer">Hyderabad • HITEC City & Financial District</li>
-                <li className="hover:text-white transition-colors cursor-pointer">London • Bank & Canary Wharf</li>
-                <li className="hover:text-white transition-colors cursor-pointer">San Francisco • SoMa & Silicon Valley</li>
+                <li className="hover:text-white transition-colors cursor-pointer">Bangalore ÔÇó Indiranagar & Outer Ring Rd</li>
+                <li className="hover:text-white transition-colors cursor-pointer">Hyderabad ÔÇó HITEC City & Financial District</li>
+                <li className="hover:text-white transition-colors cursor-pointer">London ÔÇó Bank & Canary Wharf</li>
+                <li className="hover:text-white transition-colors cursor-pointer">San Francisco ÔÇó SoMa & Silicon Valley</li>
               </ul>
             </div>
 
@@ -1552,7 +1907,7 @@ export const SampleShowcase: React.FC = () => {
 
           <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
             <div>
-              © 2026 NexaTalent Inc. All rights reserved. SOC 2 Type II & ISO 27001 Certified.
+              ┬® 2026 NexaTalent IT Solutions Inc. All rights reserved. SOC 2 Type II & ISO 27001 Certified.
             </div>
             <div className="flex items-center gap-6">
               <span className="hover:text-slate-300 cursor-pointer">Privacy Notice</span>

@@ -14,7 +14,7 @@ export interface VideoHeroProps {
 export const VideoHero: React.FC<VideoHeroProps> = ({
   badge = 'Architecture Walkthrough',
   title = 'See How Enterprise Teams Hire at Global Scale',
-  description = 'A 3-minute technical tour of how NexaTalent qualifies mandates, benchmarks salaries, and submits interview-ready shortlists.',
+  description = 'A 3-minute technical tour of how NexaTalent IT Solutions qualifies mandates, benchmarks salaries, and submits interview-ready shortlists.',
   videoPreviewImage = 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80',
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -132,7 +132,7 @@ export const VideoHero: React.FC<VideoHeroProps> = ({
       <Modal
         isOpen={isPlaying}
         onClose={() => setIsPlaying(false)}
-        title="NexaTalent Platform Overview & Workflow"
+        title="NexaTalent IT Solutions Platform Overview & Workflow"
         maxWidth="840px"
       >
         <div style={{ aspectRatio: '16/9', backgroundColor: '#090d16', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--color-border)' }}>

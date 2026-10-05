@@ -25,7 +25,7 @@ export const FooterGlobalEnterpriseMega: React.FC = () => {
               <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-black text-white text-base">
                 N
               </div>
-              <span className="font-extrabold text-2xl tracking-tight text-white">NexaTalent</span>
+              <span className="font-extrabold text-2xl tracking-tight text-white">NexaTalent IT Solutions</span>
             </div>
             <p className="text-sm text-slate-400 max-w-md leading-relaxed">
               Institutional talent infrastructure, turnkey Global Capability Centers (GCCs), and retained executive search for Tier-1 technology companies.
@@ -167,7 +167,7 @@ export const FooterGlobalEnterpriseMega: React.FC = () => {
         {/* Bottom Legal Tier */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div>
-            © 2026 NexaTalent Technologies Private Limited. All institutional rights reserved.
+            © 2026 NexaTalent IT Solutions Technologies Private Limited. All institutional rights reserved.
           </div>
           <div className="flex items-center gap-6">
             <span className="hover:text-slate-300 cursor-pointer">Privacy Statement</span>

@@ -20,13 +20,13 @@ const PLEDGE_LAYERS: PledgeLayer[] = [
     title: '180-Day Comprehensive Placement Warranty',
     badge: 'Executive Retention',
     icon: ShieldCheck,
-    description: 'If an executive or founding engineer departs for any reason within the first 180 calendar days, NexaTalent provides an immediate priority replacement at zero additional placement fee.',
+    description: 'If an executive or founding engineer departs for any reason within the first 180 calendar days, NexaTalent IT Solutions provides an immediate priority replacement at zero additional placement fee.',
     legalTerms: [
       'Unconditional coverage across cultural alignment or voluntary resignation',
       'Dedicated Managing Director assigned to launch replacement within 48 hours',
       'No fee deductions, hidden administration charges, or prorated penalties'
     ],
-    auditStamp: 'Certified by NexaTalent Governance Committee'
+    auditStamp: 'Certified by NexaTalent IT Solutions Governance Committee'
   },
   {
     id: 'layer-2',
@@ -36,7 +36,7 @@ const PLEDGE_LAYERS: PledgeLayer[] = [
     icon: Lock,
     description: 'Every candidate undergoes bilateral NDA signing and clear background IP audits before first interview. All works created in the GCC belong strictly to the client entity.',
     legalTerms: [
-      'Zero lien or claims by NexaTalent or third-party entity',
+      'Zero lien or claims by NexaTalent IT Solutions or third-party entity',
       'Clean room engineering verification ensuring no code contamination',
       'Comprehensive pre-employment non-compete and confidentiality covenants'
     ],
@@ -86,7 +86,7 @@ export const SignatureExecutivePledgeShield: React.FC = () => {
             <span>Signature Component 50 • 4-Layer Executive Guarantee Shield</span>
           </div>
           <h2 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tight mb-4">
-            The NexaTalent Enterprise Executive Pledge
+            The NexaTalent IT Solutions Enterprise Executive Pledge
           </h2>
           <p className="text-lg text-slate-600">
             Backed by a multi-layered legal covenant protecting your hiring capital, IP ownership, and operational confidentiality.

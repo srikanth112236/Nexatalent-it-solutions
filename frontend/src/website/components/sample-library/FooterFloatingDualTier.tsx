@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { Globe, DollarSign, ArrowRight, ShieldCheck } from 'lucide-react';
 
-export const FooterFloatingDualTier: React.FC = () => {
+export const FooterFloatingDualTier: React.FC<{ bare?: boolean }> = ({ bare = false }) => {
   const [currency, setCurrency] = useState<'USD' | 'EUR' | 'INR' | 'GBP'>('USD');
 
   return (
-    <div className="w-full bg-slate-900/5 p-4 sm:p-6 rounded-2xl border border-slate-200">
+    <div className={bare ? 'w-full' : 'w-full bg-slate-900/5 p-4 sm:p-6 rounded-2xl border border-slate-200'}>
+      {!bare && (
       <div className="text-xs font-mono font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center justify-between">
         <span>09 · Floating Dual-Tier Elevated Footer</span>
         <span className="text-teal-600 bg-teal-50 px-2 py-0.5 rounded text-[10px]">Currency & Locality Switcher</span>
       </div>
+      )}
 
       <footer className="max-w-6xl mx-auto space-y-3">
         {/* Tier 1: Floating Action & Currency Card */}
@@ -56,7 +58,7 @@ export const FooterFloatingDualTier: React.FC = () => {
         <div className="p-5 rounded-2xl bg-slate-900 text-slate-400 text-xs flex flex-col sm:flex-row items-center justify-between gap-4 border border-slate-800">
           <div className="flex items-center gap-2">
             <Globe className="w-4 h-4 text-teal-400" />
-            <span className="text-slate-200 font-semibold">NexaTalent Global</span>
+            <span className="text-slate-200 font-semibold">NexaTalent IT Solutions Global</span>
             <span className="text-slate-500">|</span>
             <span className="text-slate-400">Bangalore • Hyderabad • London • SF</span>
           </div>

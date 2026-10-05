@@ -10,8 +10,8 @@ export interface BeforeAfterSectionProps {
 }
 
 export const BeforeAfterSection: React.FC<BeforeAfterSectionProps> = ({
-  badge = 'The NexaTalent Paradigm Shift',
-  title = 'Legacy Agencies vs. The NexaTalent Operating System',
+  badge = 'The NexaTalent IT Solutions Paradigm Shift',
+  title = 'Legacy Agencies vs. The NexaTalent IT Solutions Operating System',
   subtitle = 'Why forward-thinking technology leaders abandon traditional headhunters for our data-driven talent infrastructure.',
 }) => {
   const comparisonItems = [
@@ -155,7 +155,7 @@ export const BeforeAfterSection: React.FC<BeforeAfterSectionProps> = ({
             </div>
           </motion.div>
 
-          {/* NexaTalent Side (Glowing Aceternity card) */}
+          {/* NexaTalent IT Solutions Side (Glowing Aceternity card) */}
           <motion.div
             style={{
               borderRadius: 'var(--radius-xl)',
@@ -201,7 +201,7 @@ export const BeforeAfterSection: React.FC<BeforeAfterSectionProps> = ({
                 <Zap size={18} color="var(--color-primary-400)" />
               </motion.div>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text)' }}>
-                NexaTalent Platform
+                NexaTalent IT Solutions Platform
               </h3>
             </div>
 

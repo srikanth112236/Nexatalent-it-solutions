@@ -19,33 +19,33 @@ const ACCORDION_TIERS: AccordionTier[] = [
     id: 'tier-1',
     step: 'TIER 01',
     title: 'Legal Entity & Non-Disclosure Governance',
-    headline: 'Day-1 Intellectual Property Assignment',
-    deliverables: ['Bilateral NDAs signed before first candidate presentation', 'SEZ regulatory tax incentive optimization', 'Clean-room IP ownership guarantees'],
-    sla: '100% Client Ownership'
+    headline: 'Documented Intellectual Property Assignment',
+    deliverables: ['Bilateral NDAs signed before first candidate presentation', 'Regulatory and documentation discipline', 'Clean-room IP ownership discipline'],
+    sla: 'Documented Ownership'
   },
   {
     id: 'tier-2',
     step: 'TIER 02',
     title: 'Employer-of-Record (EOR) & Payroll Escrow',
-    headline: 'Zero Local Entity Bureaucracy Required',
+    headline: 'Compliant Employment Without Local Overhead',
     deliverables: ['Compliant employment contracts in India', 'Localized statutory benefits & health insurance', 'Transparent milestone-based payroll disbursements'],
-    sla: 'Direct Escrow Backed'
+    sla: 'Milestone-Tracked Payroll'
   },
   {
     id: 'tier-3',
     step: 'TIER 03',
     title: '4-Stage Architectural & Code Vetting',
-    headline: 'Staff Engineers Evaluating Staff Engineers',
-    deliverables: ['Live lock-free concurrency & memory leak profiling', 'Distributed state machine & Byzantine fault tests', 'Deep reference verification with former CTOs'],
-    sla: '72-Hour Delivery SLA'
+    headline: 'Practitioners Evaluating Practitioners',
+    deliverables: ['Live concurrency and systems profiling exercises', 'Distributed systems design discussions', 'Structured reference verification'],
+    sla: 'Milestone-Tracked Delivery'
   },
   {
     id: 'tier-4',
     step: 'TIER 04',
-    title: 'Turnkey Transfer & 180-Day Warranty',
-    headline: 'Autonomous 120-Engineer Center on Day 75',
-    deliverables: ['Optional legal entity transfer at 12–36 months', 'Zero transfer fee penalty after initial term', '180-day unconditional replacement guarantee'],
-    sla: '180-Day Warranty Backed'
+    title: 'Turnkey Transfer & Documented Terms',
+    headline: 'Operating Center With Planned Handover',
+    deliverables: ['Optional legal entity transfer per agreement term', 'Documented handover and knowledge transfer', 'Replacement terms per engagement agreement'],
+    sla: 'Agreement-Backed Terms'
   }
 ];
 

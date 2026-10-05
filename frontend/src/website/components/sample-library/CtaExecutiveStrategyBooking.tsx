@@ -22,7 +22,7 @@ export const CtaExecutiveStrategyBooking: React.FC = () => {
               Schedule a 30-Minute GCC Feasibility Roadmap
             </h2>
             <p className="text-sm text-slate-600 font-light leading-relaxed">
-              Meet directly with a NexaTalent Managing Partner. We’ll analyze your engineering roadmap, calculate exact 3-year savings, and model team delivery timelines.
+              Meet directly with a NexaTalent IT Solutions Managing Partner. We’ll analyze your engineering roadmap, calculate exact 3-year savings, and model team delivery timelines.
             </p>
             <div className="flex items-center gap-4 text-xs text-slate-500 font-mono">
               <span className="flex items-center gap-1">

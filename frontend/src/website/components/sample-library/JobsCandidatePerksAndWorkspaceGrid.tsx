@@ -38,7 +38,7 @@ export const JobsCandidatePerksAndWorkspaceGrid: React.FC = () => {
   return (
     <div className="w-full bg-slate-900/5 p-4 sm:p-6 rounded-2xl border border-slate-200">
       <div className="text-xs font-mono font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center justify-between">
-        <span>36 · Candidate Perks, Workspace & Compensation Ecosystem</span>
+        <span>Candidate Perks, Workspace & Compensation Ecosystem</span>
         <span className="text-purple-600 bg-purple-50 px-2 py-0.5 rounded text-[10px]">Tier-1 Benefits</span>
       </div>
 
@@ -52,7 +52,7 @@ export const JobsCandidatePerksAndWorkspaceGrid: React.FC = () => {
             Institutional Benefits That Compete With Silicon Valley
           </h2>
           <p className="text-xs text-slate-500 mt-2 font-light">
-            Every engineer placed through NexaTalent receives standardized Tier-1 compensation packages.
+            Every engineer placed through NexaTalent IT Solutions receives standardized Tier-1 compensation packages.
           </p>
         </div>
 
@@ -69,7 +69,7 @@ export const JobsCandidatePerksAndWorkspaceGrid: React.FC = () => {
                   <p className="text-xs text-slate-600 leading-relaxed font-light">{p.desc}</p>
                 </div>
                 <div className="mt-4 pt-3 border-t border-slate-200/60 text-[11px] font-mono text-purple-600 font-semibold">
-                  Standard NexaTalent Package
+                  Standard NexaTalent IT Solutions Package
                 </div>
               </div>
             );

@@ -19,7 +19,7 @@ export const CtaTalentBenchReserveDrawer: React.FC = () => {
             Reserve a Pre-Vetted SRE or AI Pod for Q3 Delivery
           </h2>
           <p className="text-xs text-slate-400 font-light max-w-xl">
-            Due to strict quality screening, NexaTalent launches a maximum of 6 turnkey pods per quarter. 4 are currently under active client retainer.
+            Due to strict quality screening, NexaTalent IT Solutions launches a maximum of 6 turnkey pods per quarter. 4 are currently under active client retainer.
           </p>
         </div>
 

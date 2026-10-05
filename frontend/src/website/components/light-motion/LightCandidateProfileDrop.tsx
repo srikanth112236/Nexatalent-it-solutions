@@ -27,8 +27,8 @@ export const LightCandidateProfileDrop: React.FC = () => {
     <section
       className="theme-light"
       style={{
-        backgroundColor: '#ffffff',
-        borderBottom: '1px solid #e2e8f0',
+        backgroundColor: 'var(--nt-surface, #ffffff)',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
         padding: '6rem 2rem',
       }}
     >
@@ -49,13 +49,13 @@ export const LightCandidateProfileDrop: React.FC = () => {
           }}
         >
           <Sparkles size={14} />
-          <span>28 / 40 · CONFIDENTIAL TALENT INTAKE</span>
+          <span>NEXATALENT CONFIDENTIAL TALENT INTAKE</span>
         </div>
 
-        <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a', marginBottom: '0.75rem' }}>
+        <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)', marginBottom: '0.75rem' }}>
           Confidential Career Representation
         </h2>
-        <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0 auto 3.5rem auto', lineHeight: 1.6 }}>
+        <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0 auto 3.5rem auto', lineHeight: 1.6 }}>
           Submit your profile directly to our Senior Partners. Zero automated resume broadcasts, strict NDA enforcement, and uncompromised privacy.
         </p>
 
@@ -113,19 +113,19 @@ export const LightCandidateProfileDrop: React.FC = () => {
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#16a34a', marginBottom: '0.35rem' }}>
                   Dossier Received: {fileName}
                 </h3>
-                <p style={{ color: '#475569', fontSize: '0.875rem' }}>
+                <p style={{ color: 'var(--nt-muted, #475569)', fontSize: '0.875rem' }}>
                   Senior Practice Lead assigned. Calibration review within 24 business hours.
                 </p>
               </div>
             ) : (
               <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.35rem' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)', marginBottom: '0.35rem' }}>
                   Drag & Drop Your Engineering CV or GitHub Dossier
                 </h3>
-                <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '0.875rem', marginBottom: '1rem' }}>
                   Supported formats: PDF, DOCX (Max 15MB)
                 </p>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', backgroundColor: '#ffffff', border: '1px solid #cbd5e1', padding: '0.4rem 1rem', borderRadius: '8px', fontSize: '0.8125rem', fontWeight: 700, color: '#334155' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', backgroundColor: 'var(--nt-surface, #ffffff)', border: '1px solid #cbd5e1', padding: '0.4rem 1rem', borderRadius: '8px', fontSize: '0.8125rem', fontWeight: 700, color: 'var(--nt-ink-2, #334155)' }}>
                   <FileText size={14} color="#2563eb" />
                   <span>Select Local File</span>
                 </div>
@@ -135,7 +135,7 @@ export const LightCandidateProfileDrop: React.FC = () => {
         </motion.div>
 
         {/* Ethical Charter Guarantees */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '2.5rem', flexWrap: 'wrap', color: '#475569', fontSize: '0.875rem', fontWeight: 600 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '2.5rem', flexWrap: 'wrap', color: 'var(--nt-muted, #475569)', fontSize: '0.875rem', fontWeight: 600 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <Lock size={16} color="#2563eb" />
             <span>Strict NDA Guarantee: Profile never shared without explicit consent</span>

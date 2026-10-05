@@ -21,7 +21,7 @@ export const DetailContractStaffingScaleEngine: React.FC = () => {
             </h2>
           </div>
           <p className="text-xs text-slate-400 max-w-md font-light leading-relaxed">
-            Need urgent surge capacity for a major enterprise release, migration, or security remediation? NexaTalent’s pre-vetted contractor bench deploys instantaneously.
+            Need urgent surge capacity for a major enterprise release, migration, or security remediation? NexaTalent IT Solutions’s pre-vetted contractor bench deploys instantaneously.
           </p>
         </div>
 
@@ -32,13 +32,13 @@ export const DetailContractStaffingScaleEngine: React.FC = () => {
                 <Clock className="w-6 h-6 text-amber-400" />
                 <span className="text-xs font-mono text-slate-500">STAGE I</span>
               </div>
-              <h4 className="font-bold text-white text-base mb-2">72-Hour Fast-Start SLA</h4>
+              <h4 className="font-bold text-white text-base mb-2">Structured Fast-Start Onboarding</h4>
               <p className="text-xs text-slate-400 leading-relaxed font-light">
-                Candidates already have verified background checks, NDA sign-offs, and pre-allocated corporate MacBook Pro endpoints.
+                Candidates arrive with documented background checks, NDA sign-offs, and provisioned work endpoints.
               </p>
             </div>
             <div className="mt-4 pt-3 border-t border-slate-800 text-[11px] font-mono text-amber-400 font-semibold">
-              Immediate Sprint Day 1 Code Push
+              Day-1 Readiness Checklist
             </div>
           </div>
 
@@ -50,11 +50,11 @@ export const DetailContractStaffingScaleEngine: React.FC = () => {
               </div>
               <h4 className="font-bold text-white text-base mb-2">Flexible Contract-to-Hire</h4>
               <p className="text-xs text-slate-400 leading-relaxed font-light">
-                Convert contractors to permanent GCC employees after 6 months with zero conversion penalties or buyout fees.
+                Convert contractors to permanent team members per agreed terms with documented conversion options.
               </p>
             </div>
             <div className="mt-4 pt-3 border-t border-slate-800 text-[11px] font-mono text-emerald-400 font-semibold">
-              0% Conversion Buyout Fee
+              Documented Conversion Terms
             </div>
           </div>
 
@@ -66,11 +66,11 @@ export const DetailContractStaffingScaleEngine: React.FC = () => {
               </div>
               <h4 className="font-bold text-white text-base mb-2">Managed EOR & Tax Remittance</h4>
               <p className="text-xs text-slate-400 leading-relaxed font-light">
-                NexaTalent acts as the Employer of Record, absorbing all statutory provident fund, gratuity, and health insurance liabilities.
+                NexaTalent IT Solutions acts as the Employer of Record, coordinating statutory provident fund, gratuity, and health insurance obligations.
               </p>
             </div>
             <div className="mt-4 pt-3 border-t border-slate-800 text-[11px] font-mono text-cyan-400 font-semibold">
-              100% Client Indemnity
+              Documented Compliance Cover
             </div>
           </div>
         </div>

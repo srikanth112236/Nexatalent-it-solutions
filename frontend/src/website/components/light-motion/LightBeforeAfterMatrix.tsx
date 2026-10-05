@@ -10,23 +10,23 @@ const comparisons = [
   },
   {
     feature: 'Technical Vetting',
-    traditional: 'Non-technical recruiters reading resumes with zero code comprehension',
-    nexatalent: 'Staff & Principal Architect panel conducting forensic system design scorecards',
+    traditional: 'Non-technical screening with limited code comprehension',
+    nexatalent: 'Practitioner panel conducting structured system design scorecards',
   },
   {
-    feature: 'Shortlist SLA',
-    traditional: '2 to 6 weeks of radio silence, black-box waiting, and random resume dumps',
-    nexatalent: 'Contractually guaranteed 48-hour calibration delivery of 3 to 5 vetted contenders',
+    feature: 'Shortlist Flow',
+    traditional: 'Long silences, black-box waiting, and unfiltered resume dumps',
+    nexatalent: 'Calibrated shortlist delivery with documented evaluation criteria',
   },
   {
-    feature: 'Placement Warranty',
-    traditional: '30-day partial credit vouchers with restrictive clawback clauses',
-    nexatalent: '100% unconditional 90-day escrow replacement warranty with priority escalation',
+    feature: 'Placement Terms',
+    traditional: 'Partial credit arrangements with restrictive clauses',
+    nexatalent: 'Defined replacement terms with priority escalation paths',
   },
   {
     feature: 'Client Transparency',
     traditional: 'Opaque email threads, missed calendar invites, and zero candidate telemetry',
-    nexatalent: 'Synchronous employer portal with live SLA clocks, stage progress, and interview links',
+    nexatalent: 'Synchronous employer portal with stage progress and interview links',
   },
 ];
 
@@ -35,8 +35,8 @@ export const LightBeforeAfterMatrix: React.FC = () => {
     <section
       className="theme-light"
       style={{
-        backgroundColor: '#ffffff',
-        borderBottom: '1px solid #e2e8f0',
+        backgroundColor: 'var(--nt-surface, #ffffff)',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
         padding: '6rem 2rem',
       }}
     >
@@ -57,13 +57,13 @@ export const LightBeforeAfterMatrix: React.FC = () => {
           }}
         >
           <Sparkles size={14} />
-          <span>18 / 40 · THE OPERATING SYSTEM ADVANTAGE</span>
+          <span>NEXATALENT OPERATING SYSTEM ADVANTAGE</span>
         </div>
 
-        <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a', marginBottom: '0.75rem' }}>
-          Conventional Agency vs. NexaTalent Platform
+        <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)', marginBottom: '0.75rem' }}>
+          Conventional Agency vs. NexaTalent IT Solutions Platform
         </h2>
-        <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0 auto 4rem auto', lineHeight: 1.6 }}>
+        <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0 auto 4rem auto', lineHeight: 1.6 }}>
           See how our deterministic engineering infrastructure eliminates traditional recruiter failure modes.
         </p>
 
@@ -71,7 +71,7 @@ export const LightBeforeAfterMatrix: React.FC = () => {
         <div
           style={{
             borderRadius: '24px',
-            border: '1px solid #e2e8f0',
+            border: '1px solid var(--nt-border, #e2e8f0)',
             overflow: 'hidden',
             boxShadow: '0 20px 45px -15px rgba(0,0,0,0.06)',
             textAlign: 'left',
@@ -82,17 +82,17 @@ export const LightBeforeAfterMatrix: React.FC = () => {
             style={{
               display: 'grid',
               gridTemplateColumns: '1.2fr 2fr 2fr',
-              backgroundColor: '#f8fafc',
-              borderBottom: '2px solid #e2e8f0',
+              backgroundColor: 'var(--nt-surface-2, #f8fafc)',
+              borderBottom: '2px solid var(--nt-border, #e2e8f0)',
               padding: '1.25rem 2rem',
               fontWeight: 800,
               fontSize: '0.875rem',
-              color: '#334155',
+              color: 'var(--nt-ink-2, #334155)',
             }}
           >
             <div>OPERATIONAL DIMENSION</div>
             <div style={{ color: '#ef4444' }}>CONVENTIONAL RECRUITER</div>
-            <div style={{ color: '#2563eb' }}>NEXATALENT OPERATING SYSTEM</div>
+            <div style={{ color: '#2563eb' }}>NEXATALENT IT SOLUTIONS OPERATING SYSTEM</div>
           </div>
 
           {/* Rows */}
@@ -107,22 +107,22 @@ export const LightBeforeAfterMatrix: React.FC = () => {
                 display: 'grid',
                 gridTemplateColumns: '1.2fr 2fr 2fr',
                 padding: '1.5rem 2rem',
-                borderBottom: idx < comparisons.length - 1 ? '1px solid #e2e8f0' : 'none',
-                backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fcfdfd',
+                borderBottom: idx < comparisons.length - 1 ? '1px solid var(--nt-border, #e2e8f0)' : 'none',
+                backgroundColor: idx % 2 === 0 ? 'var(--nt-surface, #ffffff)' : '#fcfdfd',
                 alignItems: 'center',
                 gap: '1.5rem',
               }}
             >
-              <div style={{ fontWeight: 800, fontSize: '0.9375rem', color: '#0f172a' }}>
+              <div style={{ fontWeight: 800, fontSize: '0.9375rem', color: 'var(--nt-ink, #0f172a)' }}>
                 {item.feature}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', color: '#64748b', fontSize: '0.875rem', lineHeight: 1.5 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', color: 'var(--nt-muted, #64748b)', fontSize: '0.875rem', lineHeight: 1.5 }}>
                 <XCircle size={16} color="#ef4444" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <span>{item.traditional}</span>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', color: '#0f172a', fontWeight: 600, fontSize: '0.875rem', lineHeight: 1.5, backgroundColor: '#eff6ff', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #bfdbfe' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', color: 'var(--nt-ink, #0f172a)', fontWeight: 600, fontSize: '0.875rem', lineHeight: 1.5, backgroundColor: '#eff6ff', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #bfdbfe' }}>
                 <CheckCircle2 size={16} color="#2563eb" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <span>{item.nexatalent}</span>
               </div>
@@ -132,7 +132,7 @@ export const LightBeforeAfterMatrix: React.FC = () => {
 
         <div style={{ marginTop: '2.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: '#059669', fontWeight: 700, fontSize: '0.875rem' }}>
           <ShieldCheck size={18} />
-          <span>Every mandate contractually protected by our 48h SLA & 90-Day Warranty</span>
+          <span>Every mandate run on structured screening with defined terms</span>
         </div>
       </div>
     </section>

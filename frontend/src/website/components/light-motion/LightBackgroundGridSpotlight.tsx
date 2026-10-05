@@ -17,11 +17,11 @@ export const LightBackgroundGridSpotlight: React.FC = () => {
       onMouseMove={handleMouseMove}
       className="theme-light"
       style={{
-        backgroundColor: '#f8fafc',
-        color: '#0f172a',
+        backgroundColor: 'var(--nt-surface-2, #f8fafc)',
+        color: 'var(--nt-ink, #0f172a)',
         padding: '6rem 2rem',
         position: 'relative',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
         overflow: 'hidden',
         backgroundImage: `
           linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
@@ -61,10 +61,10 @@ export const LightBackgroundGridSpotlight: React.FC = () => {
             <Sparkles size={14} />
             Pattern 44 & 45 · Background Grid & Cursor Spotlight Follow
           </div>
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a' }}>
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)' }}>
             Interactive Vector Matching Radar
           </h2>
-          <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
+          <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
             Move your cursor across the architectural grid to illuminate candidate vectors and active calibration radars.
           </p>
         </div>
@@ -80,9 +80,9 @@ export const LightBackgroundGridSpotlight: React.FC = () => {
         >
           <div
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--nt-surface, #ffffff)',
               borderRadius: '20px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--nt-border, #e2e8f0)',
               padding: '2.5rem',
               boxShadow: '0 10px 30px -10px rgba(0,0,0,0.06)',
             }}
@@ -91,10 +91,10 @@ export const LightBackgroundGridSpotlight: React.FC = () => {
               <Terminal size={16} />
               <span>RADAR CLUSTER 01</span>
             </div>
-            <h4 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
+            <h4 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)', marginBottom: '0.5rem' }}>
               Distributed Storage Engines
             </h4>
-            <p style={{ color: '#475569', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+            <p style={{ color: 'var(--nt-muted, #475569)', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
               Specialists in LSM trees, Raft consensus, and zero-allocation networking. Verified across 1,200+ production repositories.
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#16a34a', fontSize: '0.8125rem', fontWeight: 700 }}>
@@ -105,9 +105,9 @@ export const LightBackgroundGridSpotlight: React.FC = () => {
 
           <div
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--nt-surface, #ffffff)',
               borderRadius: '20px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--nt-border, #e2e8f0)',
               padding: '2.5rem',
               boxShadow: '0 10px 30px -10px rgba(0,0,0,0.06)',
             }}
@@ -116,10 +116,10 @@ export const LightBackgroundGridSpotlight: React.FC = () => {
               <Terminal size={16} />
               <span>RADAR CLUSTER 02</span>
             </div>
-            <h4 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
+            <h4 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)', marginBottom: '0.5rem' }}>
               Low-Latency C++20 / HFT
             </h4>
-            <p style={{ color: '#475569', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+            <p style={{ color: 'var(--nt-muted, #475569)', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
               Lock-free ring buffers, cache-line optimization, and sub-850ns exchange gateways for Tier-1 trading organizations.
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#16a34a', fontSize: '0.8125rem', fontWeight: 700 }}>

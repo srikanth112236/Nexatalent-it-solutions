@@ -24,7 +24,7 @@ const accordionItems: AccordionItem[] = [
   {
     id: 'acc-2',
     question: 'What is included in the 90-day unconditional replacement warranty?',
-    answer: 'If any engineer placed by NexaTalent departs or fails to meet established milestones within their first 90 days, we immediately remount the search with our highest priority tier at zero additional expense.',
+    answer: 'If any engineer placed by NexaTalent IT Solutions departs or fails to meet established milestones within their first 90 days, we immediately remount the search with our highest priority tier at zero additional expense.',
     metric: '90-Day Guarantee',
     visualTitle: 'Escrow-Backed Placement Insurance',
     visualDesc: 'Continuous post-onboarding pulse checks at 30, 60, and 90 days with hiring manager review.',
@@ -48,11 +48,11 @@ export const LightMagneticCardAccordion: React.FC = () => {
     <section
       className="theme-light"
       style={{
-        backgroundColor: '#ffffff',
-        color: '#0f172a',
+        backgroundColor: 'var(--nt-surface, #ffffff)',
+        color: 'var(--nt-ink, #0f172a)',
         padding: '6rem 2rem',
         position: 'relative',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
       }}
     >
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -76,10 +76,10 @@ export const LightMagneticCardAccordion: React.FC = () => {
             <Sparkles size={14} />
             Pattern 46, 47 & 48 · Magnetic Cards & Accordion Visual Transformation
           </div>
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a' }}>
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)' }}>
             Reactive SLAs & Dynamic Visual Verification
           </h2>
-          <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
+          <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
             Click each accordion query to watch the corresponding architectural visual transform in real time.
           </p>
         </div>
@@ -104,7 +104,7 @@ export const LightMagneticCardAccordion: React.FC = () => {
                   style={{
                     borderRadius: '20px',
                     backgroundColor: isOpen ? '#f8fafc' : '#ffffff',
-                    border: isOpen ? '2px solid #2563eb' : '1px solid #e2e8f0',
+                    border: isOpen ? '2px solid #2563eb' : '1px solid var(--nt-border, #e2e8f0)',
                     padding: '1.75rem',
                     cursor: 'pointer',
                     boxShadow: isOpen ? '0 10px 25px -5px rgba(37, 99, 235, 0.1)' : '0 2px 4px rgba(0,0,0,0.02)',
@@ -129,7 +129,7 @@ export const LightMagneticCardAccordion: React.FC = () => {
                         transition={{ duration: 0.25 }}
                         style={{ overflow: 'hidden' }}
                       >
-                        <p style={{ color: '#475569', fontSize: '0.9375rem', lineHeight: 1.6, marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
+                        <p style={{ color: 'var(--nt-muted, #475569)', fontSize: '0.9375rem', lineHeight: 1.6, marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--nt-border, #e2e8f0)' }}>
                           {item.answer}
                         </p>
                       </motion.div>
@@ -145,7 +145,7 @@ export const LightMagneticCardAccordion: React.FC = () => {
             style={{
               position: 'sticky',
               top: '120px',
-              backgroundColor: '#f8fafc',
+              backgroundColor: 'var(--nt-surface-2, #f8fafc)',
               borderRadius: '24px',
               border: '1px solid #cbd5e1',
               padding: '3rem 2.5rem',
@@ -163,7 +163,7 @@ export const LightMagneticCardAccordion: React.FC = () => {
                 width: '64px',
                 height: '64px',
                 borderRadius: '16px',
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--nt-surface, #ffffff)',
                 color: '#2563eb',
                 display: 'flex',
                 alignItems: 'center',
@@ -175,15 +175,15 @@ export const LightMagneticCardAccordion: React.FC = () => {
               <Cpu size={32} />
             </div>
 
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.75rem' }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)', marginBottom: '0.75rem' }}>
               {currentVisual.visualTitle}
             </h3>
 
-            <p style={{ color: '#475569', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '2rem', maxWidth: '420px', margin: '0 auto 2rem auto' }}>
+            <p style={{ color: 'var(--nt-muted, #475569)', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '2rem', maxWidth: '420px', margin: '0 auto 2rem auto' }}>
               {currentVisual.visualDesc}
             </p>
 
-            <div style={{ padding: '1rem', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', color: '#16a34a', fontSize: '0.8125rem', fontWeight: 700 }}>
+            <div style={{ padding: '1rem', backgroundColor: 'var(--nt-surface, #ffffff)', borderRadius: '12px', border: '1px solid var(--nt-border, #e2e8f0)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', color: '#16a34a', fontSize: '0.8125rem', fontWeight: 700 }}>
               <CheckCircle2 size={16} />
               <span>Verified Service Level Standard Active</span>
             </div>
@@ -191,12 +191,12 @@ export const LightMagneticCardAccordion: React.FC = () => {
         </div>
 
         {/* Pattern 46 & 47: Magnetic Hover Expand Grid */}
-        <div style={{ marginTop: '5rem', paddingTop: '3rem', borderTop: '1px solid #e2e8f0' }}>
+        <div style={{ marginTop: '5rem', paddingTop: '3rem', borderTop: '1px solid var(--nt-border, #e2e8f0)' }}>
           <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
             <span style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase' }}>
               Pattern 46 & 47 · Magnetic Hover Expand Cards
             </span>
-            <h3 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', marginTop: '0.35rem' }}>
+            <h3 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)', marginTop: '0.35rem' }}>
               Hover to Expand Practice Disciplines
             </h3>
           </div>
@@ -214,9 +214,9 @@ export const LightMagneticCardAccordion: React.FC = () => {
                   key={idx}
                   whileHover={{ y: -6, scale: 1.02 }}
                   style={{
-                    backgroundColor: '#f8fafc',
+                    backgroundColor: 'var(--nt-surface-2, #f8fafc)',
                     borderRadius: '18px',
-                    border: '1px solid #e2e8f0',
+                    border: '1px solid var(--nt-border, #e2e8f0)',
                     padding: '2rem',
                     cursor: 'pointer',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
@@ -225,7 +225,7 @@ export const LightMagneticCardAccordion: React.FC = () => {
                   <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
                     <IconComp size={20} />
                   </div>
-                  <h4 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.35rem' }}>
+                  <h4 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)', marginBottom: '0.35rem' }}>
                     {card.title}
                   </h4>
                   <div style={{ fontSize: '0.8125rem', color: '#16a34a', fontWeight: 600, marginBottom: '1.25rem' }}>

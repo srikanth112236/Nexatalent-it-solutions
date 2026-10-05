@@ -20,7 +20,7 @@ export const JobsCandidateCareerConcierge: React.FC = () => {
   return (
     <div className="w-full bg-slate-900/5 p-4 sm:p-6 rounded-2xl border border-slate-200">
       <div className="text-xs font-mono font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center justify-between">
-        <span>39 · Private Candidate Career Concierge & Agent Model</span>
+        <span>Private Candidate Career Concierge & Agent Model</span>
         <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-[10px]">Candidate Representation</span>
       </div>
 
@@ -59,9 +59,10 @@ export const JobsCandidateCareerConcierge: React.FC = () => {
           </span>
           <button 
             type="button"
-            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-all cursor-pointer shrink-0"
+            onClick={() => window.location.href = '/contact?inquiry=candidate#contact-form'}
+            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-all cursor-pointer shrink-0 shadow-sm"
           >
-            Apply for Agent Representation
+            Apply for Agent Representation →
           </button>
         </div>
       </section>

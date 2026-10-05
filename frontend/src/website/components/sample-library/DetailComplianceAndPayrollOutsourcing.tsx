@@ -21,7 +21,7 @@ export const DetailComplianceAndPayrollOutsourcing: React.FC = () => {
             </h2>
             <p className="text-sm text-slate-600 font-light leading-relaxed">
               Want to deploy your first 15 engineers before incorporating a wholly-owned subsidiary? 
-              NexaTalent acts as the Employer of Record, managing all local tax, statutory provident fund (EPF), 
+              NexaTalent IT Solutions acts as the Employer of Record, managing all local tax, statutory provident fund (EPF), 
               health benefits, and multi-currency payroll under our legal umbrella.
             </p>
 

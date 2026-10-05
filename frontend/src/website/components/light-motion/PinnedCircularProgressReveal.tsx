@@ -14,10 +14,10 @@ interface PillarPledge {
 }
 
 const PILLARS: PillarPledge[] = [
-  { degree: 25, title: 'Bilateral Confidentiality & NDA', badge: 'Day 01', summary: 'Strict non-disclosure agreements protecting strategic expansion plans.', icon: Lock },
-  { degree: 50, title: 'Contractual 72h Shortlist SLA', badge: 'Day 03', summary: 'Pre-vetted engineering dossiers delivered within 72 business hours.', icon: ShieldCheck },
-  { degree: 75, title: 'Day-1 Intellectual Property Assignment', badge: 'Day 21', summary: '100% IP ownership resides directly with your parent enterprise.', icon: Award },
-  { degree: 100, title: '180-Day Comprehensive Warranty', badge: 'Day 75', summary: 'Unconditional replacement coverage backed by dedicated talent advocacy.', icon: FileCheck2 },
+  { degree: 25, title: 'Bilateral Confidentiality & NDA', badge: 'Signing', summary: 'Non-disclosure discipline protecting strategic hiring plans.', icon: Lock },
+  { degree: 50, title: 'Structured Shortlist Flow', badge: 'Calibration', summary: 'Assessed dossiers presented against documented role criteria.', icon: ShieldCheck },
+  { degree: 75, title: 'Documented IP Assignment', badge: 'Placement', summary: 'Ownership and handover discipline recorded per engagement.', icon: Award },
+  { degree: 100, title: 'Defined Replacement Terms', badge: 'Agreement', summary: 'Tenure and replacement terms defined in the engagement agreement.', icon: FileCheck2 },
 ];
 
 export const PinnedCircularProgressReveal: React.FC = () => {

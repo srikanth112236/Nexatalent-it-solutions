@@ -1,5 +1,5 @@
 // Barrel export for all 40 reusable website components
-// Conforms to NexaTalent Build Specification 03-COMPONENTS/02-WEBSITE-COMPONENTS-40.md
+// Conforms to NexaTalent IT Solutions Build Specification 03-COMPONENTS/02-WEBSITE-COMPONENTS-40.md
 
 export * from './AnimatedHero';
 export * from './SplitHero';
@@ -41,5 +41,9 @@ export * from './TrustSignalStrip';
 export * from './ServiceComparison';
 export * from './RecruitmentJourneyMap';
 export * from './MegaFooter';
+export * from './Logo';
+export * from './SiteChrome';
+export * from './MinimalOutlineFooter';
+export * from './AceternityDarkNavbar';
 export * from './WebsiteHeader';
 export * from './WebsiteFooter';

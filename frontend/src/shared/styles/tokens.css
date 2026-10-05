@@ -1,16 +1,16 @@
 :root {
   --font-family-primary: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --color-bg: #090d16;
-  --color-surface: #111726;
-  --color-surface-raised: #182238;
-  --color-surface-hover: #1f2b47;
-  --color-text: #f8fafc;
-  --color-text-muted: #94a3b8;
-  --color-border: #1e293b;
-  --color-border-subtle: #141c2e;
-  --color-primary: #3b82f6;
-  --color-primary-hover: #2563eb;
-  --color-accent: #06b6d4;
+  --color-bg: #060F2B;
+  --color-surface: #0A1E4E;
+  --color-surface-raised: #102C6B;
+  --color-surface-hover: #14337a;
+  --color-text: #EFF5FF;
+  --color-text-muted: #8AA3C7;
+  --color-border: #102C6B;
+  --color-border-subtle: #0A1E4E;
+  --color-primary: #0B63E5;
+  --color-primary-hover: #0A53C4;
+  --color-accent: #1A86FF;
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-danger: #ef4444;

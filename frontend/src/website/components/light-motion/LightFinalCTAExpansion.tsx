@@ -11,42 +11,21 @@ export const LightFinalCTAExpansion: React.FC = () => {
   });
 
   // Scale expansion on scroll
-  const scale = useTransform(scrollYProgress, [0, 0.9], [0.92, 1]);
-  const borderRadius = useTransform(scrollYProgress, [0, 0.9], ['36px', '0px']);
+  const scale = useTransform(scrollYProgress, [0, 0.9], [0.95, 1]);
+  const borderRadius = useTransform(scrollYProgress, [0, 0.9], ['32px', '0px']);
 
   return (
     <section
       ref={containerRef}
-      className="theme-light"
-      style={{
-        backgroundColor: '#f8fafc',
-        color: '#0f172a',
-        padding: '5rem 0 0 0',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
+      className="theme-light relative overflow-hidden bg-[#FAF8F5] text-slate-900 pt-16"
     >
-      <div style={{ maxWidth: '1200px', margin: '0 auto', textAlign: 'center', marginBottom: '2.5rem', padding: '0 2rem' }}>
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            padding: '0.35rem 0.85rem',
-            borderRadius: '9999px',
-            backgroundColor: 'rgba(37, 99, 235, 0.08)',
-            border: '1px solid rgba(37, 99, 235, 0.25)',
-            fontSize: '0.8125rem',
-            fontWeight: 700,
-            color: '#2563eb',
-            marginBottom: '1rem',
-          }}
-        >
-          <Sparkles size={14} />
-          P10 Final CTA Expansion Pattern
+      <div className="max-w-6xl mx-auto text-center mb-8 px-6">
+        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#0265FF] text-xs font-extrabold uppercase tracking-wider mb-4 shadow-xs">
+          <Sparkles size={14} className="text-[#0265FF]" />
+          <span>START VENDOR EMPANELMENT</span>
         </div>
-        <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a' }}>
-          Ready to Upgrade Your Engineering Talent Infrastructure?
+        <h2 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
+          Ready to Upgrade Your Technology Hiring Capacity?
         </h2>
       </div>
 
@@ -55,124 +34,54 @@ export const LightFinalCTAExpansion: React.FC = () => {
         style={{
           scale,
           borderRadius,
-          background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #0369a1 100%)',
-          color: '#ffffff',
-          padding: '6rem 2rem 7rem 2rem',
-          textAlign: 'center',
-          boxShadow: '0 -20px 50px rgba(37, 99, 235, 0.2)',
-          position: 'relative',
         }}
+        className="bg-[#0265FF] text-white py-20 px-6 text-center shadow-2xl relative"
       >
-        <div style={{ maxWidth: '850px', margin: '0 auto' }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              backgroundColor: 'rgba(255, 255, 255, 0.15)',
-              border: '1px solid rgba(255, 255, 255, 0.25)',
-              padding: '0.35rem 1rem',
-              borderRadius: '9999px',
-              fontSize: '0.8125rem',
-              fontWeight: 700,
-              marginBottom: '1.5rem',
-            }}
-          >
-            <Zap size={14} />
-            Immediate Calibration SLA
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="inline-flex items-center gap-2 bg-white/15 border border-white/30 px-4 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider">
+            <Zap size={14} className="text-white" />
+            <span>48-HOUR SHORTLIST SLA</span>
           </div>
 
-          <h3
-            style={{
-              fontSize: 'clamp(2.25rem, 5vw, 3.5rem)',
-              fontWeight: 900,
-              lineHeight: 1.15,
-              letterSpacing: '-0.03em',
-              marginBottom: '1.5rem',
-            }}
-          >
+          <h3 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight">
             Receive 3 to 5 Calibrated Profiles in Under 48 Hours
           </h3>
 
-          <p
-            style={{
-              fontSize: 'clamp(1rem, 2vw, 1.25rem)',
-              color: 'rgba(255, 255, 255, 0.9)',
-              lineHeight: 1.6,
-              maxWidth: '680px',
-              margin: '0 auto 3rem auto',
-            }}
-          >
-            Join 120+ tier-1 technology scale-ups, global enterprise GCCs, and high-frequency trading firms scaling with NexaTalent.
+          <p className="text-base sm:text-xl text-blue-100 max-w-2xl mx-auto font-normal leading-relaxed">
+            Empanel Nexa Talent IT Solutions Private Limited to deploy permanent hires, flexible contract staffing pods, or turnkey GCC engineering teams.
           </p>
 
           {/* Action Row */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '1.25rem', flexWrap: 'wrap', marginBottom: '3.5rem' }}>
+          <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
             <Link
               to="/employers"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                backgroundColor: '#ffffff',
-                color: '#1e40af',
-                padding: '1rem 2.25rem',
-                borderRadius: '14px',
-                fontWeight: 800,
-                fontSize: '1.0625rem',
-                textDecoration: 'none',
-                boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
-                transition: 'all 0.2s ease',
-              }}
+              className="px-8 py-4 rounded-full bg-white text-[#0265FF] hover:bg-slate-100 font-extrabold text-sm shadow-xl transition-all flex items-center gap-2"
             >
-              <span>Submit Hiring Mandate</span>
+              <span>Submit Requisition Now</span>
               <ArrowRight size={18} />
             </Link>
 
             <Link
-              to="/jobs"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                color: '#ffffff',
-                padding: '1rem 2rem',
-                borderRadius: '14px',
-                fontWeight: 700,
-                fontSize: '1.0625rem',
-                textDecoration: 'none',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-              }}
+              to="/contact"
+              className="px-8 py-4 rounded-full bg-white/15 border border-white/30 hover:bg-white/25 text-white font-extrabold text-sm transition-all"
             >
-              <span>Browse Open Roles</span>
+              Request Empanelment Pack
             </Link>
           </div>
 
           {/* Trust Guarantees */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: '2.5rem',
-              flexWrap: 'wrap',
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              color: 'rgba(255, 255, 255, 0.85)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <ShieldCheck size={18} color="#4ade80" />
+          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-xs sm:text-sm font-bold text-white/95 pt-6">
+            <div className="flex items-center gap-2">
+              <ShieldCheck size={18} className="text-white" />
               <span>90-Day Unconditional Warranty</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <CheckCircle2 size={18} color="#4ade80" />
-              <span>Zero Placement Fee Until Start</span>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={18} className="text-white" />
+              <span>Zero Candidate Fee Policy</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Zap size={18} color="#4ade80" />
-              <span>SOC-2 Type II Certified</span>
+            <div className="flex items-center gap-2">
+              <Zap size={18} className="text-white" />
+              <span>ISO 27001 & DPDP Governed</span>
             </div>
           </div>
         </div>

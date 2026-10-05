@@ -36,7 +36,7 @@ export const SignatureTalentComparisonSlider: React.FC = () => {
             Interactive Recruitment Model Comparison
           </h2>
           <p className="text-lg text-slate-600">
-            Drag the central slider to visually compare the traditional transactional recruitment approach against the NexaTalent dedicated GCC search pod.
+            Drag the central slider to visually compare the traditional transactional recruitment approach against the NexaTalent IT Solutions dedicated GCC search pod.
           </p>
         </div>
 
@@ -56,11 +56,11 @@ export const SignatureTalentComparisonSlider: React.FC = () => {
           className="relative max-w-5xl mx-auto h-[480px] md:h-[420px] rounded-3xl overflow-hidden border-2 border-slate-300 shadow-2xl shadow-slate-200 cursor-ew-resize"
         >
           
-          {/* RIGHT SIDE: NexaTalent Engine (Underneath / Base Layer) */}
+          {/* RIGHT SIDE: NexaTalent IT Solutions Engine (Underneath / Base Layer) */}
           <div className="absolute inset-0 bg-gradient-to-br from-blue-50/80 via-white to-indigo-50/50 p-8 md:p-12 flex flex-col justify-between">
             <div className="flex items-center justify-end">
               <span className="px-3.5 py-1.5 rounded-full bg-blue-600 text-white text-xs font-extrabold uppercase shadow-sm">
-                NexaTalent Executive Pod (Calibrated)
+                NexaTalent IT Solutions Executive Pod (Calibrated)
               </span>
             </div>
 

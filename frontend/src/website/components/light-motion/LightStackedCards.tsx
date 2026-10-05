@@ -29,14 +29,14 @@ const solutionCards: SolutionCardData[] = [
     badge: 'High Velocity Search',
     title: 'Precision Contingent Search',
     tagline: 'Zero financial exposure until candidate successfully completes onboarding.',
-    description: 'Specialized senior engineering search delivering 3 to 5 pre-screened contenders within our contractually guaranteed 48-hour calibration window.',
+    description: 'Specialized senior engineering search delivering calibrated, pre-screened contenders through a structured calibration window.',
     highlights: [
       'Architect-led technical code and system design screening',
-      'Direct interview calendar synchronization with zero recruiter latency',
-      'Full 90-day replacement warranty backed by dedicated squad',
+      'Direct interview calendar synchronization with hiring teams',
+      'Defined replacement terms backed by dedicated squad',
     ],
-    stat: '48h',
-    statLabel: 'Shortlist Delivery SLA',
+    stat: 'Calibrated',
+    statLabel: 'Shortlist Delivery Flow',
     ctaText: 'Explore Contingent Model',
     ctaLink: '/employers?model=contingent',
     bgGradient: 'linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)',
@@ -48,14 +48,14 @@ const solutionCards: SolutionCardData[] = [
     badge: 'Confidential Executive',
     title: 'Retained Technology Leadership Search',
     tagline: 'Exclusive, discreet searches for VP Engineering, CTO, and Head of AI.',
-    description: 'Comprehensive 360-degree talent mapping across tier-1 hyperscalers and venture-backed unicorns. Senior partner leads calibration from inception to offer closure.',
+    description: 'Comprehensive talent mapping across established technology employers and venture-backed platforms. Senior partner leads calibration from inception to offer closure.',
     highlights: [
-      'Ex-Staff & Principal Engineer debriefs and forensic compensation vetting',
+      'Practitioner debriefs and structured compensation vetting',
       'Confidential outreach preserving client market posture',
-      'Extended 180-day executive warranty & board presentation package',
+      'Defined executive tenure terms & board reporting package',
     ],
-    stat: '100%',
-    statLabel: 'Retained Placement Success',
+    stat: 'Partner-Led',
+    statLabel: 'Retained Search Motion',
     ctaText: 'Retain Partner Practice',
     ctaLink: '/employers?model=retained',
     bgGradient: 'linear-gradient(135deg, #ffffff 0%, #eff6ff 100%)',
@@ -66,15 +66,15 @@ const solutionCards: SolutionCardData[] = [
     step: '03 / ENGAGEMENT PILLAR',
     badge: 'Global Scale Hub',
     title: 'Turnkey India GCC Squad Buildout',
-    tagline: 'Incubate 15 to 50+ person engineering hubs in Bangalore, Hyderabad, or Pune.',
-    description: 'Rapid assembly of full-stack engineering pods including Site Directors, Engineering Managers, and Staff Leads with standardized technical rubrics.',
+    tagline: 'Incubate engineering hubs across major Indian technology corridors.',
+    description: 'Planned assembly of full-stack engineering pods including Site Directors, Engineering Managers, and Staff Leads with standardized technical rubrics.',
     highlights: [
       'Complete pod incubation (Site Lead + Core Tech Leads + Senior ICs)',
       'Local legal entity, payroll advisory, and state-of-the-art office support',
       'Dedicated 3-recruiter squad working exclusively on site setup',
     ],
-    stat: '75 Days',
-    statLabel: 'Full Team Deployment SLA',
+    stat: 'Phased',
+    statLabel: 'Team Deployment Motion',
     ctaText: 'Build Turnkey GCC',
     ctaLink: '/employers?model=gcc',
     bgGradient: 'linear-gradient(135deg, #ffffff 0%, #faf5ff 100%)',
@@ -85,15 +85,15 @@ const solutionCards: SolutionCardData[] = [
     step: '04 / ENGAGEMENT PILLAR',
     badge: 'Technical Intelligence',
     title: 'Technical Screening as a Service (TSaaS)',
-    tagline: 'Outsource technical screening to vetted ex-FAANG / Tier-1 architects.',
+    tagline: 'Outsource technical screening to assessed senior architects.',
     description: 'Stop burning your high-value engineering team hours on resume filtering and first-round screens. Receive standardized objective rubrics with video recordings.',
     highlights: [
       'Conducted exclusively by Staff and Principal practitioners',
       'Standardized scoring across concurrency, distributed systems, and clean code',
       'Integrated directly into your ATS (Greenhouse, Lever, Ashby)',
     ],
-    stat: '70%',
-    statLabel: 'Engineering Hours Saved',
+    stat: 'Focused',
+    statLabel: 'Engineering Hours Redirected',
     ctaText: 'Deploy Screening Service',
     ctaLink: '/employers?model=tsaas',
     bgGradient: 'linear-gradient(135deg, #ffffff 0%, #fff7ed 100%)',
@@ -139,11 +139,11 @@ export const LightStackedCards: React.FC = () => {
       ref={containerRef}
       className="theme-light"
       style={{
-        backgroundColor: '#f8fafc',
-        color: '#0f172a',
+        backgroundColor: 'var(--nt-surface-2, #f8fafc)',
+        color: 'var(--nt-ink, #0f172a)',
         padding: '5rem 2rem',
         position: 'relative',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
       }}
     >
       <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
@@ -167,10 +167,10 @@ export const LightStackedCards: React.FC = () => {
             <Layers size={14} />
             C08 Stacked Cards on Scroll Pattern
           </div>
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a' }}>
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)' }}>
             Tailored Engagement Models That Stack to Scale
           </h2>
-          <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
+          <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
             Scroll down to watch each engagement tier smoothly stack into a cohesive talent partnership.
           </p>
         </div>
@@ -193,8 +193,8 @@ export const LightStackedCards: React.FC = () => {
                 position: 'sticky',
                 top: `${100 + idx * 24}px`,
                 borderRadius: '24px',
-                backgroundColor: '#ffffff',
-                border: '1px solid #e2e8f0',
+                backgroundColor: 'var(--nt-surface, #ffffff)',
+                border: '1px solid var(--nt-border, #e2e8f0)',
                 padding: '3rem 2.5rem',
                 boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.08), 0 0 1px 1px rgba(0, 0, 0, 0.04)',
                 background: card.bgGradient,
@@ -212,18 +212,18 @@ export const LightStackedCards: React.FC = () => {
                       style={{
                         fontSize: '0.75rem',
                         fontWeight: 700,
-                        backgroundColor: '#ffffff',
+                        backgroundColor: 'var(--nt-surface, #ffffff)',
                         border: '1px solid #cbd5e1',
                         padding: '0.2rem 0.6rem',
                         borderRadius: '9999px',
-                        color: '#475569',
+                        color: 'var(--nt-muted, #475569)',
                       }}
                     >
                       {card.badge}
                     </span>
                   </div>
 
-                  <h3 style={{ fontSize: '1.875rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.25, marginBottom: '0.75rem' }}>
+                  <h3 style={{ fontSize: '1.875rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)', lineHeight: 1.25, marginBottom: '0.75rem' }}>
                     {card.title}
                   </h3>
 
@@ -231,13 +231,13 @@ export const LightStackedCards: React.FC = () => {
                     {card.tagline}
                   </p>
 
-                  <p style={{ fontSize: '0.9375rem', color: '#475569', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+                  <p style={{ fontSize: '0.9375rem', color: 'var(--nt-muted, #475569)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
                     {card.description}
                   </p>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '2rem' }}>
                     {card.highlights.map((h, hIdx) => (
-                      <div key={hIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.875rem', color: '#1e293b' }}>
+                      <div key={hIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--nt-ink-2, #1e293b)' }}>
                         <CheckCircle2 size={16} color={card.accentColor} style={{ flexShrink: 0, marginTop: '2px' }} />
                         <span>{h}</span>
                       </div>
@@ -268,9 +268,9 @@ export const LightStackedCards: React.FC = () => {
                 {/* Right Visual Stat Highlight */}
                 <div
                   style={{
-                    backgroundColor: '#ffffff',
+                    backgroundColor: 'var(--nt-surface, #ffffff)',
                     borderRadius: '20px',
-                    border: '1px solid #e2e8f0',
+                    border: '1px solid var(--nt-border, #e2e8f0)',
                     padding: '2.5rem',
                     textAlign: 'center',
                     boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)',
@@ -295,14 +295,14 @@ export const LightStackedCards: React.FC = () => {
                     {idx === 3 && <Cpu size={28} />}
                   </div>
 
-                  <div style={{ fontSize: '3.25rem', fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>
+                  <div style={{ fontSize: '3.25rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)', lineHeight: 1 }}>
                     {card.stat}
                   </div>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#64748b', marginTop: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--nt-muted, #64748b)', marginTop: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     {card.statLabel}
                   </div>
 
-                  <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #e2e8f0', fontSize: '0.8125rem', color: '#16a34a', fontWeight: 600 }}>
+                  <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--nt-border, #e2e8f0)', fontSize: '0.8125rem', color: '#16a34a', fontWeight: 600 }}>
                     ✓ 100% Contractually Enforced Standard
                   </div>
                 </div>

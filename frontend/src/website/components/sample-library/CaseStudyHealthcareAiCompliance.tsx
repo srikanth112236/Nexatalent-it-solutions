@@ -20,7 +20,7 @@ export const CaseStudyHealthcareAiCompliance: React.FC = () => {
               Deploying a Zero-Trust Clinical AI Pod Under FDA 21 CFR Part 11
             </h2>
             <p className="text-sm text-slate-600 font-light leading-relaxed">
-              Medical device and healthcare software requires uncompromising regulatory rigor. NexaTalent placed an entire 18-person Bangalore clinical ML engineering team operating within air-gapped VPCs and SOC-2 Type II audit regimes.
+              Medical device and healthcare software requires uncompromising regulatory rigor. NexaTalent IT Solutions placed an entire 18-person Bangalore clinical ML engineering team operating within air-gapped VPCs and SOC-2 Type II audit regimes.
             </p>
 
             <div className="grid grid-cols-3 gap-3 pt-2">

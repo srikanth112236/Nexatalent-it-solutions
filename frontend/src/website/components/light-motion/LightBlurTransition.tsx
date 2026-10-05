@@ -38,11 +38,11 @@ export const LightBlurTransition: React.FC = () => {
       ref={containerRef}
       className="theme-light"
       style={{
-        backgroundColor: '#ffffff',
-        color: '#0f172a',
+        backgroundColor: 'var(--nt-surface, #ffffff)',
+        color: 'var(--nt-ink, #0f172a)',
         padding: '6rem 2rem',
         position: 'relative',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
       }}
     >
       <div style={{ maxWidth: '1000px', margin: '0 auto', textAlign: 'center' }}>
@@ -66,10 +66,10 @@ export const LightBlurTransition: React.FC = () => {
             <Sparkles size={14} />
             Pattern 36 & 37 · Progressive Blur to Sharp Transition
           </div>
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a' }}>
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)' }}>
             Encrypted Candidate Dossier Clarification
           </h2>
-          <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
+          <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
             Scroll down to watch candidate dossiers transition from blurred confidential privacy mode into razor-sharp calibrated telemetry.
           </p>
         </div>
@@ -81,7 +81,7 @@ export const LightBlurTransition: React.FC = () => {
             maxWidth: '820px',
             margin: '0 auto',
             borderRadius: '24px',
-            backgroundColor: '#f8fafc',
+            backgroundColor: 'var(--nt-surface-2, #f8fafc)',
             border: '1px solid #cbd5e1',
             padding: '3rem 2.5rem',
             boxShadow: '0 20px 45px -15px rgba(0, 0, 0, 0.08)',
@@ -94,10 +94,10 @@ export const LightBlurTransition: React.FC = () => {
                 <Lock size={20} />
               </div>
               <div>
-                <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
+                <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)' }}>
                   Forensic Calibration Dossier #NT-4402
                 </h4>
-                <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>
+                <div style={{ fontSize: '0.8125rem', color: 'var(--nt-muted, #64748b)' }}>
                   Staff Machine Learning Systems Architect · Verified Active Candidate
                 </div>
               </div>
@@ -109,23 +109,23 @@ export const LightBlurTransition: React.FC = () => {
             </div>
           </div>
 
-          <p style={{ color: '#475569', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '2rem' }}>
+          <p style={{ color: 'var(--nt-muted, #475569)', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '2rem' }}>
             Candidate has 8+ years scaling real-time distributed model inference across Kubernetes clusters. Passed rigorous ex-Staff Architect system design review with a 4.9/5.0 consensus rating.
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
-            <div style={{ padding: '1rem', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Current Comp Band</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginTop: '0.2rem' }}>₹65L - ₹85L</div>
+            <div style={{ padding: '1rem', backgroundColor: 'var(--nt-surface, #ffffff)', borderRadius: '12px', border: '1px solid var(--nt-border, #e2e8f0)' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--nt-muted, #64748b)', fontWeight: 700, textTransform: 'uppercase' }}>Current Comp Band</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)', marginTop: '0.2rem' }}>₹65L - ₹85L</div>
             </div>
 
-            <div style={{ padding: '1rem', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Notice Period</div>
+            <div style={{ padding: '1rem', backgroundColor: 'var(--nt-surface, #ffffff)', borderRadius: '12px', border: '1px solid var(--nt-border, #e2e8f0)' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--nt-muted, #64748b)', fontWeight: 700, textTransform: 'uppercase' }}>Notice Period</div>
               <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#16a34a', marginTop: '0.2rem' }}>30 Days (Buyout Ready)</div>
             </div>
 
-            <div style={{ padding: '1rem', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Calibration Rating</div>
+            <div style={{ padding: '1rem', backgroundColor: 'var(--nt-surface, #ffffff)', borderRadius: '12px', border: '1px solid var(--nt-border, #e2e8f0)' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--nt-muted, #64748b)', fontWeight: 700, textTransform: 'uppercase' }}>Calibration Rating</div>
               <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#2563eb', marginTop: '0.2rem' }}>Top 1.4%</div>
             </div>
           </div>

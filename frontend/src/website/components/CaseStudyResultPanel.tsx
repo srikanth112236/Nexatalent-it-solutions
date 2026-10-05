@@ -25,7 +25,7 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
   clientIndustry = 'Enterprise Infrastructure & Cloud Native',
   challengeTitle = 'The Critical Bottleneck',
   challengeDescription = 'The client needed to hire 18 Lead SRE and Distributed Systems Engineers within 60 days to meet critical SOC-2 Type II audit commitments for their multi-tenant Kubernetes platform.',
-  solutionTitle = 'NexaTalent Rapid GCC Squad Architecture',
+  solutionTitle = 'NexaTalent IT Solutions Rapid GCC Squad Architecture',
   solutionHighlights = [
     'Deployed dedicated 3-member technical recruiter pod with deep Golang/K8s domain mastery',
     'Pre-calibrated 140 candidate profiles via real-time distributed systems screening',
@@ -39,7 +39,7 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
     { label: 'Cost Savings', value: '38%', detail: 'Compared to conventional headhunter retainers' },
   ],
   quote = {
-    text: 'NexaTalent outperformed every other recruitment firm we tested by an order of magnitude. Their candidates were already vetted for production scale.',
+    text: 'NexaTalent IT Solutions outperformed every other recruitment firm we tested by an order of magnitude. Their candidates were already vetted for production scale.',
     author: 'Siddharth Rao',
     role: 'VP of Platform Engineering',
     company: 'HyperScale Cloud Platform',

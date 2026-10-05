@@ -107,7 +107,7 @@ export const FullScreenVerticalParallaxTopographicContour: React.FC = () => {
             <span>ALTITUDE: 3,600M · INDIRANAGAR LABS</span>
           </div>
           <h4 className="text-lg font-bold text-slate-900">GenAI & ML Systems</h4>
-          <p className="text-xs text-slate-500 mt-1">3,400+ Researchers specializing in transformer inference.</p>
+          <p className="text-xs text-slate-500 mt-1">Researchers specializing in transformer inference.</p>
         </div>
       </div>
 
@@ -115,13 +115,13 @@ export const FullScreenVerticalParallaxTopographicContour: React.FC = () => {
       <div ref={layerMidRef} className="relative z-20 w-full px-12 md:px-32 flex justify-between items-center my-6">
         <div className="p-6 rounded-2xl bg-slate-900 text-white shadow-xl max-w-sm">
           <div className="text-xs font-mono text-emerald-400 mb-1">Elevation Benchmark</div>
-          <div className="text-xl font-bold">Top 0.8% Scarcity Index</div>
-          <div className="text-xs text-slate-400 mt-1">Calibrated against strict Silicon Valley Principal rubrics.</div>
+          <div className="text-xl font-bold">Calibrated Scarcity Review</div>
+          <div className="text-xs text-slate-400 mt-1">Assessed against documented principal-level rubrics.</div>
         </div>
         <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xl max-w-sm">
           <div className="text-xs font-mono text-blue-600 mb-1">Geographic Density</div>
-          <div className="text-xl font-bold text-slate-900">74 GCC Hubs Mapped</div>
-          <div className="text-xs text-slate-500 mt-1">Direct pipeline relationships across Tier-1 campuses.</div>
+          <div className="text-xl font-bold text-slate-900">GCC Hiring Coverage</div>
+          <div className="text-xs text-slate-500 mt-1">Pipeline relationships across key technology campuses.</div>
         </div>
       </div>
 

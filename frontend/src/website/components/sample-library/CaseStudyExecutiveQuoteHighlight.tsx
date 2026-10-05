@@ -17,13 +17,13 @@ export const CaseStudyExecutiveQuoteHighlight: React.FC = () => {
           </div>
 
           <blockquote className="text-xl sm:text-2xl font-serif italic text-slate-200 leading-relaxed font-light">
-            "Before NexaTalent, our offshore attempts were plagued by 30% attrition and junior staff turnover. NexaTalent’s sovereign model transformed our Bangalore team into our highest-velocity engineering division."
+            "Employers evaluating distributed hiring consistently ask for the same foundations: documented screening, visible pipelines and accountable placements."
           </blockquote>
 
           <div className="pt-4 border-t border-slate-800 inline-block text-center">
-            <div className="font-bold text-white text-base">Arjun Krishnamurthy</div>
-            <div className="text-xs text-slate-400 font-mono">VP of Infrastructure & Security, Tier-1 FinTech Platform</div>
-            <div className="text-[11px] text-emerald-400 font-mono mt-1">120 Engineers Placed Across 3 Sovereign Pods</div>
+            <div className="font-bold text-white text-base">Hiring Leadership Perspective</div>
+            <div className="text-xs text-slate-400 font-mono">Representative view across platform engineering mandates</div>
+            <div className="text-[11px] text-emerald-400 font-mono mt-1">Screening · Visibility · Accountability</div>
           </div>
         </div>
       </section>

@@ -12,8 +12,8 @@ export const LightJobMandatesSearch: React.FC = () => {
     <section
       className="theme-light"
       style={{
-        backgroundColor: '#ffffff',
-        borderBottom: '1px solid #e2e8f0',
+        backgroundColor: 'var(--nt-surface, #ffffff)',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
         padding: '6rem 2rem',
       }}
     >
@@ -34,20 +34,20 @@ export const LightJobMandatesSearch: React.FC = () => {
           }}
         >
           <Sparkles size={14} />
-          <span>20 / 40 · VERIFIED MANDATE SEARCH</span>
+          <span>NEXATALENT VERIFIED MANDATE SEARCH</span>
         </div>
 
-        <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a', marginBottom: '0.75rem' }}>
+        <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)', marginBottom: '0.75rem' }}>
           Explore 310+ Active Tier-1 Mandates
         </h2>
-        <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0 auto 3.5rem auto', lineHeight: 1.6 }}>
+        <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0 auto 3.5rem auto', lineHeight: 1.6 }}>
           100% verified compensation bands, explicit tech stacks, and direct CTO interview coordination.
         </p>
 
         {/* Search Bar Input Container */}
         <div
           style={{
-            backgroundColor: '#ffffff',
+            backgroundColor: 'var(--nt-surface, #ffffff)',
             borderRadius: '20px',
             border: '2px solid #2563eb',
             padding: '0.75rem 1rem',
@@ -72,7 +72,7 @@ export const LightJobMandatesSearch: React.FC = () => {
                 border: 'none',
                 outline: 'none',
                 fontSize: '1rem',
-                color: '#0f172a',
+                color: 'var(--nt-ink, #0f172a)',
                 backgroundColor: 'transparent',
               }}
             />
@@ -111,7 +111,7 @@ export const LightJobMandatesSearch: React.FC = () => {
                   position: 'relative',
                   padding: '0.5rem 1.25rem',
                   borderRadius: '9999px',
-                  border: isSelected ? '1px solid #2563eb' : '1px solid #e2e8f0',
+                  border: isSelected ? '1px solid #2563eb' : '1px solid var(--nt-border, #e2e8f0)',
                   backgroundColor: isSelected ? '#eff6ff' : '#f8fafc',
                   color: isSelected ? '#2563eb' : '#475569',
                   fontSize: '0.875rem',
@@ -127,7 +127,7 @@ export const LightJobMandatesSearch: React.FC = () => {
         </div>
 
         {/* Quick Summary Strip */}
-        <div style={{ marginTop: '2.5rem', display: 'flex', justifyContent: 'center', gap: '2rem', flexWrap: 'wrap', color: '#64748b', fontSize: '0.8125rem' }}>
+        <div style={{ marginTop: '2.5rem', display: 'flex', justifyContent: 'center', gap: '2rem', flexWrap: 'wrap', color: 'var(--nt-muted, #64748b)', fontSize: '0.8125rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <Briefcase size={14} color="#2563eb" />
             <span>Average Senior Comp: ₹65L - ₹95L</span>

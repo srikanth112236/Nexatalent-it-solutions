@@ -112,7 +112,7 @@ export const FullScreenVerticalParallaxQuantumWave: React.FC = () => {
             Specialists in multi-Raft partition consensus, RocksDB storage engines, and zero-downtime shard migration.
           </p>
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 font-mono text-xs text-slate-700">
-            Retention Record: 98.8% Over 36 Months
+            Screening Depth: Multi-Stage Consensus Review
           </div>
         </div>
       </div>

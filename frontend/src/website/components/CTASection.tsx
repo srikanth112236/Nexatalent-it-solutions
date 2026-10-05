@@ -18,7 +18,7 @@ export interface CTASectionProps {
 export const CTASection: React.FC<CTASectionProps> = ({
   badge = 'Ready to Transform Your Engineering Bench?',
   title = 'Lock in Your First Elite Tech Shortlist in Under 72 Hours',
-  description = 'Join over 120+ VC-backed unicorns and enterprise engineering leaders who trust NexaTalent for precision hiring.',
+  description = 'Join over 120+ VC-backed unicorns and enterprise engineering leaders who trust NexaTalent IT Solutions for precision hiring.',
   primaryCtaText = 'Initiate Enterprise Search',
   primaryCtaLink = '/contact',
   secondaryCtaText = 'Browse Active Mandates',

@@ -102,7 +102,7 @@ export const WebsiteComponentsCatalog: React.FC = () => {
               </span>
             </div>
             <h1 style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.02em' }}>
-              NexaTalent Living Website Component Library
+              NexaTalent IT Solutions Living Website Component Library
             </h1>
           </div>
 
@@ -587,7 +587,7 @@ export const WebsiteComponentsCatalog: React.FC = () => {
               {/* 32. BeforeAfterSection */}
               <div style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-2xl)', overflow: 'hidden' }}>
                 <div style={{ padding: '0.75rem 1.5rem', backgroundColor: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)', fontSize: '0.8125rem', fontWeight: 700 }}>
-                  32. BeforeAfterSection (Conventional Agency vs NexaTalent Operating System)
+                  32. BeforeAfterSection (Conventional Agency vs NexaTalent IT Solutions Operating System)
                 </div>
                 <BeforeAfterSection />
               </div>

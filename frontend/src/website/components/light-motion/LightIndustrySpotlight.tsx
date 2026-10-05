@@ -7,8 +7,8 @@ export const LightIndustrySpotlight: React.FC = () => {
     <section
       className="theme-light"
       style={{
-        backgroundColor: '#ffffff',
-        borderBottom: '1px solid #e2e8f0',
+        backgroundColor: 'var(--nt-surface, #ffffff)',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
         padding: '6rem 2rem',
       }}
     >
@@ -30,13 +30,13 @@ export const LightIndustrySpotlight: React.FC = () => {
             }}
           >
             <Sparkles size={14} />
-            <span>26 / 40 · VERTICAL PRACTICE SPOTLIGHT</span>
+            <span>NEXATALENT VERTICAL PRACTICE SPOTLIGHT</span>
           </div>
 
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a', marginBottom: '0.75rem' }}>
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)', marginBottom: '0.75rem' }}>
             Low-Latency Systems & High-Frequency Trading
           </h2>
-          <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0 auto', lineHeight: 1.6 }}>
+          <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0 auto', lineHeight: 1.6 }}>
             Inside our fastest-moving technical recruitment practice: placing sub-microsecond systems engineers.
           </p>
         </div>
@@ -54,10 +54,10 @@ export const LightIndustrySpotlight: React.FC = () => {
             <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#2563eb', letterSpacing: '0.05em' }}>
               CALIBRATED COMPETENCY PROFILE
             </span>
-            <h3 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.25, marginTop: '0.5rem', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)', lineHeight: 1.25, marginTop: '0.5rem', marginBottom: '1rem' }}>
               Kernel Bypass, Solarflare & C++20 Specialists
             </h3>
-            <p style={{ color: '#475569', fontSize: '1rem', lineHeight: 1.6, marginBottom: '2rem' }}>
+            <p style={{ color: 'var(--nt-muted, #475569)', fontSize: '1rem', lineHeight: 1.6, marginBottom: '2rem' }}>
               We test cache-line padding, SIMD vectorization, memory barrier semantics, and network interface bypass protocols. Zero generic software engineers; only proven quantitative builders.
             </p>
 
@@ -68,7 +68,7 @@ export const LightIndustrySpotlight: React.FC = () => {
                 'Forensic verification of lock-free queue implementations',
                 '48-hour shortlist guarantee of 3 verified Principal candidates',
               ].map((item, idx) => (
-                <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.9375rem', color: '#1e293b' }}>
+                <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.9375rem', color: 'var(--nt-ink-2, #1e293b)' }}>
                   <CheckCircle2 size={16} color="#2563eb" style={{ flexShrink: 0, marginTop: '3px' }} />
                   <span>{item}</span>
                 </div>
@@ -98,7 +98,7 @@ export const LightIndustrySpotlight: React.FC = () => {
           {/* Right Visual Stats Card */}
           <div
             style={{
-              backgroundColor: '#f8fafc',
+              backgroundColor: 'var(--nt-surface-2, #f8fafc)',
               borderRadius: '24px',
               border: '1px solid #cbd5e1',
               padding: '3rem 2.5rem',
@@ -110,21 +110,21 @@ export const LightIndustrySpotlight: React.FC = () => {
               <Zap size={28} />
             </div>
 
-            <div style={{ fontSize: '3.5rem', fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>
-              &lt; 850ns
+            <div style={{ fontSize: '3.5rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)', lineHeight: 1 }}>
+              Low-Latency
             </div>
-            <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#64748b', marginTop: '0.5rem', textTransform: 'uppercase' }}>
-              Benchmarked Gateway Execution
+            <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--nt-muted, #64748b)', marginTop: '0.5rem', textTransform: 'uppercase' }}>
+              FinTech Systems Practice
             </div>
 
-            <div style={{ marginTop: '2.5rem', paddingTop: '2rem', borderTop: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', textAlign: 'left' }}>
+            <div style={{ marginTop: '2.5rem', paddingTop: '2rem', borderTop: '1px solid var(--nt-border, #e2e8f0)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', textAlign: 'left' }}>
               <div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a' }}>14 Days</div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>Median Offer Time</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)' }}>Structured</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--nt-muted, #64748b)', marginTop: '0.2rem' }}>Shortlist Workflow</div>
               </div>
               <div>
                 <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#16a34a' }}>90 Days</div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>Replacement Escrow</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--nt-muted, #64748b)', marginTop: '0.2rem' }}>Replacement Escrow</div>
               </div>
             </div>
 

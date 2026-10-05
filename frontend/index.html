@@ -1,17 +1,103 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NexaTalent — Enterprise Recruitment Platform & Ecosystem</title>
+    <script>
+      try {
+        localStorage.removeItem('nexatalent-theme');
+        document.documentElement.dataset.theme = 'light';
+      } catch (e) {}
+    </script>
+    <title>NexaTalent — AI-Powered Talent. Human Intelligence. Better Hiring.</title>
+    <meta
+      name="description"
+      content="Nexa Talent IT Solutions connects companies, recruitment partners, and technology professionals through an intelligent hiring ecosystem. AI-powered recruitment, lateral engineering sourcing, and turnkey GCC pods."
+    />
+    <meta
+      name="keywords"
+      content="IT Recruitment India, IT Staffing, AI Recruitment Platform, Hire IT Talent, Tech Recruitment Bengaluru, GCC Turnkey Pods, Lateral Engineering Hiring, Executive Search Tech, NexaTalent"
+    />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <link rel="canonical" href="https://nexatalent.com/" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+
+    <!-- Open Graph / Social Sharing -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://nexatalent.com/" />
+    <meta property="og:title" content="NexaTalent — AI-Powered Talent. Human Intelligence. Better Hiring." />
+    <meta
+      property="og:description"
+      content="Connecting enterprise employers, recruitment partners, and technology professionals through an intelligent hiring ecosystem. Discover, match, and deliver talent faster."
+    />
+    <meta property="og:image" content="https://nexatalent.com/logo.png" />
+    <meta property="og:site_name" content="NexaTalent" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://nexatalent.com/" />
+    <meta name="twitter:title" content="NexaTalent — AI-Powered Talent. Human Intelligence. Better Hiring." />
+    <meta
+      name="twitter:description"
+      content="Nexa Talent IT Solutions: Intelligent recruitment marketplace, AI resume parsing, candidate scoring, and turnkey offshore engineering pods."
+    />
+    <meta name="twitter:image" content="https://nexatalent.com/logo.png" />
+
+    <!-- Google Analytics (GA4) / Google Tag Manager Readiness -->
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() { dataLayer.push(arguments); }
+      gtag('js', new Date());
+      // Consent-aware default configuration (DPDP Act 2023 & GDPR friendly)
+      gtag('consent', 'default', {
+        'analytics_storage': 'granted',
+        'ad_storage': 'denied'
+      });
+      gtag('config', 'G-NEXATALENT', {
+        send_page_view: true
+      });
+    </script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-NEXATALENT"></script>
+
+    <!-- Schema.org Organization Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "NexaTalent IT Solutions Pvt. Ltd.",
+        "url": "https://nexatalent.com",
+        "logo": "https://nexatalent.com/logo.png",
+        "sameAs": [
+          "https://www.linkedin.com/company/nexatalent",
+          "https://twitter.com/nexatalent"
+        ],
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "telephone": "+91-80-49208800",
+          "contactType": "customer service",
+          "email": "contact@nexatalent.com",
+          "areaServed": "IN",
+          "availableLanguage": ["English", "Hindi"]
+        },
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Outer Ring Road, Bellandur",
+          "addressLocality": "Bengaluru",
+          "addressRegion": "Karnataka",
+          "postalCode": "560103",
+          "addressCountry": "IN"
+        }
+      }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
   </head>
-  <body style="margin: 0; background-color: #090d16; color: #f8fafc; font-family: 'Manrope', sans-serif;">
+  <body style="margin: 0; background-color: #ffffff; color: #0f172a; font-family: 'Manrope', 'Plus Jakarta Sans', sans-serif;">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

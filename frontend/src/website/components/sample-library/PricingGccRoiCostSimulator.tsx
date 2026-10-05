@@ -17,30 +17,28 @@ export const PricingGccRoiCostSimulator: React.FC = () => {
   const threeYearSavings = annualSavings * 3;
 
   return (
-    <div className="w-full bg-slate-900/5 p-4 sm:p-6 rounded-2xl border border-slate-200">
-      <div className="text-xs font-mono font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center justify-between">
-        <span>52 · Enterprise GCC ROI Cost Simulator</span>
-        <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[10px]">Real-Time Model</span>
-      </div>
-
-      <section className="max-w-6xl mx-auto rounded-3xl bg-slate-950 text-white p-8 sm:p-12 border border-slate-800 shadow-xl">
+    <div className="w-full bg-[#FAF8F5] py-8 px-4 sm:px-8 border-y border-slate-200/80">
+      <section className="max-w-6xl mx-auto rounded-3xl bg-white border border-slate-200 p-8 sm:p-12 shadow-xs">
         <div className="text-center max-w-2xl mx-auto mb-10">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono mb-3">
-            <DollarSign className="w-3.5 h-3.5" />
-            <span>Interactive Financial Model</span>
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#0265FF] text-xs font-extrabold uppercase tracking-wider mb-3">
+            <DollarSign className="w-3.5 h-3.5 text-[#0265FF]" />
+            <span>ENTERPRISE COST ESTIMATOR</span>
           </div>
-          <h2 className="text-section-title font-bold text-white tracking-tight">
-            Calculate Your Organization's 3-Year Capital Arbitrage
+          <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+            Calculate Your Organization's 3-Year Cost Savings
           </h2>
+          <p className="text-xs sm:text-sm text-slate-600 mt-2 font-normal">
+            Model headcount savings achieved by leveraging Nexa Talent IT Solutions offshore pod models.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           {/* Sliders */}
-          <div className="lg:col-span-6 space-y-6 bg-slate-900/80 p-6 rounded-2xl border border-slate-800">
+          <div className="lg:col-span-6 space-y-6 bg-[#FAF8F5] p-6 rounded-2xl border border-slate-200">
             <div>
-              <div className="flex justify-between text-xs font-mono text-slate-300 mb-2">
+              <div className="flex justify-between text-xs font-bold text-slate-800 mb-2">
                 <span>Planned Team Size (Headcount)</span>
-                <span className="text-emerald-400 font-bold">{headcount} Engineers</span>
+                <span className="text-[#0265FF] font-extrabold">{headcount} Engineers</span>
               </div>
               <input
                 type="range"
@@ -49,14 +47,14 @@ export const PricingGccRoiCostSimulator: React.FC = () => {
                 step="5"
                 value={headcount}
                 onChange={(e) => setHeadcount(Number(e.target.value))}
-                className="w-full accent-emerald-500 cursor-pointer"
+                className="w-full accent-[#0265FF] cursor-pointer"
               />
             </div>
 
             <div>
-              <div className="flex justify-between text-xs font-mono text-slate-300 mb-2">
+              <div className="flex justify-between text-xs font-bold text-slate-800 mb-2">
                 <span>Senior / Staff Seniority Ratio</span>
-                <span className="text-emerald-400 font-bold">{seniorityMix}% Staff/Senior</span>
+                <span className="text-[#0265FF] font-extrabold">{seniorityMix}% Staff/Senior</span>
               </div>
               <input
                 type="range"
@@ -65,40 +63,40 @@ export const PricingGccRoiCostSimulator: React.FC = () => {
                 step="10"
                 value={seniorityMix}
                 onChange={(e) => setSeniorityMix(Number(e.target.value))}
-                className="w-full accent-emerald-500 cursor-pointer"
+                className="w-full accent-[#0265FF] cursor-pointer"
               />
             </div>
 
-            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-400 space-y-1.5 font-light">
-              <div className="font-mono text-slate-300 font-semibold mb-1">Model Assumptions:</div>
-              <div>• US Baseline: San Francisco & New York average fully loaded comp + healthcare + rent.</div>
-              <div>• India Baseline: Top 1% tier-1 compensation in Indiranagar/Outer Ring Rd + Class-A facilities.</div>
+            <div className="p-4 rounded-xl bg-white border border-slate-200 text-xs text-slate-600 space-y-1.5 font-normal">
+              <div className="text-slate-900 font-bold mb-1">Model Assumptions:</div>
+              <div>• US Baseline: San Francisco & New York average fully loaded comp + health + facilities.</div>
+              <div>• India Baseline: Senior compensation bands in major Indian technology hubs.</div>
             </div>
           </div>
 
           {/* Savings Outcome Box */}
-          <div className="lg:col-span-6 p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-emerald-950/80 via-slate-900 to-slate-950 border border-emerald-500/40 space-y-6">
+          <div className="lg:col-span-6 p-6 sm:p-8 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-6">
             <div>
-              <span className="text-xs font-mono uppercase tracking-widest text-emerald-400 block mb-1">
-                Net Annual Capital Saved
+              <span className="text-xs font-extrabold uppercase tracking-widest text-[#0265FF] block mb-1">
+                Net Annual Savings
               </span>
-              <div className="text-4xl font-black font-mono text-white">
-                ${annualSavings.toLocaleString()} <span className="text-xs font-normal text-slate-400">/ year</span>
+              <div className="text-3xl sm:text-4xl font-extrabold text-slate-900">
+                ${annualSavings.toLocaleString()} <span className="text-xs font-normal text-slate-600">/ year</span>
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/30">
-              <span className="text-xs font-mono text-emerald-300 block mb-1">3-Year Cumulative Runway Preservation</span>
-              <div className="text-3xl font-black font-mono text-emerald-400">
+            <div className="p-4 rounded-xl bg-white border border-blue-200 shadow-xs">
+              <span className="text-xs font-bold text-slate-600 block mb-1">3-Year Cumulative Cost Savings</span>
+              <div className="text-2xl sm:text-3xl font-extrabold text-[#0265FF]">
                 ${threeYearSavings.toLocaleString()}
               </div>
             </div>
 
             <button
               type="button"
-              className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-emerald-600/30"
+              className="w-full py-3.5 rounded-full bg-[#0265FF] hover:bg-[#004FBF] text-white font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
             >
-              <span>Download Detailed Excel Financial Model</span>
+              <span>Request Detailed Commercial Proposal</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

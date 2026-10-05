@@ -1,121 +1,41 @@
-import React, { useEffect, useRef } from 'react';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Radar, Compass, ArrowUp, ArrowDown } from 'lucide-react';
-
-gsap.registerPlugin(ScrollTrigger);
+import React from 'react';
+import { Radar, Compass } from 'lucide-react';
 
 export const FullScreenVerticalSplitCurtain: React.FC = () => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const topCurtainRef = useRef<HTMLDivElement>(null);
-  const bottomCurtainRef = useRef<HTMLDivElement>(null);
-  const radarMapRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: containerRef.current,
-          start: 'top top',
-          end: '+=160%',
-          pin: true,
-          scrub: 1,
-        },
-      });
-
-      tl.to(topCurtainRef.current, { yPercent: -100, ease: 'power2.inOut' }, 0)
-        .to(bottomCurtainRef.current, { yPercent: 100, ease: 'power2.inOut' }, 0)
-        .fromTo(
-          radarMapRef.current,
-          { scale: 0.88, opacity: 0 },
-          { scale: 1, opacity: 1, ease: 'power2.out' },
-          0.2
-        );
-    }, containerRef);
-
-    return () => ctx.revert();
-  }, []);
-
   return (
-    <section
-      ref={containerRef}
-      className="relative w-screen min-h-screen bg-slate-50 text-slate-900 overflow-hidden flex items-center justify-center m-0 p-0"
-      style={{ width: '100vw', maxWidth: '100vw' }}
-    >
-      {/* Pattern 18 Unveiled Content: Strategic Talent Radar */}
-      <div
-        ref={radarMapRef}
-        className="relative z-10 w-full px-8 md:px-20 py-16 text-center max-w-5xl mx-auto"
-      >
-        <div className="w-16 h-16 mx-auto mb-6 rounded-3xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shadow-lg shadow-emerald-500/10">
-          <Radar className="w-8 h-8 text-emerald-600 animate-spin" style={{ animationDuration: '8s' }} />
-        </div>
-
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono text-xs font-bold mb-4">
-          <Compass className="w-3.5 h-3.5 text-emerald-600" />
-          <span>PATTERN 18 · VERTICAL SHUTTER CURTAIN SPLIT</span>
-        </div>
-
-        <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tight mb-4">
-          Global Talent Coordinates Unlocked
-        </h2>
-        <p className="text-slate-600 text-sm md:text-base max-w-2xl mx-auto mb-10 leading-relaxed">
-          The vertical shutters have parted upwards and downwards, revealing live geographic candidate density across Bangalore Outer Ring Road, Hyderabad Financial District, and London Bank hubs.
-        </p>
-
-        <div className="p-8 rounded-3xl bg-white border border-slate-200 shadow-xl shadow-slate-200/50 grid grid-cols-2 md:grid-cols-4 gap-4 text-center font-mono">
-          <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
-            <div className="text-xs text-slate-500">Bangalore Hub</div>
-            <div className="text-2xl font-black text-emerald-600 mt-1">28,400+</div>
-          </div>
-          <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
-            <div className="text-xs text-slate-500">Hyderabad Hub</div>
-            <div className="text-2xl font-black text-blue-600 mt-1">14,200+</div>
-          </div>
-          <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
-            <div className="text-xs text-slate-500">London Hub</div>
-            <div className="text-2xl font-black text-purple-600 mt-1">4,500+</div>
-          </div>
-          <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
-            <div className="text-xs text-slate-500">SF Hub</div>
-            <div className="text-2xl font-black text-teal-600 mt-1">3,200+</div>
-          </div>
-        </div>
+    <section className="relative w-full py-20 px-6 md:px-16 bg-white text-slate-900 border-b border-slate-200 flex flex-col items-center justify-center text-center">
+      <div className="w-16 h-16 mx-auto mb-6 rounded-3xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shadow-lg shadow-emerald-500/10">
+        <Radar className="w-8 h-8 text-emerald-600 animate-spin" style={{ animationDuration: '8s' }} />
       </div>
 
-      {/* Pattern 18: Top Curtain Panel (Slides UP) */}
-      <div
-        ref={topCurtainRef}
-        className="absolute top-0 left-0 right-0 h-1/2 bg-white border-b border-slate-300 p-8 md:p-12 flex flex-col justify-between z-20 shadow-2xl backdrop-blur-xl"
-      >
-        <div className="flex items-center justify-between text-xs font-mono text-emerald-700 font-bold">
-          <span>PATTERN 18 · TOP CURTAIN SHUTTER</span>
-          <span className="flex items-center gap-1">
-            <span>SLIDING UP</span>
-            <ArrowUp className="w-3.5 h-3.5" />
-          </span>
-        </div>
-        <div className="text-2xl md:text-4xl font-black text-slate-900 tracking-tight">
-          NexaTalent Global Radar
-        </div>
+      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono text-xs font-bold mb-4">
+        <Compass className="w-3.5 h-3.5 text-emerald-600" />
+        <span>NEXA MATCH™ · REAL-TIME TALENT ARBITRAGE RADAR</span>
       </div>
 
-      {/* Pattern 18: Bottom Curtain Panel (Slides DOWN) */}
-      <div
-        ref={bottomCurtainRef}
-        className="absolute bottom-0 left-0 right-0 h-1/2 bg-white border-t border-slate-300 p-8 md:p-12 flex flex-col justify-between z-20 shadow-2xl backdrop-blur-xl"
-      >
-        <div className="text-2xl md:text-4xl font-black text-slate-900 tracking-tight">
-          Candidate Coordinate System
+      <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-4">
+        Real-Time Engineering Coordinates
+      </h2>
+      <p className="text-slate-600 text-sm md:text-base max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
+        Real-time candidate telemetry across Bengaluru Outer Ring Road, Hyderabad HITEC City, Pune Cybercity, and Delhi NCR tech corridors.
+      </p>
+
+      <div className="p-8 rounded-3xl bg-slate-50 border border-slate-200 shadow-xl shadow-slate-200/50 grid grid-cols-2 md:grid-cols-4 gap-4 text-center font-mono w-full max-w-5xl">
+        <div className="p-4 bg-white border border-slate-200 rounded-2xl">
+          <div className="text-xs text-slate-500">Bengaluru Hub</div>
+          <div className="text-2xl font-black text-emerald-600 mt-1">240,000+</div>
         </div>
-        <div className="flex items-center justify-between text-xs font-mono text-slate-400">
-          <span>COORDINATES CALIBRATED</span>
-          <span className="flex items-center gap-1 text-emerald-600 font-bold">
-            <span>SLIDING DOWN</span>
-            <ArrowDown className="w-3.5 h-3.5" />
-          </span>
+        <div className="p-4 bg-white border border-slate-200 rounded-2xl">
+          <div className="text-xs text-slate-500">Hyderabad Hub</div>
+          <div className="text-2xl font-black text-blue-600 mt-1">185,000+</div>
+        </div>
+        <div className="p-4 bg-white border border-slate-200 rounded-2xl">
+          <div className="text-xs text-slate-500">Pune Hub</div>
+          <div className="text-2xl font-black text-purple-600 mt-1">130,000+</div>
+        </div>
+        <div className="p-4 bg-white border border-slate-200 rounded-2xl">
+          <div className="text-xs text-slate-500">Delhi NCR Hub</div>
+          <div className="text-2xl font-black text-teal-600 mt-1">115,000+</div>
         </div>
       </div>
     </section>

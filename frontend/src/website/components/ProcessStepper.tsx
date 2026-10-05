@@ -21,7 +21,7 @@ export interface ProcessStepperProps {
 
 export const ProcessStepper: React.FC<ProcessStepperProps> = ({
   badge = 'Interactive Engagement Steps',
-  title = 'How Enterprise Hiring Works With NexaTalent',
+  title = 'How Enterprise Hiring Works With NexaTalent IT Solutions',
   steps = [
     {
       number: 1,

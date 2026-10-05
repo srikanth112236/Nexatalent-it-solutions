@@ -216,7 +216,7 @@ export const SignatureTalentRadar: React.FC = () => {
             </div>
 
             <p className="mt-8 text-xs text-slate-500 text-center">
-              Evaluated via NexaTalent 4-Stage Architectural Defense. Only candidates exceeding 85% in all vectors qualify for enterprise shortlist.
+              Evaluated via NexaTalent IT Solutions 4-Stage Architectural Defense. Only candidates exceeding 85% in all vectors qualify for enterprise shortlist.
             </p>
           </div>
 

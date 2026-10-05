@@ -155,7 +155,7 @@ export const ParallaxMultiLayerSplit: React.FC = () => {
             </h3>
 
             <p className="text-slate-600 text-base leading-relaxed">
-              While conventional recruiters spray keyword-matched resumes, NexaTalent operates across three calibrated architectural layers. On scroll, each stratum responds at differential visual speeds, matching how we deconstruct candidate capabilities from macro experience down to microsecond cache profiling.
+              While conventional recruiters spray keyword-matched resumes, NexaTalent IT Solutions operates across three calibrated architectural layers. On scroll, each stratum responds at differential visual speeds, matching how we deconstruct candidate capabilities from macro experience down to microsecond cache profiling.
             </p>
 
             <div className="space-y-3 pt-2">

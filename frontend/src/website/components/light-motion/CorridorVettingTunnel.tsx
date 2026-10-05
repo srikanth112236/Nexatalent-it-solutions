@@ -22,7 +22,7 @@ const GATES: VettingGate[] = [
     title: 'Production Architecture & Distributed State',
     evaluator: 'Ex-Staff Architect, Distributed Systems',
     description: 'Live whiteboarding on Raft consensus, Byzantine fault tolerance, sharded database partitioning, and cache coherency.',
-    failureRate: '68% Filtered',
+    failureRate: 'Stage 01 · Architecture Depth',
     metrics: ['Sub-millisecond state machines', 'Zero single-point-of-failure topologies', 'Partition tolerance verification'],
     accent: '#2563eb',
     icon: Cpu
@@ -32,7 +32,7 @@ const GATES: VettingGate[] = [
     title: 'Algorithmic Concurrency & Kernel Profiling',
     evaluator: 'Principal Systems Specialist',
     description: 'Candidates write lock-free memory buffers and multithreaded queues benchmarked for CPU cache misses and memory contention.',
-    failureRate: '84% Filtered',
+    failureRate: 'Stage 02 · Concurrency & Systems',
     metrics: ['Zero-allocation data paths', 'Atomic memory ordering models', 'eBPF kernel bypass profiling'],
     accent: '#0891b2',
     icon: Terminal
@@ -42,7 +42,7 @@ const GATES: VettingGate[] = [
     title: 'Organizational Leadership & Calibrated Culture',
     evaluator: 'Managing Partner & Former VP Eng',
     description: 'Assessing engineering empathy, conflict resolution in distributed teams, compensation expectations, and executive maturity.',
-    failureRate: '93% Filtered',
+    failureRate: 'Stage 03 · Leadership & Culture',
     metrics: ['Cross-functional stakeholder sync', 'Mentorship & staff retention models', 'Notice-period buyouts & counter-defense'],
     accent: '#7c3aed',
     icon: Users
@@ -52,7 +52,7 @@ const GATES: VettingGate[] = [
     title: 'Background Verification & Credential Audit',
     evaluator: 'Governance & Compliance Board',
     description: 'Deep reference checks with former direct managers, verified educational credentials, criminal background checks, and NDA clearance.',
-    failureRate: '96.5% Filtered (Top 3.5% Cleared)',
+    failureRate: 'Stage 04 · Verification & Clearance',
     metrics: ['Strict bilateral non-compete audits', '100% IP assignment clearance', 'Escrow-backed 180-day warranty'],
     accent: '#10b981',
     icon: Award

@@ -19,7 +19,7 @@ export const JobsSalaryAndArbitrageCalculator: React.FC = () => {
   return (
     <div className="w-full bg-slate-900/5 p-4 sm:p-6 rounded-2xl border border-slate-200">
       <div className="text-xs font-mono font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center justify-between">
-        <span>33 · Candidate Compensation & Purchasing Power Calculator</span>
+        <span>Candidate Compensation & Purchasing Power Calculator</span>
         <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[10px]">PPP Realization</span>
       </div>
 

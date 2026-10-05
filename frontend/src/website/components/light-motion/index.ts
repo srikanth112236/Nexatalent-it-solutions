@@ -1,5 +1,10 @@
 // 40 Modern Light-Theme Animated Components + 10 Signature Sections + 16 Advanced Parallax, Rails & Sticky Pin Sections (66 Total)
 export * from './LightHeroZoomReveal';
+export * from './LightWhyNexaHeroBanner';
+export * from './LightCaseStudiesHeroBanner';
+export * from './LightRequestTalentHeroBanner';
+export * from './LightInsightsHeroBanner';
+export * from './LightEmployersHeroBanner';
 export * from './LightHeroParallaxImage';
 export * from './LightStackedCards';
 export * from './LightTwoColumnPinnedStory';

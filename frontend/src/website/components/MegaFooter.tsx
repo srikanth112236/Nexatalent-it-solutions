@@ -150,9 +150,16 @@ export const MegaFooter: React.FC = () => {
               Solutions
             </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
-              {['Contingent Search', 'Retained Executive Search', 'GCC Turnkey Incubation', 'Technical Screening as a Service', 'Employer Portal & SLAs'].map((item, i) => (
+              {[
+                { to: '/solutions', label: 'Solutions Overview' },
+                { to: '/solutions/permanent-hiring', label: 'Permanent Recruitment' },
+                { to: '/solutions/contract-staffing', label: 'Contract Staffing' },
+                { to: '/solutions/gcc-hiring', label: 'GCC Turnkey Pods' },
+                { to: '/solutions/executive-search', label: 'Executive CXO Search' },
+                { to: '/solutions/volume-hiring', label: 'Volume Hiring Drives' }
+              ].map((item, i) => (
                 <motion.li key={i} whileHover={{ x: 5, color: 'var(--color-primary-400)' }} transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}>
-                  <Link to="#" style={{ color: 'inherit', textDecoration: 'none' }}>{item}</Link>
+                  <Link to={item.to} style={{ color: 'inherit', textDecoration: 'none' }}>{item.label}</Link>
                 </motion.li>
               ))}
             </ul>
@@ -164,9 +171,16 @@ export const MegaFooter: React.FC = () => {
               Practices
             </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
-              {['FinTech & High Frequency', 'AI & Foundation Models', 'Cloud Native & SRE', 'HealthTech & Bio', 'Automotive & Mobility'].map((item, i) => (
+              {[
+                { to: '/industries', label: 'Industries Overview' },
+                { to: '/industries/technology', label: 'Technology & SaaS' },
+                { to: '/industries/bfsi', label: 'BFSI & FinTech' },
+                { to: '/industries/healthcare', label: 'Healthcare & Life Sciences' },
+                { to: '/industries/manufacturing', label: 'Manufacturing & IoT' },
+                { to: '/industries/gcc', label: 'Global Capability Centers' }
+              ].map((item, i) => (
                 <motion.li key={i} whileHover={{ x: 5, color: 'var(--color-primary-400)' }} transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}>
-                  <Link to="#" style={{ color: 'inherit', textDecoration: 'none' }}>{item}</Link>
+                  <Link to={item.to} style={{ color: 'inherit', textDecoration: 'none' }}>{item.label}</Link>
                 </motion.li>
               ))}
             </ul>
@@ -175,12 +189,18 @@ export const MegaFooter: React.FC = () => {
           {/* Col 3: Hub Locations */}
           <motion.div variants={itemVariants}>
             <h4 style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--color-text)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1.25rem' }}>
-              Global Hubs
+              Locations
             </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
-              {['Bangalore, India', 'Hyderabad, India', 'Pune, India', 'London, UK', 'San Francisco, US', 'Global Asynchronous Remote'].map((item, i) => (
+              {[
+                { to: '/contact', label: 'Bengaluru (HQ)' },
+                { to: '/contact', label: 'Hyderabad Tech Pod' },
+                { to: '/contact', label: 'Pune Enterprise Hub' },
+                { to: '/contact', label: 'Mumbai Financial Center' },
+                { to: '/contact', label: 'Contact Global Hubs' }
+              ].map((item, i) => (
                 <motion.li key={i} whileHover={{ x: 5, color: 'var(--color-primary-400)' }} transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}>
-                  <Link to="#" style={{ color: 'inherit', textDecoration: 'none' }}>{item}</Link>
+                  <Link to={item.to} style={{ color: 'inherit', textDecoration: 'none' }}>{item.label}</Link>
                 </motion.li>
               ))}
             </ul>
@@ -192,9 +212,15 @@ export const MegaFooter: React.FC = () => {
               Platform Portals
             </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
-              {['Employer Client Portal', 'Candidate Passport', 'Recruiter Workspace', 'SuperAdmin Console', 'Component Library (All 40)'].map((item, i) => (
+              {[
+                { to: '/employers', label: 'For Employers' },
+                { to: '/candidates', label: 'For Candidates' },
+                { to: '/partners', label: 'Recruitment Partners' },
+                { to: '/jobs', label: 'Job Board & Open Mandates' },
+                { to: '/login', label: 'Unified Sign In' }
+              ].map((item, i) => (
                 <motion.li key={i} whileHover={{ x: 5, color: 'var(--color-primary-400)' }} transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}>
-                  <Link to="#" style={{ color: 'inherit', textDecoration: 'none' }}>{item}</Link>
+                  <Link to={item.to} style={{ color: 'inherit', textDecoration: 'none' }}>{item.label}</Link>
                 </motion.li>
               ))}
             </ul>
@@ -206,9 +232,17 @@ export const MegaFooter: React.FC = () => {
               Trust & Legal
             </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
-              {['Client Case Studies', 'Candidate Privacy Charter', 'Service Level Agreement (SLA)', 'SOC-2 Type II Attestation', 'Escalation & Support'].map((item, i) => (
+              {[
+                { to: '/case-studies', label: 'Client Case Studies' },
+                { to: '/why-nexatalent', label: 'Why NexaTalent IT Solutions' },
+                { to: '/insights', label: 'Market Insights & Salary Reports' },
+                { to: '/privacy-policy', label: 'Privacy Policy (DPDP Act)' },
+                { to: '/terms', label: 'Terms of Service' },
+                { to: '/data-protection', label: 'IP & Non-Solicitation' },
+                { to: '/contact', label: 'Contact & Office SLA' }
+              ].map((item, i) => (
                 <motion.li key={i} whileHover={{ x: 5, color: 'var(--color-primary-400)' }} transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}>
-                  <Link to="#" style={{ color: 'inherit', textDecoration: 'none' }}>{item}</Link>
+                  <Link to={item.to} style={{ color: 'inherit', textDecoration: 'none' }}>{item.label}</Link>
                 </motion.li>
               ))}
             </ul>
@@ -232,9 +266,9 @@ export const MegaFooter: React.FC = () => {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <span style={{ fontWeight: 700, color: 'var(--color-text)' }}>
-              NexaTalent Operating System
+              NexaTalent IT Solutions Operating System
             </span>
-            <span>© {new Date().getFullYear()} NexaTalent Inc. All rights reserved.</span>
+            <span>© {new Date().getFullYear()} NexaTalent IT Solutions Inc. All rights reserved.</span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>

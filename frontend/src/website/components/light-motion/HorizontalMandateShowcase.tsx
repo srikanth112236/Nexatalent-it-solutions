@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Briefcase, MapPin, Shield, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -172,10 +173,10 @@ export const HorizontalMandateShowcase: React.FC = () => {
               <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
                 {m.urgency}
               </span>
-              <button className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer">
-                <span>View Full Mandate</span>
+              <Link to={`/jobs/${m.id}`} className="px-4 py-2 rounded-xl bg-[#0265FF] hover:bg-[#004FBF] text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer text-decoration-none">
+                <span>View Mandate & Apply</span>
                 <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+              </Link>
             </div>
           </div>
         ))}

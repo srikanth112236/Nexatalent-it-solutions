@@ -38,11 +38,11 @@ export const LightRadialExpansion: React.FC = () => {
       ref={containerRef}
       className="theme-light"
       style={{
-        backgroundColor: '#ffffff',
-        color: '#0f172a',
+        backgroundColor: 'var(--nt-surface, #ffffff)',
+        color: 'var(--nt-ink, #0f172a)',
         padding: '6rem 2rem',
         position: 'relative',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
         overflow: 'hidden',
       }}
     >
@@ -67,10 +67,10 @@ export const LightRadialExpansion: React.FC = () => {
             <Sparkles size={14} />
             Pattern 32 & 33 · Radial Expansion & Collapse
           </div>
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a' }}>
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)' }}>
             Multi-Signal Calibration Orbit
           </h2>
-          <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
+          <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
             Scroll down to watch skills, system concurrency, and domain intelligence expand radially from the central matching core.
           </p>
         </div>
@@ -125,9 +125,9 @@ export const LightRadialExpansion: React.FC = () => {
             className="radial-node-top"
             style={{
               position: 'absolute',
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--nt-surface, #ffffff)',
               borderRadius: '16px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--nt-border, #e2e8f0)',
               padding: '1rem 1.5rem',
               boxShadow: '0 10px 25px -5px rgba(0,0,0,0.08)',
               display: 'flex',
@@ -138,8 +138,8 @@ export const LightRadialExpansion: React.FC = () => {
           >
             <Code2 size={18} color="#2563eb" />
             <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#0f172a' }}>System Architecture</div>
-              <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>Raft, Paxos, eBPF</div>
+              <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)' }}>System Architecture</div>
+              <div style={{ fontSize: '0.6875rem', color: 'var(--nt-muted, #64748b)' }}>Raft, Paxos, eBPF</div>
             </div>
           </div>
 
@@ -148,9 +148,9 @@ export const LightRadialExpansion: React.FC = () => {
             className="radial-node-bottom"
             style={{
               position: 'absolute',
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--nt-surface, #ffffff)',
               borderRadius: '16px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--nt-border, #e2e8f0)',
               padding: '1rem 1.5rem',
               boxShadow: '0 10px 25px -5px rgba(0,0,0,0.08)',
               display: 'flex',
@@ -161,8 +161,8 @@ export const LightRadialExpansion: React.FC = () => {
           >
             <Shield size={18} color="#16a34a" />
             <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#0f172a' }}>Escrow Warranty</div>
-              <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>90-Day Protection</div>
+              <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)' }}>Escrow Warranty</div>
+              <div style={{ fontSize: '0.6875rem', color: 'var(--nt-muted, #64748b)' }}>90-Day Protection</div>
             </div>
           </div>
 
@@ -171,9 +171,9 @@ export const LightRadialExpansion: React.FC = () => {
             className="radial-node-left"
             style={{
               position: 'absolute',
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--nt-surface, #ffffff)',
               borderRadius: '16px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--nt-border, #e2e8f0)',
               padding: '1rem 1.5rem',
               boxShadow: '0 10px 25px -5px rgba(0,0,0,0.08)',
               display: 'flex',
@@ -184,8 +184,8 @@ export const LightRadialExpansion: React.FC = () => {
           >
             <Database size={18} color="#7c3aed" />
             <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#0f172a' }}>FinTech & HFT</div>
-              <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>Sub-microsecond</div>
+              <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)' }}>FinTech & HFT</div>
+              <div style={{ fontSize: '0.6875rem', color: 'var(--nt-muted, #64748b)' }}>Sub-microsecond</div>
             </div>
           </div>
 
@@ -194,9 +194,9 @@ export const LightRadialExpansion: React.FC = () => {
             className="radial-node-right"
             style={{
               position: 'absolute',
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--nt-surface, #ffffff)',
               borderRadius: '16px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--nt-border, #e2e8f0)',
               padding: '1rem 1.5rem',
               boxShadow: '0 10px 25px -5px rgba(0,0,0,0.08)',
               display: 'flex',
@@ -207,8 +207,8 @@ export const LightRadialExpansion: React.FC = () => {
           >
             <Zap size={18} color="#ea580c" />
             <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#0f172a' }}>48h Shortlist SLA</div>
-              <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>Contractually Backed</div>
+              <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)' }}>48h Shortlist SLA</div>
+              <div style={{ fontSize: '0.6875rem', color: 'var(--nt-muted, #64748b)' }}>Contractually Backed</div>
             </div>
           </div>
         </div>

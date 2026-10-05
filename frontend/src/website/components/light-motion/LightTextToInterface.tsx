@@ -40,11 +40,11 @@ export const LightTextToInterface: React.FC = () => {
       ref={containerRef}
       className="theme-light"
       style={{
-        backgroundColor: '#f8fafc',
-        color: '#0f172a',
+        backgroundColor: 'var(--nt-surface-2, #f8fafc)',
+        color: 'var(--nt-ink, #0f172a)',
         padding: '6rem 2rem',
         position: 'relative',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
       }}
     >
       <div style={{ maxWidth: '1100px', margin: '0 auto', textAlign: 'center' }}>
@@ -68,10 +68,10 @@ export const LightTextToInterface: React.FC = () => {
             <Sparkles size={14} />
             Pattern 34 & 35 · Text to Interface Transformation & Fragment Assembly
           </div>
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a' }}>
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)' }}>
             From Semantic Words to Live Calibrated Interface
           </h2>
-          <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
+          <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
             Scroll down to watch raw technical criteria transform dynamically into an assembled candidate scorecard.
           </p>
         </div>
@@ -90,14 +90,14 @@ export const LightTextToInterface: React.FC = () => {
           <div
             className="transforming-text-block"
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--nt-surface, #ffffff)',
               borderRadius: '24px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--nt-border, #e2e8f0)',
               padding: '2.5rem',
               boxShadow: '0 10px 25px -5px rgba(0,0,0,0.04)',
             }}
           >
-            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: '1rem' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--nt-muted, #64748b)', textTransform: 'uppercase', marginBottom: '1rem' }}>
               Input: Plain Language Mandate
             </div>
             <div
@@ -105,11 +105,11 @@ export const LightTextToInterface: React.FC = () => {
                 fontFamily: 'monospace',
                 fontSize: '1rem',
                 lineHeight: 1.8,
-                color: '#0f172a',
-                backgroundColor: '#f8fafc',
+                color: 'var(--nt-ink, #0f172a)',
+                backgroundColor: 'var(--nt-surface-2, #f8fafc)',
                 padding: '1.5rem',
                 borderRadius: '16px',
-                border: '1px solid #e2e8f0',
+                border: '1px solid var(--nt-border, #e2e8f0)',
               }}
             >
               "We need a <span style={{ color: '#2563eb', fontWeight: 700 }}>Staff Distributed SRE</span> who has written production{' '}
@@ -117,8 +117,8 @@ export const LightTextToInterface: React.FC = () => {
               <span style={{ color: '#0891b2', fontWeight: 700 }}>Kubernetes</span> clusters with zero downtime, and holds deep{' '}
               <span style={{ color: '#16a34a', fontWeight: 700 }}>eBPF tracing</span> experience."
             </div>
-            <div style={{ marginTop: '1.5rem', color: '#64748b', fontSize: '0.875rem' }}>
-              ↓ NexaTalent parses semantic tokens & concurrency invariants
+            <div style={{ marginTop: '1.5rem', color: 'var(--nt-muted, #64748b)', fontSize: '0.875rem' }}>
+              ↓ NexaTalent IT Solutions parses semantic tokens & concurrency invariants
             </div>
           </div>
 
@@ -126,7 +126,7 @@ export const LightTextToInterface: React.FC = () => {
           <div
             className="ui-fragment-card"
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--nt-surface, #ffffff)',
               borderRadius: '24px',
               border: '2px solid #2563eb',
               padding: '2.5rem',
@@ -139,8 +139,8 @@ export const LightTextToInterface: React.FC = () => {
                   <User size={24} />
                 </div>
                 <div>
-                  <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Candidate NT-9824</h4>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: '#64748b' }}>
+                  <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)' }}>Candidate NT-9824</h4>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: 'var(--nt-muted, #64748b)' }}>
                     <MapPin size={13} />
                     <span>Bangalore · Ex-FAANG SRE Lead · 8 Yrs</span>
                   </div>
@@ -170,7 +170,7 @@ export const LightTextToInterface: React.FC = () => {
             {/* Assembled Skill Bars */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', fontWeight: 700, color: 'var(--nt-ink-2, #334155)', marginBottom: '0.25rem' }}>
                   <span>Rust / Concurrency Limits</span>
                   <span style={{ color: '#2563eb' }}>96%</span>
                 </div>
@@ -180,7 +180,7 @@ export const LightTextToInterface: React.FC = () => {
               </div>
 
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', fontWeight: 700, color: 'var(--nt-ink-2, #334155)', marginBottom: '0.25rem' }}>
                   <span>Distributed K8s & Mesh</span>
                   <span style={{ color: '#0891b2' }}>92%</span>
                 </div>
@@ -190,7 +190,7 @@ export const LightTextToInterface: React.FC = () => {
               </div>
 
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', fontWeight: 700, color: 'var(--nt-ink-2, #334155)', marginBottom: '0.25rem' }}>
                   <span>eBPF Tracing & Observability</span>
                   <span style={{ color: '#16a34a' }}>98%</span>
                 </div>

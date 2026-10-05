@@ -76,11 +76,11 @@ export const LightCardExpandSection: React.FC = () => {
     <section
       className="theme-light"
       style={{
-        backgroundColor: '#f8fafc',
-        color: '#0f172a',
+        backgroundColor: 'var(--nt-surface-2, #f8fafc)',
+        color: 'var(--nt-ink, #0f172a)',
         padding: '6rem 2rem',
         position: 'relative',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid var(--nt-border, #e2e8f0)',
       }}
     >
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -104,10 +104,10 @@ export const LightCardExpandSection: React.FC = () => {
             <Sparkles size={14} />
             S08 Card to Full Section Expansion Pattern
           </div>
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a' }}>
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)' }}>
             Interactive Practice Deep Dives
           </h2>
-          <p style={{ color: '#64748b', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
+          <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
             Click any practice card to expand into an immersive full-section view with deep technical rubrics and verified metrics.
           </p>
         </div>
@@ -129,8 +129,8 @@ export const LightCardExpandSection: React.FC = () => {
               transition={{ duration: motionTokens.duration.standard, ease: motionTokens.ease.standard }}
               style={{
                 borderRadius: '24px',
-                backgroundColor: '#ffffff',
-                border: '1px solid #e2e8f0',
+                backgroundColor: 'var(--nt-surface, #ffffff)',
+                border: '1px solid var(--nt-border, #e2e8f0)',
                 padding: '2.5rem',
                 cursor: 'pointer',
                 display: 'flex',
@@ -176,11 +176,11 @@ export const LightCardExpandSection: React.FC = () => {
                   {idx === 2 && <Layers size={22} />}
                 </div>
 
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.35, marginBottom: '0.75rem' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)', lineHeight: 1.35, marginBottom: '0.75rem' }}>
                   {item.title}
                 </h3>
 
-                <p style={{ color: '#475569', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '2rem' }}>
+                <p style={{ color: 'var(--nt-muted, #475569)', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '2rem' }}>
                   {item.shortDesc}
                 </p>
               </div>
@@ -191,7 +191,7 @@ export const LightCardExpandSection: React.FC = () => {
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   paddingTop: '1.25rem',
-                  borderTop: '1px solid #e2e8f0',
+                  borderTop: '1px solid var(--nt-border, #e2e8f0)',
                 }}
               >
                 <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#16a34a' }}>
@@ -232,9 +232,9 @@ export const LightCardExpandSection: React.FC = () => {
                 style={{
                   width: '100%',
                   maxWidth: '850px',
-                  backgroundColor: '#ffffff',
+                  backgroundColor: 'var(--nt-surface, #ffffff)',
                   borderRadius: '28px',
-                  border: '1px solid #e2e8f0',
+                  border: '1px solid var(--nt-border, #e2e8f0)',
                   padding: '3.5rem 3rem',
                   boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
                   position: 'relative',
@@ -251,13 +251,13 @@ export const LightCardExpandSection: React.FC = () => {
                     width: '36px',
                     height: '36px',
                     borderRadius: '50%',
-                    backgroundColor: '#f1f5f9',
+                    backgroundColor: 'var(--nt-surface-3, #f1f5f9)',
                     border: '1px solid #cbd5e1',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: 'pointer',
-                    color: '#475569',
+                    color: 'var(--nt-muted, #475569)',
                   }}
                 >
                   <X size={18} />
@@ -281,20 +281,20 @@ export const LightCardExpandSection: React.FC = () => {
                   </span>
                 </div>
 
-                <h2 style={{ fontSize: '2rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.25, marginBottom: '1.25rem' }}>
+                <h2 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--nt-ink, #0f172a)', lineHeight: 1.25, marginBottom: '1.25rem' }}>
                   {selectedItem.title}
                 </h2>
 
-                <p style={{ fontSize: '1.0625rem', color: '#475569', lineHeight: 1.7, marginBottom: '2rem' }}>
+                <p style={{ fontSize: '1.0625rem', color: 'var(--nt-muted, #475569)', lineHeight: 1.7, marginBottom: '2rem' }}>
                   {selectedItem.longDesc}
                 </p>
 
                 {/* Metric Strip */}
                 <div
                   style={{
-                    backgroundColor: '#f8fafc',
+                    backgroundColor: 'var(--nt-surface-2, #f8fafc)',
                     borderRadius: '16px',
-                    border: '1px solid #e2e8f0',
+                    border: '1px solid var(--nt-border, #e2e8f0)',
                     padding: '1.5rem 2rem',
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -305,13 +305,13 @@ export const LightCardExpandSection: React.FC = () => {
                   }}
                 >
                   <div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--nt-muted, #64748b)', textTransform: 'uppercase' }}>
                       Performance Outcome
                     </div>
                     <div style={{ fontSize: '2.5rem', fontWeight: 900, color: selectedItem.accent }}>
                       {selectedItem.stat}
                     </div>
-                    <div style={{ fontSize: '0.8125rem', color: '#475569', fontWeight: 600 }}>
+                    <div style={{ fontSize: '0.8125rem', color: 'var(--nt-muted, #475569)', fontWeight: 600 }}>
                       {selectedItem.statLabel}
                     </div>
                   </div>
@@ -323,12 +323,12 @@ export const LightCardExpandSection: React.FC = () => {
                 </div>
 
                 <div style={{ marginBottom: '2.5rem' }}>
-                  <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.75rem' }}>
+                  <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--nt-ink, #0f172a)', marginBottom: '0.75rem' }}>
                     Standard Calibration Deliverables:
                   </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
                     {selectedItem.deliverables.map((d, dIdx) => (
-                      <div key={dIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.9375rem', color: '#1e293b' }}>
+                      <div key={dIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.9375rem', color: 'var(--nt-ink-2, #1e293b)' }}>
                         <CheckCircle2 size={16} color={selectedItem.accent} style={{ flexShrink: 0, marginTop: '3px' }} />
                         <span>{d}</span>
                       </div>
@@ -358,8 +358,8 @@ export const LightCardExpandSection: React.FC = () => {
                     style={{
                       padding: '0.875rem 1.5rem',
                       borderRadius: '12px',
-                      backgroundColor: '#ffffff',
-                      color: '#475569',
+                      backgroundColor: 'var(--nt-surface, #ffffff)',
+                      color: 'var(--nt-muted, #475569)',
                       border: '1px solid #cbd5e1',
                       fontWeight: 600,
                       fontSize: '1rem',

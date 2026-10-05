@@ -12,14 +12,14 @@ export const FooterMonolithicDarkEcho: React.FC = () => {
       <footer className="max-w-7xl mx-auto rounded-3xl bg-neutral-950 text-white p-8 sm:p-14 border border-neutral-800 overflow-hidden relative">
         {/* Giant Watermark in background */}
         <div className="absolute -bottom-8 -right-8 select-none pointer-events-none opacity-5 text-neutral-100 font-black text-8xl lg:text-9xl tracking-tighter">
-          NEXATALENT
+          NEXATALENT IT SOLUTIONS
         </div>
 
         <div className="relative z-10 grid grid-cols-1 md:grid-cols-4 gap-10 pb-12 border-b border-neutral-800">
           <div className="space-y-4">
             <span className="font-mono text-xs uppercase tracking-widest text-amber-500">Corporate Genesis</span>
             <p className="text-xs text-neutral-400 leading-relaxed font-light">
-              NexaTalent operates institutional talent infrastructure designed specifically to circumvent agency friction, slow recruiting cycles, and sub-par technical vetting.
+              NexaTalent IT Solutions operates institutional talent infrastructure designed specifically to circumvent agency friction, slow recruiting cycles, and sub-par technical vetting.
             </p>
             <div className="inline-flex items-center gap-1.5 text-[11px] font-mono text-neutral-400">
               <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
@@ -65,7 +65,7 @@ export const FooterMonolithicDarkEcho: React.FC = () => {
         </div>
 
         <div className="relative z-10 pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-neutral-500 font-mono">
-          <div>© 2026 NEXATALENT PLATFORM HOLDINGS. ALL RIGHTS RESERVED.</div>
+          <div>© 2026 NEXATALENT IT SOLUTIONS PLATFORM HOLDINGS. ALL RIGHTS RESERVED.</div>
           <div className="flex gap-4 mt-2 sm:mt-0">
             <span>SEC-REG: #8829-10</span>
             <span>BLR • HYD • LON • SF</span>

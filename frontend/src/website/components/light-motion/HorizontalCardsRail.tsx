@@ -20,58 +20,58 @@ interface RailCard {
 const RAIL_CARDS: RailCard[] = [
   {
     id: 'case-1',
-    client: 'Tier-1 Wall Street Investment Bank',
-    location: 'Bangalore GCC Center',
-    scope: '45-Engineer Ultra-Low Latency C++ & FPGA Trading Pod',
-    outcome: 'Achieved sub-850ns execution parity with Chicago colocation gateway.',
-    teamSize: '45 Engineers',
-    timeline: '42 Calendar Days',
-    savings: '$3.8M Annual Arbitrage',
-    accent: '#2563eb'
+    client: 'Global Investment Banking Practice',
+    location: 'India GCC Hiring',
+    scope: 'Low-Latency Trading Systems Hiring Pod',
+    outcome: 'Systems-focused screening with architecture depth reviews.',
+    teamSize: 'Practice Pod',
+    timeline: 'Milestone Tracking',
+    savings: 'Transparent Commercials',
+    accent: '#0265FF'
   },
   {
     id: 'case-2',
-    client: 'Silicon Valley AI Research Scale-Up ($15B Cap)',
-    location: 'Hyderabad AI Center',
-    scope: 'VP of AI Platform + 30 Distributed vLLM Systems Architects',
-    outcome: 'Scaled production GPU memory inference throughput by 8.4x.',
-    teamSize: '31 Key Hires',
-    timeline: '38 Calendar Days',
-    savings: '$4.2M Annual Arbitrage',
-    accent: '#7c3aed'
+    client: 'AI Platform Engineering Practice',
+    location: 'Distributed AI Hiring',
+    scope: 'AI Platform Leadership & Systems Architects',
+    outcome: 'Production-grade AI systems screening and structured evaluation.',
+    teamSize: 'Leadership & IC Mix',
+    timeline: 'Milestone Tracking',
+    savings: 'Transparent Commercials',
+    accent: '#0265FF'
   },
   {
     id: 'case-3',
-    client: 'London FinTech Unicorn (Series D)',
-    location: 'Bangalore Capability Hub',
-    scope: 'Founding Engineering Director + 60 Microservices Engineers',
-    outcome: 'Eliminated reliance on expensive third-party outsourcing agencies.',
-    teamSize: '61 Engineers',
-    timeline: '55 Calendar Days',
-    savings: '$5.1M Annual Arbitrage',
-    accent: '#0891b2'
+    client: 'FinTech Platform Practice',
+    location: 'India Capability Hiring',
+    scope: 'Engineering Leadership & Microservices Teams',
+    outcome: 'Direct hiring model replacing third-party dependency.',
+    teamSize: 'Team Pod',
+    timeline: 'Milestone Tracking',
+    savings: 'Transparent Commercials',
+    accent: '#0265FF'
   },
   {
     id: 'case-4',
-    client: 'Autonomous Robotics & CV Platform',
-    location: 'Bangalore Core Center',
-    scope: 'Turnkey 120-Engineer Center Build-Operate-Transfer (BOT)',
-    outcome: 'Delivered 100% intellectual property transfer on Day 75.',
-    teamSize: '120 Engineers',
-    timeline: '75 Calendar Days',
-    savings: '$9.4M Annual Arbitrage',
-    accent: '#10b981'
+    client: 'Robotics & Vision Practice',
+    location: 'India Core Center Hiring',
+    scope: 'Center Build-Operate-Transfer Hiring Motion',
+    outcome: 'Documented IP and handover discipline at every stage.',
+    teamSize: 'Center Pod',
+    timeline: 'Milestone Tracking',
+    savings: 'Transparent Commercials',
+    accent: '#0265FF'
   },
   {
     id: 'case-5',
-    client: 'Singapore Digital Banking Consortium',
-    location: 'Hyderabad FinTech Pod',
-    scope: '25 Cloud-Native SRE & Cryptographic Core Engineers',
-    outcome: 'Achieved 99.999% uptime compliance under MAS regulatory standards.',
-    teamSize: '25 Engineers',
-    timeline: '28 Calendar Days',
-    savings: '$2.4M Annual Arbitrage',
-    accent: '#ea580c'
+    client: 'Digital Banking Practice',
+    location: 'FinTech Pod Hiring',
+    scope: 'Cloud-Native & Platform Security Engineers',
+    outcome: 'Compliance-aware screening for regulated environments.',
+    teamSize: 'Platform Pod',
+    timeline: 'Milestone Tracking',
+    savings: 'Transparent Commercials',
+    accent: '#0265FF'
   }
 ];
 
@@ -110,17 +110,17 @@ export const HorizontalCardsRail: React.FC = () => {
     >
       <div className="pt-12 px-8 max-w-7xl mx-auto flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold mb-2">
-            <LayoutGrid className="w-3.5 h-3.5 text-blue-600" />
-            <span>Pinned Horizontal Rail • Global GCC Case Studies</span>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#0265FF] text-xs font-extrabold uppercase tracking-wider mb-2">
+            <LayoutGrid className="w-3.5 h-3.5 text-[#0265FF]" />
+            <span>FEATURED CLIENT MANDATES & CASE STUDIES</span>
           </div>
           <h2 className="text-2xl md:text-4xl font-black text-slate-900 tracking-tight">
-            Horizontal Rail: 5 Turnkey GCC Deployments
+            Proven Track Record Across Key Engineering Sectors
           </h2>
         </div>
         <div className="text-xs font-bold text-slate-500 flex items-center gap-2">
-          <span>Scroll down to slide cards horizontally</span>
-          <ArrowRight className="w-4 h-4 text-blue-600" />
+          <span>Scroll down to slide case studies horizontally</span>
+          <ArrowRight className="w-4 h-4 text-[#0265FF]" />
         </div>
       </div>
 
