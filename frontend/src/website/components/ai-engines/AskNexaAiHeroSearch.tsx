@@ -30,7 +30,7 @@ const TARGET_HUBS = [
   { city: 'Bangalore', role: 'Staff SRE & Distributed DB', pool: '2,400+ Candidates', sla: '12 Days SLA' },
   { city: 'Hyderabad', role: 'GenAI & GPU Cluster Architects', pool: '1,800+ Candidates', sla: '14 Days SLA' },
   { city: 'Pune', role: 'Cloud SaaS & Full Stack Leads', pool: '1,500+ Candidates', sla: '10 Days SLA' },
-  { city: 'London / Remote', role: 'Low-Latency C++ & Quant Trading', pool: '600+ Candidates', sla: '18 Days SLA' },
+  { city: 'NCR / Remote', role: 'Enterprise Cloud & Cybersecurity', pool: '1,200+ Candidates', sla: '12 Days SLA' },
 ];
 
 export function AskNexaAiHeroSearch({ 

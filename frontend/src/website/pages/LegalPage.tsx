@@ -24,7 +24,7 @@ const LEGAL_SECTIONS = [
     content: [
       {
         heading: '1. Corporate Identity & Data Fiduciary Details',
-        text: 'NEXA TALENT IT SOLUTIONS PRIVATE LIMITED ("NexaTalent IT Solutions", "we", "us", "our") operates as a Data Fiduciary under the Digital Personal Data Protection (DPDP) Act, 2023. Corporate Identification Number (CIN): U72200MH2021PTC145678. Registered Office: 4th and 7th Floor, Skyline Icon, Andheri - Kurla Rd, Chimatpada, Marol, Andheri East, Mumbai, Maharashtra 400059, India. Executive Email: ceo@nexatalentitsolution.com.'
+        text: 'NEXA TALENT IT SOLUTIONS PRIVATE LIMITED ("NexaTalent IT Solutions", "we", "us", "our") operates as a Data Fiduciary under the Digital Personal Data Protection (DPDP) Act, 2023. Corporate Identification Number (CIN): U72200MH2021PTC145678. Registered Office: 4th and 7th Floor, Skyline Icon, Andheri - Kurla Rd, Chimatpada, Marol, Andheri East, Mumbai, Maharashtra 400059, India. Executive Email: ceo@nexatalentitsolutions.com.'
       },
       {
         heading: '2. Categories of Personal Data Collected',
@@ -40,7 +40,7 @@ const LEGAL_SECTIONS = [
       },
       {
         heading: '5. Grievance Redressal & Data Protection Officer',
-        text: 'In accordance with the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021 and DPDP Act 2023, the appointed Data Protection Officer is: Executive Compliance Desk, NEXA TALENT IT SOLUTIONS PRIVATE LIMITED, 4th and 7th Floor, Skyline Icon, Andheri - Kurla Rd, Marol, Andheri East, Mumbai 400059. Direct Grievance Email: ceo@nexatalentitsolution.com. Phone: +91 70196 96166. Acknowledgement SLA: within 24 hours; resolution within 15 working days.'
+        text: 'In accordance with the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021 and DPDP Act 2023, the appointed Data Protection Officer is: Executive Compliance Desk, NEXA TALENT IT SOLUTIONS PRIVATE LIMITED, 4th and 7th Floor, Skyline Icon, Andheri - Kurla Rd, Marol, Andheri East, Mumbai 400059. Direct Grievance Email: ceo@nexatalentitsolutions.com. Phone: +91 70196 96166. Acknowledgement SLA: within 24 hours; resolution within 15 working days.'
       }
     ]
   },
@@ -214,7 +214,7 @@ export function LegalPage() {
                 marginBottom: '0.75rem'
               }}>
                 <ShieldCheck size={14} />
-                <span>Statutory Governance Documentation • ISO 27001 & DPDP 2023</span>
+                <span>Statutory Governance Documentation • Enterprise Compliance & DPDP 2023</span>
               </div>
               <h1 style={{
                 fontSize: 'clamp(2rem, 4vw, 3rem)',
@@ -329,7 +329,7 @@ export function LegalPage() {
                 <div><strong>Entity:</strong> NEXA TALENT IT SOLUTIONS PRIVATE LIMITED</div>
                 <div><strong>CIN:</strong> U72200MH2021PTC145678</div>
                 <div><strong>Location:</strong> Skyline Icon, Marol, Mumbai 400059</div>
-                <div><strong>Email:</strong> ceo@nexatalentitsolution.com</div>
+                <div><strong>Email:</strong> ceo@nexatalentitsolutions.com</div>
               </div>
             </div>
           </div>

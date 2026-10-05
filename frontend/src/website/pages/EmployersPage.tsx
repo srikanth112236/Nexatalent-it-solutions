@@ -41,7 +41,7 @@ function ClientRegistrationSection() {
   const [formData, setFormData] = useState({
     companyName: 'Fintech ScaleOps Technologies Ltd',
     website: 'https://fintechscaleops.io',
-    industry: 'BFSI / High-Frequency Trading & Payments',
+    industry: 'Technology / Software & Digital Enterprise',
     contactPerson: 'Aditi Deshmukh (VP of Engineering & Talent)',
     email: 'aditi.d@fintechscaleops.io',
     phone: '+91 99800 11223',
@@ -75,7 +75,7 @@ function ClientRegistrationSection() {
             <span>ENTERPRISE CLIENT REGISTRATION & KYC</span>
           </div>
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-slate-950 mb-2">
-            Register Your Organization to Deploy Engineering Pods
+            Register Your Organization for IT Recruitment & Staffing
           </h2>
           <p className="text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
             Direct access to pre-screened technical talent. All enterprise accounts undergo express administrative KYC verification before account activation.
@@ -298,9 +298,9 @@ export function EmployersPage() {
       }}
     >
       <SeoHead
-        title="Hire Elite IT Talent & Deploy Turnkey GCC Pods"
-        description="Submit your technical requirement. Access calibrated engineer shortlists within 72 hours with transparent Cost-Plus pricing and 90-day replacement guarantee."
-        keywords="Hire IT Talent, Enterprise Tech Recruitment, Contract Staffing India, GCC Turnkey Pods, Lateral Sourcing, IT Staff Augmentation"
+        title="Technology Recruitment & Staffing Solutions for Employers"
+        description="Submit your technical hiring requirements. Partner with NexaTalent IT Solutions for IT recruitment, permanent staffing, contract staffing, and executive search."
+        keywords="Hire IT Talent, Enterprise Tech Recruitment, Contract Staffing India, IT Staff Augmentation, Executive Search"
         canonicalPath="/employers"
       />
 

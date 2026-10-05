@@ -2,42 +2,22 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { 
   Sparkles, 
-  ArrowRight, 
-  Database, 
-  Globe2, 
+  ArrowRight,
   Shield, 
-  Layers, 
   Cpu, 
   Landmark, 
-  Stethoscope, 
-  Factory, 
-  ShoppingBag, 
-  Car, 
-  Radio, 
-  Plane, 
-  Sun, 
-  Gamepad2, 
+  Globe2, 
   BriefcaseBusiness 
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const practices = [
-  { id: 'fintech', title: '1. FinTech & Quantitative Trading', desc: 'Ultra-low latency exchange gateways, FPGA acceleration, C++20, and algorithmic order routing.', roles: '48 Roles Active', icon: Landmark, accent: '#0265FF' },
-  { id: 'ai-ml', title: '2. Generative AI & LLM Systems', desc: 'Distributed vLLM clusters, GPU memory kernels, RLHF alignment, and low-latency embeddings.', roles: '62 Roles Active', icon: Sparkles, accent: '#0265FF' },
-  { id: 'cloud', title: '3. Cloud-Native & Distributed Systems', desc: 'Raft consensus state machines, petabyte-scale messaging fabrics, and multi-region Kubernetes.', roles: '74 Roles Active', icon: Database, accent: '#0265FF' },
-  { id: 'gcc', title: '4. Global Capability Center (GCC) Pods', desc: 'Turnkey site directors, staff architects, and full pods established in 75 days across India hubs.', roles: '85 Roles Active', icon: Globe2, accent: '#0265FF' },
-  { id: 'security', title: '5. Infrastructure Security & eBPF', desc: 'Kernel-bypass observability, zero-trust container security, cryptographic protocols, and SOC2.', roles: '36 Roles Active', icon: Shield, accent: '#0265FF' },
-  { id: 'data', title: '6. High-Throughput Data Engineering', desc: 'Real-time streaming pipelines, Apache Flink/Kafka at scale, and columnar analytical engines.', roles: '42 Roles Active', icon: Layers, accent: '#0265FF' },
-  { id: 'technology', title: '7. Technology & Enterprise SaaS', desc: 'Hyper-scale microservices, multi-tenant cloud platforms, and distributed backend engineering.', roles: '90 Roles Active', icon: Cpu, accent: '#0265FF' },
-  { id: 'healthcare', title: '8. Healthcare & Digital MedTech', desc: 'HIPAA-compliant platforms, FHIR integrations, clinical AI models, and genomics data engines.', roles: '38 Roles Active', icon: Stethoscope, accent: '#0265FF' },
-  { id: 'manufacturing', title: '9. Manufacturing & Industrial IoT', desc: 'Industry 4.0, embedded C/C++ firmware, SCADA systems, and smart factory robotics automation.', roles: '29 Roles Active', icon: Factory, accent: '#0265FF' },
-  { id: 'retail', title: '10. Retail, E-Commerce & Supply Chain', desc: 'High-concurrency checkout engines, dynamic pricing ML, and warehouse robotics automation.', roles: '54 Roles Active', icon: ShoppingBag, accent: '#0265FF' },
-  { id: 'automotive', title: '11. Automotive & Autonomous Mobility', desc: 'AUTOSAR adaptive stacks, ADAS computer vision, EV battery management, and connected vehicle IoT.', roles: '31 Roles Active', icon: Car, accent: '#0265FF' },
-  { id: 'telecom', title: '12. Telecommunications & 5G Edge', desc: 'OpenRAN architecture, cloud-native packet cores, 5G MEC, and low-latency network slicing.', roles: '27 Roles Active', icon: Radio, accent: '#0265FF' },
-  { id: 'aerospace', title: '13. Aerospace & Defense Technology', desc: 'DO-178C avionics software, real-time embedded Linux, flight control logic, and satellite systems.', roles: '22 Roles Active', icon: Plane, accent: '#0265FF' },
-  { id: 'energy', title: '14. Energy, Utilities & CleanTech', desc: 'Smart grid telemetry, renewable energy analytics, IoT sensor fabrics, and carbon tracking platforms.', roles: '25 Roles Active', icon: Sun, accent: '#0265FF' },
-  { id: 'media', title: '15. Media, Gaming & Streaming Tech', desc: 'Unreal/Unity rendering engines, WebRTC video streaming, anti-cheat security, and cloud gaming.', roles: '33 Roles Active', icon: Gamepad2, accent: '#0265FF' },
-  { id: 'professional-services', title: '16. Professional IT Advisory & Services', desc: 'Management consulting, Big-4 digital transformations, enterprise architecture, and SAP S/4HANA.', roles: '45 Roles Active', icon: BriefcaseBusiness, accent: '#0265FF' },
+  { id: 'cloud', title: '1. Software & Cloud Engineering', desc: 'Backend, Frontend, Full Stack, Microservices, DevOps, Kubernetes, and Cloud Architecture.', roles: 'Active Requisitions', icon: Cpu, accent: '#0265FF' },
+  { id: 'ai-ml', title: '2. Data & AI Engineering', desc: 'Data Engineering, Data Pipelines, AI/ML Models, Business Intelligence, and Analytics.', roles: 'Active Requisitions', icon: Sparkles, accent: '#0265FF' },
+  { id: 'security', title: '3. Cybersecurity & Infrastructure', desc: 'Cloud Security, SecOps, Network Infrastructure, Systems Administration, and Governance.', roles: 'Active Requisitions', icon: Shield, accent: '#0265FF' },
+  { id: 'leadership', title: '4. Executive Search & Leadership', desc: 'Confidential CXO, VP Engineering, Director of Technology, and Product Management search.', roles: 'Active Requisitions', icon: Landmark, accent: '#0265FF' },
+  { id: 'gcc', title: '5. GCC & Technology Operations', desc: 'Technology talent acquisition, operational leadership, and team scaling for GCCs.', roles: 'Active Requisitions', icon: Globe2, accent: '#0265FF' },
+  { id: 'business', title: '6. Enterprise Business Functions', desc: 'Sales Engineering, HR, Finance, Talent Operations, and Enterprise Tech Support.', roles: 'Active Requisitions', icon: BriefcaseBusiness, accent: '#0265FF' },
 ];
 
 export const LightIndustryPracticeGrid: React.FC = () => {
@@ -67,18 +47,18 @@ export const LightIndustryPracticeGrid: React.FC = () => {
           }}
         >
           <Sparkles size={14} />
-          <span>16 CORE PRACTICE VERTICALS & SOLUTIONS</span>
+          <span>OUR RECRUITMENT EXPERTISE & PRACTICE DOMAINS</span>
         </div>
 
         <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0F172A', marginBottom: '0.75rem' }}>
-          Specialized Talent Solutions Across 16 Core Industries
+          Our Recruitment Expertise Across Key Technology Domains
         </h2>
         <p style={{ color: '#475569', fontSize: '1.0625rem', maxWidth: '720px', margin: '0 auto 4rem auto', lineHeight: 1.6 }}>
-          NexaTalent IT Solutions organizes engineering teams into 16 dedicated technical practice verticals led by veteran tech recruiters and industry architects.
+          NexaTalent IT Solutions organizes talent acquisition into specialized core technology practices to deliver structured candidate screening and reliable hiring.
         </p>
 
-        {/* 16 Practices Responsive Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', textAlign: 'left' }}>
+        {/* 6 Core Practices Grid - 3 per row on desktop */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-left">
           {practices.map((p) => {
             const IconComp = p.icon;
             return (

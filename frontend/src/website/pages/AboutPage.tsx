@@ -40,22 +40,20 @@ export function AboutPage() {
 
   const faqs = {
     General: [
-      { q: 'What is NexaTalent IT Solutions?', a: 'NexaTalent IT Solutions is an AI-powered talent intelligence and recruitment platform connecting enterprise employers, recruitment partners, and senior software engineers across Dubai, Riyadh, Bangalore, and global tech corridors.' },
-      { q: 'How does NexaTalent IT Solutions differ from traditional recruitment agencies?', a: 'Unlike traditional agencies that rely on manual resume screening (60-90 day cycles), NexaTalent IT Solutions combines automated algorithmic code vetting with human technical panel defenses to match pre-evaluated candidate dossiers in under 72 hours.' },
-      { q: 'Where are NexaTalent IT Solutions regional hubs located?', a: 'We operate primary engineering hubs in Bangalore (India), Dubai Silicon Oasis (UAE), Riyadh KAFD (Saudi Arabia), and Singapore.' },
+      { q: 'What is NexaTalent IT Solutions?', a: 'NexaTalent IT Solutions is a technology recruitment and staffing company helping organizations identify, attract, and hire skilled professionals across IT and business functions.' },
+      { q: 'How does NexaTalent IT Solutions differ from traditional recruitment agencies?', a: 'NexaTalent IT Solutions combines deep technology understanding with structured screening and dedicated recruitment support to deliver calibrated shortlists faster.' },
+      { q: 'Where does NexaTalent IT Solutions operate?', a: 'We serve corporate clients, enterprises, and recruitment partners across India and global markets.' },
     ],
     Vetting: [
-      { q: 'What does "Deterministic Talent Verification" mean?', a: 'It means every candidate is evaluated against empirical code execution benchmarks (O(1) memory optimization, high-concurrency stress tests) and live system architecture defenses rather than subjective resume claims.' },
-      { q: 'How does Algorithmic Rigor work with Human Empathy?', a: 'While our AI models benchmark code efficiency and memory utilization, experienced tech leads conduct human technical panel interviews to evaluate communication, culture fit, and soft skills.' },
-      { q: 'What is the 14-day zero-risk trial guarantee?', a: 'You get 14 full days to work directly with the engineer in your Jira and GitHub repos. If you are not completely satisfied with their output, you pay zero.' },
+      { q: 'How does NexaTalent IT Solutions evaluate candidates?', a: 'Candidates are evaluated against role-specific technical skills, experience requirements, team culture fit, and soft skills before shortlist presentation.' },
+      { q: 'What recruitment models do you offer?', a: 'We support permanent recruitment, contract staffing, contract-to-hire, executive search, bulk volume hiring, and vendor empanelment.' },
     ],
     'GCC Hubs': [
-      { q: 'How does NexaTalent IT Solutions handle timezone overlap for GCC clients?', a: 'Our Dubai, Riyadh, and Bangalore engineers operate with 4-6 hours of daily synchronous timezone overlap with Middle East and European working hours.' },
-      { q: 'Can NexaTalent IT Solutions set up turnkey offshore hubs?', a: 'Yes! We manage local employment contracts, local labor law compliance, hardware logistics, and office space setup for 5 to 50+ person pods.' },
+      { q: 'Do you support GCC and offshore talent hiring?', a: 'Yes. We support organizations with talent acquisition, engineering staffing, and leadership hiring for GCC and technology operations.' },
     ],
     Support: [
-      { q: 'How do I submit an employer hiring mandate?', a: 'You can click "Submit Requirement" on our homepage or contact our sourcing team to receive 3 pre-vetted candidate dossiers within 72 hours.' },
-      { q: 'How do you ensure 100% intellectual property protection?', a: 'All work product, code, and patents belong exclusively to your corporate entity under strict enterprise NDAs and SOC2 compliant protocols.' },
+      { q: 'How do I submit an employer hiring mandate?', a: 'You can click "Hire Talent" or "Submit Requirement" on our website or contact our recruitment team directly at ceo@nexatalentitsolutions.com.' },
+      { q: 'What is candidate data confidentiality policy?', a: 'All candidate and client information is handled under strict corporate data privacy standards in compliance with DPDP Act 2023.' },
     ],
   };
 
@@ -81,60 +79,60 @@ export function AboutPage() {
           </div>
 
           <h1 className="text-4xl sm:text-6xl font-extrabold text-neutral-900 tracking-tight leading-[1.1] uppercase">
-            Built for Modern Engineering <br />
+            Building Teams. <br />
             <span className="text-[#0265FF]">
-              Talent Ecosystems
+              Powering Growth.
             </span>
           </h1>
 
           <p className="text-base sm:text-lg text-neutral-600 max-w-3xl mx-auto font-medium leading-relaxed">
-            Business success depends on an intelligent, real-time tech talent ecosystem. NexaTalent IT Solutions provides a unified view of verified engineering supply and enterprise demand across Dubai, Riyadh, Bangalore, and global corridors.
+            NexaTalent IT Solutions is a technology recruitment and staffing partner helping organizations identify, evaluate, and hire skilled professionals across permanent, contract, executive search, and talent solutions.
           </p>
 
-          {/* 3 Visual Image Cards Grid */}
+          {/* 3 Visual Image Cards Grid with Increased Height & Relevant Tech Recruitment Images */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 max-w-5xl mx-auto text-left">
-            <div className="relative group overflow-hidden rounded-3xl border border-neutral-200 shadow-xl bg-slate-50 transition-all hover:-translate-y-1">
+            <div className="relative group overflow-hidden rounded-3xl border border-neutral-200 shadow-xl bg-white transition-all hover:-translate-y-1.5 hover:shadow-2xl">
               <img
-                src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=600&q=80"
-                alt="AI Vetting Lab"
-                className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
+                src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80"
+                alt="HR & Tech Group Discussion"
+                className="w-full h-60 object-cover object-center group-hover:scale-105 transition-transform duration-500"
               />
-              <div className="p-5 space-y-1">
-                <span className="px-3 py-1 bg-blue-100 text-[#0265FF] text-[10px] font-bold rounded-full border border-blue-200">
-                  50,000+ Vetted Devs
+              <div className="p-6 space-y-1.5">
+                <span className="px-3.5 py-1 bg-blue-50 text-[#0265FF] text-[11px] font-bold rounded-full border border-blue-200 inline-block">
+                  HR & Tech Group Discussion
                 </span>
-                <h4 className="font-bold text-sm text-neutral-900 pt-2">AI Code Vetting Lab</h4>
-                <p className="text-xs text-neutral-500">Automated algorithmic benchmarks & live system architecture defenses.</p>
+                <h4 className="font-extrabold text-base text-neutral-900 pt-1">Technical Candidate Screening</h4>
+                <p className="text-xs text-neutral-600 leading-relaxed font-normal">Role-specific technical evaluation, panel interviews, and candidate shortlisting.</p>
               </div>
             </div>
 
-            <div className="relative group overflow-hidden rounded-3xl border border-neutral-200 shadow-xl bg-slate-50 transition-all hover:-translate-y-1">
+            <div className="relative group overflow-hidden rounded-3xl border border-neutral-200 shadow-xl bg-white transition-all hover:-translate-y-1.5 hover:shadow-2xl">
               <img
-                src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80"
-                alt="GCC Tech Corridors"
-                className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
+                src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=800&q=80"
+                alt="Vendor & Partnership Alliance"
+                className="w-full h-60 object-cover object-center group-hover:scale-105 transition-transform duration-500"
               />
-              <div className="p-5 space-y-1">
-                <span className="px-3 py-1 bg-blue-100 text-[#0265FF] text-[10px] font-bold rounded-full border border-blue-200">
-                  100+ Enterprise Clients
+              <div className="p-6 space-y-1.5">
+                <span className="px-3.5 py-1 bg-blue-50 text-[#0265FF] text-[11px] font-bold rounded-full border border-blue-200 inline-block">
+                  Partnership Alliance
                 </span>
-                <h4 className="font-bold text-sm text-neutral-900 pt-2">GCC Tech Corridors</h4>
-                <p className="text-xs text-neutral-500">Dubai Silicon Oasis, Riyadh KAFD, and Bangalore tech hubs.</p>
+                <h4 className="font-extrabold text-base text-neutral-900 pt-1">Vendor Empanelment</h4>
+                <p className="text-xs text-neutral-600 leading-relaxed font-normal">Collaborating with enterprises and staffing partners for dependable talent delivery.</p>
               </div>
             </div>
 
-            <div className="relative group overflow-hidden rounded-3xl border border-neutral-200 shadow-xl bg-slate-50 transition-all hover:-translate-y-1">
+            <div className="relative group overflow-hidden rounded-3xl border border-neutral-200 shadow-xl bg-white transition-all hover:-translate-y-1.5 hover:shadow-2xl">
               <img
-                src="https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=600&q=80"
-                alt="Human Empathy & Retention"
-                className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
+                src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=800&q=80"
+                alt="Permanent & Contract Staffing"
+                className="w-full h-60 object-cover object-center group-hover:scale-105 transition-transform duration-500"
               />
-              <div className="p-5 space-y-1">
-                <span className="px-3 py-1 bg-blue-100 text-[#0265FF] text-[10px] font-bold rounded-full border border-blue-200">
-                  99.4% Retention Rate
+              <div className="p-6 space-y-1.5">
+                <span className="px-3.5 py-1 bg-blue-50 text-[#0265FF] text-[11px] font-bold rounded-full border border-blue-200 inline-block">
+                  Permanent & Contract Staffing
                 </span>
-                <h4 className="font-bold text-sm text-neutral-900 pt-2">Human Empathy Safeguards</h4>
-                <p className="text-xs text-neutral-500">Dedicated candidate career success managers and 2-year retention pledge.</p>
+                <h4 className="font-extrabold text-base text-neutral-900 pt-1">Flexible Engagement Models</h4>
+                <p className="text-xs text-neutral-600 leading-relaxed font-normal">Permanent recruitment, contract staffing, and executive search solutions.</p>
               </div>
             </div>
           </div>
@@ -148,27 +146,27 @@ export function AboutPage() {
         <div className="max-w-5xl mx-auto space-y-10 text-center">
           <div className="space-y-4 max-w-3xl mx-auto">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 leading-relaxed">
-              We are on a mission to help tech organizations reach their <strong className="text-[#0265FF]">full potential</strong> through smarter and more <strong className="text-[#0265FF]">efficient tech hiring</strong> across global operations.
+              We are on a mission to help organizations hire the <strong className="text-[#0265FF]">right talent</strong> through transparent, structured, and <strong className="text-[#0265FF]">dependable recruitment solutions</strong>.
             </h2>
           </div>
 
           {/* 4 Crisp Key Metric Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 text-center">
             <div className="p-6 bg-white rounded-2xl border border-neutral-200/80 shadow-md">
-              <div className="text-3xl sm:text-4xl font-extrabold text-neutral-900">25+</div>
-              <div className="text-xs font-bold text-neutral-500 mt-2">Global Talent Hubs</div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-neutral-900">India & Global</div>
+              <div className="text-xs font-bold text-neutral-500 mt-2">Talent Delivery Reach</div>
             </div>
             <div className="p-6 bg-white rounded-2xl border border-neutral-200/80 shadow-md">
-              <div className="text-3xl sm:text-4xl font-extrabold text-[#0265FF]">100+</div>
-              <div className="text-xs font-bold text-neutral-500 mt-2">Global Enterprise Partners</div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-[#0265FF]">6 Core</div>
+              <div className="text-xs font-bold text-neutral-500 mt-2">Technology Practices</div>
             </div>
             <div className="p-6 bg-white rounded-2xl border border-neutral-200/80 shadow-md">
-              <div className="text-3xl sm:text-4xl font-extrabold text-[#0265FF]">50,000+</div>
-              <div className="text-xs font-bold text-neutral-500 mt-2">Vetted Engineers</div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-[#0265FF]">90 Days</div>
+              <div className="text-xs font-bold text-neutral-500 mt-2">Replacement Commitment</div>
             </div>
             <div className="p-6 bg-white rounded-2xl border border-neutral-200/80 shadow-md">
-              <div className="text-3xl sm:text-4xl font-extrabold text-[#0265FF]">99.4%</div>
-              <div className="text-xs font-bold text-neutral-500 mt-2">Engineering Retention</div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-[#0265FF]">100%</div>
+              <div className="text-xs font-bold text-neutral-500 mt-2">Candidate Zero-Fee Policy</div>
             </div>
           </div>
         </div>

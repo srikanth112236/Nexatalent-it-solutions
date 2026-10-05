@@ -67,7 +67,7 @@ export const MinimalOutlineFooter: React.FC = () => {
             </span>
             
             <p className="text-xs text-slate-600 leading-relaxed font-normal">
-              <strong>NEXA TALENT IT SOLUTIONS PRIVATE LIMITED</strong> is India&apos;s premier AI tech talent acquisition engine and executive search partner, engineering 72-hour shortlist SLAs with open-book Cost-Plus transparency.
+              <strong>NEXA TALENT IT SOLUTIONS PRIVATE LIMITED</strong> is a technology recruitment and staffing partner connecting organizations with IT, contract, and executive talent.
             </p>
 
             {/* Official Contact Badges */}
@@ -82,13 +82,13 @@ export const MinimalOutlineFooter: React.FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 <Mail size={15} className="text-[#0265FF] shrink-0" />
-                <span><strong>Executive Email:</strong> <a href="mailto:ceo@nexatalentitsolution.com" className="text-[#0265FF] font-bold hover:underline">ceo@nexatalentitsolution.com</a></span>
+                <span><strong>Executive Email:</strong> <a href="mailto:ceo@nexatalentitsolutions.com" className="text-[#0265FF] font-bold hover:underline">ceo@nexatalentitsolutions.com</a></span>
               </div>
             </div>
 
             <div className="pt-2 flex items-center gap-3 text-slate-500 text-xs font-semibold">
               <span className="flex items-center gap-1 text-slate-700">
-                <ShieldCheck size={14} className="text-[#0265FF]" /> ISO 27001 Certified
+                <ShieldCheck size={14} className="text-[#0265FF]" /> Enterprise Governance
               </span>
               <span>•</span>
               <span className="flex items-center gap-1 text-slate-700">
@@ -147,7 +147,7 @@ export const MinimalOutlineFooter: React.FC = () => {
         {/* Copyright & SLA Bottom Bar */}
         <div className="mt-4 pt-4 border-t border-slate-200/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 font-medium">
           <span>© 2026 <strong>NEXA TALENT IT SOLUTIONS PRIVATE LIMITED</strong>. All rights reserved.</span>
-          <span className="font-mono text-slate-600">Precision Talent · Audited Cost-Plus · A Better Tomorrow</span>
+          <span className="font-mono text-slate-600">Technology Recruitment · Staffing Solutions · Talent Delivery</span>
         </div>
 
       </div>

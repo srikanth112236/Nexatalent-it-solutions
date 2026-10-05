@@ -12,47 +12,63 @@ export const FullScreenHorizontalSplitCurtain: React.FC = () => {
 
       <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 font-mono text-xs font-bold mb-4">
         <Award className="w-3.5 h-3.5" />
-        <span>NEXA TALENT INTELLIGENCE™ · ARCHITECTURAL ECOSYSTEM</span>
+        <span>NEXATALENT IT SOLUTIONS · TECHNOLOGY & TALENT PARTNER</span>
       </div>
 
       <h1 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tight mb-4 uppercase leading-tight">
-        AI-Powered Talent. Human Intelligence. Better Hiring.
+        Building Teams. Powering Growth.
       </h1>
-      <p className="text-slate-600 text-base md:text-lg max-w-3xl mx-auto mb-10 leading-relaxed font-medium">
-        NexaTalent IT Solutions connects companies, recruitment partners, and technology professionals through an intelligent hiring ecosystem designed to discover, match, and deliver top 1% talent faster.
+      <p className="text-slate-600 text-base md:text-lg max-w-3xl mx-auto mb-6 leading-relaxed font-medium">
+        We help companies hire the right people through IT recruitment, permanent staffing, contract staffing, executive search, and specialized talent solutions.
       </p>
+
+      {/* Dual Primary Action Buttons */}
+      <div className="flex flex-wrap items-center justify-center gap-4 mb-10">
+        <a
+          href="/employers"
+          className="px-8 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-2"
+        >
+          <span>Hire Talent →</span>
+        </a>
+        <a
+          href="/partners"
+          className="px-8 py-3.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-900 border border-slate-300 font-extrabold text-sm shadow-sm transition-all flex items-center gap-2"
+        >
+          <span>Vendor Empanelment</span>
+        </a>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl text-left">
         <div className="p-8 rounded-3xl bg-white border border-slate-200 shadow-xl shadow-slate-200/50">
           <div className="flex items-center gap-2 text-emerald-600 text-xs font-mono font-bold mb-2">
             <CheckCircle2 className="w-4 h-4" />
-            <span>STAGE 04 CLEARED</span>
+            <span>PERMANENT HIRING</span>
           </div>
-          <div className="text-xl font-extrabold text-slate-900 mb-1">AI Research Directors</div>
+          <div className="text-xl font-extrabold text-slate-900 mb-1">IT & Tech Recruitment</div>
           <div className="text-xs text-slate-600 leading-relaxed">
-            82 Candidates cleared deep algorithmic and architectural vetting.
+            Direct tech sourcing & lateral engineering talent across senior levels.
           </div>
         </div>
 
         <div className="p-8 rounded-3xl bg-white border border-slate-200 shadow-xl shadow-slate-200/50">
           <div className="flex items-center gap-2 text-blue-600 text-xs font-mono font-bold mb-2">
             <CheckCircle2 className="w-4 h-4" />
-            <span>ESCROW SEALED</span>
+            <span>FLEXIBLE STAFFING</span>
           </div>
-          <div className="text-xl font-extrabold text-slate-900 mb-1">Founding GCC Managing Directors</div>
+          <div className="text-xl font-extrabold text-slate-900 mb-1">Contract & Contract-to-Hire</div>
           <div className="text-xs text-slate-600 leading-relaxed">
-            24 Executives placed with 100% 2-year retention records.
+            Agile developer squads and contract staffing for critical project delivery.
           </div>
         </div>
 
         <div className="p-8 rounded-3xl bg-white border border-slate-200 shadow-xl shadow-slate-200/50">
           <div className="flex items-center gap-2 text-indigo-600 text-xs font-mono font-bold mb-2">
             <CheckCircle2 className="w-4 h-4" />
-            <span>ZERO CONFLICT</span>
+            <span>LEADERSHIP SEARCH</span>
           </div>
-          <div className="text-xl font-extrabold text-slate-900 mb-1">Staff Distributed Storage</div>
+          <div className="text-xl font-extrabold text-slate-900 mb-1">Executive Search</div>
           <div className="text-xs text-slate-600 leading-relaxed">
-            114 Engineers with verified non-compete quarantine passes.
+            Confidential search for CXO, VP Engineering, and specialized leadership roles.
           </div>
         </div>
       </div>

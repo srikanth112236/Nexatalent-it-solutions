@@ -59,11 +59,11 @@ const EIGHT_DELIVERY_MODELS = [
   },
   {
     id: 'gcc-pods',
-    title: '4. Turnkey GCC Engineering Pods',
-    tag: 'Offshore R&D BOT Model',
+    title: '4. GCC Talent & Staffing Solutions',
+    tag: 'GCC Capability Support',
     icon: Globe2,
-    desc: 'Build dedicated offshore engineering teams, center-of-excellence hubs, and project pods in 75 days across India corridors.',
-    highlights: ['Complete BOT execution', '60% cost-plus arbitrage', 'Turnkey site directors & leads'],
+    desc: 'Support organizations with talent acquisition, engineering staffing, and leadership hiring for GCC and technology operations.',
+    highlights: ['Specialized tech talent sourcing', 'Dedicated recruitment squads', 'Leadership & engineering hires'],
     href: '/solutions/gcc-hiring'
   },
   {
@@ -71,7 +71,7 @@ const EIGHT_DELIVERY_MODELS = [
     title: '5. Bulk & Volume Sourcing Drives',
     tag: 'Rapid Scale Campaigns',
     icon: Sparkles,
-    desc: 'Structured sourcing drives and weekend hiring sprints when talent demand increases rapidly for 10 to 100+ roles.',
+    desc: 'Structured sourcing drives and hiring sprints when talent demand increases rapidly for 10 to 100+ roles.',
     highlights: ['Dedicated sourcing squads', 'Batch interview coordination', 'High offer acceptance rates'],
     href: '/solutions/recruitment-process-support'
   },
@@ -89,8 +89,8 @@ const EIGHT_DELIVERY_MODELS = [
     title: '7. Niche & Specialist Tech Search',
     tag: 'Rare Skill Sourcing',
     icon: Search,
-    desc: 'Targeted market mapping and proactive outreach for hard-to-find skills (Low-Latency C++, AI/LLMs, FPGA, eBPF, SRE).',
-    highlights: ['Active passive-talent headhunting', 'Live code sandbox vetting', 'Sub-millisecond tech validation'],
+    desc: 'Targeted market mapping and proactive outreach for hard-to-find skills (Cloud Architects, Data Engineers, AI Specialists, DevOps, SecOps).',
+    highlights: ['Active passive-talent outreach', 'Technical skill screening', 'Targeted candidate shortlisting'],
     href: '/solutions/executive-search'
   },
   {

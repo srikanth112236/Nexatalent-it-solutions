@@ -58,9 +58,9 @@ function CandidateAuthGateway() {
         <div className="mb-6 p-3.5 rounded-xl bg-slate-900 text-white flex items-center justify-between text-xs font-medium shadow-md">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>🔒 <strong>Candidate Stealth Mode Active:</strong> Your profile & current employer disclosures remain strictly confidential until you explicitly approve direct interview invites.</span>
+            <span>🔒 <strong>Candidate Confidentiality Active:</strong> Your profile and current employer disclosures remain strictly confidential until you explicitly approve direct interview invites.</span>
           </div>
-          <span className="hidden sm:inline-block px-2.5 py-1 rounded bg-slate-800 text-emerald-400 font-bold font-mono">100% Zero Fee</span>
+          <span className="hidden sm:inline-block px-2.5 py-1 rounded bg-slate-800 text-emerald-400 font-bold font-mono">Candidates Never Pay Fees</span>
         </div>
 
         <motion.div
@@ -77,7 +77,7 @@ function CandidateAuthGateway() {
             Candidate Experience Analysis, Skill Diagnostics & Access Portal
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 mt-1 leading-relaxed max-w-2xl mx-auto">
-            NexaTalent IT Solutions evaluates your technical experience, domain expertise, and compensation benchmarks to match you with top GCC & enterprise mandates.
+            NexaTalent IT Solutions evaluates your technical experience, domain expertise, and compensation expectations to match you with top technology and corporate hiring mandates.
           </p>
         </motion.div>
 
@@ -369,9 +369,9 @@ export function CandidatesPage() {
       }}
     >
       <SeoHead
-        title="Candidate Career Services & AI Talent Matching"
-        description="Upload your resume. Discover AI-matched engineering opportunities with verified compensation benchmarks, 1-click apply, and zero candidate fees."
-        keywords="Candidate Registration, AI Resume Parsing, Tech Jobs India, Software Engineer Jobs Bengaluru, Resume Score, AI Career Scanner"
+        title="Candidate Career Hub | Technology & IT Opportunities"
+        description="Upload your resume. Discover technology & IT career opportunities across leading corporate employers. Candidates never pay recruitment fees."
+        keywords="Candidate Registration, Tech Jobs India, Software Engineer Jobs, IT Career Hub, Recruitment Agency Candidates"
         canonicalPath="/candidates"
       />
 

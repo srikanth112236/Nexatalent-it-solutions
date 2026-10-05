@@ -39,29 +39,29 @@ const PILLARS = [
     icon: DollarSign,
     color: '#10B981',
     bg: '#ECFDF5',
-    title: 'Cost-Plus Pricing Transparency',
-    desc: 'Traditional staffing firms hide candidate gross margins of 40-70%. NexaTalent IT Solutions operates on open-book, auditable Cost-Plus terms. You know exact compensation and transparent recruitment margins with zero hidden fees.'
+    title: 'Transparent Commercial Terms',
+    desc: 'Flexible commercial structures—percentage of CTC, contract staffing markups, and executive search retainers with zero hidden fees.'
   },
   {
     icon: FileCheck2,
     color: '#0060E6',
     bg: '#EEF2FF',
-    title: '3-Stage Rigorous Technical Vetting',
-    desc: 'Never receive raw resumes. Every candidate passes algorithmic code review, real-world system architecture evaluations, and behavioral leadership checks before presenting a verified portfolio.'
+    title: 'Structured Technical Candidate Screening',
+    desc: 'Never receive raw resumes. Every candidate undergoes role-specific technical evaluation, experience verification, and soft skills screening.'
   },
   {
     icon: ShieldCheck,
     color: '#8B5CF6',
     bg: '#F5F3FF',
-    title: '90-Day Replacement Guarantee',
-    desc: 'Every permanent hire comes with a full 90-day unconditional replacement commitment. If a candidate leaves or fails to meet deliverables, our rapid squad deploys a replacement at zero surcharge.'
+    title: '90-Day Replacement Support',
+    desc: 'Every permanent lateral hire is backed by a 90-day replacement commitment to ensure long-term candidate success.'
   },
   {
     icon: Clock,
     color: '#F59E0B',
     bg: '#FFFBEB',
-    title: '72-Hour Shortlist Velocity',
-    desc: 'Our proprietary talent graph continuously pre-engages passive Indian tech talent across Bengaluru, Hyderabad, and Pune—reducing initial shortlist delivery from 4 weeks to under 72 hours.'
+    title: 'Targeted Shortlist SLAs',
+    desc: 'Our recruiters pre-screen tech talent across major India hubs—delivering qualified candidate shortlists rapidly for urgent requisitions.'
   }
 ];
 

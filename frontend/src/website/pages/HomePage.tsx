@@ -70,65 +70,60 @@ export function HomePage() {
         <div className="max-w-5xl mx-auto space-y-6">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold uppercase tracking-wider shadow-sm">
             <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-            NexaTalent IT Solutions — Intelligent Hiring Ecosystem
+            NexaTalent IT Solutions — Technology Recruitment & Staffing Partner
           </div>
 
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-neutral-900 tracking-tight leading-[1.08] uppercase">
-            AI-Powered Talent. <br />
+            Building Teams. <br />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600">
-              Human Intelligence. Better Hiring.
+              Powering Growth.
             </span>
           </h1>
 
           <p className="text-base sm:text-xl text-neutral-600 max-w-3xl mx-auto font-normal leading-relaxed">
-            NexaTalent IT Solutions connects companies, recruitment partners, and technology professionals through an intelligent hiring ecosystem designed to discover, match, and deliver top 1% tech talent faster.
+            NexaTalent IT Solutions helps organizations identify, evaluate, and hire top-tier technology and business professionals through IT recruitment, permanent staffing, contract staffing, executive search, and specialized talent solutions.
           </p>
 
-          {/* 4 Action Buttons */}
+          {/* Action Buttons */}
           <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
             <Link
               to="/employers"
-              className="px-7 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-emerald-600/25 flex items-center gap-2"
+              className="px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-emerald-600/25 flex items-center gap-2"
             >
               Hire Talent <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
-              to="/employers#post-requirement-section"
-              className="px-7 py-3.5 bg-white hover:bg-neutral-50 text-neutral-900 border border-neutral-300 font-bold text-sm rounded-xl transition-all shadow-sm"
+              to="/partners"
+              className="px-8 py-3.5 bg-white hover:bg-neutral-50 text-neutral-900 border border-neutral-300 font-bold text-sm rounded-xl transition-all shadow-sm flex items-center gap-2"
+            >
+              <Users className="w-4 h-4 text-emerald-600" />
+              Vendor Empanelment
+            </Link>
+            <Link
+              to="/employers#post-requirement"
+              className="px-6 py-3.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-bold text-sm rounded-xl transition-all"
             >
               Submit Requirement
-            </Link>
-            <Link
-              to="/candidates"
-              className="px-7 py-3.5 bg-white hover:bg-neutral-50 text-neutral-900 border border-neutral-300 font-bold text-sm rounded-xl transition-all shadow-sm"
-            >
-              Upload Resume
-            </Link>
-            <Link
-              to="/partners"
-              className="px-7 py-3.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-sm rounded-xl transition-all"
-            >
-              Become a Recruitment Partner
             </Link>
           </div>
 
           {/* Trust Highlights */}
           <div className="pt-10 border-t border-neutral-200/80 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center max-w-4xl mx-auto">
             <div>
-              <div className="text-2xl sm:text-3xl font-extrabold text-neutral-900">72 Hours</div>
-              <div className="text-xs text-neutral-500 font-medium mt-1">Average Match & Deploy</div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-neutral-900">Rapid SLA</div>
+              <div className="text-xs text-neutral-500 font-medium mt-1">Shortlist Delivery</div>
             </div>
             <div>
-              <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600">99.4%</div>
-              <div className="text-xs text-neutral-500 font-medium mt-1">14-Day Trial Pass Rate</div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600">Strict Vetting</div>
+              <div className="text-xs text-neutral-500 font-medium mt-1">Technical & Culture Evaluation</div>
             </div>
             <div>
-              <div className="text-2xl sm:text-3xl font-extrabold text-indigo-600">60%</div>
-              <div className="text-xs text-neutral-500 font-medium mt-1">Payroll Cost Arbitrage</div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-indigo-600">Flexible Models</div>
+              <div className="text-xs text-neutral-500 font-medium mt-1">Permanent & Contract Staffing</div>
             </div>
             <div>
-              <div className="text-2xl sm:text-3xl font-extrabold text-teal-600">50,000+</div>
-              <div className="text-xs text-neutral-500 font-medium mt-1">Vetted Tech Professionals</div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-teal-600">Vetted Network</div>
+              <div className="text-xs text-neutral-500 font-medium mt-1">Pre-Screened Professionals</div>
             </div>
           </div>
         </div>
