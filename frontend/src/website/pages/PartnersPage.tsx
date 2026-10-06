@@ -456,7 +456,7 @@ export function PartnersPage() {
                     <p className="font-bold text-slate-900">What happens next?</p>
                     <p>1. Our Alliance Director will verify your agency registration & sourcing credentials for <strong>{agencyName}</strong>.</p>
                     <p>2. You will receive your Partner Portal login credentials and initial mandate allocations within 24 to 48 hours.</p>
-                    <p className="text-slate-500 pt-1 border-t border-slate-200">Executive Desk: <strong className="text-slate-900">ceo@nexatalentitsolution.com</strong> | Direct Line: <strong className="text-slate-900">+91 70196 96166</strong></p>
+                    <p className="text-slate-500 pt-1 border-t border-slate-200">Executive Desk: <strong className="text-slate-900">info@nexatalentitsolutions.com</strong> | Direct Line: <strong className="text-slate-900">+91 70196 96166</strong></p>
                   </div>
 
                   <button

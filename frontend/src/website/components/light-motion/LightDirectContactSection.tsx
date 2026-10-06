@@ -65,7 +65,7 @@ export const LightDirectContactSection: React.FC = () => {
                 </div>
                 <div>
                   <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Executive Email Desk</div>
-                  <a href="mailto:ceo@nexatalentitsolution.com" style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#0265FF', textDecoration: 'none' }}>ceo@nexatalentitsolution.com</a>
+                  <a href="mailto:info@nexatalentitsolutions.com" style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#0265FF', textDecoration: 'none' }}>info@nexatalentitsolutions.com</a>
                 </div>
               </div>
 

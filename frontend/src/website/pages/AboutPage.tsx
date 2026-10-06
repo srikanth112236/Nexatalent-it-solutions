@@ -52,7 +52,7 @@ export function AboutPage() {
       { q: 'Do you support GCC and offshore talent hiring?', a: 'Yes. We support organizations with talent acquisition, engineering staffing, and leadership hiring for GCC and technology operations.' },
     ],
     Support: [
-      { q: 'How do I submit an employer hiring mandate?', a: 'You can click "Hire Talent" or "Submit Requirement" on our website or contact our recruitment team directly at ceo@nexatalentitsolutions.com.' },
+      { q: 'How do I submit an employer hiring mandate?', a: 'You can click "Hire Talent" or "Submit Requirement" on our website or contact our recruitment team directly at info@nexatalentitsolutions.com.' },
       { q: 'What is candidate data confidentiality policy?', a: 'All candidate and client information is handled under strict corporate data privacy standards in compliance with DPDP Act 2023.' },
     ],
   };

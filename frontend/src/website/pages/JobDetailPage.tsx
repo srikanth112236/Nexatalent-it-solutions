@@ -536,7 +536,7 @@ export function JobDetailPage() {
               <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">PRACTICE LEAD CONTACT</span>
               <div className="space-y-2 text-xs font-semibold text-slate-800">
                 <div className="font-bold text-sm text-slate-900">Nexa Talent IT Solutions Executive Desk</div>
-                <div className="text-slate-600">Email: <a href="mailto:ceo@nexatalentitsolution.com" className="text-[#0265FF] font-bold">ceo@nexatalentitsolution.com</a></div>
+                <div className="text-slate-600">Email: <a href="mailto:info@nexatalentitsolutions.com" className="text-[#0265FF] font-bold">info@nexatalentitsolutions.com</a></div>
                 <div className="text-slate-600">Hotline: <a href="tel:+917019696166" className="text-slate-900 font-bold">+91 70196 96166</a></div>
                 <div className="text-slate-500 text-[11px] pt-1">Corporate HQ: Skyline Icon, Marol, Andheri East, Mumbai 400059</div>
               </div>
@@ -724,7 +724,7 @@ export function JobDetailPage() {
                     <p className="font-semibold text-slate-900">What happens next?</p>
                     <p>1. Our senior practice recruiters will review your resume for <strong>{job.title}</strong>.</p>
                     <p>2. If shortlisted, you will receive an invitation for Stage-1 technical calibration within 24 to 48 hours.</p>
-                    <p className="text-slate-500 pt-1 border-t border-slate-200">Direct Desk: <strong className="text-slate-900">ceo@nexatalentitsolution.com</strong> | Phone: <strong className="text-slate-900">+91 70196 96166</strong></p>
+                    <p className="text-slate-500 pt-1 border-t border-slate-200">Direct Desk: <strong className="text-slate-900">info@nexatalentitsolutions.com</strong> | Phone: <strong className="text-slate-900">+91 70196 96166</strong></p>
                   </div>
 
                   <button

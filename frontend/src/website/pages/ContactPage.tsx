@@ -26,7 +26,7 @@ const LOCATION_DETAILS = [
     tag: 'Corporate Registered Office & Primary HQ',
     address: '4th and 7th Floor, Skyline Icon, Andheri - Kurla Rd, Chimatpada, Marol, Andheri East, Mumbai, Maharashtra 400059',
     phone: '+91 70196 96166',
-    email: 'ceo@nexatalentitsolution.com',
+    email: 'info@nexatalentitsolutions.com',
     talentPool: '280,000+ Active Vetted Devs',
     hours: '09:00 - 19:00 IST',
     mapQuery: 'Skyline+Icon+Marol+Andheri+East+Mumbai',
@@ -38,7 +38,7 @@ const LOCATION_DETAILS = [
     tag: 'Global Delivery & AI R&D Hub',
     address: 'Level 7, Prestige Tech Park IV, Outer Ring Road, Bellandur, Bengaluru, Karnataka 560103',
     phone: '+91 70196 96166',
-    email: 'ceo@nexatalentitsolution.com',
+    email: 'info@nexatalentitsolutions.com',
     talentPool: '240,000+ Active Vetted Devs',
     hours: '09:00 - 19:00 IST',
     mapQuery: 'Prestige+Tech+Park+Bengaluru',
@@ -50,7 +50,7 @@ const LOCATION_DETAILS = [
     tag: 'Cloud & GCC Acceleration Pod',
     address: 'HITEC City, Phase II, Madhapur, Hyderabad, Telangana 500081',
     phone: '+91 70196 96166',
-    email: 'ceo@nexatalentitsolution.com',
+    email: 'info@nexatalentitsolutions.com',
     talentPool: '185,000+ Active Vetted Devs',
     hours: '09:00 - 19:00 IST',
     mapQuery: 'HITEC+City+Hyderabad',
@@ -62,7 +62,7 @@ const LOCATION_DETAILS = [
     tag: 'Enterprise & Embedded Systems',
     address: 'Cybercity Tower 4, Magarpatta City, Hadapsar, Pune, Maharashtra 411028',
     phone: '+91 70196 96166',
-    email: 'ceo@nexatalentitsolution.com',
+    email: 'info@nexatalentitsolutions.com',
     talentPool: '130,000+ Active Vetted Devs',
     hours: '09:00 - 19:00 IST',
     mapQuery: 'Magarpatta+Cybercity+Pune',
@@ -74,7 +74,7 @@ const LOCATION_DETAILS = [
     tag: 'FinTech & Executive Search',
     address: 'DLF Cyber City, Building 10, Phase II, Gurugram, Haryana 122002',
     phone: '+91 70196 96166',
-    email: 'ceo@nexatalentitsolution.com',
+    email: 'info@nexatalentitsolutions.com',
     talentPool: '160,000+ Active Vetted Devs',
     hours: '09:00 - 19:00 IST',
     mapQuery: 'DLF+Cyber+City+Gurugram',
@@ -86,7 +86,7 @@ const LOCATION_DETAILS = [
     tag: 'MENA & GCC Corporate Desk',
     address: 'Silicon Park Tower B2, Dubai Silicon Oasis, Dubai, United Arab Emirates',
     phone: '+91 70196 96166',
-    email: 'ceo@nexatalentitsolution.com',
+    email: 'info@nexatalentitsolutions.com',
     talentPool: '95,000+ Regional Talent Network',
     hours: '09:00 - 18:00 GST',
     mapQuery: 'Dubai+Silicon+Oasis',
@@ -373,7 +373,7 @@ export function ContactPage() {
                   </div>
                   <div>
                     <div className="font-bold text-slate-900">Executive & Corporate Desk</div>
-                    <a href="mailto:ceo@nexatalentitsolution.com" className="text-[#0265FF] font-semibold hover:underline">ceo@nexatalentitsolution.com</a>
+                    <a href="mailto:info@nexatalentitsolutions.com" className="text-[#0265FF] font-semibold hover:underline">info@nexatalentitsolutions.com</a>
                   </div>
                 </div>
 
@@ -513,7 +513,7 @@ export function ContactPage() {
                   <ExternalLink size={13} />
                 </a>
                 <a
-                  href="mailto:ceo@nexatalentitsolution.com"
+                  href="mailto:info@nexatalentitsolutions.com"
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-50 text-[#0265FF] hover:bg-blue-100 text-xs font-bold transition-colors border border-blue-200"
                 >
                   <span>Contact Hub Director</span>

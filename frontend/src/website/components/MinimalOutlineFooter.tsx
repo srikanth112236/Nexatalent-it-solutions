@@ -82,7 +82,7 @@ export const MinimalOutlineFooter: React.FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 <Mail size={15} className="text-[#0265FF] shrink-0" />
-                <span><strong>Executive Email:</strong> <a href="mailto:ceo@nexatalentitsolutions.com" className="text-[#0265FF] font-bold hover:underline">ceo@nexatalentitsolutions.com</a></span>
+                <span><strong>Executive Email:</strong> <a href="mailto:info@nexatalentitsolutions.com" className="text-[#0265FF] font-bold hover:underline">info@nexatalentitsolutions.com</a></span>
               </div>
             </div>
 

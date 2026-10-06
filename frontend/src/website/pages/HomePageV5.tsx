@@ -408,9 +408,9 @@ export function HomePageV5() {
         <div className="max-w-4xl mx-auto text-center space-y-4">
           <h3 className="text-2xl font-extrabold text-slate-900">Ready to Hire? Talk to Our Recruitment Team</h3>
           <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-slate-700 font-semibold">
-            <a href="mailto:ceo@nexatalentitsolutions.com" className="flex items-center gap-2 hover:text-blue-600 transition-colors">
+            <a href="mailto:info@nexatalentitsolutions.com" className="flex items-center gap-2 hover:text-blue-600 transition-colors">
               <Mail className="w-4 h-4 text-blue-600" />
-              <span>ceo@nexatalentitsolutions.com</span>
+              <span>info@nexatalentitsolutions.com</span>
             </a>
             <span className="text-slate-400">•</span>
             <a href="tel:+917019696166" className="flex items-center gap-2 hover:text-blue-600 transition-colors">
