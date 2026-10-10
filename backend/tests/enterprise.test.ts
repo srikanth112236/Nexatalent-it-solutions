@@ -204,6 +204,24 @@ describe('commercial terms: slabs, templates, reminders', () => {
     expect(dup.status).toBe(409);
     db.commissions.splice(db.commissions.findIndex((c: any) => c.id === 'COM-TEST-1'), 1);
   });
+  it('paginates commercial lists server-side (20 default, up to 100)', async () => {
+    for (const path of ['/api/v1/commissions', '/api/v1/commission-agreements', '/api/v1/payouts', '/api/v1/invoices']) {
+      const r = await request(app).get(`${path}?pageSize=50`).set(auth(superToken));
+      expect(r.status).toBe(200);
+      expect(Array.isArray(r.body.data)).toBe(true);
+      expect(r.body.pagination.pageSize).toBe(50);
+    }
+    const q = await request(app).get('/api/v1/commissions?q=COM-TEST-1&leg=receivable').set(auth(superToken));
+    expect(q.status).toBe(200);
+  });
+  it('carries monthly-CTC basis through templates into agreements', async () => {
+    const t = await request(app).post('/api/v1/agreement-templates').set(auth(superToken)).send({ name: 'Monthly Contract Terms', basisType: 'monthly_ctc', contractMonths: 6 });
+    const tid = t.body.data.id;
+    await request(app).post(`/api/v1/agreement-templates/${tid}/status`).set(auth(superToken)).send({ status: 'Active' });
+    const inst = await request(app).post(`/api/v1/agreement-templates/${tid}/instantiate`).set(auth(superToken)).send({ orgId: 'TNT-9011', rate: 9 });
+    expect(inst.body.data.basisType).toBe('monthly_ctc');
+    expect(inst.body.data.contractMonths).toBe(6);
+  });
   it('ships a seeded active template with printable HTML body', async () => {
     const all = await request(app).get('/api/v1/agreement-templates').set(auth(superToken));
     const std = all.body.data.find((t: any) => t.id === 'AGT-STD-001');

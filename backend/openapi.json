@@ -159,7 +159,7 @@
     "/api/v1/agreement-templates/{id}/status": { "post": { "summary": "Draft|Active|Archived", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/agreement-templates/{id}/instantiate": { "post": { "summary": "Create agreement from template", "responses": { "201": { "description": "created" } } } },
 
-    "/api/v1/commissions/check": { "get": { "summary": "Duplicate placement+trigger diagnostic", "responses": { "200": { "description": "ok" }, "400": { "description": "bad query" } } } },    "/api/v1/commissions": { "get": { "summary": "Commission ledger", "responses": { "200": { "description": "ok" } } } },
+    "/api/v1/commissions/check": { "get": { "summary": "Duplicate placement+trigger diagnostic", "responses": { "200": { "description": "ok" }, "400": { "description": "bad query" } } } },    "/api/v1/commissions": { "get": { "summary": "Commission ledger (paged, q/leg/approval filters + receivable/payable summary)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/commissions/{id}/invoice": { "post": { "summary": "Generate invoice from approved commission (once, 409-guarded)", "responses": { "201": { "description": "created" }, "409": { "description": "already invoiced" }, "422": { "description": "not approved" } } } },
     "/api/v1/commissions/{id}/approve": { "patch": { "summary": "Approve (perm: approve)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/payouts": { "get": { "summary": "Payouts (separate ledger)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Process payout", "responses": { "201": { "description": "created" } } } },

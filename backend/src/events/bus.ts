@@ -80,10 +80,12 @@ export function evaluateCommission(p: { placementId?: string; applicationId?: st
     const key = `${p.applicationId || p.placementId}::${trigger}::${a.id}`;
     if (db.idempotency.find((x: any) => x.key === key)) continue;
     const basis = Number((p as any).feeBasis || (a as any).feeBasis || (a as any).fixedFee || 100000);
-    const gross = a.feeModel === 'fixed' ? Number(a.fixedFee || 0) : +(basis * Number(a.rate || 8.33) / 100).toFixed(2);
+    const basisType = (a as any).basisType === 'monthly_ctc' ? 'monthly_ctc' : 'annual_ctc';
+    const months = basisType === 'monthly_ctc' ? Number((a as any).contractMonths || 12) : 1;
+    const gross = a.feeModel === 'fixed' ? Number(a.fixedFee || 0) : +(basis * months * Number(a.rate || 8.33) / 100).toFixed(2);
     db.idempotency.unshift({ key, createdAt: nowIso() });
     trim(db.idempotency, 5000);
-    db.commissions.unshift({ id: uid('COM'), agreementId: a.id, placementId: p.placementId || p.applicationId, applicationId: p.applicationId || null, jobId: p.jobId, orgId: p.orgId, agencyId: (a as any).agencyId || null, candidateEmail: p.candidateEmail, trigger, triggerDate: nowIso(), feeBasis: basis, rate: a.rate, gross, adjustments: 0, tax: +(gross * 0.18).toFixed(2), total: +(gross * 1.18).toFixed(2), net: +(gross * 1.18).toFixed(2), approvalStatus: 'Pending', paymentStatus: 'Unpaid', createdAt: nowIso() });
+    db.commissions.unshift({ id: uid('COM'), agreementId: a.id, placementId: p.placementId || p.applicationId, applicationId: p.applicationId || null, jobId: p.jobId, orgId: p.orgId, agencyId: (a as any).agencyId || null, candidateEmail: p.candidateEmail, trigger, triggerDate: nowIso(), feeBasis: basis, basisType, contractMonths: months, rate: a.rate, gross, adjustments: 0, tax: +(gross * 0.18).toFixed(2), total: +(gross * 1.18).toFixed(2), net: +(gross * 1.18).toFixed(2), approvalStatus: 'Pending', paymentStatus: 'Unpaid', createdAt: nowIso() });
   }
 }
 

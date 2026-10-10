@@ -93,6 +93,34 @@ export function Pager({ page, total, pageSize, onPage }: { page: number; total: 
   );
 }
 
+/** Records-per-page selector (20/50/100) paired with server pagination. */
+export function PageSize({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  return (
+    <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
+      Show
+      <select aria-label="Records per page" value={String(value)} onChange={(e) => onChange(Number(e.target.value))}
+        className="px-2 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-xs text-slate-900">
+        {[20, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
+      </select>
+      / page
+    </label>
+  );
+}
+
+/** Info pattern (§5): ⓘ button opening a titled explainer modal. Use beside any guarded/derived action. */
+export function InfoTip({ title, body }: { title: string; body: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} aria-label={`About: ${title}`} title={title}
+        className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-full bg-slate-200 hover:bg-[#087BFF] hover:text-white text-slate-600 text-[11px] font-extrabold shrink-0">i</button>
+      <Modal open={open} onClose={() => setOpen(false)} title={title}>
+        <div className="text-xs text-slate-700 space-y-2 leading-relaxed">{body}</div>
+      </Modal>
+    </>
+  );
+}
+
 /** Accessible two-step destructive confirm (§5.4/§5.5) — replaces window.confirm. */
 export function ConfirmButton({ label, confirmLabel = 'Confirm?', onConfirm, className }: { label: string; confirmLabel?: string; onConfirm: () => void | Promise<void>; className?: string }) {
   const [arming, setArming] = useState(false);
@@ -1563,7 +1591,12 @@ export function InvoicesPanel() {
   const [ok, setOk] = useState('');
   const [loadError, setLoadError] = useState(0);
   const [q, setQ] = useQueryState('inv_q');
+  const dqInv = useDebounced(q);
   const [statusF, setStatusF] = useQueryState('inv_status');
+  const [invPage, setInvPage] = useState(1);
+  const [invPageSize, setInvPageSize] = useQueryState('inv_ps');
+  const ips = Number(invPageSize) === 50 ? 50 : Number(invPageSize) === 100 ? 100 : 20;
+  const [invTotal, setInvTotal] = useState(0);
   const [showInvoice, setShowInvoice] = useState(false);
   const [invForm, setInvForm] = useState({ orgId: '', agreementId: '', label: 'Placement fee', qty: '1', unit: '', discount: '', taxRate: '18', dueDate: '', draft: false });
   const [docFor, setDocFor] = useState<any>(null);
@@ -1575,13 +1608,21 @@ export function InvoicesPanel() {
   const [reminders, setReminders] = useState<any[]>([]);
   const [remResult, setRemResult] = useState('');
   const [remBusy, setRemBusy] = useState(false);
-  const load = async () => {
+  const load = async (p = invPage, size = ips, qq = dqInv, st = statusF) => {
     setLoading(true); setError('');
-    try { setInvoices(unwrapList(await billingApi.invoices())); loadReminders(); }
+    try {
+      const params = new URLSearchParams({ page: String(p), pageSize: String(size) });
+      if (qq.trim()) params.set('q', qq.trim());
+      if (st) params.set('status', st);
+      const res: any = await billingApi.invoices(`?${params.toString()}`);
+      setInvoices(unwrapList(res)); setInvTotal(Number(res?.pagination?.total || unwrapList(res).length));
+      loadReminders();
+    }
     catch (e) { setError(errMsg(e)); setLoadError(errStatus(e)); }
     finally { setLoading(false); }
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { setInvPage(1); }, [dqInv, statusF, ips]);
+  useEffect(() => { load(invPage, ips, dqInv, statusF); }, [invPage, ips, dqInv, statusF]);
   const loadReminders = async () => {
     try { setReminders(unwrapList(await billingApi.invoiceReminders())); } catch { setReminders([]); }
   };
@@ -1598,7 +1639,7 @@ export function InvoicesPanel() {
     if (!invForm.orgId.trim() || !invForm.unit || !invForm.dueDate) { setError('Organization + unit price + due date are required.'); return; }
     try {
       const created = unwrapObj(await billingApi.createInvoice({ orgId: invForm.orgId.trim(), agreementId: invForm.agreementId.trim() || undefined, dueDate: invForm.dueDate, discount: Number(invForm.discount) || 0, taxRate: Number(invForm.taxRate) || 0, draft: invForm.draft, lines: [{ label: invForm.label, qty: Number(invForm.qty) || 1, unit: Number(invForm.unit) }] }));
-      if (created?.id) setInvoices((x) => [created, ...x]);
+      if (created?.id) load(1, ips, dqInv, statusF);
       setInvForm({ orgId: '', agreementId: '', label: 'Placement fee', qty: '1', unit: '', discount: '', taxRate: '18', dueDate: '', draft: false }); setShowInvoice(false);
       setOk(invForm.draft ? 'Draft invoice saved — issue it when ready.' : 'Invoice issued (immutable — amend via credit note).'); syncAll();
     } catch (e) { setError(errMsg(e)); }
@@ -1637,12 +1678,7 @@ export function InvoicesPanel() {
     <table><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Amount</th></tr>${(d.lines || []).map((l: any) => `<tr><td>${l.label}</td><td>${l.qty}</td><td>₹${l.unit}</td><td>₹${(l.qty * l.unit).toLocaleString('en-IN')}</td></tr>`).join('')}</table>
     <div class="totals"><div><span>Subtotal</span><span>₹${d.subtotal}</span></div><div><span>Discount</span><span>− ₹${d.discount}</span></div><div><span>Tax (GST @ ${d.taxRate ?? 18}%)</span><span>₹${d.tax}</span></div><div><strong>Total</strong><span><strong>₹${d.total}</strong></span></div><div><span>Paid</span><span>₹${d.amountPaid}</span></div><div><span>Balance</span><span>₹${d.balance}</span></div></div>
     <div class="terms"><h3>Commercial terms</h3><p>• ${d.terms?.paymentNote || ''}</p><p>• ${d.terms?.replacementNote || ''}</p><p>• ${d.terms?.gstNote || ''}</p><p>• ${d.terms?.ownershipNote || ''}</p><p>• ${d.terms?.duplicateNote || ''}</p></div>`;
-  const filteredInv = invoices.filter((i) => {
-    const st = i.overdue ? 'Overdue' : i.status;
-    if (statusF && st !== statusF) return false;
-    if (!q.trim()) return true;
-    return `${i.id} ${i.number} ${i.orgId} ${i.status} ${i.agreementId || ''}`.toLowerCase().includes(q.toLowerCase());
-  });
+  const filteredInv = invoices;
   const invMenuFor = (i: any) => (
     <RowMenu label={`Invoice ${i.number || i.id}`} items={[
       { label: 'View document', onSelect: () => openDocument(i) },
@@ -1669,9 +1705,12 @@ export function InvoicesPanel() {
             <Select value={statusF} onChange={setStatusF} ariaLabel="Invoice status filter" placeholder="All statuses"
               options={[{ value: '', label: 'All statuses' }, ...INV_STATUSES.map((s) => ({ value: s, label: s }))]} />
           </div>
+          <div className="flex items-center gap-2">
+            <PageSize value={ips} onChange={(n) => setInvPageSize(String(n))} />
+          </div>
         </div>
       </div>
-      {error && <PanelError message={error} status={loadError} onRetry={load} />}
+      {error && <PanelError message={error} status={loadError} onRetry={() => load(invPage, ips, dqInv, statusF)} />}
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
       <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 text-xs space-y-2">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -1845,6 +1884,7 @@ export function InvoicesPanel() {
           </table>
         </div>
       </>)}
+      <Pager page={invPage} total={invTotal} pageSize={ips} onPage={setInvPage} />
     </div>
   );
 }
@@ -2201,11 +2241,10 @@ export function CommissionsPanel() {
   const [commissions, setCommissions] = useState<any[]>([]);
   const [payouts, setPayouts] = useState<any[]>([]);
   const [error, setError] = useState('');
-  const [form, setForm] = useState({ orgId: '', jobId: '', hiringType: 'Mid-level IT roles', rate: '8.33', trigger: 'Joined', paymentTermsDays: '30', replacementDays: '90', templateId: '' });
+  const [form, setForm] = useState({ orgId: '', jobId: '', hiringType: 'Mid-level IT roles', rate: '8.33', trigger: 'Joined', basisType: 'annual_ctc', contractMonths: '12', paymentTermsDays: '30', replacementDays: '90', templateId: '' });
   const [slabs, setSlabs] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
   const [showAgreement, setShowAgreement] = useState(false);
-  const [payoutId, setPayoutId] = useState('');
   const [adjustFor, setAdjustFor] = useState<any>(null);
   const [adjustments, setAdjustments] = useState<any[]>([]);
   const [adjustForm, setAdjustForm] = useState({ amount: '', reason: '' });
@@ -2248,18 +2287,44 @@ export function CommissionsPanel() {
     } catch (e) { setError(errMsg(e)); }
   };
   const [loadError, setLoadError] = useState(0);
+  const [ok, setOk] = useState('');
   const canTemplates = useCan('manage_billing');
-  const load = async () => {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useQueryState('com_ps');
+  const ps = Number(pageSize) === 50 ? 50 : Number(pageSize) === 100 ? 100 : 20;
+  const [total, setTotal] = useState(0);
+  const [summary, setSummary] = useState<any>(null);
+  const [agrPage, setAgrPage] = useState(1);
+  const [agrTotal, setAgrTotal] = useState(0);
+  const [payPage, setPayPage] = useState(1);
+  const [payPgTotal, setPayPgTotal] = useState(0);
+  const [cq, setCq] = useQueryState('com_q');
+  const dqCq = useDebounced(cq);
+  const [leg, setLeg] = useQueryState('com_leg');
+  const [approvalF, setApprovalF] = useQueryState('com_appr');
+  const load = async (p = page, size = ps, q = dqCq, lg = leg, appr = approvalF, ap = agrPage, pp = payPage) => {
     setError('');
     try {
-      setAgreements(unwrapList(await billingApi.agreements()));
-      setCommissions(unwrapList(await billingApi.commissions()));
-      setPayouts(unwrapList(await billingApi.payouts()));
-      setSlabs(unwrapList(await billingApi.feeSlabs()).filter(Boolean));
-      try { setTemplates(unwrapList(await billingApi.agreementTemplates())); } catch { setTemplates([]); }
+      const params = new URLSearchParams({ page: String(p), pageSize: String(size) });
+      if (q.trim()) params.set('q', q.trim());
+      if (lg) params.set('leg', lg);
+      if (appr) params.set('approval', appr);
+      const [agRes, comRes, payRes, slabsRes, tplRes] = await Promise.all([
+        billingApi.agreements(`?page=${ap}&pageSize=20`).catch(() => null),
+        billingApi.commissions(`?${params.toString()}`).catch(() => null),
+        billingApi.payouts(`?page=${pp}&pageSize=20`).catch(() => null),
+        billingApi.feeSlabs().catch(() => null),
+        billingApi.agreementTemplates().catch(() => null),
+      ]);
+      if (agRes) { setAgreements(unwrapList(agRes)); setAgrTotal(Number((agRes as any)?.pagination?.total || unwrapList(agRes).length)); }
+      if (comRes) { setCommissions(unwrapList(comRes)); setTotal(Number((comRes as any)?.pagination?.total || unwrapList(comRes).length)); setSummary((comRes as any)?.summary || (comRes as any)?.data?.summary || null); }
+      if (payRes) { setPayouts(unwrapList(payRes)); setPayPgTotal(Number((payRes as any)?.pagination?.total || unwrapList(payRes).length)); }
+      if (slabsRes) setSlabs(unwrapList(slabsRes).filter(Boolean));
+      if (tplRes) setTemplates(unwrapList(tplRes));
     } catch (e) { setError(errMsg(e)); setLoadError(errStatus(e)); }
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { setPage(1); setAgrPage(1); setPayPage(1); }, [dqCq, leg, approvalF, ps]);
+  useEffect(() => { load(page, ps, dqCq, leg, approvalF, agrPage, payPage); }, [page, ps, dqCq, leg, approvalF, agrPage, payPage]);
   const slabOf = (hiringType: string) => slabs.find((s: any) => s.hiringType === hiringType);
   const applyTemplate = (id: string) => {
     const t = templates.find((x: any) => x.id === id);
@@ -2269,6 +2334,8 @@ export function CommissionsPanel() {
       ...f, templateId: id,
       hiringType: t.hiringType || f.hiringType,
       rate: t.rateMin !== undefined && t.rateMax !== undefined ? String(t.rateMin === t.rateMax ? t.rateMin : (t.rateMin + t.rateMax) / 2) : f.rate,
+      basisType: t.basisType || f.basisType,
+      contractMonths: String(t.contractMonths ?? 12),
       paymentTermsDays: String(t.paymentTermsDays ?? 30),
       replacementDays: String(t.replacementDays ?? 90),
     }));
@@ -2277,10 +2344,10 @@ export function CommissionsPanel() {
     e.preventDefault(); if (!form.orgId) return;
     try {
       const a = form.templateId
-        ? unwrapObj(await billingApi.instantiateTemplate(form.templateId, { orgId: form.orgId, jobId: form.jobId || undefined, hiringType: form.hiringType, rate: Number(form.rate) || undefined, trigger: form.trigger }))
-        : unwrapObj(await billingApi.createAgreement({ orgId: form.orgId, jobId: form.jobId || undefined, hiringType: form.hiringType, rate: Number(form.rate) || 8.33, trigger: form.trigger, paymentTermsDays: Number(form.paymentTermsDays) || 30, replacementDays: Number(form.replacementDays) || 90 }));
+        ? unwrapObj(await billingApi.instantiateTemplate(form.templateId, { orgId: form.orgId, jobId: form.jobId || undefined, hiringType: form.hiringType, rate: Number(form.rate) || undefined, trigger: form.trigger, basisType: form.basisType, contractMonths: Number(form.contractMonths) || 12 }))
+        : unwrapObj(await billingApi.createAgreement({ orgId: form.orgId, jobId: form.jobId || undefined, hiringType: form.hiringType, rate: Number(form.rate) || 8.33, trigger: form.trigger, basisType: form.basisType, contractMonths: Number(form.contractMonths) || 12, paymentTermsDays: Number(form.paymentTermsDays) || 30, replacementDays: Number(form.replacementDays) || 90 }));
       if (a?.id) setAgreements((x) => [a, ...x]);
-      setForm({ orgId: '', jobId: '', hiringType: 'Mid-level IT roles', rate: '8.33', trigger: 'Joined', paymentTermsDays: '30', replacementDays: '90', templateId: '' });
+      setForm({ orgId: '', jobId: '', hiringType: 'Mid-level IT roles', rate: '8.33', trigger: 'Joined', basisType: 'annual_ctc', contractMonths: '12', paymentTermsDays: '30', replacementDays: '90', templateId: '' });
       setShowAgreement(false);
       syncAll();
     } catch (e) { setError(errMsg(e)); }
@@ -2291,27 +2358,34 @@ export function CommissionsPanel() {
       setAgreements((x) => x.map((a) => (a.id === id ? u : a))); syncAll();
     } catch (e) { setError(errMsg(e)); }
   };
-  const approve = async (id: string) => {
-    try { const u = unwrapObj(await billingApi.approveCommission(id)); setCommissions((x) => x.map((c) => (c.id === id ? u : c))); syncAll(); }
-    catch (e) { setError(errMsg(e)); }
+  const basisText = (c: any) => c.basisType === 'monthly_ctc'
+    ? `₹${Number(c.feeBasis || 0).toLocaleString('en-IN')}/mo × ${c.contractMonths || 12} mo`
+    : `₹${Number(c.feeBasis || 0).toLocaleString('en-IN')} annual`;
+  const [approveFor, setApproveFor] = useState<any>(null);
+  const [payoutFor, setPayoutFor] = useState<any>(null);
+  const approve = async (c: any) => {
+    const u = unwrapObj(await billingApi.approveCommission(c.id));
+    setCommissions((x) => x.map((y) => (y.id === c.id ? { ...y, ...(u?.id ? u : { approvalStatus: 'Approved' }) } : y)));
+    if (commDetail?.id === c.id) setCommDetail((d: any) => ({ ...d, approvalStatus: 'Approved' }));
+    setApproveFor(null); setOk(`Commission ${c.id} approved — now billable and payable.`); syncAll();
   };
-  const payout = async (id: string) => {
-    try { const p = unwrapObj(await billingApi.payout(id)); if (p?.id) { setPayouts((x) => [p, ...x]); load(); } syncAll(); }
-    catch (e) { setError(errMsg(e)); }
+  const payout = async (c: any) => {
+    const p = unwrapObj(await billingApi.payout(c.id));
+    if (p?.id) {
+      setCommissions((x) => x.map((y) => (y.id === c.id ? { ...y, paymentStatus: 'Paid' } : y)));
+      if (commDetail?.id === c.id) setCommDetail((d: any) => ({ ...d, paymentStatus: 'Paid' }));
+      load(page, ps, dqCq, leg, approvalF, agrPage, payPage);
+    }
+    setPayoutFor(null); setOk(`Payout ${p?.id || ''} processed for ${c.id} — both ledgers updated.`); syncAll();
   };
-  const [cq, setCq] = useQueryState('com_q');
-  const [leg, setLeg] = useQueryState('com_leg');
-  const [dupMsg, setDupMsg] = useState('');
+  const [dupInfo, setDupInfo] = useState<{ c: any; result: any } | null>(null);
   const checkDup = async (c: any) => {
-    setDupMsg('');
     try {
       const key = c.placementId || c.applicationId;
       const res: any = await billingApi.checkDuplicate(`?trigger=${encodeURIComponent(c.trigger || '')}&${c.applicationId ? `applicationId=${c.applicationId}` : `placementId=${key}`}${c.agreementId ? `&agreementId=${c.agreementId}` : ''}`);
-      const d = (res as { data?: any })?.data;
-      setDupMsg(d?.duplicate ? `Duplicate guard: ${d.count} record(s) share placement+trigger (e.g. ${d.rows.map((r: any) => r.id).join(', ')}). New payouts are blocked by idempotency.` : 'No duplicate for this placement + trigger.');
-    } catch (e) { setDupMsg(errMsg(e)); }
+      setDupInfo({ c, result: (res as { data?: any })?.data || null });
+    } catch (e) { setError(errMsg(e)); }
   };
-  const legOf = (c: any) => (c.agencyId ? 'payable' : 'receivable');
   const [commDetail, setCommDetail] = useState<any>(null);
   const [agDetail, setAgDetail] = useState<any>(null);
   const [invoiceFor, setInvoiceFor] = useState<any>(null);
@@ -2321,28 +2395,26 @@ export function CommissionsPanel() {
     setCommissions((x) => x.map((y) => (y.id === c.id ? { ...y, ...updated } : y)));
     if (commDetail?.id === c.id) setCommDetail((d: any) => ({ ...d, ...updated }));
     setInvoiceFor(null);
+    setOk(`Invoice ${res?.invoice?.number || res?.invoice?.id || ''} generated from ${c.id}.`);
     syncAll();
   };
   const commMenuFor = (c: any) => (
     <RowMenu label={`Commission ${c.id}`} items={[
       { label: 'View detail', onSelect: () => setCommDetail(c) },
-      ...(c.approvalStatus !== 'Approved' ? [{ label: 'Approve commission', onSelect: () => approve(c.id) }] : []),
+      ...(c.approvalStatus !== 'Approved' ? [{ label: 'Approve commission…', onSelect: () => setApproveFor(c) }] : []),
       ...(c.approvalStatus === 'Approved' && !c.invoiceId ? [{ label: 'Generate invoice…', onSelect: () => setInvoiceFor(c) }] : []),
-      ...(c.approvalStatus === 'Approved' && c.paymentStatus !== 'Paid' ? [{ label: 'Process payout', onSelect: () => setPayoutId(c.id) }] : []),
+      ...(c.approvalStatus === 'Approved' && c.paymentStatus !== 'Paid' ? [{ label: 'Process payout…', onSelect: () => setPayoutFor(c) }] : []),
       { label: 'Verify uniqueness…', onSelect: () => checkDup(c) },
-      { label: 'Adjustments', onSelect: async () => {
+      { label: 'Adjustments…', onSelect: async () => {
         setAdjustFor(c); setAdjustForm({ amount: '', reason: '' });
         try { setAdjustments(unwrapList(await workforceApi.adjustments(c.id))); }
         catch (e) { setError(errMsg(e)); }
       } },
     ]} />
   );
-  const filteredComms = commissions.filter((c) => {
-    if (leg && legOf(c) !== leg) return false;
-    return !cq.trim() || `${c.id} ${c.orgId} ${c.agencyId} ${c.approvalStatus}`.toLowerCase().includes(cq.toLowerCase());
-  });
-  const recvTotal = commissions.filter((c) => legOf(c) === 'receivable').reduce((a: number, c: any) => a + Number(c.total || c.net || 0), 0);
-  const payTotal = commissions.filter((c) => legOf(c) === 'payable').reduce((a: number, c: any) => a + Number(c.total || c.net || 0), 0);
+  const filteredComms = commissions;
+  const recvTotal = Number(summary?.receivable || 0);
+  const payTotal = Number(summary?.payable || 0);
   const stageOf = (c: any): number => {
     if (c.paymentStatus === 'Paid') return 5;
     if (c.approvalStatus === 'Approved') return 4;
@@ -2356,26 +2428,36 @@ export function CommissionsPanel() {
     <div className={cardCls}>
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-base font-extrabold text-slate-900">Commissions — Agreements → Approve → Adjust → Payout / Export</h3>
+          <div className="flex items-center gap-1.5">
+            <h3 className="text-base font-extrabold text-slate-900">Commissions — Agreements → Approve → Adjust → Payout / Export</h3>
+            <InfoTip title="How commissions work" body={<><p>Companies pay NexaTalent on every hire. <strong>Receivable</strong> = company owes the platform; <strong>Payable</strong> = platform owes the agency/contractor.</p><p>Fee basis is the <strong>annual CTC</strong> for direct hires, or <strong>monthly CTC × contract months</strong> for contract/payroll hires — set per agreement. Gross = basis × rate%; GST 18% is added extra.</p><p>Flow: placement triggers a commission (Pending) → <strong>Approve</strong> → optionally <strong>Adjust</strong> → <strong>Generate invoice</strong> (once) → <strong>Process payout</strong>. Every step needs confirmation and is audited.</p></>} />
+          </div>
           <div className="flex gap-2">
-            <ExportButton filename="commissions.csv" rows={filteredComms} columns={['id', 'orgId', 'agencyId', 'gross', 'total', 'approvalStatus', 'paymentStatus']} />
+            <ExportButton filename="commissions.csv" rows={filteredComms} columns={['id', 'orgId', 'agencyId', 'feeBasis', 'basisType', 'rate', 'gross', 'total', 'approvalStatus', 'paymentStatus', 'invoiceId']} />
             <button type="button" onClick={() => setShowAgreement(true)} className={btnPrimary}>+ New agreement</button>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="p-3 rounded-2xl bg-blue-50 border border-blue-200"><div className="text-[10px] font-bold text-blue-700 uppercase">Company receivable</div><div className="text-base font-extrabold">₹{recvTotal.toLocaleString('en-IN')}</div></div>
+          <div className="p-3 rounded-2xl bg-blue-50 border border-blue-200"><div className="text-[10px] font-bold text-blue-700 uppercase">Company receivable{summary ? ` (${summary.count} records)` : ''}</div><div className="text-base font-extrabold">₹{recvTotal.toLocaleString('en-IN')}</div></div>
           <div className="p-3 rounded-2xl bg-purple-50 border border-purple-200"><div className="text-[10px] font-bold text-purple-700 uppercase">Agency payable</div><div className="text-base font-extrabold">₹{payTotal.toLocaleString('en-IN')}</div></div>
         </div>
         <div className="flex flex-col lg:flex-row gap-2">
-          <input className={`${inputCls} flex-1`} placeholder="Search commission ID, org, agency, status…" value={cq} onChange={(e) => setCq(e.target.value)} />
+          <input className={`${inputCls} flex-1`} placeholder="Search commission ID, org, agency, candidate…" value={cq} onChange={(e) => setCq(e.target.value)} />
           <div className="w-full lg:w-44 shrink-0">
             <Select value={leg} onChange={setLeg} ariaLabel="Ledger filter" placeholder="Both ledgers"
               options={[{ value: '', label: 'Both ledgers' }, { value: 'receivable', label: 'Receivable only' }, { value: 'payable', label: 'Payable only' }]} />
           </div>
+          <div className="w-full lg:w-44 shrink-0">
+            <Select value={approvalF} onChange={setApprovalF} ariaLabel="Approval filter" placeholder="All approvals"
+              options={[{ value: '', label: 'All approvals' }, { value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }]} />
+          </div>
+          <div className="flex items-center gap-2">
+            <PageSize value={ps} onChange={(n) => setPageSize(String(n))} />
+          </div>
         </div>
       </div>
-      {error && <PanelError message={error} status={loadError} onRetry={load} />}
-      {dupMsg && <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs font-bold">{dupMsg}</div>}
+      {error && <PanelError message={error} status={loadError} onRetry={() => load(page, ps, dqCq, leg, approvalF, agrPage, payPage)} />}
+      {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
       <div className="flex items-center justify-between gap-2">
         <div className="text-xs font-extrabold text-slate-700">Agreement templates — company ↔ platform ({templates.length})</div>
         {canTemplates ? <button type="button" onClick={openTplCreate} className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">+ Template</button> : null}
@@ -2457,10 +2539,12 @@ export function CommissionsPanel() {
           <div className="sm:col-span-2"><Field label="Hiring type *"><Select value={form.hiringType} onChange={(v) => setForm({ ...form, hiringType: v })} options={['Junior IT roles', 'Mid-level IT roles', 'Senior / niche technology roles', 'Leadership / executive search', 'Bulk hiring'].map((h) => ({ value: h, label: h }))} /></Field></div>
           <Field label="Rate % of annual CTC *"><input className={kitInput} type="number" step="0.01" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} /></Field>
           <Field label="Trigger"><Select value={form.trigger} onChange={(v) => setForm({ ...form, trigger: v })} options={[{ value: 'Joined', label: 'Joined' }, { value: 'Offer Accepted', label: 'Offer Accepted' }]} /></Field>
+          <Field label="Fee basis"><Select value={form.basisType} onChange={(v) => setForm({ ...form, basisType: v })} options={[{ value: 'annual_ctc', label: 'Annual CTC (direct hire)' }, { value: 'monthly_ctc', label: 'Monthly CTC (contract / payroll)' }]} /></Field>
+          <Field label="Contract months (monthly basis)"><input className={kitInput} type="number" min={1} max={36} value={form.contractMonths} onChange={(e) => setForm({ ...form, contractMonths: e.target.value })} /></Field>
           <Field label="Payment within (days of joining)"><input className={kitInput} type="number" min={1} max={60} value={form.paymentTermsDays} onChange={(e) => setForm({ ...form, paymentTermsDays: e.target.value })} /></Field>
           <Field label="Replacement window (days)"><input className={kitInput} type="number" min={0} max={365} value={form.replacementDays} onChange={(e) => setForm({ ...form, replacementDays: e.target.value })} /></Field>
           <div className="sm:col-span-2 text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200 rounded-xl p-2.5">
-            {(() => { const s = slabOf(form.hiringType); if (!s) return 'Slab: loading…'; if (s.negotiated) return `Slab — ${s.hiringType}: ${s.note}. Any rate allowed.`; return `Slab — ${s.hiringType}: ${s.rateMin}%–${s.rateMax}% of annual CTC. GST extra. Payment 15–30 days from joining.`; })()}
+            {(() => { const s = slabOf(form.hiringType); if (!s) return 'Slab: loading…'; if (s.negotiated) return `Slab — ${s.hiringType}: ${s.note}. Any rate allowed.`; return `Slab — ${s.hiringType}: ${s.rateMin}%–${s.rateMax}% of ${form.basisType === 'monthly_ctc' ? `monthly CTC × ${form.contractMonths || 12} months` : 'annual CTC'}. GST extra. Payment 15–30 days from joining.`; })()}
           </div>
           <div className="sm:col-span-2 flex justify-end gap-2">
             <button type="button" onClick={() => setShowAgreement(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
@@ -2468,24 +2552,28 @@ export function CommissionsPanel() {
           </div>
         </form>
       </Modal>
-      <div className="text-xs font-extrabold text-slate-700">Agreements ({agreements.length})</div>
+      <div className="flex items-center gap-1.5">
+        <div className="text-xs font-extrabold text-slate-700">Agreements ({agrTotal})</div>
+        <InfoTip title="How agreements work" body={<><p>An agreement binds a company to commercial terms: <strong>hiring type → slab rate</strong>, <strong>annual-CTC or monthly-CTC × months</strong> basis, trigger (Joined / Offer Accepted), payment window, replacement window and GST treatment.</p><p>Every placement under an approved agreement auto-mints a commission. The company must <strong>accept</strong> the agreement (tracked with actor + timestamp) before invoicing.</p></>} />
+      </div>
       {agreements.map((a) => (
         <div key={a.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
-          <span className="min-w-0 truncate">{a.id} • {a.orgId} • {a.hiringType || '—'} • {a.rate}% • trigger {a.trigger} • pay ≤{a.paymentTermsDays || 30}d • repl {a.replacementDays ?? 90}d • {a.status}{a.companyAccepted ? ' • ✓ company accepted' : ' • pending company acceptance'}</span>
+          <span className="min-w-0 truncate">{a.id} • {a.orgId} • {a.hiringType || '—'} • {a.rate}% • {a.basisType === 'monthly_ctc' ? `monthly × ${a.contractMonths || 12}mo` : 'annual'} • trigger {a.trigger} • pay ≤{a.paymentTermsDays || 30}d • repl {a.replacementDays ?? 90}d • {a.status}{a.companyAccepted ? ' • ✓ company accepted' : ' • pending company acceptance'}</span>
           <div className="flex items-center gap-1 shrink-0">
             {!a.companyAccepted ? <button type="button" onClick={() => accept(a.id)} className="text-[11px] font-bold text-blue-600 underline">Mark accepted</button> : null}
             <RowMenu label={`Agreement ${a.id}`} items={[{ label: 'View terms', onSelect: () => setAgDetail(a) }]} />
           </div>
         </div>
       ))}
+      <Pager page={agrPage} total={agrTotal} pageSize={20} onPage={setAgrPage} />
       <Modal open={agDetail !== null} onClose={() => setAgDetail(null)} title={`Agreement ${agDetail?.id || ''}`} subtitle={`${agDetail?.orgId || ''} • ${agDetail?.hiringType || ''} @ ${agDetail?.rate || ''}%`}>
         <div className="space-y-2 text-xs">
-          {[['Trigger', agDetail?.trigger], ['Payment window', agDetail?.paymentTermsDays ? `Within ${agDetail.paymentTermsDays} days of joining` : '—'], ['Replacement', agDetail?.replacementDays !== undefined ? `${agDetail.replacementDays} days — ${agDetail?.replacementTerms || 'standard conditions'}` : '—'], ['GST', agDetail?.gstApplicable === false ? 'Not applicable' : `Extra as applicable${agDetail?.taxTreatment ? ` — ${agDetail.taxTreatment}` : ''}`], ['Ownership', agDetail?.ownershipClause || '—'], ['Duplicates', agDetail?.duplicatePolicy || '—'], ['Cancellation', agDetail?.cancellationTerms || '—'], ['Template', agDetail?.templateId ? `${agDetail.templateId} v${agDetail.templateVersion || ''}` : 'custom'], ['Company acceptance', agDetail?.companyAccepted ? `✓ by ${agDetail.acceptedBy} @ ${String(agDetail.acceptedAt || '').slice(0, 16).replace('T', ' ')}` : 'pending']].map(([k, v]) => (
+          {[['Trigger', agDetail?.trigger], ['Fee basis', agDetail?.basisType === 'monthly_ctc' ? `Monthly CTC × ${agDetail?.contractMonths || 12} months (contract / payroll)` : 'Annual CTC (direct hire)'], ['Payment window', agDetail?.paymentTermsDays ? `Within ${agDetail.paymentTermsDays} days of joining` : '—'], ['Replacement', agDetail?.replacementDays !== undefined ? `${agDetail.replacementDays} days — ${agDetail?.replacementTerms || 'standard conditions'}` : '—'], ['GST', agDetail?.gstApplicable === false ? 'Not applicable' : `Extra as applicable${agDetail?.taxTreatment ? ` — ${agDetail.taxTreatment}` : ''}`], ['Ownership', agDetail?.ownershipClause || '—'], ['Duplicates', agDetail?.duplicatePolicy || '—'], ['Cancellation', agDetail?.cancellationTerms || '—'], ['Template', agDetail?.templateId ? `${agDetail.templateId} v${agDetail.templateVersion || ''}` : 'custom'], ['Company acceptance', agDetail?.companyAccepted ? `✓ by ${agDetail.acceptedBy} @ ${String(agDetail.acceptedAt || '').slice(0, 16).replace('T', ' ')}` : 'pending']].map(([k, v]) => (
             <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1">{String(v ?? '—')}</div></div>
           ))}
         </div>
       </Modal>
-      <div className="text-xs font-extrabold text-slate-700">Commissions ({filteredComms.length}/{commissions.length})</div>
+      <div className="text-xs font-extrabold text-slate-700">Commissions ({total})</div>
       {filteredComms.length === 0 && <EmptyState title="No commissions yet" message="Placement triggers auto-create commission records from approved agreements." />}
       {filteredComms.length > 0 && (<>
         <div className="space-y-2 md:hidden">
@@ -2500,7 +2588,7 @@ export function CommissionsPanel() {
                 </div>
                 {commMenuFor(c)}
               </div>
-              <div className="font-bold text-slate-700">Basis ₹{Number(c.feeBasis || 0).toLocaleString('en-IN')} × {c.rate}% = gross ₹{Number(c.gross || 0).toLocaleString('en-IN')} + GST ₹{Number(c.tax || 0).toLocaleString('en-IN')} = <strong>₹{Number(c.total || c.net || 0).toLocaleString('en-IN')}</strong></div>
+              <div className="font-bold text-slate-700">Basis {basisText(c)} × {c.rate}% = gross ₹{Number(c.gross || 0).toLocaleString('en-IN')} + GST ₹{Number(c.tax || 0).toLocaleString('en-IN')} = <strong>₹{Number(c.total || c.net || 0).toLocaleString('en-IN')}</strong></div>
               <div className="flex flex-wrap gap-1">
                 <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">{c.approvalStatus}</span>
                 <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-bold text-[11px]">{c.paymentStatus}</span>
@@ -2529,7 +2617,7 @@ export function CommissionsPanel() {
                   <td className="px-4 py-3"><div className="font-bold text-slate-900">{c.id}</div><div className="font-mono text-[11px] text-slate-500">trig {c.trigger || '—'}{c.invoiceId ? ` • inv ${c.invoiceId}` : ''}</div></td>
                   <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${c.agencyId ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>{c.agencyId ? `Payable → ${c.agencyId}` : `Receivable ← ${c.orgId}`}</span></td>
                   <td className="px-4 py-3 font-medium">{c.candidateEmail || '—'}</td>
-                  <td className="px-4 py-3 text-right font-mono">₹{Number(c.feeBasis || 0).toLocaleString('en-IN')} × {c.rate}%</td>
+                  <td className="px-4 py-3 text-right font-mono">{basisText(c)} × {c.rate}%</td>
                   <td className="px-4 py-3 text-right font-bold">₹{Number(c.gross || 0).toLocaleString('en-IN')}</td>
                   <td className="px-4 py-3 text-right">₹{Number(c.tax || 0).toLocaleString('en-IN')}</td>
                   <td className="px-4 py-3 text-right font-extrabold">₹{Number(c.total || c.net || 0).toLocaleString('en-IN')}</td>
@@ -2541,18 +2629,47 @@ export function CommissionsPanel() {
           </table>
         </div>
       </>)}
-      <div className="text-xs font-extrabold text-slate-700">Payouts ({payouts.length})</div>
+      <div className="flex items-center justify-between gap-2">
+        <Pager page={page} total={total} pageSize={ps} onPage={setPage} />
+      </div>
+      <div className="text-xs font-extrabold text-slate-700">Payouts ({payPgTotal})</div>
       {payouts.map((p) => (
         <div key={p.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold">{p.id} • ₹{p.amount} • {p.status}</div>
       ))}
-      <ConfirmDialog
-        open={payoutId !== ''}
-        title="Process payout"
-        body={`Pay out this approved commission (${payoutId})? This moves money and is recorded in both ledgers.`}
-        confirmLabel="Process payout"
-        onConfirm={async () => { await payout(payoutId); setPayoutId(''); }}
-        onCancel={() => setPayoutId('')}
+      <Pager page={payPage} total={payPgTotal} pageSize={20} onPage={setPayPage} />
+      <ActionConfirm
+        open={approveFor !== null}
+        onCancel={() => setApproveFor(null)}
+        title={`Approve commission ${approveFor?.id || ''}`}
+        subtitle={`${approveFor?.candidateEmail || ''} • ${approveFor ? basisText(approveFor) : ''} × ${approveFor?.rate || ''}% = ₹${Number(approveFor?.gross || 0).toLocaleString('en-IN')}`}
+        why={['Placement trigger fired and the record passed slab validation', 'Approval is the explicit commercial sign-off']}
+        steps={['Status moves to Approved', 'Commission becomes billable (Generate invoice) and payable (Process payout)', 'Event recorded with actor + timestamp']}
+        consequences={['Money movement is still gated behind payout approval', 'Adjustments remain possible after approval']}
+        confirmLabel="Approve commission"
+        tone="dark"
+        onConfirm={async () => { if (approveFor) await approve(approveFor); }}
       />
+      <ActionConfirm
+        open={payoutFor !== null}
+        onCancel={() => setPayoutFor(null)}
+        title={`Process payout — ${payoutFor?.id || ''}`}
+        subtitle={`₹${Number(payoutFor?.total || payoutFor?.net || 0).toLocaleString('en-IN')} → ${payoutFor?.agencyId || payoutFor?.orgId || ''}`}
+        why={['Commission is Approved and unpaid', 'Payout settles the payable/receivable leg']}
+        steps={['Payout record created with settlement date', 'Commission payment status moves to Paid', 'Both ledgers updated + audit event']}
+        consequences={['This moves real money — verify bank details off-platform first', 'Reversal is a new adjustment, not a delete']}
+        confirmLabel="Process payout"
+        tone="dark"
+        onConfirm={async () => { if (payoutFor) await payout(payoutFor); }}
+      />
+      <Modal open={dupInfo !== null} onClose={() => setDupInfo(null)} title={`Uniqueness check — ${dupInfo?.c?.id || ''}`}
+        subtitle={`${dupInfo?.c?.trigger || ''} • ${dupInfo?.c?.placementId || dupInfo?.c?.applicationId || ''}`}>
+        <div className="text-xs text-slate-700 space-y-2 leading-relaxed">
+          <p><strong>What this checks:</strong> whether any other commission shares the same placement/application + trigger + agreement. The platform blocks double-minting with an idempotency key (<span className="font-mono">placement :: trigger :: agreement</span>), so a duplicate can only exist if it was created before the guard or through another agreement.</p>
+          {dupInfo?.result?.duplicate
+            ? <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 font-bold">Duplicate guard: {dupInfo.result.count} record(s) share placement + trigger ({(dupInfo.result.rows || []).map((r: any) => r.id).join(', ')}). Do not approve or pay twice — adjust or void instead.</div>
+            : <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 font-bold">No duplicate for this placement + trigger — safe to approve.</div>}
+        </div>
+      </Modal>
       <ActionConfirm
         open={invoiceFor !== null}
         onCancel={() => setInvoiceFor(null)}
@@ -2568,42 +2685,57 @@ export function CommissionsPanel() {
       {commDetail !== null && (
         <DetailDrawer title={`Commission ${commDetail.id}`} subtitle={`${commDetail.agencyId ? `Payable → ${commDetail.agencyId}` : `Receivable ← ${commDetail.orgId}`} • ${commDetail.approvalStatus} / ${commDetail.paymentStatus}`} onClose={() => setCommDetail(null)}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-            {[['Fee basis (annual CTC)', `₹${Number(commDetail.feeBasis || 0).toLocaleString('en-IN')}`], ['Rate', `${commDetail.rate}%`], ['Gross', `₹${Number(commDetail.gross || 0).toLocaleString('en-IN')}`], ['Adjustments', `₹${Number(commDetail.adjustments || 0).toLocaleString('en-IN')}`], ['GST (18%)', `₹${Number(commDetail.tax || 0).toLocaleString('en-IN')}`], ['Total', `₹${Number(commDetail.total || commDetail.net || 0).toLocaleString('en-IN')}`], ['Trigger', `${commDetail.trigger || '—'} @ ${String(commDetail.triggerDate || '').slice(0, 10)}`], ['Agreement', commDetail.agreementId || '—'], ['Placement / Application', commDetail.placementId || commDetail.applicationId || '—'], ['Candidate', commDetail.candidateEmail || '—'], ['Job', commDetail.jobId || '—'], ['Invoice', commDetail.invoiceId || 'not generated']].map(([k, v]) => (
+            {[['Fee basis', basisText(commDetail)], ['Rate', `${commDetail.rate}%`], ['Gross', `₹${Number(commDetail.gross || 0).toLocaleString('en-IN')}`], ['Adjustments', `₹${Number(commDetail.adjustments || 0).toLocaleString('en-IN')}`], ['GST (18%)', `₹${Number(commDetail.tax || 0).toLocaleString('en-IN')}`], ['Total', `₹${Number(commDetail.total || commDetail.net || 0).toLocaleString('en-IN')}`], ['Trigger', `${commDetail.trigger || '—'} @ ${String(commDetail.triggerDate || '').slice(0, 10)}`], ['Agreement', commDetail.agreementId || '—'], ['Placement / Application', commDetail.placementId || commDetail.applicationId || '—'], ['Candidate', commDetail.candidateEmail || '—'], ['Job', commDetail.jobId || '—'], ['Invoice', commDetail.invoiceId || 'not generated']].map(([k, v]) => (
               <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—')}</div></div>
             ))}
           </div>
           <div className="flex flex-wrap gap-2 pt-1">
-            {commDetail.approvalStatus !== 'Approved' ? <button type="button" onClick={() => { approve(commDetail.id); setCommDetail(null); }} className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-xs">Approve commission</button> : null}
+            {commDetail.approvalStatus !== 'Approved' ? <button type="button" onClick={() => setApproveFor(commDetail)} className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-xs">Approve commission…</button> : null}
             {commDetail.approvalStatus === 'Approved' && !commDetail.invoiceId ? <button type="button" onClick={() => { setInvoiceFor(commDetail); }} className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs">Generate invoice…</button> : null}
-            {commDetail.approvalStatus === 'Approved' && commDetail.paymentStatus !== 'Paid' ? <button type="button" onClick={() => { setPayoutId(commDetail.id); setCommDetail(null); }} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">Process payout</button> : null}
+            {commDetail.approvalStatus === 'Approved' && commDetail.paymentStatus !== 'Paid' ? <button type="button" onClick={() => { setPayoutFor(commDetail); }} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">Process payout…</button> : null}
           </div>
         </DetailDrawer>
       )}
-      <Modal open={adjustFor !== null} onClose={() => setAdjustFor(null)} title={`Adjustments — ${adjustFor?.id || ''}`} subtitle="Adjustments recompute gross, tax and total">
+      <Modal open={adjustFor !== null} onClose={() => setAdjustFor(null)} title={`Adjustments — ${adjustFor?.id || ''}`} subtitle="Each entry recomputes gross → GST → total; nothing is ever edited or deleted">
         <div className="space-y-3">
+          <div className="flex items-start gap-1.5 text-[11px] font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-xl p-2.5">
+            <InfoTip title="How adjustments work" body={<><p>An adjustment is a <strong>new ledger entry</strong> (positive = add-on, negative = deduction). The commission's <strong>gross, 18% GST and total recompute immediately</strong> and every entry keeps its reason + author + timestamp.</p><p>Adjustments are <strong>idempotent</strong> (same amount + reason won't double-post) and require the <strong>adjust_commission</strong> permission. Approved commissions can still be adjusted; already-generated invoices must be amended via void / credit note instead.</p></>} />
+            <span>Current gross ₹{Number(adjustFor?.gross || 0).toLocaleString('en-IN')} • adjustments ₹{Number(adjustFor?.adjustments || 0).toLocaleString('en-IN')} • total ₹{Number(adjustFor?.total || adjustFor?.net || 0).toLocaleString('en-IN')}</span>
+          </div>
           {adjustments.length === 0 && <div className="text-[11px] text-slate-500 font-medium">No adjustments yet.</div>}
-          {adjustments.map((a) => (
-            <div key={a.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold">
-              {a.amount >= 0 ? '+' : ''}₹{a.amount} • {a.reason || 'no reason'} • by {a.by}
-            </div>
-          ))}
+          {(() => {
+            let running = Number(adjustFor?.gross || 0) - adjustments.reduce((a: number, x: any) => a + Number(x.amount || 0), 0);
+            return [...adjustments].reverse().map((a) => {
+              running += Number(a.amount || 0);
+              return (
+                <div key={a.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
+                  <span>{Number(a.amount) >= 0 ? '+' : ''}₹{a.amount} • {a.reason || 'no reason'} • by {a.by} • {String(a.createdAt || '').slice(0, 16).replace('T', ' ')}</span>
+                  <span className="text-slate-500 shrink-0">gross → ₹{running.toLocaleString('en-IN')}</span>
+                </div>
+              );
+            });
+          })()}
           <form
             onSubmit={async (e) => {
               e.preventDefault();
-              if (!adjustFor || !adjustForm.amount) return;
+              if (!adjustFor || !adjustForm.amount || !adjustForm.reason.trim()) { setError('Adjustment amount + reason are required.'); return; }
               try {
-                const created = unwrapObj(await workforceApi.adjustCommission(adjustFor.id, Number(adjustForm.amount), adjustForm.reason));
+                const created = unwrapObj(await workforceApi.adjustCommission(adjustFor.id, Number(adjustForm.amount), adjustForm.reason.trim()));
                 if (created?.id) setAdjustments((x) => [created, ...x]);
                 setAdjustForm({ amount: '', reason: '' });
-                load(); syncAll();
+                setOk(`Adjustment ₹${Number(created?.amount || 0).toLocaleString('en-IN')} posted — totals recomputed.`);
+                load(page, ps, dqCq, leg, approvalF, agrPage, payPage); syncAll();
               } catch (e) { setError(errMsg(e)); }
             }}
             className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200"
           >
-            <input className={kitInput} type="number" step="0.01" placeholder="Amount (±)" value={adjustForm.amount} onChange={(e) => setAdjustForm({ ...adjustForm, amount: e.target.value })} />
-            <input className={kitInput} placeholder="Reason" value={adjustForm.reason} onChange={(e) => setAdjustForm({ ...adjustForm, reason: e.target.value })} />
+            <input className={kitInput} type="number" step="0.01" placeholder="Amount (±) *" value={adjustForm.amount} onChange={(e) => setAdjustForm({ ...adjustForm, amount: e.target.value })} />
+            <input className={kitInput} placeholder="Reason *" value={adjustForm.reason} onChange={(e) => setAdjustForm({ ...adjustForm, reason: e.target.value })} />
             <button className={btnDark}>Add adjustment</button>
           </form>
+          {adjustForm.amount ? (
+            <div className="text-[11px] font-bold text-slate-600">Projected: gross ₹{(Number(adjustFor?.gross || 0) + Number(adjustForm.amount || 0)).toLocaleString('en-IN')} → total ₹{((Number(adjustFor?.gross || 0) + Number(adjustForm.amount || 0)) * 1.18).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</div>
+          ) : null}
         </div>
       </Modal>
     </div>

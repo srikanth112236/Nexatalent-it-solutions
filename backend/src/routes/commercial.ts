@@ -148,6 +148,10 @@ commercialRouter.get('/invoices', requireAuth(), (req, res) => {
   const ctx = ctxOf(req); let rows = loadDb().invoices as any[];
   if (!['superadmin','platform_owner','finance_admin','finance_staff'].includes(ctx.role)) rows = rows.filter((i) => i.orgId === ctx.tenantId);
   rows = rows.map(withOverdue);
+  const q = String(req.query.q || '').toLowerCase();
+  if (q) rows = rows.filter((i) => `${i.id} ${i.number} ${i.orgId} ${i.status} ${i.agreementId || ''}`.toLowerCase().includes(q));
+  const status = String(req.query.status || '');
+  if (status) rows = rows.filter((i) => (status === 'Overdue' ? !!i.overdue : i.status === status));
   const { page, pageSize } = paginate.parse(req.query);
   res.json({ success: true, ...paged(rows, page, pageSize) });
 });
@@ -422,7 +426,7 @@ commercialRouter.put('/agreement-templates/:id', requireAuth(['superadmin','plat
   const parsed = agreementTemplateSchema.partial().safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'Validation failed.', errors: parsed.error.flatten() });
   const { name, orgId, ...terms } = parsed.data as any;
-  t.history.unshift({ version: t.version, terms: { hiringType: t.hiringType, rateMin: t.rateMin, rateMax: t.rateMax, paymentTermsDays: t.paymentTermsDays, replacementDays: t.replacementDays, gstNote: t.gstNote, ownershipClause: t.ownershipClause, duplicatePolicy: t.duplicatePolicy, cancellationTerms: t.cancellationTerms, bodyHtml: t.bodyHtml }, by: ctxOf(req).email, at: nowIso() });
+  t.history.unshift({ version: t.version, terms: { hiringType: t.hiringType, rateMin: t.rateMin, rateMax: t.rateMax, basisType: t.basisType, contractMonths: t.contractMonths, paymentTermsDays: t.paymentTermsDays, replacementDays: t.replacementDays, gstNote: t.gstNote, ownershipClause: t.ownershipClause, duplicatePolicy: t.duplicatePolicy, cancellationTerms: t.cancellationTerms, bodyHtml: t.bodyHtml }, by: ctxOf(req).email, at: nowIso() });
   if (name !== undefined) t.name = name;
   if (orgId !== undefined) t.orgId = orgId;
   Object.assign(t, terms);
@@ -443,7 +447,7 @@ commercialRouter.post('/agreement-templates/:id/instantiate', requireAuth(['supe
   const db = loadDb(); const t: any = db.agreementTemplates.find((x: any) => x.id === req.params.id);
   if (!t) return res.status(404).json({ success: false, message: 'Template not found.' });
   if (t.status !== 'Active') return res.status(422).json({ success: false, message: `Only Active templates can be instantiated (current: ${t.status}).` });
-  const { orgId, jobId, agencyId, hiringType, feeModel, rate, fixedFee, trigger } = req.body || {};
+  const { orgId, jobId, agencyId, hiringType, feeModel, rate, fixedFee, trigger, basisType, contractMonths } = req.body || {};
   if (!orgId) return res.status(400).json({ success: false, message: 'orgId required.' });
   const ctx = ctxOf(req);
   if (!['superadmin','platform_owner','finance_admin'].includes(ctx.role) && orgId !== ctx.tenantId) return res.status(403).json({ success: false, message: 'Cannot instantiate for another organization.' });
@@ -455,6 +459,7 @@ commercialRouter.post('/agreement-templates/:id/instantiate', requireAuth(['supe
   const ag = {
     id: uid('AGR'), status: 'Approved', companyAccepted: false, acceptedAt: null, acceptedBy: null,
     orgId, jobId, agencyId, hiringType: ht, feeModel: model, rate: r, fixedFee,
+    basisType: basisType || t.basisType || 'annual_ctc', contractMonths: Number(contractMonths || t.contractMonths || 12),
     trigger: trigger || 'Joined', paymentTermsDays: t.paymentTermsDays ?? 30, replacementDays: t.replacementDays ?? 90,
     gstApplicable: true, replacementTerms: `Free replacement within ${t.replacementDays ?? 90} days of joining under the defined conditions.`,
     ownershipClause: t.ownershipClause, duplicatePolicy: t.duplicatePolicy, cancellationTerms: t.cancellationTerms,
@@ -467,12 +472,28 @@ commercialRouter.post('/agreement-templates/:id/instantiate', requireAuth(['supe
 commercialRouter.get('/commission-agreements', requireAuth(), (req, res) => {
   const ctx = ctxOf(req); let rows = loadDb().commissionAgreements as any[];
   if (!['superadmin','platform_owner','finance_admin'].includes(ctx.role)) rows = rows.filter((a) => a.orgId === ctx.tenantId);
-  res.json({ success: true, data: rows });
+  const q = String(req.query.q || '').toLowerCase();
+  if (q) rows = rows.filter((a) => `${a.id} ${a.orgId} ${a.hiringType || ''} ${a.status || ''}`.toLowerCase().includes(q));
+  const { page, pageSize } = paginate.parse(req.query);
+  res.json({ success: true, ...paged(rows, page, pageSize) });
 });
 commercialRouter.get('/commissions', requireAuth(), (req, res) => {
   const ctx = ctxOf(req); let rows = loadDb().commissions as any[];
   if (!['superadmin','platform_owner','finance_admin'].includes(ctx.role)) rows = rows.filter((c) => c.orgId === ctx.tenantId || c.agencyId === ctx.tenantId);
-  res.json({ success: true, data: rows });
+  const q = String(req.query.q || '').toLowerCase();
+  if (q) rows = rows.filter((c) => `${c.id} ${c.orgId} ${c.agencyId || ''} ${c.candidateEmail || ''} ${c.jobId || ''}`.toLowerCase().includes(q));
+  const leg = String(req.query.leg || '');
+  if (leg === 'receivable') rows = rows.filter((c) => !c.agencyId);
+  if (leg === 'payable') rows = rows.filter((c) => !!c.agencyId);
+  const approval = String(req.query.approval || '');
+  if (approval) rows = rows.filter((c) => c.approvalStatus === approval);
+  const summary = {
+    receivable: rows.filter((c) => !c.agencyId).reduce((a, c) => a + Number(c.total || c.net || 0), 0),
+    payable: rows.filter((c) => !!c.agencyId).reduce((a, c) => a + Number(c.total || c.net || 0), 0),
+    count: rows.length,
+  };
+  const { page, pageSize } = paginate.parse(req.query);
+  res.json({ success: true, summary, ...paged(rows, page, pageSize) });
 });
 // Duplicate-trigger diagnostic (§6.11): would this placement+trigger mint a duplicate?
 commercialRouter.get('/commissions/check', requireAuth(), (req, res) => {
@@ -504,10 +525,14 @@ commercialRouter.post('/commissions/:id/invoice', requireAuth(['superadmin','pla
   const gross = Number(c.gross || 0);
   const tax = +(gross * 18 / 100).toFixed(2);
   const total = +(gross + tax).toFixed(2);
+  const monthly = c.basisType === 'monthly_ctc';
+  const basisLabel = monthly
+    ? `₹${Number(c.feeBasis || 0).toLocaleString('en-IN')}/mo × ${c.contractMonths || 12} mo`
+    : `₹${Number(c.feeBasis || 0).toLocaleString('en-IN')}`;
   const inv = {
     id: uid('INV'), number: `INV-${new Date().getFullYear()}-${String(db.invoices.length + 1).padStart(4, '0')}`,
     orgId: c.orgId, agreementId: c.agreementId || undefined, paymentTermsDays: termsDays,
-    lines: [{ label: `Placement fee — ${c.candidateEmail || c.applicationId || ''} (${c.jobId || ''}) @ ${c.rate || ag?.rate || 0}% of ₹${Number(c.feeBasis || 0).toLocaleString('en-IN')}`, qty: 1, unit: gross }],
+    lines: [{ label: `Placement fee — ${c.candidateEmail || c.applicationId || ''} (${c.jobId || ''}) @ ${c.rate || ag?.rate || 0}% of ${basisLabel}`, qty: 1, unit: gross }],
     discount: 0, taxRate: 18, subtotal: gross, tax, total, amountPaid: 0, balance: total,
     status: 'Issued', issueDate: nowIso(), dueDate, currency: 'INR', createdAt: nowIso(), createdBy: ctxOf(req).email,
     replacementNote: ag?.replacementTerms || undefined,
@@ -534,7 +559,8 @@ commercialRouter.get('/payouts', requireAuth(), (req, res) => {
     const comIds = new Set(loadDb().commissions.filter((c: any) => c.orgId === ctx.tenantId || c.agencyId === ctx.tenantId).map((c: any) => c.id));
     rows = rows.filter((p: any) => comIds.has(p.commissionId));
   }
-  res.json({ success: true, data: rows });
+  const { page, pageSize } = paginate.parse(req.query);
+  res.json({ success: true, ...paged(rows, page, pageSize) });
 });
 commercialRouter.get('/reconciliation', requireAuth(['superadmin','platform_owner','finance_admin']), (_req, res) => {
   const db = loadDb();

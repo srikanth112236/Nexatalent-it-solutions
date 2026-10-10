@@ -294,6 +294,24 @@ describe('Invoices + templates', () => {
   });
 });
 
+describe('InfoTip + PageSize pattern', () => {
+  it('info button opens a titled explainer modal', async () => {
+    const { InfoTip } = await import('./portals/common/EnterprisePanels.js');
+    render(<InfoTip title="How this works" body={<p>Because reasons.</p>} />);
+    const btn = container.querySelector('button[aria-label="About: How this works"]');
+    assert.ok(btn, 'info button renders');
+    act(() => { btn!.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+    assert.ok(container.textContent?.includes('Because reasons.'), 'explainer opens');
+  });
+  it('page size offers 20/50/100', async () => {
+    const { PageSize } = await import('./portals/common/EnterprisePanels.js');
+    let val = 20;
+    render(<PageSize value={val} onChange={(n) => { val = n; }} />);
+    const opts = Array.from(container.querySelectorAll('option')).map((o) => o.textContent);
+    assert.deepEqual(opts, ['20', '50', '100']);
+  });
+});
+
 describe('DetailDrawer scroll', () => {
   it('pins the panel to the viewport with a dedicated internal scroller', () => {
     render(
