@@ -39,6 +39,7 @@
     "/api/v1/users": { "get": { "summary": "Directory (paged, no hashes)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Create user (perm: assign)", "responses": { "201": { "description": "created" } } } },
     "/api/v1/users/{id}/status": { "patch": { "summary": "Suspend/reactivate + revoke sessions + reassign", "responses": { "200": { "description": "ok" } } } },
 
+    "/api/v1/users/{id}/assignments": { "get": { "summary": "Assigned companies/jobs/leads/candidates/tasks/interviews + counts", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/branches": { "get": { "summary": "Branches (tenant-scoped)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Create branch", "responses": { "201": { "description": "created" } } } },
 
     "/api/v1/branches/{id}": { "put": { "summary": "Edit branch", "responses": { "200": { "description": "ok" } } }, "delete": { "summary": "Delete branch", "responses": { "200": { "description": "ok" } } } },
@@ -106,7 +107,12 @@
     "/api/v1/timesheets/{id}/approve": { "patch": { "summary": "Approve/reject with note (once)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/commissions/{id}/adjustments": { "get": { "summary": "List adjustments", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Add adjustment (perm, idempotent, recomputes totals)", "responses": { "201": { "description": "created" } } } },
     "/api/v1/agency-profiles": { "get": { "summary": "Agency directory (real records)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Onboard agency", "responses": { "201": { "description": "created" } } } },
-    "/api/v1/agency-profiles/{id}": { "patch": { "summary": "Verify/suspend/edit agency", "responses": { "200": { "description": "ok" } } } },
+
+    "/api/v1/agency-profiles/{id}": { "patch": { "summary": "Edit + verify + suspend with reason (revokes member sessions)", "responses": { "200": { "description": "ok" } } }, "delete": { "summary": "Close (live work) or delete agency", "responses": { "200": { "description": "ok" } } } },
+
+    "/api/v1/agency-profiles/{id}/invite": { "post": { "summary": "Invite tenant-scoped agency admin|recruiter", "responses": { "201": { "description": "created" }, "422": { "description": "no tenant link" } } } },
+
+    "/api/v1/agency-profiles/{id}/360": { "get": { "summary": "Agency 360: users, jobs, submissions, placements, agreements, payouts, audit", "responses": { "200": { "description": "ok" } } } },    "/api/v1/agency-profiles/{id}": { "patch": { "summary": "Verify/suspend/edit agency", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/notifications/{id}/read": { "patch": { "summary": "Mark notification read", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/messages": { "post": { "summary": "Send (rate-limited 30/5min)", "responses": { "201": { "description": "sent" } } } },
     "/api/v1/talent-pools": { "get": { "summary": "List pools", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Create pool (entitlement)", "responses": { "201": { "description": "created" } } } },

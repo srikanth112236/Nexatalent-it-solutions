@@ -66,6 +66,7 @@ authRouter.post('/login', limiter, async (req: Request, res: Response) => {
   const refreshToken = signRefresh({ id: user.id, email: user.email }, jti);
   db.sessions.unshift({ jti, userId: user.id, email: user.email, role: user.role, tenantId: user.tenantId, accessToken: 'legacy-compat', createdAt: nowIso() });
   user.lastLogin = nowIso();
+  if (user.invitationStatus && user.invitationStatus !== 'Accepted') { user.invitationStatus = 'Accepted'; user.invitationAcceptedAt = nowIso(); }
   audit(user.email, 'AUTH_LOGIN_SUCCESS', user.tenantId, 'auth', user.id, req.ip); persist();
   const out = { id: user.id, email: user.email, role: user.role, tenantId: user.tenantId, name: user.name };
   res.json({ success: true, data: { accessToken, refreshToken, token: accessToken, user: out }, accessToken, refreshToken, token: accessToken, user: out, message: 'Authentication successful.' });
@@ -240,6 +241,7 @@ authRouter.post('/mfa/challenge', limiter, (req: Request, res: Response) => {
   const refreshToken = signRefresh({ id: user.id, email: user.email }, jti);
   db.sessions.unshift({ jti, userId: user.id, email: user.email, role: user.role, tenantId: user.tenantId, accessToken: 'legacy-compat', createdAt: nowIso() });
   user.lastLogin = nowIso();
+  if (user.invitationStatus && user.invitationStatus !== 'Accepted') { user.invitationStatus = 'Accepted'; user.invitationAcceptedAt = nowIso(); }
   audit(user.email, 'AUTH_MFA_SUCCESS', user.tenantId, 'auth', user.id, req.ip); persist();
   const out = { id: user.id, email: user.email, role: user.role, tenantId: user.tenantId, name: user.name };
   res.json({ success: true, data: { accessToken, refreshToken, token: accessToken, user: out }, accessToken, refreshToken, token: accessToken, user: out, message: 'Second factor verified.' });

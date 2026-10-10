@@ -265,8 +265,42 @@ function claimId(key: string): boolean {
 function amtRound(n: number): number { return Math.round(n * 100) / 100; }
 
 /* ---------------- Agency directory (§6.5/§9.1) ---------------- */
-extendedRouter.get('/agency-profiles', requireAuth(), (_req, res) => {
-  res.json({ success: true, data: loadDb().agencyProfiles });
+function agencyNameKeys(a: any): string[] {
+  return [a.displayName, a.legalName].filter(Boolean).map((s: string) => String(s).toLowerCase());
+}
+function agencyJobs(db: any, a: any): any[] {
+  const keys = agencyNameKeys(a);
+  if (keys.length === 0 && !a.tenantId) return [];
+  return (db.jobs as any[]).filter((j) => {
+    const listed = [...(j.assignedAgencies || []), ...(j.assignedVendors || [])].map((x: string) => String(x).toLowerCase());
+    return listed.some((l) => keys.some((k) => l.includes(k) || k.includes(l)));
+  });
+}
+function agencyStats(db: any, a: any): any {
+  const jobs = agencyJobs(db, a);
+  const subs = ((db as any).submissions as any[] || []).filter((s) => (a.tenantId && s.agencyId === a.tenantId) || (s.submittedBy && a.contactEmail && String(s.submittedBy).toLowerCase() === String(a.contactEmail).toLowerCase()));
+  const pairKeys = new Set(subs.map((s) => `${s.jobId}::${String(s.candidateEmail).toLowerCase()}`));
+  const placements = (db.placements as any[]).filter((p) => pairKeys.has(`${p.jobId}::${String(p.candidateEmail).toLowerCase()}`));
+  const comms = (db.commissions as any[]).filter((c) => (a.tenantId && (c.agencyId === a.tenantId || c.orgId === a.tenantId)));
+  const balance = comms.filter((c) => c.paymentStatus !== 'Paid').reduce((x: number, c: any) => x + Number(c.net ?? c.total ?? 0), 0);
+  return {
+    activeAssignments: jobs.filter((j) => ['Published', 'Approved'].includes(j.status)).length,
+    assignments: jobs.length,
+    submissions: subs.length,
+    pendingSubmissions: subs.filter((s) => ['Submitted', 'Duplicate-Review'].includes(s.status)).length,
+    placements: placements.length,
+    payoutBalance: +balance.toFixed(2),
+  };
+}
+extendedRouter.get('/agency-profiles', requireAuth(), (req, res) => {
+  const db = loadDb();
+  const q = req.query as Record<string, string>;
+  let rows = (db.agencyProfiles as any[]).map((a) => ({ ...a, ...agencyStats(db, a) }));
+  if (q.status) rows = rows.filter((a) => a.accountStatus === q.status);
+  if (q.verification) rows = rows.filter((a) => a.verificationStatus === q.verification);
+  if (q.q) { const s = q.q.toLowerCase(); rows = rows.filter((a) => `${a.id} ${a.legalName} ${a.displayName} ${a.contactEmail} ${a.specialties}`.toLowerCase().includes(s)); }
+  const { page, pageSize } = paginate.parse(req.query);
+  res.json({ success: true, ...paged(rows, page, pageSize) });
 });
 extendedRouter.post('/agency-profiles', requireAuth(['superadmin', 'platform_owner']), (req: Request, res: Response) => {
   const { legalName, displayName } = req.body || {};
@@ -274,32 +308,95 @@ extendedRouter.post('/agency-profiles', requireAuth(['superadmin', 'platform_own
   const b: any = req.body || {};
   const row = {
     id: uid('AGC'), legalName: String(legalName), displayName: displayName ? String(displayName) : String(legalName),
-    entityType: b.entityType || '', country: b.country || '', taxIds: b.taxIds || '',
+    entityType: b.entityType || '', country: b.country || '', registrationNumber: b.registrationNumber || '', taxIds: b.taxIds || '',
     website: b.website || '', address: b.address || '', contactName: b.contactName || '',
     contactEmail: b.contactEmail || '', contactPhone: b.contactPhone || '',
     specialties: b.specialties || '', locations: b.locations || '', recruiterCount: Number(b.recruiterCount || 0),
+    tenantId: b.tenantId || '', accountManager: b.accountManager || '',
     verificationStatus: 'Pending', agreementStatus: 'Draft', commercialModel: b.commercialModel || '',
     accountStatus: 'Invited', createdAt: nowIso(), createdBy: ctxOf(req).email,
   };
   loadDb().agencyProfiles.unshift(row); persist();
+  audit(ctxOf(req).email, `AGENCY_ONBOARDED:${row.id}`, 'TNT-GLOBAL', 'agency', row.id, req.ip); persist();
   res.status(201).json({ success: true, data: row });
 });
 extendedRouter.patch('/agency-profiles/:id', requireAuth(['superadmin', 'platform_owner', 'operations_admin']), (req, res) => {
   const db = loadDb(); const a: any = db.agencyProfiles.find((x: any) => x.id === req.params.id);
   if (!a) return res.status(404).json({ success: false, message: 'Not found.' });
   const b: any = req.body || {};
-  for (const k of ['displayName', 'entityType', 'country', 'taxIds', 'website', 'address', 'contactName', 'contactEmail', 'contactPhone', 'specialties', 'locations', 'recruiterCount', 'commercialModel', 'agreementStatus']) {
+  for (const k of ['displayName', 'entityType', 'country', 'registrationNumber', 'taxIds', 'website', 'address', 'contactName', 'contactEmail', 'contactPhone', 'specialties', 'locations', 'recruiterCount', 'commercialModel', 'agreementStatus', 'tenantId', 'accountManager']) {
     if (b[k] !== undefined) a[k] = b[k];
   }
   if (b.verificationStatus && ['Pending', 'Approved', 'Rejected'].includes(b.verificationStatus)) {
     a.verificationStatus = b.verificationStatus;
     if (b.verificationStatus === 'Approved' && a.accountStatus === 'Invited') a.accountStatus = 'Active';
   }
+  let sessionsRevoked = 0;
   if (b.accountStatus && ['Invited', 'Active', 'Suspended', 'Closed'].includes(b.accountStatus)) {
     if (!b.reason && b.accountStatus !== 'Active') return res.status(400).json({ success: false, message: 'Reason required for status change.' });
-    a.accountStatus = b.accountStatus;
+    a.accountStatus = b.accountStatus; a.statusReason = b.reason || ''; a.statusAt = nowIso();
+    if (b.accountStatus !== 'Active' && a.tenantId) {
+      const emails = new Set(db.users.filter((u: any) => u.tenantId === a.tenantId).map((u: any) => String(u.email).toLowerCase()));
+      const before = db.sessions.length;
+      db.sessions = db.sessions.filter((s: any) => !emails.has(String(s.email).toLowerCase()));
+      sessionsRevoked = before - db.sessions.length;
+    }
   }
   a.updatedAt = nowIso();
   audit(ctxOf(req).email, `AGENCY_UPDATED:${a.id}`, 'TNT-GLOBAL', 'agency', a.id, req.ip); persist();
-  res.json({ success: true, data: a });
+  res.json({ success: true, data: a, sessionsRevoked });
+});
+extendedRouter.delete('/agency-profiles/:id', requireAuth(['superadmin', 'platform_owner']), requirePermission('delete'), (req, res) => {
+  const db = loadDb(); const i = db.agencyProfiles.findIndex((x: any) => x.id === req.params.id);
+  if (i < 0) return res.status(404).json({ success: false, message: 'Not found.' });
+  const a: any = db.agencyProfiles[i];
+  const stats = agencyStats(db, a);
+  const reason = String((req.body as any)?.reason || req.query.reason || '');
+  if (!reason) return res.status(400).json({ success: false, message: 'Closure reason required.' });
+  if (stats.activeAssignments > 0 || stats.pendingSubmissions > 0 || stats.payoutBalance > 0) {
+    a.accountStatus = 'Closed'; a.statusReason = reason; a.statusAt = nowIso();
+    audit(ctxOf(req).email, `AGENCY_CLOSED:${a.id}`, 'TNT-GLOBAL', 'agency', a.id, req.ip); persist();
+    return res.json({ success: true, data: { ...a, ...agencyStats(db, a) }, message: 'Agency has live work or unpaid balance — closed instead of deleted.' });
+  }
+  const [removed] = db.agencyProfiles.splice(i, 1);
+  audit(ctxOf(req).email, `AGENCY_DELETED:${a.id}`, 'TNT-GLOBAL', 'agency', a.id, req.ip); persist();
+  res.json({ success: true, data: removed });
+});
+extendedRouter.post('/agency-profiles/:id/invite', requireAuth(['superadmin', 'platform_owner']), requirePermission('assign'), async (req: Request, res: Response) => {
+  const db = loadDb(); const a: any = db.agencyProfiles.find((x: any) => x.id === req.params.id);
+  if (!a) return res.status(404).json({ success: false, message: 'Not found.' });
+  if (!a.tenantId) return res.status(422).json({ success: false, message: 'Link a login tenant to this agency first (tenantId).' });
+  const { name, email, role, password } = req.body || {};
+  if (!email || !String(email).includes('@')) return res.status(400).json({ success: false, message: 'Valid email required.' });
+  if (!['agency_admin', 'agency_recruiter'].includes(role)) return res.status(400).json({ success: false, message: 'role must be agency_admin|agency_recruiter.' });
+  if (!password || String(password).length < 8) return res.status(400).json({ success: false, message: '8-char temporary password required.' });
+  if (db.users.some((u: any) => String(u.email).toLowerCase() === String(email).toLowerCase())) return res.status(409).json({ success: false, message: 'Account exists. Use the user directory.' });
+  const { hashPassword } = await import('../auth/password.js');
+  const user = { id: uid('USR'), name: name || String(email).split('@')[0], email, role, tenantId: a.tenantId, status: 'Active', invitationStatus: 'Pending', invitedAt: nowIso(), lastLogin: 'Never' };
+  db.users.unshift(user);
+  db.credentials.push({ userId: user.id, email: String(email).toLowerCase(), passwordHash: await hashPassword(String(password)), algo: 'bcrypt' });
+  a.recruiterCount = Number(a.recruiterCount || 0) + 1;
+  audit(ctxOf(req).email, `AGENCY_USER_INVITED:${a.id}:${user.email}`, a.tenantId, 'agency', a.id, req.ip); persist();
+  res.status(201).json({ success: true, data: user });
+});
+extendedRouter.get('/agency-profiles/:id/360', requireAuth(['superadmin', 'platform_owner', 'operations_admin']), (req, res) => {
+  const db = loadDb(); const a: any = db.agencyProfiles.find((x: any) => x.id === req.params.id);
+  if (!a) return res.status(404).json({ success: false, message: 'Not found.' });
+  const jobs = agencyJobs(db, a);
+  const subs = ((db as any).submissions as any[] || []).filter((s) => (a.tenantId && s.agencyId === a.tenantId) || (s.submittedBy && a.contactEmail && String(s.submittedBy).toLowerCase() === String(a.contactEmail).toLowerCase()));
+  const pairKeys = new Set(subs.map((s) => `${s.jobId}::${String(s.candidateEmail).toLowerCase()}`));
+  const placements = (db.placements as any[]).filter((p) => pairKeys.has(`${p.jobId}::${String(p.candidateEmail).toLowerCase()}`));
+  const comms = (db.commissions as any[]).filter((c) => (a.tenantId && (c.agencyId === a.tenantId || c.orgId === a.tenantId)));
+  const memberEmails = new Set(db.users.filter((u: any) => a.tenantId && u.tenantId === a.tenantId).map((u: any) => String(u.email).toLowerCase()));
+  res.json({ success: true, data: {
+    profile: { ...a, ...agencyStats(db, a) },
+    users: (db.users as any[]).filter((u) => a.tenantId && u.tenantId === a.tenantId),
+    jobs: jobs.slice(0, 200),
+    submissions: subs.slice(0, 200),
+    placements: placements.slice(0, 200),
+    agreements: (db.commissionAgreements as any[]).filter((x) => (a.tenantId && (x.agencyId === a.tenantId || x.orgId === a.tenantId))),
+    commissions: comms.slice(0, 200),
+    payouts: (db.payouts as any[]).filter((p) => comms.some((c) => c.id === p.commissionId)).slice(0, 100),
+    activity: (db.auditLogs as any[]).filter((l) => l.recordId === a.id || memberEmails.has(String(l.actor).toLowerCase())).slice(0, 100),
+  } });
 });

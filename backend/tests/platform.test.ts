@@ -385,6 +385,98 @@ describe('company fields + admin invite (§6.4)', () => {
   });
 });
 
+describe('agency directory (§6.5)', () => {
+  const tag = `TstAg ${stamp}`;
+  let agencyId = '';
+  const tenant = `TNT-AG-${stamp}`;
+  it('onboards with full fields and computed stats', async () => {
+    const c = await request(app).post('/api/v1/agency-profiles').set(auth(superToken)).send({
+      legalName: `${tag} Pvt Ltd`, specialties: 'Engineering', locations: 'Bengaluru',
+      registrationNumber: 'CIN-AG', taxIds: 'PAN-X', website: 'https://ag.example.com', address: '1 Park St',
+      contactName: 'Ann Admin', contactEmail: `ann-${stamp}@example.com`, contactPhone: '9999999999',
+      recruiterCount: 3, tenantId: tenant, accountManager: 'kiran@nexatalent.com',
+      commercialModel: 'percentage', agreementStatus: 'Sent',
+    });
+    expect(c.status).toBe(201);
+    agencyId = c.body.data.id;
+    expect(c.body.data.verificationStatus).toBe('Pending');
+    const list = await request(app).get('/api/v1/agency-profiles?status=Invited').set(auth(superToken));
+    const row = (list.body.data as any[]).find((x) => x.id === agencyId);
+    expect(row).toBeDefined();
+    for (const k of ['activeAssignments', 'submissions', 'placements', 'payoutBalance']) expect(row).toHaveProperty(k);
+    const q = await request(app).get(`/api/v1/agency-profiles?q=${encodeURIComponent(tag)}`).set(auth(superToken));
+    expect(q.body.data.length).toBeGreaterThanOrEqual(1);
+  });
+  it('invites tenant-scoped recruiters and revokes sessions on suspend', async () => {
+    const email = `ag-rec-${stamp}@example.com`;
+    const inv = await request(app).post(`/api/v1/agency-profiles/${agencyId}/invite`).set(auth(superToken)).send({ name: 'Ag Rec', email, role: 'agency_recruiter', password: 'AgRecPass1' });
+    expect(inv.status).toBe(201);
+    expect(inv.body.data.tenantId).toBe(tenant);
+    const dup = await request(app).post(`/api/v1/agency-profiles/${agencyId}/invite`).set(auth(superToken)).send({ email, role: 'agency_recruiter', password: 'AgRecPass1' });
+    expect(dup.status).toBe(409);
+    const l = await login(email, 'AgRecPass1');
+    expect(l.status).toBe(200);
+    const noreason = await request(app).patch(`/api/v1/agency-profiles/${agencyId}`).set(auth(superToken)).send({ accountStatus: 'Suspended' });
+    expect(noreason.status).toBe(400);
+    const s = await request(app).patch(`/api/v1/agency-profiles/${agencyId}`).set(auth(superToken)).send({ accountStatus: 'Suspended', reason: 'test suspension' });
+    expect(s.body.sessionsRevoked).toBeGreaterThanOrEqual(1);
+    await request(app).patch(`/api/v1/agency-profiles/${agencyId}`).set(auth(superToken)).send({ accountStatus: 'Active' });
+  });
+  it('assigns jobs, serves 360, and closes instead of deleting live agencies', async () => {
+    const before: any = await request(app).get('/api/v1/jobs/JOB-8890').set(auth(superToken));
+    const listed = [...(before.body.data.assignedAgencies || [])];
+    await request(app).put('/api/v1/jobs/JOB-8890').set(auth(superToken)).send({ assignedAgencies: [...listed, tag] });
+    const full = await request(app).get(`/api/v1/agency-profiles/${agencyId}/360`).set(auth(superToken));
+    expect(full.status).toBe(200);
+    expect(full.body.data.jobs.length).toBeGreaterThanOrEqual(1);
+    expect(full.body.data).toHaveProperty('submissions');
+    expect(full.body.data).toHaveProperty('agreements');
+    const noreason = await request(app).delete(`/api/v1/agency-profiles/${agencyId}`).set(auth(superToken)).send({});
+    expect(noreason.status).toBe(400);
+    const closed = await request(app).delete(`/api/v1/agency-profiles/${agencyId}`).set(auth(superToken)).send({ reason: 'test close' });
+    expect(closed.body.data.accountStatus).toBe('Closed');
+    await request(app).put('/api/v1/jobs/JOB-8890').set(auth(superToken)).send({ assignedAgencies: listed });
+  });
+});
+
+describe('user directory extras (§6.6)', () => {
+  const email = `usr-probe-${stamp}@example.com`;
+  const password = 'UsrProbe123';
+  let userId = '';
+  it('tracks invitation Pending → Accepted and exposes MFA flag', async () => {
+    const u = await request(app).post('/api/v1/users').set(auth(superToken)).send({ name: 'Usr Probe', email, role: 'bda', tenantId: 'TNT-GLOBAL', password, phone: '9111111111', startDate: '2026-01-05' });
+    userId = u.body.data.id;
+    expect(u.body.data.invitationStatus).toBe('Pending');
+    const l = await login(email, password);
+    expect(l.status).toBe(200);
+    const list = await request(app).get(`/api/v1/users?q=${encodeURIComponent(email)}`).set(auth(superToken));
+    const row = (list.body.data as any[]).find((x) => x.id === userId);
+    expect(row.invitationStatus).toBe('Accepted');
+    expect(row).toHaveProperty('mfaEnabled');
+    expect(row.mfaEnabled).toBe(false);
+    const edit = await request(app).put(`/api/v1/users/${userId}`).set(auth(superToken)).send({ endDate: '2026-12-31', phone: '9222222222' });
+    expect(edit.body.data.endDate).toBe('2026-12-31');
+  });
+  it('reports assignments and fans out interviews, requisitions and candidates', async () => {
+    const lead = await request(app).post('/api/v1/leads').set(auth(superToken)).send({ contactName: 'Asg', companyName: `AsgCo ${stamp}`, owner: email });
+    const req = await request(app).post('/api/v1/requisitions').set(auth(superToken)).send({ title: `Asg Req ${stamp}`, openings: 1, recruiter: email });
+    await request(app).put('/api/v1/directory/candidates/CND-9042').set(auth(superToken)).send({ assignedRecruiter: email });
+    const asg = await request(app).get(`/api/v1/users/${userId}/assignments`).set(auth(superToken));
+    expect(asg.body.data.counts.leads).toBeGreaterThanOrEqual(1);
+    expect(asg.body.data.counts.requisitions).toBeGreaterThanOrEqual(1);
+    expect(asg.body.data.counts.candidates).toBeGreaterThanOrEqual(1);
+    expect(asg.body.data.companies.length).toBeGreaterThanOrEqual(0);
+    const s = await request(app).patch(`/api/v1/users/${userId}/status`).set(auth(superToken)).send({ status: 'Suspended', reason: 'exit test', reassignTo: 'kiran@nexatalent.com' });
+    expect(s.body.reassigned.counts.requisitions).toBe(1);
+    expect(s.body.reassigned.counts.candidates).toBe(1);
+    await request(app).put('/api/v1/directory/candidates/CND-9042').set(auth(superToken)).send({ assignedRecruiter: '' });
+    await request(app).delete(`/api/v1/leads/${lead.body.data.id}`).set(auth(superToken));
+    await request(app).delete(`/api/v1/requisitions/${req.body.data.id}`).set(auth(superToken));
+    await request(app).patch(`/api/v1/users/${userId}/status`).set(auth(superToken)).send({ status: 'Active', reason: 'test restore' });
+    await request(app).delete(`/api/v1/users/${userId}`).set(auth(superToken)).send({ reason: 'test cleanup' });
+  });
+});
+
 describe('commission duplicate guard (§6.11)', () => {
   it('mints once per placement+trigger and reports via check', async () => {
     const ag = await request(app).post('/api/v1/commission-agreements').set(auth(superToken)).send({ orgId: 'TNT-9011', jobId: 'JOB-9901', rate: 8.33, trigger: 'Joined' });

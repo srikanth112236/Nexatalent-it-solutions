@@ -96,22 +96,27 @@ directoryRouter.get('/tenants/:id/360', requireAuth(['superadmin','platform_owne
 
 // Users (+suspend/reactivate with reassignment note)
 directoryRouter.get('/users', requireAuth(['superadmin','platform_owner','operations_admin','sales_admin']), (req, res) => {
+  const db = loadDb();
   const { page, pageSize, q } = paginate.parse(req.query);
-  let rows = loadDb().users as any[];
+  let rows = db.users as any[];
   if (q) rows = rows.filter((u) => JSON.stringify(u).toLowerCase().includes(String(q).toLowerCase()));
-  // never leak password hashes
-  rows = rows.map(({ ...u }) => u);
+  // never leak password hashes or MFA secrets — expose only the enabled flag
+  rows = rows.map((u) => {
+    const { ...safe } = u;
+    const cred: any = db.credentials.find((c: any) => c.userId === u.id);
+    return { ...safe, mfaEnabled: !!cred?.mfaEnabled };
+  });
   res.json({ success: true, ...paged(rows, page, pageSize) });
 });
 directoryRouter.post('/users', requireAuth(['superadmin','platform_owner']), requirePermission('assign'), async (req: Request, res: Response) => {
-  const { name, email, role, tenantId, password } = req.body || {};
+  const { name, email, role, tenantId, password, phone, startDate, endDate } = req.body || {};
   if (!email || !String(email).includes('@')) return res.status(400).json({ success: false, message: 'Valid email required.' });
   if (!password || String(password).length < 8) return res.status(400).json({ success: false, message: '8-char password required.' });
   if (!tenantId) return res.status(400).json({ success: false, message: 'tenantId required.' });
   const db = loadDb();
   if (db.users.some((u: any) => String(u.email).toLowerCase() === String(email).toLowerCase())) return res.status(409).json({ success: false, message: 'Exists.' });
   const { hashPassword } = await import('../auth/password.js');
-  const user = { id: uid('USR'), name: name || email.split('@')[0], email, role: role || 'employer', tenantId, status: 'Active', lastLogin: 'Never' };
+  const user = { id: uid('USR'), name: name || email.split('@')[0], email, role: role || 'employer', tenantId, status: 'Active', invitationStatus: 'Pending', invitedAt: nowIso(), phone: phone || '', startDate: startDate || '', endDate: endDate || '', lastLogin: 'Never' };
   db.users.unshift(user);
   db.credentials.push({ userId: user.id, email: String(email).toLowerCase(), passwordHash: await hashPassword(String(password)), algo: 'bcrypt' });
   audit(ctxOf(req).email, `USER_CREATED:${user.email}`, user.tenantId, 'user', user.id, req.ip); persist();
@@ -122,7 +127,7 @@ directoryRouter.put('/users/:id', requireAuth(['superadmin','platform_owner']), 
   const db = loadDb(); const u: any = db.users.find((x: any) => x.id === req.params.id);
   if (!u) return res.status(404).json({ success: false, message: 'Not found.' });
   const patch = req.body || {};
-  for (const k of ['name', 'phone', 'employeeId', 'department', 'designation', 'branch', 'reportingManager', 'role']) {
+  for (const k of ['name', 'phone', 'employeeId', 'department', 'designation', 'branch', 'reportingManager', 'role', 'startDate', 'endDate']) {
     if (patch[k] !== undefined) (u as any)[k] = patch[k];
   }
   u.updatedAt = nowIso();
@@ -140,6 +145,39 @@ directoryRouter.delete('/users/:id', requireAuth(['superadmin','platform_owner']
   db.sessions = db.sessions.filter((s: any) => s.email !== u.email);
   audit(ctxOf(req).email, `USER_DELETED:${u.email}`, u.tenantId, 'user', u.id, req.ip); persist();
   res.json({ success: true, data: u });
+});
+// Assigned work per user (§6.6 — companies/jobs/leads + pipeline ownership)
+directoryRouter.get('/users/:id/assignments', requireAuth(['superadmin','platform_owner','operations_admin','sales_admin']), (req, res) => {
+  const db = loadDb(); const u: any = db.users.find((x: any) => x.id === req.params.id);
+  if (!u) return res.status(404).json({ success: false, message: 'Not found.' });
+  const em = String(u.email).toLowerCase();
+  const is = (v: unknown) => String(v || '').toLowerCase() === em;
+  const pick = (rows: any[], pred: (r: any) => boolean, map: (r: any) => any) => rows.filter(pred).slice(0, 20).map(map);
+  const org = db.organizations.find((o: any) => o.id === u.tenantId);
+  res.json({ success: true, data: {
+    companies: org ? [{ id: org.id, name: org.displayName || org.legalName, role: u.role }] : [],
+    jobs: pick(db.jobs as any[], (j) => is(j.createdBy) || is(j.hiringManager), (j) => ({ id: j.id, title: j.title, status: j.status })),
+    requisitions: pick(db.requisitions as any[], (r) => is(r.createdBy) || is(r.hiringManager) || is(r.recruiter), (r) => ({ id: r.id, title: r.title, status: r.status })),
+    leads: pick(db.leads as any[], (l) => is(l.owner), (l) => ({ id: l.id, companyName: l.companyName, stage: l.stage })),
+    candidates: pick(db.candidateProfiles as any[], (c) => is(c.assignedRecruiter) || is(c.submittedBy), (c) => ({ id: c.id, name: c.name, stage: c.stage })),
+    tasks: pick(db.tasks as any[], (t) => is(t.owner), (t) => ({ id: t.id, title: t.title, status: t.status })),
+    interviews: pick(db.interviews as any[], (i) => is(i.interviewer), (i) => ({ id: i.id, candidateName: i.candidateName, status: i.status })),
+    targets: pick(db.targets as any[], (t) => is(t.owner), (t) => ({ id: t.id, title: t.period, status: '' })),
+    opportunities: pick(db.opportunities as any[], (o) => is(o.owner), (o) => ({ id: o.id, title: o.title, stage: o.stage })),
+    meetings: pick(db.meetings as any[], (m) => is(m.owner), (m) => ({ id: m.id, title: m.title, status: '' })),
+    counts: {
+      companies: org ? 1 : 0,
+      jobs: (db.jobs as any[]).filter((j) => is(j.createdBy) || is(j.hiringManager)).length,
+      requisitions: (db.requisitions as any[]).filter((r) => is(r.createdBy) || is(r.hiringManager) || is(r.recruiter)).length,
+      leads: (db.leads as any[]).filter((l) => is(l.owner)).length,
+      candidates: (db.candidateProfiles as any[]).filter((c) => is(c.assignedRecruiter) || is(c.submittedBy)).length,
+      tasks: (db.tasks as any[]).filter((t) => is(t.owner)).length,
+      interviews: (db.interviews as any[]).filter((i) => is(i.interviewer)).length,
+      targets: (db.targets as any[]).filter((t) => is(t.owner)).length,
+      opportunities: (db.opportunities as any[]).filter((o) => is(o.owner)).length,
+      meetings: (db.meetings as any[]).filter((m) => is(m.owner)).length,
+    },
+  } });
 });
 directoryRouter.patch('/users/:id/status', requireAuth(['superadmin','platform_owner']), requirePermission('suspend'), (req, res) => {
   const db = loadDb(); const u: any = db.users.find((x: any) => x.id === req.params.id);
@@ -165,6 +203,9 @@ directoryRouter.patch('/users/:id/status', requireAuth(['superadmin','platform_o
     counts.targets = touch(db.targets);
     counts.opportunities = touch(db.opportunities);
     counts.meetings = touch(db.meetings);
+    counts.interviews = touch(db.interviews, 'interviewer');
+    counts.requisitions = touch(db.requisitions, 'recruiter');
+    counts.candidates = touch(db.candidateProfiles, 'assignedRecruiter');
     u.reassignedTo = to;
   }
   audit(ctxOf(req).email, `USER_${u.status.toUpperCase()}:${u.email}`, u.tenantId, 'user', u.id, req.ip); persist();

@@ -60,8 +60,8 @@ function seed(): DbShape {
     ],
     companyProfiles: [],
     agencyProfiles: [
-      { id: 'AGC-101', legalName: 'Apex Tech Search Pvt Ltd', displayName: 'Apex Tech Search', type: 'Recruitment Agency', specialties: 'Engineering, Product', locations: 'Bengaluru, Mumbai', status: 'Verified Partner', verificationStatus: 'Approved', accountStatus: 'Active', createdAt: now },
-      { id: 'VND-201', legalName: 'Global TechSolutions Staffing Ltd', displayName: 'Global TechSolutions Vendor', type: 'Contingent Staffing Vendor', specialties: 'Cloud, Security', locations: 'Hyderabad, Remote', status: 'Active SOW', verificationStatus: 'Approved', accountStatus: 'Active', createdAt: now },
+      { id: 'AGC-101', legalName: 'Apex Tech Search Pvt Ltd', displayName: 'Apex Tech Search', type: 'Recruitment Agency', specialties: 'Engineering, Product', locations: 'Bengaluru, Mumbai', status: 'Verified Partner', verificationStatus: 'Approved', accountStatus: 'Active', tenantId: 'TNT-AGENCY-01', contactName: 'Vikram Malhotra', contactEmail: 'vikram@apextechsearch.com', commercialModel: 'percentage', agreementStatus: 'Signed', recruiterCount: 1, createdAt: now },
+      { id: 'VND-201', legalName: 'Global TechSolutions Staffing Ltd', displayName: 'Global TechSolutions Vendor', type: 'Contingent Staffing Vendor', specialties: 'Cloud, Security', locations: 'Hyderabad, Remote', status: 'Active SOW', verificationStatus: 'Approved', accountStatus: 'Active', tenantId: 'TNT-VENDOR-05', contactName: 'Rajesh Verma', contactEmail: 'rajesh@techsolutionsvendor.com', commercialModel: 'percentage', agreementStatus: 'Signed', recruiterCount: 1, createdAt: now },
     ],
     branches: [
       { id: 'BR-01', orgId: 'TNT-9011', name: 'Bengaluru HQ', city: 'Bengaluru', status: 'Active' },
@@ -161,6 +161,15 @@ export function loadDb(): DbShape {
       // Backfill reference collections for DBs created before they were seeded.
       if ((db!.skills || []).length === 0) db!.skills = fresh.skills;
       if ((db!.agencyProfiles || []).length === 0) db!.agencyProfiles = fresh.agencyProfiles;
+      if (!Array.isArray((db as any).candidateInfoRequests)) (db as any).candidateInfoRequests = [];
+      if (!Array.isArray((db as any).privacyRequests)) (db as any).privacyRequests = [];
+      // Backfill login-tenant links + new columns on seed agencies.
+      for (const a of (db!.agencyProfiles as any[])) {
+        const ref = (fresh.agencyProfiles as any[]).find((f) => f.id === a.id);
+        if (ref) for (const k of ['tenantId', 'contactName', 'contactEmail', 'commercialModel', 'agreementStatus', 'recruiterCount']) {
+          if (a[k] === undefined || a[k] === '' || a[k] === 0) a[k] = ref[k];
+        }
+      }
       persist();
       return db!;
     }
