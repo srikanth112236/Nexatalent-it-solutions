@@ -180,10 +180,20 @@ describe('PortalShell sidebar', () => {
     const active = container.querySelector('a[aria-current="page"]');
     assert.ok(active?.textContent?.includes('Users'));
   });
-  it('collapses a group and hides its links', () => {
-    render(shell('/superadmin'));
+  it('keeps exactly one group open (accordion)', () => {
+    render(shell('/superadmin/users'));
+    const dirToggle = Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.includes('Directory')) as HTMLButtonElement;
+    const recToggle = Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.includes('Recruitment')) as HTMLButtonElement;
+    assert.ok(dirToggle && recToggle, 'group toggles exist');
+    assert.equal(dirToggle.getAttribute('aria-expanded'), 'true');
+    assert.equal(recToggle.getAttribute('aria-expanded'), 'false');
+    act(() => { recToggle.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+    assert.equal(recToggle.getAttribute('aria-expanded'), 'true');
+    assert.equal(dirToggle.getAttribute('aria-expanded'), 'false', 'previous group auto-closes');
+  });
+  it('collapses the open group on toggle', () => {
+    render(shell('/superadmin/users'));
     const toggle = Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.includes('Directory')) as HTMLButtonElement;
-    assert.ok(toggle, 'group toggle exists');
     assert.equal(toggle.getAttribute('aria-expanded'), 'true');
     act(() => { toggle.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
     assert.equal(toggle.getAttribute('aria-expanded'), 'false');
