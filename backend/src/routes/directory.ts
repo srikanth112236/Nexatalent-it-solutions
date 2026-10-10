@@ -63,6 +63,37 @@ directoryRouter.patch('/tenants/:id/suspend', requireAuth(['superadmin','platfor
   res.json({ success: true, data: o });
 });
 
+// Company 360° — the 15 spec tabs served from one audited read
+directoryRouter.get('/tenants/:id/360', requireAuth(['superadmin','platform_owner','operations_admin']), (req, res) => {
+  const db = loadDb(); const o: any = db.organizations.find((x: any) => x.id === req.params.id);
+  if (!o) return res.status(404).json({ success: false, message: 'Not found.' });
+  const id = o.id;
+  const jobs = (db.jobs as any[]).filter((j) => j.orgId === id);
+  const invoices = (db.invoices as any[]).filter((i) => i.orgId === id).slice(0, 100);
+  const commissions = (db.commissions as any[]).filter((x) => x.orgId === id);
+  res.json({ success: true, data: {
+    organization: o,
+    verification: { status: o.verificationStatus || 'Pending', verifiedAt: o.verifiedAt || null, verifiedBy: o.verifiedBy || null, reason: o.suspendReason || null },
+    users: (db.users as any[]).filter((u) => u.tenantId === id),
+    branches: (db.branches as any[]).filter((b) => b.orgId === id),
+    requisitions: (db.requisitions as any[]).filter((r) => r.orgId === id).slice(0, 200),
+    jobs: jobs.slice(0, 200),
+    applications: (db.applications as any[]).filter((a) => a.orgId === id).slice(0, 200),
+    interviews: (db.interviews as any[]).filter((i) => i.companyId === id || i.orgId === id).slice(0, 200),
+    subscriptions: (db.subscriptions as any[]).filter((s) => s.orgId === id),
+    invoices,
+    payments: (db.payments as any[]).filter((p) => p.orgId === id).slice(0, 100),
+    commissions: commissions.slice(0, 200),
+    payouts: (db.payouts as any[]).filter((p) => commissions.some((c) => c.id === p.commissionId)).slice(0, 100),
+    activity: (db.auditLogs as any[]).filter((l) => l.tenantId === id).slice(0, 100),
+    computed: {
+      activeJobs: jobs.filter((j) => j.status === 'Published').length,
+      outstanding: invoices.reduce((a: number, i: any) => a + Number(i.balance || 0), 0),
+      commissionsDue: commissions.filter((c: any) => c.approvalStatus === 'Approved' && c.paymentStatus !== 'Paid').length,
+    },
+  } });
+});
+
 // Users (+suspend/reactivate with reassignment note)
 directoryRouter.get('/users', requireAuth(['superadmin','platform_owner','operations_admin','sales_admin']), (req, res) => {
   const { page, pageSize, q } = paginate.parse(req.query);
@@ -130,18 +161,108 @@ directoryRouter.get('/branches', requireAuth(), (req, res) => {
   res.json({ success: true, data: rows });
 });
 directoryRouter.post('/branches', requireAuth(['employer','company_admin','superadmin','platform_owner']), (req: Request, res: Response) => {
-  const { name, city } = req.body || {};
+  const { name, city, orgId } = req.body || {};
   if (!name) return res.status(400).json({ success: false, message: 'Branch name required.' });
-  const b = { id: uid('BR'), orgId: tenantOf(req), name: String(name), city: city ? String(city) : '', status: 'Active', createdAt: nowIso() };
-  loadDb().branches.unshift(b); persist(); res.status(201).json({ success: true, data: b });
+  const ctx = ctxOf(req);
+  const owner = ['superadmin','platform_owner'].includes(ctx.role) && orgId ? String(orgId) : tenantOf(req);
+  const b = { id: uid('BR'), orgId: owner, name: String(name), city: city ? String(city) : '', status: 'Active', createdAt: nowIso() };
+  loadDb().branches.unshift(b);
+  audit(ctx.email, `BRANCH_CREATED:${b.id}`, owner, 'branch', b.id, req.ip); persist();
+  res.status(201).json({ success: true, data: b });
 });
-
-// Candidate directory (admin) — masked unless permitted
-directoryRouter.get('/directory/candidates', requireAuth(['superadmin','platform_owner','operations_admin','support_admin']), (req, res) => {
-  const canSee = ctxOf(req).permissions.includes('view_sensitive_fields');
-  let rows = (loadDb().candidateProfiles as any[]).map((c) => canSee ? c : { ...c, phone: '**********', currentCtc: 'Restricted' });
+directoryRouter.put('/branches/:id', requireAuth(['employer','company_admin','superadmin','platform_owner']), (req: Request, res: Response) => {
+  const db = loadDb(); const b: any = db.branches.find((x: any) => x.id === req.params.id);
+  if (!b) return res.status(404).json({ success: false, message: 'Not found.' });
+  const ctx = ctxOf(req);
+  if (!['superadmin','platform_owner'].includes(ctx.role) && b.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Not found.' });
+  const body: any = req.body || {};
+  for (const k of ['name','city','status']) if (body[k] !== undefined) b[k] = body[k];
+  b.updatedAt = nowIso();
+  audit(ctx.email, `BRANCH_EDITED:${b.id}`, b.orgId, 'branch', b.id, req.ip); persist();
+  res.json({ success: true, data: b });
+});
+directoryRouter.delete('/branches/:id', requireAuth(['employer','company_admin','superadmin','platform_owner']), (req, res) => {
+  const db = loadDb(); const i = db.branches.findIndex((x: any) => x.id === req.params.id);
+  if (i < 0) return res.status(404).json({ success: false, message: 'Not found.' });
+  const b: any = db.branches[i];
+  const ctx = ctxOf(req);
+  if (!['superadmin','platform_owner'].includes(ctx.role) && b.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Not found.' });
+  const [removed] = db.branches.splice(i, 1);
+  audit(ctx.email, `BRANCH_DELETED:${b.id}`, b.orgId, 'branch', b.id, req.ip); persist();
+  res.json({ success: true, data: removed });
+});
+// Support / account-issue tickets (§6.1 Platform → Support)
+const TICKET_FLOW: Record<string, string[]> = { Open: ['In Progress','Closed'], 'In Progress': ['Resolved','Closed'], Resolved: ['Closed','In Progress'], Closed: [] };
+directoryRouter.get('/support-tickets', requireAuth(), (req, res) => {
+  const ctx = ctxOf(req); let rows = loadDb().supportTickets as any[];
+  if (!['superadmin','platform_owner','operations_admin','support_admin'].includes(ctx.role)) rows = rows.filter((t) => t.orgId === ctx.tenantId || t.requester === ctx.email);
   const { page, pageSize } = paginate.parse(req.query);
   res.json({ success: true, ...paged(rows, page, pageSize) });
+});
+directoryRouter.post('/support-tickets', requireAuth(), (req: Request, res: Response) => {
+  const { subject, category, priority, body } = req.body || {};
+  if (!subject || !body) return res.status(400).json({ success: false, message: 'subject + body required.' });
+  const ctx = ctxOf(req);
+  const t = { id: uid('SUP'), orgId: ctx.tenantId, requester: ctx.email, subject: String(subject).slice(0, 160), category: category ? String(category) : 'Account', priority: ['Low','Medium','High'].includes(priority) ? priority : 'Medium', body: String(body).slice(0, 4000), status: 'Open', notes: [], createdAt: nowIso() };
+  loadDb().supportTickets.unshift(t);
+  audit(ctx.email, `SUPPORT_OPENED:${t.id}`, ctx.tenantId, 'support', t.id, req.ip); persist();
+  res.status(201).json({ success: true, data: t });
+});
+directoryRouter.patch('/support-tickets/:id', requireAuth(['superadmin','platform_owner','operations_admin','support_admin']), (req, res) => {
+  const db = loadDb(); const t: any = db.supportTickets.find((x: any) => x.id === req.params.id);
+  if (!t) return res.status(404).json({ success: false, message: 'Not found.' });
+  const ctx = ctxOf(req); const body: any = req.body || {};
+  if (body.status && !(TICKET_FLOW[t.status] || []).includes(body.status)) return res.status(422).json({ success: false, message: `Invalid transition ${t.status} → ${body.status}.` });
+  if (body.status) t.status = body.status;
+  if (body.assignee !== undefined) t.assignee = body.assignee;
+  if (body.note) (t.notes ||= []).unshift({ by: ctx.email, text: String(body.note).slice(0, 2000), at: nowIso() });
+  t.updatedAt = nowIso();
+  audit(ctx.email, `SUPPORT_UPDATED:${t.id}->${t.status}`, t.orgId, 'support', t.id, req.ip); persist();
+  res.json({ success: true, data: t });
+});
+
+// Candidate directory (admin) — masked unless permitted, enriched with counts
+const COMPLETENESS_FIELDS = ['name','email','phone','headline','roleTitle','experienceYears','location','country','currentCtc','expectedCtc','noticePeriod','skills','summary','education','availability'];
+export function completenessOf(c: any): number {
+  if (!c) return 0;
+  const filled = COMPLETENESS_FIELDS.filter((f) => String(c[f] ?? '').trim() !== '').length;
+  return Math.round((filled / COMPLETENESS_FIELDS.length) * 100);
+}
+directoryRouter.get('/directory/candidates', requireAuth(['superadmin','platform_owner','operations_admin','support_admin']), (req, res) => {
+  const db = loadDb();
+  const canSee = ctxOf(req).permissions.includes('view_sensitive_fields');
+  const appCounts: Record<string, number> = {};
+  for (const a of db.applications as any[]) {
+    const k = String(a.candidateEmail || '').toLowerCase();
+    if (k) appCounts[k] = (appCounts[k] || 0) + 1;
+  }
+  let rows = (db.candidateProfiles as any[]).map((c) => {
+    const base = canSee ? c : { ...c, phone: '**********', currentCtc: 'Restricted' };
+    return { ...base, applicationCount: appCounts[String(c.email || '').toLowerCase()] || 0, completeness: completenessOf(c) };
+  });
+  const { page, pageSize } = paginate.parse(req.query);
+  res.json({ success: true, ...paged(rows, page, pageSize) });
+});
+// Candidate 360° — the 12 spec tabs served from one audited read
+directoryRouter.get('/directory/candidates/:id/360', requireAuth(['superadmin','platform_owner','operations_admin','candidate']), (req, res) => {
+  const db = loadDb(); const ctx = ctxOf(req);
+  const c: any = db.candidateProfiles.find((x: any) => x.id === req.params.id);
+  if (!c) return res.status(404).json({ success: false, message: 'Not found.' });
+  if (ctx.role === 'candidate' && String(c.email).toLowerCase() !== ctx.email.toLowerCase()) return res.status(404).json({ success: false, message: 'Not found.' });
+  const canSee = ctx.permissions.includes('view_sensitive_fields') || ctx.role === 'candidate';
+  const email = String(c.email || '').toLowerCase();
+  const apps = (db.applications as any[]).filter((a) => String(a.candidateEmail).toLowerCase() === email);
+  const appIds = new Set(apps.map((a) => a.id));
+  res.json({ success: true, data: {
+    profile: canSee ? { ...c, completeness: completenessOf(c) } : { ...c, phone: '**********', currentCtc: 'Restricted', completeness: completenessOf(c) },
+    completeness: completenessOf(c),
+    applications: apps.slice(0, 200),
+    stageHistory: (db.stageHistory as any[]).filter((h) => appIds.has(h.applicationId)).slice(0, 200),
+    interviews: (db.interviews as any[]).filter((i) => String(i.candidateEmail || '').toLowerCase() === email).slice(0, 200),
+    documents: (db.documents as any[]).filter((d) => String(d.ownerEmail || '').toLowerCase() === email).map(({ ...d }) => d).slice(0, 100),
+    consents: (db.consents as any[]).filter((x) => String(x.email || '').toLowerCase() === email),
+    activity: (db.auditLogs as any[]).filter((l) => l.recordId === c.id || String(l.actor).toLowerCase() === email).slice(0, 100),
+  } });
 });
 
 // Candidate directory admin edit + account status (suspend/block/restore)

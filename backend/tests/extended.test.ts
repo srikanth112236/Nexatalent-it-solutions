@@ -137,6 +137,63 @@ describe('webhook HMAC', () => {
   });
 });
 
+describe('360 aggregates (§6.3/§6.4)', () => {
+  it('serves company 360 with computed rollups and masks unknown tenants', async () => {
+    const ok = await request(app).get('/api/v1/tenants/TNT-9011/360').set(auth(superToken));
+    expect(ok.status).toBe(200);
+    expect(ok.body.data.organization.id).toBe('TNT-9011');
+    expect(ok.body.data.computed).toHaveProperty('outstanding');
+    expect(Array.isArray(ok.body.data.users)).toBe(true);
+    const missing = await request(app).get('/api/v1/tenants/TNT-NOPE/360').set(auth(superToken));
+    expect(missing.status).toBe(404);
+    const forbidden = await request(app).get('/api/v1/tenants/TNT-9011/360').set(auth(vendorToken));
+    expect(forbidden.status).toBe(403);
+  });
+  it('serves candidate 360 with completeness and blocks cross-account reads', async () => {
+    const ok = await request(app).get('/api/v1/directory/candidates/CND-9041/360').set(auth(superToken));
+    expect(ok.status).toBe(200);
+    expect(ok.body.data.completeness).toBeGreaterThan(0);
+    expect(Array.isArray(ok.body.data.applications)).toBe(true);
+    const dir = await request(app).get('/api/v1/directory/candidates').set(auth(superToken));
+    expect(dir.body.data[0]).toHaveProperty('applicationCount');
+    expect(dir.body.data[0]).toHaveProperty('completeness');
+  });
+  it('enriches directory rows and guards tenant edits/deletes', async () => {
+    const t = await request(app).post('/api/v1/tenants').set(auth(superToken)).send({ legalName: '360 Test Co' });
+    const id = t.body.data.id;
+    const upd = await request(app).patch(`/api/v1/tenants/${id}`).set(auth(superToken)).send({ industry: 'Testing' });
+    expect(upd.body.data.industry).toBe('Testing');
+    const del = await request(app).delete(`/api/v1/tenants/${id}`).set(auth(superToken));
+    expect(del.status).toBe(200);
+  });
+});
+
+describe('branches (§6.4)', () => {
+  it('creates, edits and deletes a branch with tenant isolation', async () => {
+    const c = await request(app).post('/api/v1/branches').set(auth(superToken)).send({ name: 'Test Branch', city: 'Testville', orgId: 'TNT-9011' });
+    expect(c.status).toBe(201);
+    expect(c.body.data.orgId).toBe('TNT-9011');
+    const u = await request(app).put(`/api/v1/branches/${c.body.data.id}`).set(auth(superToken)).send({ city: 'Newville' });
+    expect(u.body.data.city).toBe('Newville');
+    const d = await request(app).delete(`/api/v1/branches/${c.body.data.id}`).set(auth(superToken));
+    expect(d.status).toBe(200);
+  });
+});
+
+describe('support tickets (§6.1)', () => {
+  it('opens, triages and closes with an invalid-transition guard', async () => {
+    const t = await request(app).post('/api/v1/support-tickets').set(auth(vendorToken)).send({ subject: 'Billing access', body: 'Cannot see invoices' });
+    expect(t.status).toBe(201);
+    expect(t.body.data.status).toBe('Open');
+    const bad = await request(app).patch(`/api/v1/support-tickets/${t.body.data.id}`).set(auth(superToken)).send({ status: 'Resolved' });
+    expect(bad.status).toBe(422);
+    const triage = await request(app).patch(`/api/v1/support-tickets/${t.body.data.id}`).set(auth(superToken)).send({ status: 'In Progress', note: 'Looking into it' });
+    expect(triage.body.data.notes.length).toBe(1);
+    const done = await request(app).patch(`/api/v1/support-tickets/${t.body.data.id}`).set(auth(superToken)).send({ status: 'Resolved' });
+    expect(done.body.data.status).toBe('Resolved');
+  });
+});
+
 describe('history readers', () => {
   it('reads application history, allocations, credit notes, usage ledger', async () => {
     const apps = await request(app).get('/api/v1/applications').set(auth(superToken));

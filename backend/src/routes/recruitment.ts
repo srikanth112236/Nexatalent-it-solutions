@@ -159,6 +159,7 @@ recruitmentRouter.get('/applications', requireAuth(), (req, res) => {
   else if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role)) rows = rows.filter((a) => a.orgId === ctx.tenantId);
   const { page, pageSize, status } = paginate.parse(req.query);
   if (status) rows = rows.filter((a) => a.stage === status);
+  if (req.query.jobId) rows = rows.filter((a) => a.jobId === req.query.jobId);
   res.json({ success: true, ...paged(rows, page, pageSize) });
 });
 recruitmentRouter.post('/applications', requireAuth(['candidate','superadmin','agency_recruiter','agency_admin','recruiter','vendor']), (req: Request, res: Response) => {

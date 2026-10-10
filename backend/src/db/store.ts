@@ -30,6 +30,7 @@ export interface DbShape {
   notifications: any[]; notificationPrefs: any[];
   campaigns: any[]; campaignRecipients: any[]; campaignEvents: any[];
   assignments: any[]; outbox: any[]; idempotency: any[];
+  supportTickets: any[];
   auditLogs: any[]; sessions: any[]; passwordResets: any[]; settings: any;
   // legacy compat mirrors
   jobsLegacy: any[]; candidatesLegacy: any[]; tenantsLegacy: any[];
@@ -115,6 +116,7 @@ function seed(): DbShape {
     notifications: [], notificationPrefs: [],
     campaigns: [], campaignRecipients: [], campaignEvents: [],
     assignments: [], outbox: [], idempotency: [],
+    supportTickets: [],
     auditLogs: [
       { id: 'AUD-1001', timestamp: now, actor: 'system', action: 'SYSTEM_BOOTSTRAP', resource: 'system', recordId: '-', tenantId: 'TNT-GLOBAL', ipAddress: '127.0.0.1' },
     ],
