@@ -269,11 +269,28 @@ describe('Commercial terms UI', () => {
     render(<AuthProvider><CommissionsPanel /></AuthProvider>);
     assert.ok(container.textContent?.includes('Agreement templates'), 'templates section renders');
   });
-  it('billing panel shows superadmin payment reminders strip', async () => {
+  it('billing panel focuses on payments/refunds (invoices moved out)', async () => {
     const { BillingPanel } = await import('./portals/common/EnterprisePanels.js');
     const { AuthProvider } = await import('./shared/auth/AuthContext.js');
     render(<AuthProvider><BillingPanel /></AuthProvider>);
+    assert.ok(container.textContent?.includes('Payments / Refunds'), 'billing header renders');
+    assert.ok(!container.textContent?.includes('Payment reminders'), 'reminders live on the invoices page now');
+  });
+});
+
+describe('Invoices + templates', () => {
+  it('invoices page renders the corporate table shell', async () => {
+    const { InvoicesPanel } = await import('./portals/common/EnterprisePanels.js');
+    const { AuthProvider } = await import('./shared/auth/AuthContext.js');
+    render(<AuthProvider><InvoicesPanel /></AuthProvider>);
+    assert.ok(container.textContent?.includes('Tax invoices'), 'invoices header renders');
     assert.ok(container.textContent?.includes('Payment reminders'), 'reminders strip renders');
+  });
+  it('fillTemplate substitutes commercial tokens', async () => {
+    const { fillTemplate } = await import('./portals/common/EnterprisePanels.js');
+    const html = fillTemplate({ name: 'Std', paymentTermsDays: 15, replacementDays: 60, rateMin: 10, rateMax: 12, hiringType: 'Senior / niche technology roles', bodyHtml: '<p>{{company_name}} pays {{rate_percent}}% in {{payment_days}} days.</p>' }, 'TNT-9011');
+    assert.ok(html.includes('TNT-9011 pays 10–12% in 15 days.'), `tokens filled, got: ${html}`);
+    assert.ok(!html.includes('{{'), 'no raw tokens remain');
   });
 });
 

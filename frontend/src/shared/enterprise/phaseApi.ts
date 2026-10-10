@@ -152,6 +152,7 @@ export const billingApi = {
   commissions: () => apiClient.get('/api/v1/commissions'),
   checkDuplicate: (params: string) => apiClient.get(`/api/v1/commissions/check${params}`),
   approveCommission: (id: string) => apiClient.patch(`/api/v1/commissions/${id}/approve`, {}),
+  commissionInvoice: (id: string) => apiClient.post(`/api/v1/commissions/${id}/invoice`, {}),
   payout: (commissionId: string) => apiClient.post('/api/v1/payouts', { commissionId }),
   payouts: () => apiClient.get('/api/v1/payouts'),
   reconciliation: () => apiClient.get('/api/v1/reconciliation'),

@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo, Fragment } from 'react';
+import { useState, useEffect, useMemo, useRef, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../../shared/api-client';
 import { Candidate360Drawer, AgencyDrawer } from '../superadmin/SuperAdmin360';
 import { ExportButton, useQueryState, useDebounced, checkRecordAction, useActionGuard, DetailDrawer, GlobalCreateModal } from './CrudKit';
-import { useAuth, usePermissions } from '../../shared/auth/AuthContext';
+import { useAuth, useCan, usePermissions } from '../../shared/auth/AuthContext';
 import {
   applicationsApi, interviewsApi, chatApi, talentApi, requisitionsApi, jobsApi,
   offersPlacementsApi, billingApi, salesApi, platformApi, documentsApi, workforceApi,
@@ -1511,28 +1511,77 @@ export function OutreachPanel() {
   );
 }
 
-/* ---------------- Phase 3: Billing ---------------- */
-export function BillingPanel() {
-  const [usage, setUsage] = useState<any>(null);
+/** Print only the document: isolated print window with corporate styling. */
+export function printHtmlDocument(title: string, bodyHtml: string) {
+  const w = window.open('', '_blank', 'width=900,height=700');
+  if (!w) return;
+  w.document.write(`<!doctype html><html><head><title>${title.replace(/</g, '')}</title><style>body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:32px;max-width:800px;margin:0 auto;}h2{margin:0 0 4px;}h3{margin:18px 0 6px;border-bottom:2px solid #111;padding-bottom:4px;}table{border-collapse:collapse;width:100%;margin:8px 0;}th,td{border:1px solid #999;padding:6px 8px;text-align:left;font-size:13px;}th{background:#f1f5f9;}.totals{float:right;width:280px;margin-top:8px;}.totals div{display:flex;justify-content:space-between;padding:3px 0;font-size:13px;}.terms{clear:both;margin-top:16px;font-size:12px;color:#334155;}@media print{.no-print{display:none;}}</style></head><body>${bodyHtml}<div class="no-print" style="margin-top:24px;"><button onclick="window.print()">Print / Save PDF</button></div></body></html>`);
+  w.document.close();
+}
+
+export const TEMPLATE_TOKENS = ['company_name', 'date', 'hiring_type', 'rate_percent', 'payment_days', 'replacement_days', 'gst_note', 'ownership', 'duplicates', 'cancellation', 'template_name'];
+
+/** Fill {{tokens}} in template HTML with template terms + company context. */
+export function fillTemplate(t: any, companyName?: string): string {
+  const map: Record<string, string> = {
+    company_name: companyName || t?.orgId || '[Company Name]',
+    date: new Date().toISOString().slice(0, 10),
+    hiring_type: t?.hiringType || 'Mid-level IT roles',
+    rate_percent: t?.rateMin !== undefined && t?.rateMax !== undefined ? (t.rateMin === t.rateMax ? String(t.rateMin) : `${t.rateMin}–${t.rateMax}`) : '8.33–10',
+    payment_days: String(t?.paymentTermsDays ?? 30),
+    replacement_days: String(t?.replacementDays ?? 90),
+    gst_note: t?.gstNote || 'GST charged extra as applicable.',
+    ownership: t?.ownershipClause || '',
+    duplicates: t?.duplicatePolicy || '',
+    cancellation: t?.cancellationTerms || '',
+    template_name: t?.name || '',
+  };
+  let html = String(t?.bodyHtml || '');
+  for (const [k, v] of Object.entries(map)) html = html.split(`{{${k}}}`).join(String(v));
+  return html;
+}
+
+/** Download an HTML document as a Word-compatible .doc file. */
+export function downloadDocFile(filename: string, title: string, bodyHtml: string) {
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${title}</title></head><body>${bodyHtml}</body></html>`;
+  const blob = new Blob([html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename.endsWith('.doc') ? filename : `${filename}.doc`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+const INV_STATUSES = ['Draft', 'Issued', 'Partially Paid', 'Paid', 'Overdue', 'Void', 'Credited'];
+
+/* ---------------- Invoices (dedicated page: table, statuses, corporate document, reminders) ---------------- */
+export function InvoicesPanel() {
+  const canBill = useCan('manage_billing');
   const [invoices, setInvoices] = useState<any[]>([]);
-  const [payments, setPayments] = useState<any[]>([]);
-  const [refunds, setRefunds] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
-  const [pay, setPay] = useState({ invoiceId: '', amount: '' });
-  const [refund, setRefund] = useState({ paymentId: '', amount: '', reason: '' });
-  const [showPay, setShowPay] = useState(false);
-  const [showRefund, setShowRefund] = useState(false);
-  const [refundConfirm, setRefundConfirm] = useState(false);
+  const [loadError, setLoadError] = useState(0);
+  const [q, setQ] = useQueryState('inv_q');
+  const [statusF, setStatusF] = useQueryState('inv_status');
   const [showInvoice, setShowInvoice] = useState(false);
-  const [invForm, setInvForm] = useState({ orgId: '', label: 'Subscription — monthly', qty: '1', unit: '', discount: '', taxRate: '18', dueDate: '', draft: false });
-  const [recon, setRecon] = useState<any>(null);
+  const [invForm, setInvForm] = useState({ orgId: '', agreementId: '', label: 'Placement fee', qty: '1', unit: '', discount: '', taxRate: '18', dueDate: '', draft: false });
   const [docFor, setDocFor] = useState<any>(null);
   const [doc, setDoc] = useState<any>(null);
-  const [q, setQ] = useQueryState('bill_q');
+  const [voidFor, setVoidFor] = useState<any>(null);
+  const [voidReason, setVoidReason] = useState('');
+  const [creditFor, setCreditFor] = useState<any>(null);
+  const [creditForm, setCreditForm] = useState({ amount: '', reason: '' });
   const [reminders, setReminders] = useState<any[]>([]);
   const [remResult, setRemResult] = useState('');
   const [remBusy, setRemBusy] = useState(false);
+  const load = async () => {
+    setLoading(true); setError('');
+    try { setInvoices(unwrapList(await billingApi.invoices())); loadReminders(); }
+    catch (e) { setError(errMsg(e)); setLoadError(errStatus(e)); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
   const loadReminders = async () => {
     try { setReminders(unwrapList(await billingApi.invoiceReminders())); } catch { setReminders([]); }
   };
@@ -1544,47 +1593,13 @@ export function BillingPanel() {
       loadReminders(); syncAll();
     } catch (e) { setError(errMsg(e)); } finally { setRemBusy(false); }
   };
-  const [voidFor, setVoidFor] = useState<any>(null);
-  const [voidReason, setVoidReason] = useState('');
-  const [creditFor, setCreditFor] = useState<any>(null);
-  const [creditForm, setCreditForm] = useState({ amount: '', reason: '' });
-  const load = async () => {
-    setError('');
-    try {
-      const [u, i, p, r, rec] = await Promise.all([
-        billingApi.usage().catch(() => null), billingApi.invoices().catch(() => null), billingApi.payments().catch(() => null), billingApi.refunds().catch(() => null), billingApi.reconciliation().catch(() => null),
-      ]);
-      if (u) setUsage(unwrapObj(u)); if (i) setInvoices(unwrapList(i)); if (p) setPayments(unwrapList(p)); if (r) setRefunds(unwrapList(r));
-      if (rec) setRecon(unwrapObj(rec));
-      loadReminders();
-    } catch (e) { setError(errMsg(e)); }
-  };
-  useEffect(() => { load(); }, []);
-  const payNow = async (e: React.FormEvent) => {
-    e.preventDefault(); setError(''); setOk('');
-    try {
-      const key = `ui-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
-      await billingApi.pay(pay.invoiceId, Number(pay.amount), key);
-      setOk('Payment recorded and reconciled.'); setPay({ invoiceId: '', amount: '' }); setShowPay(false); load();
-      syncAll();
-    } catch (e) { setError(errMsg(e)); }
-  };
-  const doRefund = async () => {
-    setError(''); setOk('');
-    if (!refund.paymentId || !refund.amount) { setError('Payment ID + amount required.'); return; }
-    try {
-      const r = unwrapObj(await billingApi.refund(refund.paymentId, Number(refund.amount), refund.reason || 'requested'));
-      if (r?.id) setRefunds((x) => [r, ...x]);
-      setOk('Refund processed — ledger updated.'); setRefund({ paymentId: '', amount: '', reason: '' }); setShowRefund(false); load(); syncAll();
-    } catch (e) { setError(errMsg(e)); }
-  };
   const createInvoice = async (e: React.FormEvent) => {
     e.preventDefault(); setError(''); setOk('');
     if (!invForm.orgId.trim() || !invForm.unit || !invForm.dueDate) { setError('Organization + unit price + due date are required.'); return; }
     try {
-      const created = unwrapObj(await billingApi.createInvoice({ orgId: invForm.orgId.trim(), dueDate: invForm.dueDate, discount: Number(invForm.discount) || 0, taxRate: Number(invForm.taxRate) || 0, draft: invForm.draft, lines: [{ label: invForm.label, qty: Number(invForm.qty) || 1, unit: Number(invForm.unit) }] }));
+      const created = unwrapObj(await billingApi.createInvoice({ orgId: invForm.orgId.trim(), agreementId: invForm.agreementId.trim() || undefined, dueDate: invForm.dueDate, discount: Number(invForm.discount) || 0, taxRate: Number(invForm.taxRate) || 0, draft: invForm.draft, lines: [{ label: invForm.label, qty: Number(invForm.qty) || 1, unit: Number(invForm.unit) }] }));
       if (created?.id) setInvoices((x) => [created, ...x]);
-      setInvForm({ orgId: '', label: 'Subscription — monthly', qty: '1', unit: '', discount: '', taxRate: '18', dueDate: '', draft: false }); setShowInvoice(false);
+      setInvForm({ orgId: '', agreementId: '', label: 'Placement fee', qty: '1', unit: '', discount: '', taxRate: '18', dueDate: '', draft: false }); setShowInvoice(false);
       setOk(invForm.draft ? 'Draft invoice saved — issue it when ready.' : 'Invoice issued (immutable — amend via credit note).'); syncAll();
     } catch (e) { setError(errMsg(e)); }
   };
@@ -1615,34 +1630,53 @@ export function BillingPanel() {
       setCreditFor(null); setCreditForm({ amount: '', reason: '' }); load(); setOk('Credit note issued — balance adjusted.'); syncAll();
     } catch (e) { setError(errMsg(e)); }
   };
-  const filteredInv = invoices.filter((i) => !q.trim() || `${i.id} ${i.number} ${i.orgId} ${i.status}`.toLowerCase().includes(q.toLowerCase()));
+  const docPrintHtml = (d: any) => `
+    <h2>NexaTalent IT Solutions — TAX INVOICE</h2>
+    <p><strong>${d.number || d.id}</strong> • Issued ${String(d.issueDate || d.createdAt || '').slice(0, 10)} • Due ${String(d.dueDate || '').slice(0, 10)} • Status: ${d.status}${d.overdue ? ` • ${d.daysOverdue}d overdue` : ''}</p>
+    <p><strong>Billed to:</strong> ${d.organization?.legalName || d.orgId}${d.organization?.gstin ? ` (GSTIN: ${d.organization.gstin})` : ' (GSTIN not on file)'}</p>
+    <table><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Amount</th></tr>${(d.lines || []).map((l: any) => `<tr><td>${l.label}</td><td>${l.qty}</td><td>₹${l.unit}</td><td>₹${(l.qty * l.unit).toLocaleString('en-IN')}</td></tr>`).join('')}</table>
+    <div class="totals"><div><span>Subtotal</span><span>₹${d.subtotal}</span></div><div><span>Discount</span><span>− ₹${d.discount}</span></div><div><span>Tax (GST @ ${d.taxRate ?? 18}%)</span><span>₹${d.tax}</span></div><div><strong>Total</strong><span><strong>₹${d.total}</strong></span></div><div><span>Paid</span><span>₹${d.amountPaid}</span></div><div><span>Balance</span><span>₹${d.balance}</span></div></div>
+    <div class="terms"><h3>Commercial terms</h3><p>• ${d.terms?.paymentNote || ''}</p><p>• ${d.terms?.replacementNote || ''}</p><p>• ${d.terms?.gstNote || ''}</p><p>• ${d.terms?.ownershipNote || ''}</p><p>• ${d.terms?.duplicateNote || ''}</p></div>`;
+  const filteredInv = invoices.filter((i) => {
+    const st = i.overdue ? 'Overdue' : i.status;
+    if (statusF && st !== statusF) return false;
+    if (!q.trim()) return true;
+    return `${i.id} ${i.number} ${i.orgId} ${i.status} ${i.agreementId || ''}`.toLowerCase().includes(q.toLowerCase());
+  });
+  const invMenuFor = (i: any) => (
+    <RowMenu label={`Invoice ${i.number || i.id}`} items={[
+      { label: 'View document', onSelect: () => openDocument(i) },
+      ...(canBill && i.status === 'Draft' ? [{ label: 'Issue now', onSelect: () => issueInvoice(i.id) }] : []),
+      ...(canBill ? [
+        { label: 'Void…', danger: true, onSelect: () => { setVoidFor(i); setVoidReason(''); } },
+        { label: 'Credit note…', onSelect: () => { setCreditFor(i); setCreditForm({ amount: '', reason: '' }); } },
+      ] : []),
+    ]} />
+  );
   return (
     <div className={cardCls}>
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-base font-extrabold text-slate-900">Billing — Invoices / Payments / Refunds / Credits</h3>
+          <h3 className="text-base font-extrabold text-slate-900">Invoices — Tax invoices, statuses, documents</h3>
           <div className="flex gap-2">
-            <ExportButton filename="invoices.csv" rows={filteredInv} columns={['id', 'number', 'orgId', 'total', 'balance', 'status']} />
-            <button type="button" onClick={() => setShowInvoice(true)} className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">+ Invoice</button>
-            <button type="button" onClick={() => setShowRefund(true)} className={btnDark}>Refund</button>
-            <button type="button" onClick={() => setShowPay(true)} className={btnPrimary}>Record payment</button>
+            <ExportButton filename="invoices.csv" rows={filteredInv} columns={['id', 'number', 'orgId', 'agreementId', 'subtotal', 'tax', 'total', 'amountPaid', 'balance', 'status', 'dueDate']} />
+            {canBill ? <button type="button" onClick={() => setShowInvoice(true)} className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">+ Invoice</button> : null}
           </div>
         </div>
-        <input className={inputCls} placeholder="Search invoice ID, number, org, status…" value={q} onChange={(e) => setQ(e.target.value)} />
-      </div>
-      {error && <PanelError message={error} onRetry={load} />}
-      {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
-      {recon && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-          {[['Invoiced', `₹${Number(recon.totalInvoiced || 0).toLocaleString('en-IN')}`], ['Paid', `₹${Number(recon.totalPaid || 0).toLocaleString('en-IN')}`], ['Outstanding', `₹${Number(recon.outstanding || 0).toLocaleString('en-IN')}`], ['Docs', `${recon.invoices || 0} inv / ${recon.payments || 0} pay`]].map(([k, v]) => (
-            <div key={k as string} className="p-3 rounded-2xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="text-base font-extrabold mt-0.5">{v}</div></div>
-          ))}
+        <div className="flex flex-col lg:flex-row gap-2">
+          <input className={`${inputCls} flex-1`} placeholder="Search invoice ID, number, org, agreement…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <div className="w-full lg:w-44 shrink-0">
+            <Select value={statusF} onChange={setStatusF} ariaLabel="Invoice status filter" placeholder="All statuses"
+              options={[{ value: '', label: 'All statuses' }, ...INV_STATUSES.map((s) => ({ value: s, label: s }))]} />
+          </div>
         </div>
-      )}
+      </div>
+      {error && <PanelError message={error} status={loadError} onRetry={load} />}
+      {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
       <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 text-xs space-y-2">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="font-extrabold text-amber-900">Payment reminders → superadmin ({invoices.filter((i) => Number(i.balance || 0) > 0 && ['Issued', 'Partially Paid'].includes(i.status) && i.dueDate && (new Date(i.dueDate).getTime() - Date.now()) / 864e5 <= 7).length} needing attention)</div>
-          <button type="button" disabled={remBusy} onClick={runReminders} className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs disabled:opacity-50 w-fit">{remBusy ? 'Sending…' : 'Send reminders now'}</button>
+          {canBill ? <button type="button" disabled={remBusy} onClick={runReminders} className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs disabled:opacity-50 w-fit">{remBusy ? 'Sending…' : 'Send reminders now'}</button> : null}
         </div>
         {remResult && <div className="font-bold text-emerald-700">{remResult}</div>}
         {reminders.length > 0 && (
@@ -1656,15 +1690,16 @@ export function BillingPanel() {
       <Modal open={showInvoice} onClose={() => setShowInvoice(false)} title="New invoice" subtitle="Drafts are editable; issued invoices are immutable (void/credit only)">
         <form onSubmit={createInvoice} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Organization ID *"><input className={kitInput} value={invForm.orgId} onChange={(e) => setInvForm({ ...invForm, orgId: e.target.value })} placeholder="TNT-9011" /></Field>
+          <Field label="Agreement ID (links terms)"><input className={kitInput} value={invForm.agreementId} onChange={(e) => setInvForm({ ...invForm, agreementId: e.target.value })} placeholder="AGR-…" /></Field>
           <Field label="Due date *"><DatePicker value={invForm.dueDate} onChange={(v) => setInvForm({ ...invForm, dueDate: v })} /></Field>
           <div className="sm:col-span-2"><Field label="Line label"><input className={kitInput} value={invForm.label} onChange={(e) => setInvForm({ ...invForm, label: e.target.value })} /></Field></div>
           <Field label="Qty"><input className={kitInput} type="number" min={1} value={invForm.qty} onChange={(e) => setInvForm({ ...invForm, qty: e.target.value })} /></Field>
           <Field label="Unit price (₹) *"><input className={kitInput} type="number" value={invForm.unit} onChange={(e) => setInvForm({ ...invForm, unit: e.target.value })} /></Field>
           <Field label="Discount (₹)"><input className={kitInput} type="number" min={0} value={invForm.discount} onChange={(e) => setInvForm({ ...invForm, discount: e.target.value })} /></Field>
-          <Field label="Tax rate %"><input className={kitInput} type="number" min={0} max={100} value={invForm.taxRate} onChange={(e) => setInvForm({ ...invForm, taxRate: e.target.value })} /></Field>
+          <Field label="GST rate %"><input className={kitInput} type="number" min={0} max={100} value={invForm.taxRate} onChange={(e) => setInvForm({ ...invForm, taxRate: e.target.value })} /></Field>
           <div className="sm:col-span-2 flex items-center gap-2 text-xs font-bold text-slate-700">
-            <input id="inv-draft" type="checkbox" checked={invForm.draft} onChange={(e) => setInvForm({ ...invForm, draft: e.target.checked })} className="w-4 h-4" />
-            <label htmlFor="inv-draft">Save as Draft (editable, issue later)</label>
+            <input id="inv2-draft" type="checkbox" checked={invForm.draft} onChange={(e) => setInvForm({ ...invForm, draft: e.target.checked })} className="w-4 h-4" />
+            <label htmlFor="inv2-draft">Save as Draft (editable, issue later)</label>
           </div>
           <div className="sm:col-span-2 flex justify-end gap-2">
             <button type="button" onClick={() => setShowInvoice(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
@@ -1672,7 +1707,7 @@ export function BillingPanel() {
           </div>
         </form>
       </Modal>
-      <Modal open={docFor !== null} onClose={() => { setDocFor(null); setDoc(null); }} title={`Invoice ${doc?.number || docFor?.number || docFor?.id || ''}`} subtitle="Printable document — totals, payments, credits">
+      <Modal open={docFor !== null} onClose={() => { setDocFor(null); setDoc(null); }} title={`Invoice ${doc?.number || docFor?.number || docFor?.id || ''}`} subtitle="Corporate tax invoice — terms, GST, reminders">
         {!doc ? <InlineLoading message="Loading document…" /> : (
           <div className="space-y-3 text-xs">
             <div className="p-4 rounded-2xl bg-slate-900 text-white space-y-1">
@@ -1734,7 +1769,7 @@ export function BillingPanel() {
             )}
             {(doc.reminders || []).length > 0 && <div className="text-slate-600 font-medium">Reminders sent: {(doc.reminders || []).map((r: any) => `${r.kind} ${String(r.sentAt || '').slice(0, 10)}`).join(' • ')}</div>}
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => window.print()} className="px-4 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs">Print / Save PDF</button>
+              <button type="button" onClick={() => printHtmlDocument(`Invoice ${doc.number || doc.id}`, docPrintHtml(doc))} className="px-4 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs">Print / Save PDF</button>
             </div>
           </div>
         )}
@@ -1758,6 +1793,128 @@ export function BillingPanel() {
           </div>
         </div>
       </Modal>
+      {loading ? <InlineLoading message="Loading invoices…" /> : filteredInv.length === 0 ? (
+        <EmptyState title="No invoices" message="Create one manually or generate it from an approved commission." />
+      ) : (<>
+        <div className="space-y-2 md:hidden">
+          {filteredInv.map((i) => {
+            const st = i.overdue ? 'Overdue' : i.status;
+            return (
+            <div key={i.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-extrabold text-slate-900 text-sm truncate">{i.number || i.id}</div>
+                  <div className="font-mono text-[11px] text-slate-500">{i.orgId}{i.agreementId ? ` • ${i.agreementId}` : ''}</div>
+                </div>
+                {invMenuFor(i)}
+              </div>
+              <div className="font-bold text-slate-700">Total ₹{Number(i.total || 0).toLocaleString('en-IN')} • paid ₹{Number(i.amountPaid || 0).toLocaleString('en-IN')} • bal <strong>₹{Number(i.balance || 0).toLocaleString('en-IN')}</strong></div>
+              <div className="flex flex-wrap gap-1 items-center">
+                <span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${st === 'Paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : st === 'Overdue' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>{st}</span>
+                <span className="text-slate-500 font-medium">due {String(i.dueDate || '').slice(0, 10)}{i.overdue ? ` • ${i.daysOverdue}d overdue` : ''}</span>
+              </div>
+            </div>
+            );
+          })}
+        </div>
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
+          <table className="w-full text-left text-xs min-w-[1020px]">
+            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
+              <th className="px-4 py-3">Invoice</th><th className="px-4 py-3">Company</th><th className="px-4 py-3">Agreement</th><th className="px-4 py-3 text-right">Subtotal</th><th className="px-4 py-3 text-right">GST</th><th className="px-4 py-3 text-right">Total</th><th className="px-4 py-3 text-right">Paid</th><th className="px-4 py-3 text-right">Balance</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Due</th><th className="px-4 py-3 text-right">Actions</th>
+            </tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredInv.map((i) => {
+                const st = i.overdue ? 'Overdue' : i.status;
+                return (
+                <tr key={i.id} className="hover:bg-slate-50/70">
+                  <td className="px-4 py-3"><div className="font-bold text-slate-900">{i.number || i.id}</div><div className="font-mono text-[11px] text-slate-500">{i.id}</div></td>
+                  <td className="px-4 py-3 font-mono font-bold text-amber-700">{i.orgId}</td>
+                  <td className="px-4 py-3 font-mono">{i.agreementId || '—'}</td>
+                  <td className="px-4 py-3 text-right">₹{Number(i.subtotal || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-4 py-3 text-right">₹{Number(i.tax || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-4 py-3 text-right font-bold">₹{Number(i.total || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-4 py-3 text-right text-emerald-700 font-bold">₹{Number(i.amountPaid || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-4 py-3 text-right font-extrabold">₹{Number(i.balance || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${st === 'Paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : st === 'Overdue' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>{st}</span></td>
+                  <td className="px-4 py-3">{String(i.dueDate || '').slice(0, 10)}{i.overdue ? <span className="text-red-600 font-bold"> • {i.daysOverdue}d</span> : ''}</td>
+                  <td className="px-4 py-3"><div className="flex justify-end">{invMenuFor(i)}</div></td>
+                </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </>)}
+    </div>
+  );
+}
+
+/* ---------------- Phase 3: Billing ---------------- */
+export function BillingPanel() {
+  const [usage, setUsage] = useState<any>(null);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [refunds, setRefunds] = useState<any[]>([]);
+  const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
+  const [pay, setPay] = useState({ invoiceId: '', amount: '' });
+  const [refund, setRefund] = useState({ paymentId: '', amount: '', reason: '' });
+  const [showPay, setShowPay] = useState(false);
+  const [showRefund, setShowRefund] = useState(false);
+  const [refundConfirm, setRefundConfirm] = useState(false);
+  const [recon, setRecon] = useState<any>(null);
+  const [q, setQ] = useQueryState('bill_q');
+  const load = async () => {
+    setError('');
+    try {
+      const [u, p, r, rec] = await Promise.all([
+        billingApi.usage().catch(() => null), billingApi.payments().catch(() => null), billingApi.refunds().catch(() => null), billingApi.reconciliation().catch(() => null),
+      ]);
+      if (u) setUsage(unwrapObj(u)); if (p) setPayments(unwrapList(p)); if (r) setRefunds(unwrapList(r));
+      if (rec) setRecon(unwrapObj(rec));
+    } catch (e) { setError(errMsg(e)); }
+  };
+  useEffect(() => { load(); }, []);
+  const payNow = async (e: React.FormEvent) => {
+    e.preventDefault(); setError(''); setOk('');
+    try {
+      const key = `ui-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+      await billingApi.pay(pay.invoiceId, Number(pay.amount), key);
+      setOk('Payment recorded and reconciled.'); setPay({ invoiceId: '', amount: '' }); setShowPay(false); load();
+      syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const doRefund = async () => {
+    setError(''); setOk('');
+    if (!refund.paymentId || !refund.amount) { setError('Payment ID + amount required.'); return; }
+    try {
+      const r = unwrapObj(await billingApi.refund(refund.paymentId, Number(refund.amount), refund.reason || 'requested'));
+      if (r?.id) setRefunds((x) => [r, ...x]);
+      setOk('Refund processed — ledger updated.'); setRefund({ paymentId: '', amount: '', reason: '' }); setShowRefund(false); load(); syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const filteredPay = payments.filter((p) => !q.trim() || `${p.id} ${p.invoiceId} ${p.orgId} ${p.status}`.toLowerCase().includes(q.toLowerCase()));
+  return (
+    <div className={cardCls}>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-base font-extrabold text-slate-900">Billing — Payments / Refunds / Reconciliation</h3>
+          <div className="flex gap-2">
+            <ExportButton filename="payments.csv" rows={filteredPay} columns={['id', 'invoiceId', 'orgId', 'amount', 'status']} />
+            <button type="button" onClick={() => setShowRefund(true)} className={btnDark}>Refund</button>
+            <button type="button" onClick={() => setShowPay(true)} className={btnPrimary}>Record payment</button>
+          </div>
+        </div>
+        <input className={inputCls} placeholder="Search payment ID, invoice, org, status…" value={q} onChange={(e) => setQ(e.target.value)} />
+      </div>
+      {error && <PanelError message={error} onRetry={load} />}
+      {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
+      {recon && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+          {[['Invoiced', `₹${Number(recon.totalInvoiced || 0).toLocaleString('en-IN')}`], ['Paid', `₹${Number(recon.totalPaid || 0).toLocaleString('en-IN')}`], ['Outstanding', `₹${Number(recon.outstanding || 0).toLocaleString('en-IN')}`], ['Docs', `${recon.invoices || 0} inv / ${recon.payments || 0} pay`]].map(([k, v]) => (
+            <div key={k as string} className="p-3 rounded-2xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="text-base font-extrabold mt-0.5">{v}</div></div>
+          ))}
+        </div>
+      )}
       <Modal open={showPay} onClose={() => setShowPay(false)} title="Record payment" subtitle="Idempotency key auto-generated per submission">
         <form onSubmit={payNow} className="space-y-3">
           <Field label="Invoice ID *"><input className={kitInput} value={pay.invoiceId} onChange={(e) => setPay({ ...pay, invoiceId: e.target.value })} /></Field>
@@ -1799,41 +1956,19 @@ export function BillingPanel() {
       )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="space-y-2">
-          <div className="text-xs font-extrabold text-slate-700">Invoices ({filteredInv.length}/{invoices.length}) — Void / Credit</div>
-          {filteredInv.map((i) => {
-            const overdue = Number(i.balance || 0) > 0 && i.dueDate && new Date(i.dueDate) < new Date() && !['Paid', 'Void', 'Credited'].includes(i.status);
-            return (
-            <div key={i.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
-              <div className="font-bold flex items-center justify-between gap-2">
-                <span className="truncate">{i.number || i.id} • ₹{i.total} • bal ₹{i.balance} • {i.status}{overdue ? ' • OVERDUE' : ''}</span>
-                <RowMenu items={[
-                  { label: 'View document', onSelect: () => openDocument(i) },
-                  ...(i.status === 'Draft' ? [{ label: 'Issue now', onSelect: () => issueInvoice(i.id) }] : []),
-                  { label: 'Void…', danger: true, onSelect: () => { setVoidFor(i); setVoidReason(''); } },
-                  { label: 'Credit note…', onSelect: () => { setCreditFor(i); setCreditForm({ amount: '', reason: '' }); } },
-                ]} />
-              </div>
-              <div className="text-slate-500 font-medium">
-                issued {String(i.issueDate || i.createdAt || '').slice(0, 10)} • due {String(i.dueDate || '').slice(0, 10)} • sub ₹{i.subtotal} − disc ₹{i.discount} + tax ₹{i.tax}
-                {Array.isArray(i.lines) && i.lines.length > 0 && ` • ${i.lines.length} line(s): ${i.lines.map((l: any) => `${l.label}×${l.qty}`).join(', ')}`}
-              </div>
-            </div>
-            );
-          })}
-          {filteredInv.length === 0 && <div className="text-xs text-slate-500">No invoices match.</div>}
-        </div>
-        <div className="space-y-2">
-          <div className="text-xs font-extrabold text-slate-700">Payments ({payments.length})</div>
-          {payments.map((p) => (
+          <div className="text-xs font-extrabold text-slate-700">Payments ({filteredPay.length}/{payments.length})</div>
+          {filteredPay.map((p) => (
             <div key={p.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
               <div className="font-bold">{p.id} • ₹{p.amount} • {p.status}{p.refundedAmount ? ` • refunded ₹${p.refundedAmount}` : ''}</div>
               <div className="text-slate-500 font-medium">{p.method || ''}{p.provider ? ` via ${p.provider}` : ''}{p.reference ? ` • ref ${p.reference}` : ''} • {String(p.transactionDate || p.createdAt || '').slice(0, 10)}</div>
             </div>
           ))}
-          {payments.length === 0 && <div className="text-xs text-slate-500">No payments.</div>}
+          {filteredPay.length === 0 && <div className="text-xs text-slate-500">No payments match.</div>}
+        </div>
+        <div className="space-y-2">
           {refunds.length > 0 && (
             <>
-              <div className="text-xs font-extrabold text-slate-700 pt-2">Refunds ({refunds.length})</div>
+              <div className="text-xs font-extrabold text-slate-700">Refunds ({refunds.length})</div>
               {refunds.map((r) => (
                 <div key={r.id} className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs font-bold">{r.id} • payment {r.paymentId} • ₹{r.amount} • {r.status}</div>
               ))}
@@ -2078,6 +2213,17 @@ export function CommissionsPanel() {
   const [tplForm, setTplForm] = useState(emptyTpl);
   const [editingTpl, setEditingTpl] = useState('');
   const [showTemplate, setShowTemplate] = useState(false);
+  const [tplBodySeed, setTplBodySeed] = useState('');
+  const [tplPreviewHtml, setTplPreviewHtml] = useState(false);
+  const [tplPreview, setTplPreview] = useState<any>(null);
+  const tplBodyRef = useRef<HTMLDivElement>(null);
+  const tplCmd = (cmd: string, val?: string) => { tplBodyRef.current?.focus(); document.execCommand(cmd, false, val); };
+  const tplToken = (tok: string) => { tplBodyRef.current?.focus(); document.execCommand('insertHTML', false, `{{${tok}}}`); };
+  const openTplCreate = () => { setTplForm(emptyTpl); setEditingTpl(''); setTplBodySeed('<h2>Agreement</h2><p>Between <strong>NexaTalent IT Solutions</strong> (“Platform”) and <strong>{{company_name}}</strong> (“Company”), effective <strong>{{date}}</strong>.</p>'); setTplPreviewHtml(false); setShowTemplate(true); };
+  const openTplEdit = (t: any) => {
+    setTplForm({ name: t.name, orgId: t.orgId || '', hiringType: t.hiringType || '', rateMin: t.rateMin ?? '', rateMax: t.rateMax ?? '', paymentTermsDays: String(t.paymentTermsDays ?? 30), replacementDays: String(t.replacementDays ?? 90), gstNote: t.gstNote || '', ownershipClause: t.ownershipClause || '', duplicatePolicy: t.duplicatePolicy || '', cancellationTerms: t.cancellationTerms || '' });
+    setTplBodySeed(t.bodyHtml || ''); setEditingTpl(t.id); setTplPreviewHtml(false); setShowTemplate(true);
+  };
   const saveTemplate = async (e: React.FormEvent) => {
     e.preventDefault(); if (!tplForm.name.trim()) return;
     try {
@@ -2088,6 +2234,7 @@ export function CommissionsPanel() {
         rateMax: tplForm.rateMax === '' ? undefined : Number(tplForm.rateMax),
         paymentTermsDays: Number(tplForm.paymentTermsDays) || 30, replacementDays: Number(tplForm.replacementDays) || 90,
         gstNote: tplForm.gstNote, ownershipClause: tplForm.ownershipClause, duplicatePolicy: tplForm.duplicatePolicy, cancellationTerms: tplForm.cancellationTerms,
+        bodyHtml: tplBodyRef.current?.innerHTML || undefined,
       };
       const saved = editingTpl ? unwrapObj(await billingApi.updateTemplate(editingTpl, body)) : unwrapObj(await billingApi.createTemplate(body));
       if (saved?.id) setTemplates((x) => (editingTpl ? x.map((t) => (t.id === editingTpl ? saved : t)) : [saved, ...x]));
@@ -2101,6 +2248,7 @@ export function CommissionsPanel() {
     } catch (e) { setError(errMsg(e)); }
   };
   const [loadError, setLoadError] = useState(0);
+  const canTemplates = useCan('manage_billing');
   const load = async () => {
     setError('');
     try {
@@ -2164,6 +2312,31 @@ export function CommissionsPanel() {
     } catch (e) { setDupMsg(errMsg(e)); }
   };
   const legOf = (c: any) => (c.agencyId ? 'payable' : 'receivable');
+  const [commDetail, setCommDetail] = useState<any>(null);
+  const [agDetail, setAgDetail] = useState<any>(null);
+  const [invoiceFor, setInvoiceFor] = useState<any>(null);
+  const doInvoice = async (c: any) => {
+    const res = unwrapObj(await billingApi.commissionInvoice(c.id)) as any;
+    const updated = res?.commission || { ...c, invoiceId: res?.invoice?.id };
+    setCommissions((x) => x.map((y) => (y.id === c.id ? { ...y, ...updated } : y)));
+    if (commDetail?.id === c.id) setCommDetail((d: any) => ({ ...d, ...updated }));
+    setInvoiceFor(null);
+    syncAll();
+  };
+  const commMenuFor = (c: any) => (
+    <RowMenu label={`Commission ${c.id}`} items={[
+      { label: 'View detail', onSelect: () => setCommDetail(c) },
+      ...(c.approvalStatus !== 'Approved' ? [{ label: 'Approve commission', onSelect: () => approve(c.id) }] : []),
+      ...(c.approvalStatus === 'Approved' && !c.invoiceId ? [{ label: 'Generate invoice…', onSelect: () => setInvoiceFor(c) }] : []),
+      ...(c.approvalStatus === 'Approved' && c.paymentStatus !== 'Paid' ? [{ label: 'Process payout', onSelect: () => setPayoutId(c.id) }] : []),
+      { label: 'Verify uniqueness…', onSelect: () => checkDup(c) },
+      { label: 'Adjustments', onSelect: async () => {
+        setAdjustFor(c); setAdjustForm({ amount: '', reason: '' });
+        try { setAdjustments(unwrapList(await workforceApi.adjustments(c.id))); }
+        catch (e) { setError(errMsg(e)); }
+      } },
+    ]} />
+  );
   const filteredComms = commissions.filter((c) => {
     if (leg && legOf(c) !== leg) return false;
     return !cq.trim() || `${c.id} ${c.orgId} ${c.agencyId} ${c.approvalStatus}`.toLowerCase().includes(cq.toLowerCase());
@@ -2205,15 +2378,18 @@ export function CommissionsPanel() {
       {dupMsg && <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs font-bold">{dupMsg}</div>}
       <div className="flex items-center justify-between gap-2">
         <div className="text-xs font-extrabold text-slate-700">Agreement templates — company ↔ platform ({templates.length})</div>
-        <button type="button" onClick={() => { setTplForm(emptyTpl); setEditingTpl(''); setShowTemplate(true); }} className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">+ Template</button>
+        {canTemplates ? <button type="button" onClick={openTplCreate} className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">+ Template</button> : null}
       </div>
       {templates.map((t: any) => (
         <div key={t.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
           <span className="min-w-0 truncate">{t.name} v{t.version} • {t.status}{t.orgId ? ` • ${t.orgId}` : ' • global'} • pay ≤{t.paymentTermsDays}d • repl {t.replacementDays}d{t.history?.length ? ` • ${t.history.length} prior version(s)` : ''}</span>
           <RowMenu label={`Template ${t.id}`} items={[
-            { label: 'Edit / new version…', onSelect: () => { setTplForm({ name: t.name, orgId: t.orgId || '', hiringType: t.hiringType || '', rateMin: t.rateMin ?? '', rateMax: t.rateMax ?? '', paymentTermsDays: String(t.paymentTermsDays ?? 30), replacementDays: String(t.replacementDays ?? 90), gstNote: t.gstNote || '', ownershipClause: t.ownershipClause || '', duplicatePolicy: t.duplicatePolicy || '', cancellationTerms: t.cancellationTerms || '' }); setEditingTpl(t.id); setShowTemplate(true); } },
-            ...(t.status === 'Draft' ? [{ label: 'Activate', onSelect: () => tplStatus(t.id, 'Active') }] : []),
-            ...(t.status === 'Active' ? [{ label: 'Archive', danger: true, onSelect: () => tplStatus(t.id, 'Archived') }] : []),
+            { label: 'Preview / download…', onSelect: () => setTplPreview(t) },
+            ...(canTemplates ? [
+              { label: 'Edit / new version…', onSelect: () => openTplEdit(t) },
+              ...(t.status === 'Draft' ? [{ label: 'Activate', onSelect: () => tplStatus(t.id, 'Active') }] : []),
+              ...(t.status === 'Active' ? [{ label: 'Archive', danger: true, onSelect: () => tplStatus(t.id, 'Archived') }] : []),
+            ] : []),
           ]} />
         </div>
       ))}
@@ -2230,11 +2406,48 @@ export function CommissionsPanel() {
           <div className="sm:col-span-2"><Field label="Candidate ownership"><textarea rows={2} className={kitInput} value={tplForm.ownershipClause} onChange={(e) => setTplForm({ ...tplForm, ownershipClause: e.target.value })} /></Field></div>
           <div className="sm:col-span-2"><Field label="Duplicate policy"><textarea rows={2} className={kitInput} value={tplForm.duplicatePolicy} onChange={(e) => setTplForm({ ...tplForm, duplicatePolicy: e.target.value })} /></Field></div>
           <div className="sm:col-span-2"><Field label="Cancellation terms"><textarea rows={2} className={kitInput} value={tplForm.cancellationTerms} onChange={(e) => setTplForm({ ...tplForm, cancellationTerms: e.target.value })} /></Field></div>
+          <div className="sm:col-span-2 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-extrabold text-slate-700">Document body (Word-style) — saved as a new version</div>
+              <button type="button" onClick={() => setTplPreviewHtml((v) => !v)} className="text-[11px] font-bold text-blue-600 underline">{tplPreviewHtml ? 'Back to edit' : 'Preview filled document'}</button>
+            </div>
+            {!tplPreviewHtml ? (
+              <>
+                <div className="flex flex-wrap gap-1 p-1.5 rounded-xl bg-slate-100 border border-slate-200">
+                  {[['H2', 'formatBlock', '<h2>'], ['H3', 'formatBlock', '<h3>'], ['B', 'bold'], ['I', 'italic'], ['U', 'underline'], ['• List', 'insertUnorderedList'], ['1. List', 'insertOrderedList']].map(([label, cmd, val]) => (
+                    <button key={label as string} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => tplCmd(cmd as string, val as string)}
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-[#087BFF]">{label}</button>
+                  ))}
+                  <select aria-label="Insert placeholder" className="px-2 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px]" defaultValue="" onChange={(e) => { if (e.target.value) { tplToken(e.target.value); e.target.value = ''; } }}>
+                    <option value="">+ {'{{field}}'}</option>
+                    {TEMPLATE_TOKENS.map((tok) => <option key={tok} value={tok}>{`{{${tok}}}`}</option>)}
+                  </select>
+                </div>
+                <div ref={tplBodyRef} contentEditable suppressContentEditableWarning
+                  key={editingTpl || 'new'}
+                  className="min-h-[280px] p-4 rounded-xl bg-white border border-slate-200 text-xs leading-relaxed focus:outline-none focus:border-[#087BFF]"
+                  dangerouslySetInnerHTML={{ __html: tplBodySeed }} />
+              </>
+            ) : (
+              <div className="p-4 rounded-xl bg-white border border-slate-200 text-xs leading-relaxed max-h-[320px] overflow-y-auto" data-lenis-prevent
+                dangerouslySetInnerHTML={{ __html: fillTemplate({ ...tplForm, rateMin: tplForm.rateMin === '' ? undefined : Number(tplForm.rateMin), rateMax: tplForm.rateMax === '' ? undefined : Number(tplForm.rateMax), bodyHtml: tplBodyRef.current?.innerHTML || tplBodySeed }, tplForm.orgId || undefined) }} />
+            )}
+          </div>
           <div className="sm:col-span-2 flex justify-end gap-2">
             <button type="button" onClick={() => setShowTemplate(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
             <button className={btnPrimary}>{editingTpl ? 'Save as new version' : 'Create template'}</button>
           </div>
         </form>
+      </Modal>
+      <Modal open={tplPreview !== null} onClose={() => setTplPreview(null)} title={tplPreview?.name || ''} subtitle={`${tplPreview?.id || ''} • v${tplPreview?.version || ''} • ${tplPreview?.status || ''}`} wide>
+        <div className="space-y-3">
+          <div className="p-5 rounded-2xl bg-white border border-slate-200 text-xs leading-relaxed max-h-[52vh] overflow-y-auto" data-lenis-prevent
+            dangerouslySetInnerHTML={{ __html: tplPreview ? fillTemplate(tplPreview) : '' }} />
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => tplPreview && downloadDocFile(`${tplPreview.name || 'agreement'}-v${tplPreview.version || 1}`, tplPreview.name || 'Agreement', fillTemplate(tplPreview))} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Download .doc (Word)</button>
+            <button type="button" onClick={() => tplPreview && printHtmlDocument(tplPreview.name || 'Agreement', fillTemplate(tplPreview))} className="px-4 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs">Print / Save PDF</button>
+          </div>
+        </div>
       </Modal>
       <Modal open={showAgreement} onClose={() => setShowAgreement(false)} title="New commission agreement" subtitle="Rate is validated against the hiring-type slab; templates carry payment, replacement and GST terms">
         <form onSubmit={create} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2259,39 +2472,75 @@ export function CommissionsPanel() {
       {agreements.map((a) => (
         <div key={a.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
           <span className="min-w-0 truncate">{a.id} • {a.orgId} • {a.hiringType || '—'} • {a.rate}% • trigger {a.trigger} • pay ≤{a.paymentTermsDays || 30}d • repl {a.replacementDays ?? 90}d • {a.status}{a.companyAccepted ? ' • ✓ company accepted' : ' • pending company acceptance'}</span>
-          {!a.companyAccepted ? <button type="button" onClick={() => accept(a.id)} className="text-[11px] font-bold text-blue-600 underline shrink-0">Mark accepted</button> : null}
+          <div className="flex items-center gap-1 shrink-0">
+            {!a.companyAccepted ? <button type="button" onClick={() => accept(a.id)} className="text-[11px] font-bold text-blue-600 underline">Mark accepted</button> : null}
+            <RowMenu label={`Agreement ${a.id}`} items={[{ label: 'View terms', onSelect: () => setAgDetail(a) }]} />
+          </div>
         </div>
       ))}
+      <Modal open={agDetail !== null} onClose={() => setAgDetail(null)} title={`Agreement ${agDetail?.id || ''}`} subtitle={`${agDetail?.orgId || ''} • ${agDetail?.hiringType || ''} @ ${agDetail?.rate || ''}%`}>
+        <div className="space-y-2 text-xs">
+          {[['Trigger', agDetail?.trigger], ['Payment window', agDetail?.paymentTermsDays ? `Within ${agDetail.paymentTermsDays} days of joining` : '—'], ['Replacement', agDetail?.replacementDays !== undefined ? `${agDetail.replacementDays} days — ${agDetail?.replacementTerms || 'standard conditions'}` : '—'], ['GST', agDetail?.gstApplicable === false ? 'Not applicable' : `Extra as applicable${agDetail?.taxTreatment ? ` — ${agDetail.taxTreatment}` : ''}`], ['Ownership', agDetail?.ownershipClause || '—'], ['Duplicates', agDetail?.duplicatePolicy || '—'], ['Cancellation', agDetail?.cancellationTerms || '—'], ['Template', agDetail?.templateId ? `${agDetail.templateId} v${agDetail.templateVersion || ''}` : 'custom'], ['Company acceptance', agDetail?.companyAccepted ? `✓ by ${agDetail.acceptedBy} @ ${String(agDetail.acceptedAt || '').slice(0, 16).replace('T', ' ')}` : 'pending']].map(([k, v]) => (
+            <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1">{String(v ?? '—')}</div></div>
+          ))}
+        </div>
+      </Modal>
       <div className="text-xs font-extrabold text-slate-700">Commissions ({filteredComms.length}/{commissions.length})</div>
       {filteredComms.length === 0 && <EmptyState title="No commissions yet" message="Placement triggers auto-create commission records from approved agreements." />}
-      {filteredComms.map((c) => {
-        const stage = stageOf(c);
-        return (
-        <div key={c.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <span className="min-w-0 truncate">{c.id} • {c.agencyId || c.orgId} • trig {c.trigger || '—'} • gross ₹{c.gross} • total ₹{c.total || c.net} • {c.approvalStatus}/{c.paymentStatus}</span>
-            <RowMenu items={[
-              ...(c.approvalStatus !== 'Approved' ? [{ label: 'Approve commission', onSelect: () => approve(c.id) }] : []),
-              ...(c.approvalStatus === 'Approved' && c.paymentStatus !== 'Paid' ? [{ label: 'Process payout', onSelect: () => setPayoutId(c.id) }] : []),
-              { label: 'Verify uniqueness…', onSelect: () => checkDup(c) },
-              { label: 'Adjustments', onSelect: async () => {
-                setAdjustFor(c); setAdjustForm({ amount: '', reason: '' });
-                try { setAdjustments(unwrapList(await workforceApi.adjustments(c.id))); }
-                catch (e) { setError(errMsg(e)); }
-              } },
-            ]} />
-          </div>
-          <div className="flex items-center gap-1" aria-label={`Lifecycle: ${STAGES[stage]}`}>
-            {STAGES.map((s, i) => (
-              <span key={s} className="flex items-center gap-1 flex-1">
-                <span className={`h-1.5 rounded-full flex-1 ${i <= stage ? 'bg-emerald-500' : 'bg-slate-200'}`} />
-              </span>
-            ))}
-            <span className="text-[10px] text-slate-500 ml-1">{STAGES[stage]}</span>
-          </div>
+      {filteredComms.length > 0 && (<>
+        <div className="space-y-2 md:hidden">
+          {filteredComms.map((c) => {
+            const stage = stageOf(c);
+            return (
+            <div key={c.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-extrabold text-slate-900 text-sm truncate">{c.id}</div>
+                  <div className="font-mono text-[11px] text-slate-500">{c.agencyId ? `payable → ${c.agencyId}` : `receivable ← ${c.orgId}`} • {c.candidateEmail || ''}</div>
+                </div>
+                {commMenuFor(c)}
+              </div>
+              <div className="font-bold text-slate-700">Basis ₹{Number(c.feeBasis || 0).toLocaleString('en-IN')} × {c.rate}% = gross ₹{Number(c.gross || 0).toLocaleString('en-IN')} + GST ₹{Number(c.tax || 0).toLocaleString('en-IN')} = <strong>₹{Number(c.total || c.net || 0).toLocaleString('en-IN')}</strong></div>
+              <div className="flex flex-wrap gap-1">
+                <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">{c.approvalStatus}</span>
+                <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-bold text-[11px]">{c.paymentStatus}</span>
+                {c.invoiceId ? <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px]">invoiced {c.invoiceId}</span> : null}
+              </div>
+              <div className="flex items-center gap-1" aria-label={`Lifecycle: ${STAGES[stage]}`}>
+                {STAGES.map((s, i) => (
+                  <span key={s} className="flex items-center gap-1 flex-1">
+                    <span className={`h-1.5 rounded-full flex-1 ${i <= stage ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+                  </span>
+                ))}
+                <span className="text-[10px] text-slate-500 ml-1">{STAGES[stage]}</span>
+              </div>
+            </div>
+            );
+          })}
         </div>
-        );
-      })}
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
+          <table className="w-full text-left text-xs min-w-[1080px]">
+            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
+              <th className="px-4 py-3">Commission</th><th className="px-4 py-3">Leg</th><th className="px-4 py-3">Candidate</th><th className="px-4 py-3 text-right">Basis × Rate</th><th className="px-4 py-3 text-right">Gross</th><th className="px-4 py-3 text-right">GST</th><th className="px-4 py-3 text-right">Total</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
+            </tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredComms.map((c) => (
+                <tr key={c.id} className="hover:bg-slate-50/70">
+                  <td className="px-4 py-3"><div className="font-bold text-slate-900">{c.id}</div><div className="font-mono text-[11px] text-slate-500">trig {c.trigger || '—'}{c.invoiceId ? ` • inv ${c.invoiceId}` : ''}</div></td>
+                  <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${c.agencyId ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>{c.agencyId ? `Payable → ${c.agencyId}` : `Receivable ← ${c.orgId}`}</span></td>
+                  <td className="px-4 py-3 font-medium">{c.candidateEmail || '—'}</td>
+                  <td className="px-4 py-3 text-right font-mono">₹{Number(c.feeBasis || 0).toLocaleString('en-IN')} × {c.rate}%</td>
+                  <td className="px-4 py-3 text-right font-bold">₹{Number(c.gross || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-4 py-3 text-right">₹{Number(c.tax || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-4 py-3 text-right font-extrabold">₹{Number(c.total || c.net || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-4 py-3"><span className="font-bold">{c.approvalStatus}</span><span className="text-slate-500"> / {c.paymentStatus}</span></td>
+                  <td className="px-4 py-3"><div className="flex justify-end">{commMenuFor(c)}</div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </>)}
       <div className="text-xs font-extrabold text-slate-700">Payouts ({payouts.length})</div>
       {payouts.map((p) => (
         <div key={p.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold">{p.id} • ₹{p.amount} • {p.status}</div>
@@ -2304,6 +2553,32 @@ export function CommissionsPanel() {
         onConfirm={async () => { await payout(payoutId); setPayoutId(''); }}
         onCancel={() => setPayoutId('')}
       />
+      <ActionConfirm
+        open={invoiceFor !== null}
+        onCancel={() => setInvoiceFor(null)}
+        title={`Generate invoice — ${invoiceFor?.id || ''}`}
+        subtitle={`${invoiceFor?.candidateEmail || ''} • ${invoiceFor?.jobId || ''}`}
+        why={['Commission is Approved', 'One invoice per commission — duplicates are blocked (409)']}
+        steps={[`Invoice line: fee basis ₹${Number(invoiceFor?.feeBasis || 0).toLocaleString('en-IN')} × ${invoiceFor?.rate}%`, 'GST 18% added extra, due date = trigger + payment terms', 'Commission links to the invoice id']}
+        consequences={['Invoice is Issued immediately (billable)', 'Amend later via void / credit note only']}
+        confirmLabel="Generate invoice"
+        tone="dark"
+        onConfirm={async () => { if (invoiceFor) await doInvoice(invoiceFor); }}
+      />
+      {commDetail !== null && (
+        <DetailDrawer title={`Commission ${commDetail.id}`} subtitle={`${commDetail.agencyId ? `Payable → ${commDetail.agencyId}` : `Receivable ← ${commDetail.orgId}`} • ${commDetail.approvalStatus} / ${commDetail.paymentStatus}`} onClose={() => setCommDetail(null)}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            {[['Fee basis (annual CTC)', `₹${Number(commDetail.feeBasis || 0).toLocaleString('en-IN')}`], ['Rate', `${commDetail.rate}%`], ['Gross', `₹${Number(commDetail.gross || 0).toLocaleString('en-IN')}`], ['Adjustments', `₹${Number(commDetail.adjustments || 0).toLocaleString('en-IN')}`], ['GST (18%)', `₹${Number(commDetail.tax || 0).toLocaleString('en-IN')}`], ['Total', `₹${Number(commDetail.total || commDetail.net || 0).toLocaleString('en-IN')}`], ['Trigger', `${commDetail.trigger || '—'} @ ${String(commDetail.triggerDate || '').slice(0, 10)}`], ['Agreement', commDetail.agreementId || '—'], ['Placement / Application', commDetail.placementId || commDetail.applicationId || '—'], ['Candidate', commDetail.candidateEmail || '—'], ['Job', commDetail.jobId || '—'], ['Invoice', commDetail.invoiceId || 'not generated']].map(([k, v]) => (
+              <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—')}</div></div>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2 pt-1">
+            {commDetail.approvalStatus !== 'Approved' ? <button type="button" onClick={() => { approve(commDetail.id); setCommDetail(null); }} className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-xs">Approve commission</button> : null}
+            {commDetail.approvalStatus === 'Approved' && !commDetail.invoiceId ? <button type="button" onClick={() => { setInvoiceFor(commDetail); }} className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs">Generate invoice…</button> : null}
+            {commDetail.approvalStatus === 'Approved' && commDetail.paymentStatus !== 'Paid' ? <button type="button" onClick={() => { setPayoutId(commDetail.id); setCommDetail(null); }} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">Process payout</button> : null}
+          </div>
+        </DetailDrawer>
+      )}
       <Modal open={adjustFor !== null} onClose={() => setAdjustFor(null)} title={`Adjustments — ${adjustFor?.id || ''}`} subtitle="Adjustments recompute gross, tax and total">
         <div className="space-y-3">
           {adjustments.length === 0 && <div className="text-[11px] text-slate-500 font-medium">No adjustments yet.</div>}

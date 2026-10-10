@@ -113,7 +113,7 @@ function seed(): DbShape {
       { hiringType: 'Leadership / executive search', rateMin: 12, rateMax: 15, note: '12%–15% or a negotiated retained fee', retainedAllowed: true, updatedAt: now, updatedBy: 'seed' },
       { hiringType: 'Bulk hiring', rateMin: 0, rateMax: 0, note: 'Negotiated rate based on volume', negotiated: true, updatedAt: now, updatedBy: 'seed' },
     ],
-    agreementTemplates: [], invoiceReminders: [],
+    agreementTemplates: [standardTemplate(now)], invoiceReminders: [],
     payouts: [], reconciliations: [],
     leads: [
       { id: 'LEAD-001', contactName: 'Rohit Shetty', companyName: 'AutoLogistics AI Global', email: 'careers@autologistics.ai', stage: 'Qualified', owner: 'kiran@nexatalent.com', value: 850000, currency: 'INR', nextFollowUp: '2026-10-12', createdAt: now },
@@ -144,6 +144,37 @@ function seed(): DbShape {
   };
 }
 
+/** Standard company ↔ platform placement terms (seeded document, editable in-app). */
+function standardTemplate(now: string): any {
+  return {
+    id: 'AGT-STD-001', name: 'Standard Placement Terms', version: 1, status: 'Active', history: [],
+    paymentTermsDays: 30, replacementDays: 90,
+    gstNote: 'GST charged extra as applicable.',
+    ownershipClause: 'Candidate ownership rests with the introducing party for 90 days from submission; the client hires only introduced candidates through the platform.',
+    duplicatePolicy: 'Duplicate profiles are rejected; the earliest valid submission owns the candidate.',
+    cancellationTerms: 'Either party may cancel with written notice; fees already triggered remain payable.',
+    bodyHtml: [
+      '<h2>Placement Services Agreement</h2>',
+      '<p>Between <strong>NexaTalent IT Solutions</strong> (“Platform”) and <strong>{{company_name}}</strong> (“Company”), effective <strong>{{date}}</strong>.</p>',
+      '<h3>1. Scope</h3>',
+      '<p>Platform shall source, screen and submit candidates for the Company’s hiring requirements published on NexaTalent.</p>',
+      '<h3>2. Commercials</h3>',
+      '<table border="1" cellpadding="6" cellspacing="0" width="100%"><tr><th>Hiring type</th><th>Fee (% of annual CTC)</th></tr><tr><td>Junior IT roles</td><td>8.33%</td></tr><tr><td>Mid-level IT roles</td><td>8.33%–10%</td></tr><tr><td>Senior / niche technology roles</td><td>10%–12%</td></tr><tr><td>Leadership / executive search</td><td>12%–15% or negotiated retained fee</td></tr><tr><td>Bulk hiring</td><td>Negotiated rate based on volume</td></tr></table>',
+      '<p>Agreed rate for this engagement: <strong>{{rate_percent}}%</strong> of annual CTC ({{hiring_type}}).</p>',
+      '<h3>3. Payment</h3>',
+      '<p>Fees are payable within <strong>{{payment_days}} days</strong> of the candidate’s joining date. {{gst_note}}</p>',
+      '<h3>4. Replacement</h3>',
+      '<p>Platform offers a free replacement within <strong>{{replacement_days}} days</strong> of joining, subject to the defined conditions (resignation or termination for non-performance, prompt written notice by the Company).</p>',
+      '<h3>5. Candidate ownership</h3>',
+      '<p>{{ownership}}</p>',
+      '<h3>6. Duplicates &amp; cancellations</h3>',
+      '<p>{{duplicates}}</p><p>{{cancellation}}</p>',
+      '<h3>7. Signatures</h3>',
+      '<table border="0" cellpadding="6" cellspacing="0" width="100%"><tr><td>For Platform:<br/><br/>___________________<br/>Authorised signatory</td><td>For Company:<br/><br/>___________________<br/>Authorised signatory</td></tr></table>',
+    ].join('\n'),
+    createdBy: 'seed', createdAt: now,
+  };
+}
 let db: DbShape | null = null;
 
 /**
@@ -172,6 +203,10 @@ export function loadDb(): DbShape {
       if ((db!.agencyProfiles || []).length === 0) db!.agencyProfiles = fresh.agencyProfiles;
       if (!Array.isArray((db as any).candidateInfoRequests)) (db as any).candidateInfoRequests = [];
       if (!Array.isArray((db as any).privacyRequests)) (db as any).privacyRequests = [];
+      // Backfill the standard agreement template for DBs seeded before it existed.
+      if (Array.isArray((db as any).agreementTemplates) && !(db as any).agreementTemplates.find((t: any) => t.id === 'AGT-STD-001')) {
+        (db as any).agreementTemplates.unshift(standardTemplate(new Date().toISOString()));
+      }
       // Backfill filterable requirement fields on older requisitions.
       for (const r of (db!.requisitions as any[])) {
         const ref = (fresh.requisitions as any[]).find((f) => f.id === r.id);

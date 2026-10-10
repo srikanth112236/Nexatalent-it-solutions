@@ -5,7 +5,7 @@ import { apiClient } from '../../shared/api-client';
 import { Users, ShieldCheck, Plus, Lock, Key } from 'lucide-react';
 import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
 import {
-  SubscriptionsPanel, BillingPanel, CommissionsPanel, LeadsPanel, PerformancePanel,
+  SubscriptionsPanel, BillingPanel, InvoicesPanel, CommissionsPanel, LeadsPanel, PerformancePanel,
   ReportsPanel, NotificationsPanel, AdminControlsPanel, RequisitionsPanel, ApplicationsPanel,
   CandidatesPanel, AgencyPanel, BranchesPanel, JobsPanel, SupportPanel,
   InterviewsPanel, OffersPlacementsPanel,
@@ -27,6 +27,7 @@ const navItems = [
   { label: 'Interviews', path: '/superadmin/interviews', group: 'Recruitment' },
   { label: 'Placements', path: '/superadmin/placements', group: 'Recruitment' },
   { label: 'Subscriptions & Plans', path: '/superadmin/subscriptions', group: 'Commercial' },
+  { label: 'Invoices', path: '/superadmin/invoices', group: 'Commercial' },
   { label: 'Billing & Payments', path: '/superadmin/billing', group: 'Commercial' },
   { label: 'Commissions & Payouts', path: '/superadmin/commissions', group: 'Commercial' },
   { label: 'Leads & Pipeline', path: '/superadmin/leads', group: 'Sales' },
@@ -56,7 +57,8 @@ export function SuperAdminPortal() {
     if (p.includes('/interviews')) return 'interviews';
     if (p.includes('/placements') || p.includes('/offers')) return 'placements';
     if (p.includes('/subscriptions')) return 'subscriptions';
-    if (p.includes('/billing') || p.includes('/payments') || p.includes('/invoices')) return 'billing';
+    if (p.includes('/invoices')) return 'invoices';
+    if (p.includes('/billing') || p.includes('/payments')) return 'billing';
     if (p.includes('/commissions') || p.includes('/payouts')) return 'commissions';
     if (p.includes('/leads') || p.includes('/pipeline')) return 'leads';
     if (p.includes('/performance') || p.includes('/targets')) return 'performance';
@@ -482,6 +484,7 @@ export function SuperAdminPortal() {
         {currentTab === 'interviews' && <InterviewsPanel />}
         {currentTab === 'placements' && <OffersPlacementsPanel />}
         {currentTab === 'subscriptions' && <SubscriptionsPanel />}
+        {currentTab === 'invoices' && <InvoicesPanel />}
         {currentTab === 'billing' && <BillingPanel />}
         {currentTab === 'commissions' && <CommissionsPanel />}
         {currentTab === 'leads' && <LeadsPanel />}

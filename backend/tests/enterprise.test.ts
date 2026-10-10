@@ -192,6 +192,24 @@ describe('commercial terms: slabs, templates, reminders', () => {
     const acc = await request(app).patch(`/api/v1/commission-agreements/${inst.body.data.id}/accept`).set(auth(superToken)).send({});
     expect(acc.body.data.companyAccepted).toBe(true);
   });
+  it('generates exactly one invoice per approved commission', async () => {
+    const ag = await request(app).post('/api/v1/commission-agreements').set(auth(superToken)).send({ orgId: 'TNT-9011', hiringType: 'Mid-level IT roles', rate: 9 });
+    const db = (await import('../src/db/store.js')).loadDb();
+    db.commissions.unshift({ id: 'COM-TEST-1', agreementId: ag.body.data.id, orgId: 'TNT-9011', candidateEmail: 'loop@test.com', jobId: 'JOB-9901', trigger: 'Joined', triggerDate: new Date().toISOString(), feeBasis: 1000000, rate: 9, gross: 90000, adjustments: 0, tax: 16200, total: 106200, net: 106200, approvalStatus: 'Approved', paymentStatus: 'Unpaid', createdAt: new Date().toISOString() });
+    const inv = await request(app).post('/api/v1/commissions/COM-TEST-1/invoice').set(auth(superToken)).send({});
+    expect(inv.status).toBe(201);
+    expect(inv.body.data.invoice.total).toBe(106200);
+    expect(inv.body.data.invoice.agreementId).toBe(ag.body.data.id);
+    const dup = await request(app).post('/api/v1/commissions/COM-TEST-1/invoice').set(auth(superToken)).send({});
+    expect(dup.status).toBe(409);
+    db.commissions.splice(db.commissions.findIndex((c: any) => c.id === 'COM-TEST-1'), 1);
+  });
+  it('ships a seeded active template with printable HTML body', async () => {
+    const all = await request(app).get('/api/v1/agreement-templates').set(auth(superToken));
+    const std = all.body.data.find((t: any) => t.id === 'AGT-STD-001');
+    expect(std?.status).toBe('Active');
+    expect(std?.bodyHtml).toMatch(/Placement Services Agreement/);
+  });
   it('runs invoice reminders idempotently for overdue balances', async () => {
     const inv = await request(app).post('/api/v1/invoices').set(auth(superToken)).send({ orgId: 'TNT-9011', lines: [{ label: 'Placement fee', qty: 1, unit: 50000 }], dueDate: '2020-01-01' });
     expect(inv.status).toBe(201);

@@ -291,6 +291,7 @@ export const agreementTemplateSchema = z.object({
   ownershipClause: z.string().max(2000).default('Candidate ownership rests with the introducing party for 90 days from submission; the client hires only introduced candidates through the platform.'),
   duplicatePolicy: z.string().max(2000).default('Duplicate profiles are rejected; the earliest valid submission owns the candidate.'),
   cancellationTerms: z.string().max(2000).default('Either party may cancel with written notice; fees already triggered remain payable.'),
+  bodyHtml: z.string().max(60000).optional(),
 });
 
 export const feeSlabSchema = z.object({

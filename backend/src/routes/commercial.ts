@@ -422,7 +422,7 @@ commercialRouter.put('/agreement-templates/:id', requireAuth(['superadmin','plat
   const parsed = agreementTemplateSchema.partial().safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'Validation failed.', errors: parsed.error.flatten() });
   const { name, orgId, ...terms } = parsed.data as any;
-  t.history.unshift({ version: t.version, terms: { hiringType: t.hiringType, rateMin: t.rateMin, rateMax: t.rateMax, paymentTermsDays: t.paymentTermsDays, replacementDays: t.replacementDays, gstNote: t.gstNote, ownershipClause: t.ownershipClause, duplicatePolicy: t.duplicatePolicy, cancellationTerms: t.cancellationTerms }, by: ctxOf(req).email, at: nowIso() });
+  t.history.unshift({ version: t.version, terms: { hiringType: t.hiringType, rateMin: t.rateMin, rateMax: t.rateMax, paymentTermsDays: t.paymentTermsDays, replacementDays: t.replacementDays, gstNote: t.gstNote, ownershipClause: t.ownershipClause, duplicatePolicy: t.duplicatePolicy, cancellationTerms: t.cancellationTerms, bodyHtml: t.bodyHtml }, by: ctxOf(req).email, at: nowIso() });
   if (name !== undefined) t.name = name;
   if (orgId !== undefined) t.orgId = orgId;
   Object.assign(t, terms);
@@ -491,6 +491,32 @@ commercialRouter.patch('/commissions/:id/approve', requireAuth(['superadmin','pl
   audit(ctxOf(req).email, `COMMISSION_APPROVED:${c.id}`, c.orgId, 'commission', c.id, req.ip); persist();
   emit('commission.approved', c, c.orgId, ctxOf(req).email);
   res.json({ success: true, data: c });
+});
+commercialRouter.post('/commissions/:id/invoice', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), (req: Request, res: Response) => {
+  const db = loadDb(); const c: any = db.commissions.find((x: any) => x.id === req.params.id);
+  if (!c) return res.status(404).json({ success: false, message: 'Commission not found.' });
+  if (c.approvalStatus !== 'Approved') return res.status(422).json({ success: false, message: `Only Approved commissions can be invoiced (current: ${c.approvalStatus}).` });
+  if (c.invoiceId) return res.status(409).json({ success: false, message: `Invoice ${c.invoiceId} already generated for this commission.` });
+  const ag: any = c.agreementId ? db.commissionAgreements.find((a: any) => a.id === c.agreementId) : null;
+  const termsDays = Number(ag?.paymentTermsDays || 30);
+  const base = new Date(c.triggerDate || c.createdAt).getTime();
+  const dueDate = new Date((Number.isFinite(base) ? base : Date.now()) + termsDays * 864e5).toISOString().slice(0, 10);
+  const gross = Number(c.gross || 0);
+  const tax = +(gross * 18 / 100).toFixed(2);
+  const total = +(gross + tax).toFixed(2);
+  const inv = {
+    id: uid('INV'), number: `INV-${new Date().getFullYear()}-${String(db.invoices.length + 1).padStart(4, '0')}`,
+    orgId: c.orgId, agreementId: c.agreementId || undefined, paymentTermsDays: termsDays,
+    lines: [{ label: `Placement fee — ${c.candidateEmail || c.applicationId || ''} (${c.jobId || ''}) @ ${c.rate || ag?.rate || 0}% of ₹${Number(c.feeBasis || 0).toLocaleString('en-IN')}`, qty: 1, unit: gross }],
+    discount: 0, taxRate: 18, subtotal: gross, tax, total, amountPaid: 0, balance: total,
+    status: 'Issued', issueDate: nowIso(), dueDate, currency: 'INR', createdAt: nowIso(), createdBy: ctxOf(req).email,
+    replacementNote: ag?.replacementTerms || undefined,
+  };
+  db.invoices.unshift(inv);
+  db.invoiceLines.unshift({ id: uid('INVL'), invoiceId: inv.id, label: inv.lines[0].label, qty: 1, unit: gross });
+  c.invoiceId = inv.id;
+  audit(ctxOf(req).email, `COMMISSION_INVOICED:${c.id}->${inv.id}`, c.orgId, 'commission', c.id, req.ip); persist();
+  res.status(201).json({ success: true, data: { commission: c, invoice: withOverdue(inv) } });
 });
 commercialRouter.post('/payouts', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), (req: Request, res: Response) => {
   const db = loadDb(); const com: any = db.commissions.find((c: any) => c.id === req.body.commissionId);

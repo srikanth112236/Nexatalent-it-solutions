@@ -6,7 +6,7 @@ import { Building2, Plus, CheckCircle2, ArrowRight, X, Search, Video, Clock } fr
 import { apiClient } from '../../shared/api-client';
 import {
   RequisitionsPanel, ApplicationsPanel, InterviewsPanel, ChatPanel, TalentPoolsPanel,
-  CandidateSearchPanel, OutreachPanel, BillingPanel, OffersPlacementsPanel,
+  CandidateSearchPanel, OutreachPanel, BillingPanel, InvoicesPanel, OffersPlacementsPanel,
   SubmissionsPanel, NotificationsPanel, TimesheetsPanel,
 } from '../common/EnterprisePanels';
 import { getTenantId } from '../../shared/auth/session';
@@ -244,7 +244,7 @@ export function EmployerPortal() {
         {currentTab === 'schedule' && <InterviewsPanel />}
         {currentTab === 'submissions' && <SubmissionsPanel canReview />}
         {currentTab === 'timesheets' && <TimesheetsPanel canApprove />}
-        {currentTab === 'billing' && <BillingPanel />}
+        {currentTab === 'billing' && (<div className="space-y-6"><InvoicesPanel /><BillingPanel /></div>)}
         {currentTab === 'messages' && <ChatPanel />}
         {currentTab === 'security' && <MfaPanel />}
         {currentTab === 'notifications' && <NotificationsPanel />}
