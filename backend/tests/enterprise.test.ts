@@ -165,6 +165,46 @@ describe('derived reports (§6.14)', () => {
   });
 });
 
+describe('commercial terms: slabs, templates, reminders', () => {
+  it('serves seeded fee slabs and enforces slab bounds', async () => {
+    const slabs = await request(app).get('/api/v1/fee-slabs').set(auth(superToken));
+    expect(slabs.status).toBe(200);
+    expect(slabs.body.data.find((s: any) => s.hiringType === 'Junior IT roles')?.rateMax).toBe(8.33);
+    const bad = await request(app).post('/api/v1/commission-agreements').set(auth(superToken)).send({ orgId: 'TNT-9011', hiringType: 'Junior IT roles', rate: 12 });
+    expect(bad.status).toBe(422);
+    const ok = await request(app).post('/api/v1/commission-agreements').set(auth(superToken)).send({ orgId: 'TNT-9011', hiringType: 'Junior IT roles', rate: 8.33 });
+    expect(ok.status).toBe(201);
+    expect(ok.body.data.companyAccepted).toBe(false);
+  });
+  it('versions templates, instantiates and records company acceptance', async () => {
+    const t = await request(app).post('/api/v1/agreement-templates').set(auth(superToken)).send({ name: 'Standard Placement Terms' });
+    expect(t.status).toBe(201);
+    const tid = t.body.data.id;
+    const act = await request(app).post(`/api/v1/agreement-templates/${tid}/status`).set(auth(superToken)).send({ status: 'Active' });
+    expect(act.body.data.status).toBe('Active');
+    const v2 = await request(app).put(`/api/v1/agreement-templates/${tid}`).set(auth(superToken)).send({ paymentTermsDays: 15 });
+    expect(v2.body.data.version).toBe(2);
+    expect(v2.body.data.history.length).toBe(1);
+    const inst = await request(app).post(`/api/v1/agreement-templates/${tid}/instantiate`).set(auth(superToken)).send({ orgId: 'TNT-9011', rate: 9 });
+    expect(inst.status).toBe(201);
+    expect(inst.body.data.templateId).toBe(tid);
+    expect(inst.body.data.paymentTermsDays).toBe(15);
+    const acc = await request(app).patch(`/api/v1/commission-agreements/${inst.body.data.id}/accept`).set(auth(superToken)).send({});
+    expect(acc.body.data.companyAccepted).toBe(true);
+  });
+  it('runs invoice reminders idempotently for overdue balances', async () => {
+    const inv = await request(app).post('/api/v1/invoices').set(auth(superToken)).send({ orgId: 'TNT-9011', lines: [{ label: 'Placement fee', qty: 1, unit: 50000 }], dueDate: '2020-01-01' });
+    expect(inv.status).toBe(201);
+    const r1 = await request(app).post('/api/v1/invoice-reminders/run').set(auth(superToken)).send({});
+    expect(r1.status).toBe(200);
+    expect(r1.body.data.sent).toBeGreaterThanOrEqual(1);
+    const r2 = await request(app).post('/api/v1/invoice-reminders/run').set(auth(superToken)).send({});
+    expect(r2.body.data.sent).toBe(0);
+    const log = await request(app).get('/api/v1/invoice-reminders').set(auth(superToken));
+    expect(log.body.data.some((x: any) => x.invoiceId === inv.body.data.id && x.kind === 'overdue')).toBe(true);
+  });
+});
+
 describe('commission math (§6.11)', () => {
   it('computes gross + 18% tax total', async () => {
     // 8.33% of 100000 basis = 8330 gross, 1499.4 tax, 9829.4 total

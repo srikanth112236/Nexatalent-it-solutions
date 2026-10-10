@@ -262,6 +262,21 @@ describe('ApplicationsKanban', () => {
   });
 });
 
+describe('Commercial terms UI', () => {
+  it('commissions panel shows agreement templates section', async () => {
+    const { CommissionsPanel } = await import('./portals/common/EnterprisePanels.js');
+    const { AuthProvider } = await import('./shared/auth/AuthContext.js');
+    render(<AuthProvider><CommissionsPanel /></AuthProvider>);
+    assert.ok(container.textContent?.includes('Agreement templates'), 'templates section renders');
+  });
+  it('billing panel shows superadmin payment reminders strip', async () => {
+    const { BillingPanel } = await import('./portals/common/EnterprisePanels.js');
+    const { AuthProvider } = await import('./shared/auth/AuthContext.js');
+    render(<AuthProvider><BillingPanel /></AuthProvider>);
+    assert.ok(container.textContent?.includes('Payment reminders'), 'reminders strip renders');
+  });
+});
+
 describe('DetailDrawer scroll', () => {
   it('pins the panel to the viewport with a dedicated internal scroller', () => {
     render(

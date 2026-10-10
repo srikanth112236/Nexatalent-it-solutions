@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { loadDb, persist, uid, nowIso, audit } from '../db/store.js';
 import { requireAuth, requirePermission, ctxOf, tenantOf } from '../middleware/rbac.js';
-import { invoiceSchema, paymentSchema, commissionAgreementSchema, paginate, paged } from '../validate/schemas.js';
+import { invoiceSchema, paymentSchema, commissionAgreementSchema, agreementTemplateSchema, feeSlabSchema, paginate, paged } from '../validate/schemas.js';
 import { emit, claimIdempotency } from '../events/bus.js';
 import { usageSummary, evaluate, consumeQuota } from '../domain/entitlements.js';
 
@@ -157,13 +157,55 @@ commercialRouter.get('/invoices/:id/document', requireAuth(), (req, res) => {
   const ctx = ctxOf(req);
   if (!['superadmin','platform_owner','finance_admin','finance_staff'].includes(ctx.role) && inv.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Invoice not found.' });
   const org: any = db.organizations.find((o: any) => o.id === inv.orgId);
+  const agreement: any = inv.agreementId ? db.commissionAgreements.find((a: any) => a.id === inv.agreementId) : null;
+  const paymentTermsDays = inv.paymentTermsDays ?? agreement?.paymentTermsDays ?? 30;
+  const replacementDays = agreement?.replacementDays ?? 90;
   res.json({ success: true, data: {
     ...withOverdue(inv),
     lines: db.invoiceLines.filter((l: any) => l.invoiceId === inv.id),
     organization: org ? { id: org.id, legalName: org.legalName, displayName: org.displayName, gstin: org.gstin, billingContact: org.billingContact, financeEmail: org.financeEmail } : null,
     payments: db.payments.filter((p: any) => p.invoiceId === inv.id),
     creditNotes: db.creditNotes.filter((c: any) => c.invoiceId === inv.id),
+    agreement: agreement ? { id: agreement.id, hiringType: agreement.hiringType, rate: agreement.rate, feeModel: agreement.feeModel, trigger: agreement.trigger, companyAccepted: agreement.companyAccepted } : null,
+    terms: {
+      paymentTermsDays,
+      paymentNote: `Payable within ${paymentTermsDays} days of the candidate's joining date.`,
+      replacementNote: inv.replacementNote || `Free replacement within ${replacementDays} days of joining under the defined conditions.`,
+      gstNote: 'GST charged extra as applicable on the taxable value.',
+      ownershipNote: agreement?.ownershipClause || 'Candidate ownership rests with the introducing party for 90 days from submission.',
+      duplicateNote: agreement?.duplicatePolicy || 'Duplicate profiles are rejected; the earliest valid submission owns the candidate.',
+    },
+    reminders: (db.invoiceReminders as any[]).filter((r: any) => r.invoiceId === inv.id),
   } });
+});
+// ---- Invoice reminders (due-soon + overdue → superadmin/finance notifications) ----
+commercialRouter.get('/invoice-reminders', requireAuth(), (req, res) => {
+  const ctx = ctxOf(req); let rows = loadDb().invoiceReminders as any[];
+  if (!['superadmin','platform_owner','finance_admin'].includes(ctx.role)) rows = rows.filter((r) => r.orgId === ctx.tenantId);
+  res.json({ success: true, data: rows.slice(0, 200) });
+});
+commercialRouter.post('/invoice-reminders/run', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), (req, res) => {
+  const db = loadDb(); const today = nowIso().slice(0, 10);
+  const open = (db.invoices as any[]).map(withOverdue).filter((i: any) => Number(i.balance || 0) > 0 && ['Issued', 'Partially Paid'].includes(i.status));
+  const sent: any[] = [];
+  for (const inv of open) {
+    const dueMs = new Date(inv.dueDate).getTime();
+    if (!Number.isFinite(dueMs)) continue;
+    const days = Math.floor((dueMs - Date.now()) / 864e5);
+    const kind = days < 0 ? 'overdue' : (days <= 7 ? 'due-soon' : null);
+    if (!kind) continue;
+    if (!claimIdempotency(`invoice-reminder:${inv.id}:${today}`)) continue;
+    const body = kind === 'overdue'
+      ? `OVERDUE ${-days}d: invoice ${inv.number || inv.id} (${inv.orgId}) balance ₹${inv.balance}, due ${String(inv.dueDate).slice(0, 10)}.`
+      : `Due in ${days}d: invoice ${inv.number || inv.id} (${inv.orgId}) balance ₹${inv.balance}, due ${String(inv.dueDate).slice(0, 10)}.`;
+    db.notifications.unshift({ id: uid('NOTIF'), recipient: 'superadmin', kind: 'invoice-reminder', body, channel: 'in-app', status: 'queued', createdAt: nowIso(), tenantId: 'TNT-GLOBAL' });
+    const log = { id: uid('INVR'), invoiceId: inv.id, number: inv.number, orgId: inv.orgId, kind, daysOverdue: kind === 'overdue' ? -days : 0, daysToDue: kind === 'due-soon' ? days : null, balance: inv.balance, sentAt: nowIso(), by: ctxOf(req).email };
+    (db.invoiceReminders as any[]).unshift(log); sent.push(log);
+    audit(ctxOf(req).email, `INVOICE_REMINDER_${kind.toUpperCase()}:${inv.id}`, inv.orgId, 'invoice', inv.id, req.ip);
+  }
+  if ((db.invoiceReminders as any[]).length > 500) (db.invoiceReminders as any[]).length = 500;
+  persist();
+  res.json({ success: true, data: { sent: sent.length, reminders: sent } });
 });
 commercialRouter.post('/invoices', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), (req: Request, res: Response) => {
   const { draft, ...body } = req.body || {};
@@ -309,12 +351,117 @@ commercialRouter.post('/payments/webhook', (req: Request, res: Response) => {
   res.json({ success: true, data: pay });
 });
 
+// ---- Fee slabs by hiring type (commercial policy, superadmin/finance owned) ----
+function slabFor(db: any, hiringType?: string): any {
+  return (db.feeSlabs as any[]).find((s: any) => s.hiringType === hiringType) || null;
+}
+commercialRouter.get('/fee-slabs', requireAuth(), (_req, res) => {
+  res.json({ success: true, data: loadDb().feeSlabs });
+});
+commercialRouter.put('/fee-slabs', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), (req: Request, res: Response) => {
+  const list = req.body?.slabs;
+  if (!Array.isArray(list) || list.length === 0) return res.status(400).json({ success: false, message: 'slabs[] required.' });
+  for (const s of list) {
+    const parsed = feeSlabSchema.safeParse(s);
+    if (!parsed.success) return res.status(400).json({ success: false, message: `Invalid slab for ${s?.hiringType || 'unknown'}.`, errors: parsed.error.flatten() });
+    if (!parsed.data.negotiated && parsed.data.rateMin > parsed.data.rateMax) return res.status(400).json({ success: false, message: `rateMin > rateMax for ${parsed.data.hiringType}.` });
+  }
+  const db = loadDb();
+  db.feeSlabs = list.map((s: any) => ({ ...s, updatedAt: nowIso(), updatedBy: ctxOf(req).email }));
+  audit(ctxOf(req).email, 'FEE_SLABS_UPDATED', 'TNT-GLOBAL', 'commercial', 'fee-slabs', req.ip); persist();
+  res.json({ success: true, data: db.feeSlabs });
+});
+function checkSlabRate(db: any, hiringType: string, feeModel: string, rate: number): string | null {
+  if (feeModel !== 'percentage') return null;
+  const slab = slabFor(db, hiringType);
+  if (!slab || slab.negotiated) return null;
+  if (rate < Number(slab.rateMin) || rate > Number(slab.rateMax)) return `Rate ${rate}% is outside the ${hiringType} slab (${slab.rateMin}%–${slab.rateMax}%).`;
+  return null;
+}
+
 // ---- Commissions & payouts (separate ledgers §6.11/§9.5) ----
 commercialRouter.post('/commission-agreements', requireAuth(['superadmin','platform_owner','finance_admin','employer','company_admin']), (req: Request, res: Response) => {
   const parsed = commissionAgreementSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'Validation failed.', errors: parsed.error.flatten() });
-  const ag = { id: uid('AGR'), status: 'Approved', effectiveDate: nowIso(), createdAt: nowIso(), createdBy: ctxOf(req).email, ...parsed.data };
-  loadDb().commissionAgreements.unshift(ag); audit(ctxOf(req).email, `COMMISSION_AGREEMENT:${ag.id}`, ag.orgId, 'commission', ag.id, req.ip); persist();
+  const db = loadDb();
+  const slabErr = checkSlabRate(db, parsed.data.hiringType, parsed.data.feeModel, parsed.data.rate);
+  if (slabErr) return res.status(422).json({ success: false, message: slabErr });
+  const ag = { id: uid('AGR'), status: 'Approved', companyAccepted: false, acceptedAt: null, acceptedBy: null, effectiveDate: nowIso(), createdAt: nowIso(), createdBy: ctxOf(req).email, ...parsed.data };
+  db.commissionAgreements.unshift(ag); audit(ctxOf(req).email, `COMMISSION_AGREEMENT:${ag.id}`, ag.orgId, 'commission', ag.id, req.ip); persist();
+  res.status(201).json({ success: true, data: ag });
+});
+commercialRouter.patch('/commission-agreements/:id/accept', requireAuth(['superadmin','platform_owner','employer','company_admin','finance_admin']), (req, res) => {
+  const db = loadDb(); const ag: any = db.commissionAgreements.find((a: any) => a.id === req.params.id);
+  if (!ag) return res.status(404).json({ success: false, message: 'Agreement not found.' });
+  const ctx = ctxOf(req);
+  if (!['superadmin','platform_owner','finance_admin'].includes(ctx.role) && ag.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Agreement not found.' });
+  if (ag.companyAccepted) return res.status(422).json({ success: false, message: 'Agreement already accepted by the company.' });
+  ag.companyAccepted = true; ag.acceptedAt = nowIso(); ag.acceptedBy = ctx.email;
+  audit(ctx.email, `COMMISSION_AGREEMENT_ACCEPTED:${ag.id}`, ag.orgId, 'commission', ag.id, req.ip); persist();
+  res.json({ success: true, data: ag });
+});
+
+// ---- Agreement templates (company ↔ platform, versioned) ----
+commercialRouter.get('/agreement-templates', requireAuth(), (req, res) => {
+  const ctx = ctxOf(req); let rows = loadDb().agreementTemplates as any[];
+  if (!['superadmin','platform_owner','finance_admin'].includes(ctx.role)) rows = rows.filter((t) => t.status === 'Active' && (!t.orgId || t.orgId === ctx.tenantId));
+  res.json({ success: true, data: rows });
+});
+commercialRouter.post('/agreement-templates', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), (req: Request, res: Response) => {
+  const parsed = agreementTemplateSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ success: false, message: 'Validation failed.', errors: parsed.error.flatten() });
+  const db = loadDb();
+  const t = { id: uid('AGT'), version: 1, status: 'Draft', history: [], createdBy: ctxOf(req).email, createdAt: nowIso(), ...parsed.data };
+  db.agreementTemplates.unshift(t); audit(ctxOf(req).email, `AGREEMENT_TEMPLATE:${t.id}`, t.orgId || 'TNT-GLOBAL', 'commercial', t.id, req.ip); persist();
+  res.status(201).json({ success: true, data: t });
+});
+commercialRouter.put('/agreement-templates/:id', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), (req: Request, res: Response) => {
+  const db = loadDb(); const t: any = db.agreementTemplates.find((x: any) => x.id === req.params.id);
+  if (!t) return res.status(404).json({ success: false, message: 'Template not found.' });
+  if (t.status === 'Archived') return res.status(422).json({ success: false, message: 'Archived templates are immutable.' });
+  const parsed = agreementTemplateSchema.partial().safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ success: false, message: 'Validation failed.', errors: parsed.error.flatten() });
+  const { name, orgId, ...terms } = parsed.data as any;
+  t.history.unshift({ version: t.version, terms: { hiringType: t.hiringType, rateMin: t.rateMin, rateMax: t.rateMax, paymentTermsDays: t.paymentTermsDays, replacementDays: t.replacementDays, gstNote: t.gstNote, ownershipClause: t.ownershipClause, duplicatePolicy: t.duplicatePolicy, cancellationTerms: t.cancellationTerms }, by: ctxOf(req).email, at: nowIso() });
+  if (name !== undefined) t.name = name;
+  if (orgId !== undefined) t.orgId = orgId;
+  Object.assign(t, terms);
+  t.version += 1; t.updatedAt = nowIso();
+  audit(ctxOf(req).email, `AGREEMENT_TEMPLATE_V${t.version}:${t.id}`, t.orgId || 'TNT-GLOBAL', 'commercial', t.id, req.ip); persist();
+  res.json({ success: true, data: t });
+});
+commercialRouter.post('/agreement-templates/:id/status', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), (req, res) => {
+  const db = loadDb(); const t: any = db.agreementTemplates.find((x: any) => x.id === req.params.id);
+  if (!t) return res.status(404).json({ success: false, message: 'Template not found.' });
+  const to = String(req.body?.status || '');
+  if (!['Draft', 'Active', 'Archived'].includes(to)) return res.status(400).json({ success: false, message: 'status must be Draft|Active|Archived.' });
+  t.status = to; t.updatedAt = nowIso();
+  audit(ctxOf(req).email, `AGREEMENT_TEMPLATE_${to.toUpperCase()}:${t.id}`, t.orgId || 'TNT-GLOBAL', 'commercial', t.id, req.ip); persist();
+  res.json({ success: true, data: t });
+});
+commercialRouter.post('/agreement-templates/:id/instantiate', requireAuth(['superadmin','platform_owner','finance_admin','employer','company_admin']), (req: Request, res: Response) => {
+  const db = loadDb(); const t: any = db.agreementTemplates.find((x: any) => x.id === req.params.id);
+  if (!t) return res.status(404).json({ success: false, message: 'Template not found.' });
+  if (t.status !== 'Active') return res.status(422).json({ success: false, message: `Only Active templates can be instantiated (current: ${t.status}).` });
+  const { orgId, jobId, agencyId, hiringType, feeModel, rate, fixedFee, trigger } = req.body || {};
+  if (!orgId) return res.status(400).json({ success: false, message: 'orgId required.' });
+  const ctx = ctxOf(req);
+  if (!['superadmin','platform_owner','finance_admin'].includes(ctx.role) && orgId !== ctx.tenantId) return res.status(403).json({ success: false, message: 'Cannot instantiate for another organization.' });
+  const ht = hiringType || t.hiringType || 'Mid-level IT roles';
+  const model = feeModel || 'percentage';
+  const r = rate !== undefined ? Number(rate) : (t.rateMin !== undefined && t.rateMax !== undefined ? (t.rateMin === t.rateMax ? t.rateMin : (t.rateMin + t.rateMax) / 2) : 8.33);
+  const slabErr = checkSlabRate(db, ht, model, r);
+  if (slabErr) return res.status(422).json({ success: false, message: slabErr });
+  const ag = {
+    id: uid('AGR'), status: 'Approved', companyAccepted: false, acceptedAt: null, acceptedBy: null,
+    orgId, jobId, agencyId, hiringType: ht, feeModel: model, rate: r, fixedFee,
+    trigger: trigger || 'Joined', paymentTermsDays: t.paymentTermsDays ?? 30, replacementDays: t.replacementDays ?? 90,
+    gstApplicable: true, replacementTerms: `Free replacement within ${t.replacementDays ?? 90} days of joining under the defined conditions.`,
+    ownershipClause: t.ownershipClause, duplicatePolicy: t.duplicatePolicy, cancellationTerms: t.cancellationTerms,
+    templateId: t.id, templateVersion: t.version,
+    effectiveDate: nowIso(), createdAt: nowIso(), createdBy: ctx.email,
+  };
+  db.commissionAgreements.unshift(ag); audit(ctx.email, `COMMISSION_AGREEMENT_FROM_TEMPLATE:${ag.id}<-${t.id}v${t.version}`, orgId, 'commission', ag.id, req.ip); persist();
   res.status(201).json({ success: true, data: ag });
 });
 commercialRouter.get('/commission-agreements', requireAuth(), (req, res) => {

@@ -24,6 +24,7 @@ export interface DbShape {
   invoices: any[]; invoiceLines: any[]; payments: any[]; allocations: any[];
   refunds: any[]; creditNotes: any[];
   commissionAgreements: any[]; commissions: any[]; commissionAdjustments: any[];
+  feeSlabs: any[]; agreementTemplates: any[]; invoiceReminders: any[];
   payouts: any[]; reconciliations: any[];
   leads: any[]; leadActivities: any[]; opportunities: any[]; targets: any[];
   tasks: any[]; proposals: any[]; meetings: any[]; timesheets: any[]; submissions: any[];
@@ -105,6 +106,14 @@ function seed(): DbShape {
     invoices: [], invoiceLines: [], payments: [], allocations: [],
     refunds: [], creditNotes: [],
     commissionAgreements: [], commissions: [], commissionAdjustments: [],
+    feeSlabs: [
+      { hiringType: 'Junior IT roles', rateMin: 8.33, rateMax: 8.33, note: '8.33% of annual CTC', updatedAt: now, updatedBy: 'seed' },
+      { hiringType: 'Mid-level IT roles', rateMin: 8.33, rateMax: 10, note: '8.33%–10% of annual CTC', updatedAt: now, updatedBy: 'seed' },
+      { hiringType: 'Senior / niche technology roles', rateMin: 10, rateMax: 12, note: '10%–12% of annual CTC', updatedAt: now, updatedBy: 'seed' },
+      { hiringType: 'Leadership / executive search', rateMin: 12, rateMax: 15, note: '12%–15% or a negotiated retained fee', retainedAllowed: true, updatedAt: now, updatedBy: 'seed' },
+      { hiringType: 'Bulk hiring', rateMin: 0, rateMax: 0, note: 'Negotiated rate based on volume', negotiated: true, updatedAt: now, updatedBy: 'seed' },
+    ],
+    agreementTemplates: [], invoiceReminders: [],
     payouts: [], reconciliations: [],
     leads: [
       { id: 'LEAD-001', contactName: 'Rohit Shetty', companyName: 'AutoLogistics AI Global', email: 'careers@autologistics.ai', stage: 'Qualified', owner: 'kiran@nexatalent.com', value: 850000, currency: 'INR', nextFollowUp: '2026-10-12', createdAt: now },

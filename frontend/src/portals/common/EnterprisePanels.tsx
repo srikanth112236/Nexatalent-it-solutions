@@ -1530,6 +1530,20 @@ export function BillingPanel() {
   const [docFor, setDocFor] = useState<any>(null);
   const [doc, setDoc] = useState<any>(null);
   const [q, setQ] = useQueryState('bill_q');
+  const [reminders, setReminders] = useState<any[]>([]);
+  const [remResult, setRemResult] = useState('');
+  const [remBusy, setRemBusy] = useState(false);
+  const loadReminders = async () => {
+    try { setReminders(unwrapList(await billingApi.invoiceReminders())); } catch { setReminders([]); }
+  };
+  const runReminders = async () => {
+    setRemBusy(true); setRemResult('');
+    try {
+      const r = unwrapObj(await billingApi.runInvoiceReminders());
+      setRemResult(`Reminders sent: ${r?.sent ?? 0} (overdue + due within 7 days → superadmin).`);
+      loadReminders(); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setRemBusy(false); }
+  };
   const [voidFor, setVoidFor] = useState<any>(null);
   const [voidReason, setVoidReason] = useState('');
   const [creditFor, setCreditFor] = useState<any>(null);
@@ -1542,6 +1556,7 @@ export function BillingPanel() {
       ]);
       if (u) setUsage(unwrapObj(u)); if (i) setInvoices(unwrapList(i)); if (p) setPayments(unwrapList(p)); if (r) setRefunds(unwrapList(r));
       if (rec) setRecon(unwrapObj(rec));
+      loadReminders();
     } catch (e) { setError(errMsg(e)); }
   };
   useEffect(() => { load(); }, []);
@@ -1624,6 +1639,20 @@ export function BillingPanel() {
           ))}
         </div>
       )}
+      <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 text-xs space-y-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="font-extrabold text-amber-900">Payment reminders → superadmin ({invoices.filter((i) => Number(i.balance || 0) > 0 && ['Issued', 'Partially Paid'].includes(i.status) && i.dueDate && (new Date(i.dueDate).getTime() - Date.now()) / 864e5 <= 7).length} needing attention)</div>
+          <button type="button" disabled={remBusy} onClick={runReminders} className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs disabled:opacity-50 w-fit">{remBusy ? 'Sending…' : 'Send reminders now'}</button>
+        </div>
+        {remResult && <div className="font-bold text-emerald-700">{remResult}</div>}
+        {reminders.length > 0 && (
+          <div className="space-y-1 max-h-32 overflow-y-auto" data-lenis-prevent>
+            {reminders.slice(0, 10).map((r: any) => (
+              <div key={r.id} className="font-medium text-amber-900">[{r.kind}] {r.number || r.invoiceId} • {r.orgId} • bal ₹{r.balance}{r.kind === 'overdue' ? ` • ${r.daysOverdue}d overdue` : ` • due in ${r.daysToDue}d`} • {String(r.sentAt || '').slice(0, 16).replace('T', ' ')} • by {r.by}</div>
+            ))}
+          </div>
+        )}
+      </div>
       <Modal open={showInvoice} onClose={() => setShowInvoice(false)} title="New invoice" subtitle="Drafts are editable; issued invoices are immutable (void/credit only)">
         <form onSubmit={createInvoice} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Organization ID *"><input className={kitInput} value={invForm.orgId} onChange={(e) => setInvForm({ ...invForm, orgId: e.target.value })} placeholder="TNT-9011" /></Field>
@@ -1647,9 +1676,31 @@ export function BillingPanel() {
         {!doc ? <InlineLoading message="Loading document…" /> : (
           <div className="space-y-3 text-xs">
             <div className="p-4 rounded-2xl bg-slate-900 text-white space-y-1">
-              <div className="font-extrabold text-sm">{doc.organization?.legalName || doc.orgId}</div>
-              <div className="text-slate-300">{doc.organization?.gstin ? `GSTIN ${doc.organization.gstin} • ` : ''}{doc.billingPeriod || ''}</div>
-              <div className="text-slate-300">Due {String(doc.dueDate || '').slice(0, 10)} • <strong className="text-white">{doc.status}</strong>{doc.overdue ? ` • ${doc.daysOverdue}d overdue` : ''}</div>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="font-extrabold text-sm">NexaTalent IT Solutions</div>
+                  <div className="text-slate-300">Talent acquisition services • GST invoicing</div>
+                </div>
+                <div className="text-right">
+                  <div className="font-extrabold">TAX INVOICE</div>
+                  <div className="text-slate-300 font-mono">{doc.number || doc.id}</div>
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-0.5">
+                <div className="text-[10px] font-bold text-slate-500 uppercase">Billed to</div>
+                <div className="font-extrabold">{doc.organization?.legalName || doc.orgId}</div>
+                {doc.organization?.gstin ? <div className="font-medium">GSTIN: {doc.organization.gstin}</div> : <div className="font-medium text-amber-700">GSTIN not on file — collect before filing</div>}
+                {doc.billingAddress ? <div className="text-slate-600">{doc.billingAddress}</div> : null}
+              </div>
+              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-0.5">
+                <div className="text-[10px] font-bold text-slate-500 uppercase">Invoice</div>
+                <div className="font-medium">Issued {String(doc.issueDate || doc.createdAt || '').slice(0, 10)} • Due {String(doc.dueDate || '').slice(0, 10)}</div>
+                <div className="font-medium">Status: <strong>{doc.status}</strong>{doc.overdue ? ` • ${doc.daysOverdue}d overdue` : ''}</div>
+                {doc.billingPeriod ? <div className="font-medium">Period: {doc.billingPeriod}</div> : null}
+                {doc.agreement ? <div className="font-medium">Agreement {doc.agreement.id} • {doc.agreement.hiringType} @ {doc.agreement.rate}%{doc.agreement.companyAccepted ? ' • accepted' : ' • pending acceptance'}</div> : null}
+              </div>
             </div>
             <div className="rounded-2xl border border-slate-200 overflow-hidden">
               <table className="w-full text-left">
@@ -1664,13 +1715,24 @@ export function BillingPanel() {
             <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 font-bold space-y-1">
               <div className="flex justify-between"><span>Subtotal</span><span>₹{doc.subtotal}</span></div>
               <div className="flex justify-between"><span>Discount</span><span>− ₹{doc.discount}</span></div>
-              <div className="flex justify-between"><span>Tax</span><span>₹{doc.tax}</span></div>
+              <div className="flex justify-between"><span>Tax (GST @ {doc.taxRate ?? 18}% — charged extra)</span><span>₹{doc.tax}</span></div>
               <div className="flex justify-between text-sm"><span>Total</span><span>₹{doc.total}</span></div>
               <div className="flex justify-between text-emerald-700"><span>Paid</span><span>₹{doc.amountPaid}</span></div>
               <div className="flex justify-between"><span>Balance</span><span>₹{doc.balance}</span></div>
             </div>
             {(doc.payments || []).length > 0 && <div className="text-slate-600 font-medium">Payments: {(doc.payments || []).map((p: any) => `${p.id} ₹${p.amount}`).join(' • ')}</div>}
             {(doc.creditNotes || []).length > 0 && <div className="text-slate-600 font-medium">Credits: {(doc.creditNotes || []).map((c: any) => `${c.id} ₹${c.amount}`).join(' • ')}</div>}
+            {doc.terms && (
+              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 font-medium space-y-1">
+                <div className="text-[10px] font-bold text-slate-500 uppercase">Commercial terms</div>
+                <div>• {doc.terms.paymentNote}</div>
+                <div>• {doc.terms.replacementNote}</div>
+                <div>• {doc.terms.gstNote}</div>
+                <div>• {doc.terms.ownershipNote}</div>
+                <div>• {doc.terms.duplicateNote}</div>
+              </div>
+            )}
+            {(doc.reminders || []).length > 0 && <div className="text-slate-600 font-medium">Reminders sent: {(doc.reminders || []).map((r: any) => `${r.kind} ${String(r.sentAt || '').slice(0, 10)}`).join(' • ')}</div>}
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => window.print()} className="px-4 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs">Print / Save PDF</button>
             </div>
@@ -2004,12 +2066,40 @@ export function CommissionsPanel() {
   const [commissions, setCommissions] = useState<any[]>([]);
   const [payouts, setPayouts] = useState<any[]>([]);
   const [error, setError] = useState('');
-  const [form, setForm] = useState({ orgId: '', jobId: '', rate: '8.33', trigger: 'Joined' });
+  const [form, setForm] = useState({ orgId: '', jobId: '', hiringType: 'Mid-level IT roles', rate: '8.33', trigger: 'Joined', paymentTermsDays: '30', replacementDays: '90', templateId: '' });
+  const [slabs, setSlabs] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
   const [showAgreement, setShowAgreement] = useState(false);
   const [payoutId, setPayoutId] = useState('');
   const [adjustFor, setAdjustFor] = useState<any>(null);
   const [adjustments, setAdjustments] = useState<any[]>([]);
   const [adjustForm, setAdjustForm] = useState({ amount: '', reason: '' });
+  const emptyTpl = { name: '', orgId: '', hiringType: '', rateMin: '', rateMax: '', paymentTermsDays: '30', replacementDays: '90', gstNote: 'GST charged extra as applicable.', ownershipClause: '', duplicatePolicy: '', cancellationTerms: '' };
+  const [tplForm, setTplForm] = useState(emptyTpl);
+  const [editingTpl, setEditingTpl] = useState('');
+  const [showTemplate, setShowTemplate] = useState(false);
+  const saveTemplate = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!tplForm.name.trim()) return;
+    try {
+      const body: any = {
+        name: tplForm.name.trim(), orgId: tplForm.orgId.trim() || undefined,
+        hiringType: tplForm.hiringType || undefined,
+        rateMin: tplForm.rateMin === '' ? undefined : Number(tplForm.rateMin),
+        rateMax: tplForm.rateMax === '' ? undefined : Number(tplForm.rateMax),
+        paymentTermsDays: Number(tplForm.paymentTermsDays) || 30, replacementDays: Number(tplForm.replacementDays) || 90,
+        gstNote: tplForm.gstNote, ownershipClause: tplForm.ownershipClause, duplicatePolicy: tplForm.duplicatePolicy, cancellationTerms: tplForm.cancellationTerms,
+      };
+      const saved = editingTpl ? unwrapObj(await billingApi.updateTemplate(editingTpl, body)) : unwrapObj(await billingApi.createTemplate(body));
+      if (saved?.id) setTemplates((x) => (editingTpl ? x.map((t) => (t.id === editingTpl ? saved : t)) : [saved, ...x]));
+      setTplForm(emptyTpl); setEditingTpl(''); setShowTemplate(false); syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const tplStatus = async (id: string, status: string) => {
+    try {
+      const u = unwrapObj(await billingApi.templateStatus(id, status));
+      setTemplates((x) => x.map((t) => (t.id === id ? u : t))); syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
   const [loadError, setLoadError] = useState(0);
   const load = async () => {
     setError('');
@@ -2017,17 +2107,40 @@ export function CommissionsPanel() {
       setAgreements(unwrapList(await billingApi.agreements()));
       setCommissions(unwrapList(await billingApi.commissions()));
       setPayouts(unwrapList(await billingApi.payouts()));
+      setSlabs(unwrapList(await billingApi.feeSlabs()).filter(Boolean));
+      try { setTemplates(unwrapList(await billingApi.agreementTemplates())); } catch { setTemplates([]); }
     } catch (e) { setError(errMsg(e)); setLoadError(errStatus(e)); }
   };
   useEffect(() => { load(); }, []);
+  const slabOf = (hiringType: string) => slabs.find((s: any) => s.hiringType === hiringType);
+  const applyTemplate = (id: string) => {
+    const t = templates.find((x: any) => x.id === id);
+    setForm((f) => ({ ...f, templateId: id }));
+    if (!t) return;
+    setForm((f) => ({
+      ...f, templateId: id,
+      hiringType: t.hiringType || f.hiringType,
+      rate: t.rateMin !== undefined && t.rateMax !== undefined ? String(t.rateMin === t.rateMax ? t.rateMin : (t.rateMin + t.rateMax) / 2) : f.rate,
+      paymentTermsDays: String(t.paymentTermsDays ?? 30),
+      replacementDays: String(t.replacementDays ?? 90),
+    }));
+  };
   const create = async (e: React.FormEvent) => {
     e.preventDefault(); if (!form.orgId) return;
     try {
-      const a = unwrapObj(await billingApi.createAgreement({ orgId: form.orgId, jobId: form.jobId || undefined, rate: Number(form.rate) || 8.33, trigger: form.trigger }));
+      const a = form.templateId
+        ? unwrapObj(await billingApi.instantiateTemplate(form.templateId, { orgId: form.orgId, jobId: form.jobId || undefined, hiringType: form.hiringType, rate: Number(form.rate) || undefined, trigger: form.trigger }))
+        : unwrapObj(await billingApi.createAgreement({ orgId: form.orgId, jobId: form.jobId || undefined, hiringType: form.hiringType, rate: Number(form.rate) || 8.33, trigger: form.trigger, paymentTermsDays: Number(form.paymentTermsDays) || 30, replacementDays: Number(form.replacementDays) || 90 }));
       if (a?.id) setAgreements((x) => [a, ...x]);
-      setForm({ orgId: '', jobId: '', rate: '8.33', trigger: 'Joined' });
+      setForm({ orgId: '', jobId: '', hiringType: 'Mid-level IT roles', rate: '8.33', trigger: 'Joined', paymentTermsDays: '30', replacementDays: '90', templateId: '' });
       setShowAgreement(false);
       syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const accept = async (id: string) => {
+    try {
+      const u = unwrapObj(await billingApi.acceptAgreement(id));
+      setAgreements((x) => x.map((a) => (a.id === id ? u : a))); syncAll();
     } catch (e) { setError(errMsg(e)); }
   };
   const approve = async (id: string) => {
@@ -2090,21 +2203,64 @@ export function CommissionsPanel() {
       </div>
       {error && <PanelError message={error} status={loadError} onRetry={load} />}
       {dupMsg && <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs font-bold">{dupMsg}</div>}
-      <Modal open={showAgreement} onClose={() => setShowAgreement(false)} title="New commission agreement" subtitle="Trigger is evaluated automatically on placement">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-xs font-extrabold text-slate-700">Agreement templates — company ↔ platform ({templates.length})</div>
+        <button type="button" onClick={() => { setTplForm(emptyTpl); setEditingTpl(''); setShowTemplate(true); }} className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">+ Template</button>
+      </div>
+      {templates.map((t: any) => (
+        <div key={t.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
+          <span className="min-w-0 truncate">{t.name} v{t.version} • {t.status}{t.orgId ? ` • ${t.orgId}` : ' • global'} • pay ≤{t.paymentTermsDays}d • repl {t.replacementDays}d{t.history?.length ? ` • ${t.history.length} prior version(s)` : ''}</span>
+          <RowMenu label={`Template ${t.id}`} items={[
+            { label: 'Edit / new version…', onSelect: () => { setTplForm({ name: t.name, orgId: t.orgId || '', hiringType: t.hiringType || '', rateMin: t.rateMin ?? '', rateMax: t.rateMax ?? '', paymentTermsDays: String(t.paymentTermsDays ?? 30), replacementDays: String(t.replacementDays ?? 90), gstNote: t.gstNote || '', ownershipClause: t.ownershipClause || '', duplicatePolicy: t.duplicatePolicy || '', cancellationTerms: t.cancellationTerms || '' }); setEditingTpl(t.id); setShowTemplate(true); } },
+            ...(t.status === 'Draft' ? [{ label: 'Activate', onSelect: () => tplStatus(t.id, 'Active') }] : []),
+            ...(t.status === 'Active' ? [{ label: 'Archive', danger: true, onSelect: () => tplStatus(t.id, 'Archived') }] : []),
+          ]} />
+        </div>
+      ))}
+      <Modal open={showTemplate} onClose={() => setShowTemplate(false)} title={editingTpl ? 'Edit template (mints a new version)' : 'New agreement template'} subtitle="Terms sync to every agreement instantiated from this template">
+        <form onSubmit={saveTemplate} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="sm:col-span-2"><Field label="Template name *"><input className={kitInput} value={tplForm.name} onChange={(e) => setTplForm({ ...tplForm, name: e.target.value })} placeholder="e.g. Standard Placement Terms — Mid-level" /></Field></div>
+          <Field label="Company scope (blank = global)"><input className={kitInput} value={tplForm.orgId} onChange={(e) => setTplForm({ ...tplForm, orgId: e.target.value })} placeholder="TNT-9011" /></Field>
+          <Field label="Hiring type"><Select value={tplForm.hiringType} onChange={(v) => setTplForm({ ...tplForm, hiringType: v })} placeholder="Any" options={[{ value: '', label: 'Any' }, ...['Junior IT roles', 'Mid-level IT roles', 'Senior / niche technology roles', 'Leadership / executive search', 'Bulk hiring'].map((h) => ({ value: h, label: h }))]} /></Field>
+          <Field label="Rate min %"><input className={kitInput} type="number" step="0.01" value={tplForm.rateMin} onChange={(e) => setTplForm({ ...tplForm, rateMin: e.target.value })} /></Field>
+          <Field label="Rate max %"><input className={kitInput} type="number" step="0.01" value={tplForm.rateMax} onChange={(e) => setTplForm({ ...tplForm, rateMax: e.target.value })} /></Field>
+          <Field label="Payment within (days of joining)"><input className={kitInput} type="number" min={1} max={60} value={tplForm.paymentTermsDays} onChange={(e) => setTplForm({ ...tplForm, paymentTermsDays: e.target.value })} /></Field>
+          <Field label="Replacement window (days)"><input className={kitInput} type="number" min={0} max={365} value={tplForm.replacementDays} onChange={(e) => setTplForm({ ...tplForm, replacementDays: e.target.value })} /></Field>
+          <div className="sm:col-span-2"><Field label="GST note"><input className={kitInput} value={tplForm.gstNote} onChange={(e) => setTplForm({ ...tplForm, gstNote: e.target.value })} /></Field></div>
+          <div className="sm:col-span-2"><Field label="Candidate ownership"><textarea rows={2} className={kitInput} value={tplForm.ownershipClause} onChange={(e) => setTplForm({ ...tplForm, ownershipClause: e.target.value })} /></Field></div>
+          <div className="sm:col-span-2"><Field label="Duplicate policy"><textarea rows={2} className={kitInput} value={tplForm.duplicatePolicy} onChange={(e) => setTplForm({ ...tplForm, duplicatePolicy: e.target.value })} /></Field></div>
+          <div className="sm:col-span-2"><Field label="Cancellation terms"><textarea rows={2} className={kitInput} value={tplForm.cancellationTerms} onChange={(e) => setTplForm({ ...tplForm, cancellationTerms: e.target.value })} /></Field></div>
+          <div className="sm:col-span-2 flex justify-end gap-2">
+            <button type="button" onClick={() => setShowTemplate(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button className={btnPrimary}>{editingTpl ? 'Save as new version' : 'Create template'}</button>
+          </div>
+        </form>
+      </Modal>
+      <Modal open={showAgreement} onClose={() => setShowAgreement(false)} title="New commission agreement" subtitle="Rate is validated against the hiring-type slab; templates carry payment, replacement and GST terms">
         <form onSubmit={create} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="sm:col-span-2"><Field label="Agreement template (optional — fills commercial terms)"><Select value={form.templateId} onChange={applyTemplate} placeholder="Custom terms (no template)" options={[{ value: '', label: 'Custom terms (no template)' }, ...templates.filter((t: any) => t.status === 'Active').map((t: any) => ({ value: t.id, label: `${t.name} v${t.version}` }))]} /></Field></div>
           <Field label="Organization ID *"><input className={kitInput} value={form.orgId} onChange={(e) => setForm({ ...form, orgId: e.target.value })} /></Field>
           <Field label="Job ID (optional)"><input className={kitInput} value={form.jobId} onChange={(e) => setForm({ ...form, jobId: e.target.value })} /></Field>
-          <Field label="Rate %"><input className={kitInput} type="number" step="0.01" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} /></Field>
+          <div className="sm:col-span-2"><Field label="Hiring type *"><Select value={form.hiringType} onChange={(v) => setForm({ ...form, hiringType: v })} options={['Junior IT roles', 'Mid-level IT roles', 'Senior / niche technology roles', 'Leadership / executive search', 'Bulk hiring'].map((h) => ({ value: h, label: h }))} /></Field></div>
+          <Field label="Rate % of annual CTC *"><input className={kitInput} type="number" step="0.01" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} /></Field>
           <Field label="Trigger"><Select value={form.trigger} onChange={(v) => setForm({ ...form, trigger: v })} options={[{ value: 'Joined', label: 'Joined' }, { value: 'Offer Accepted', label: 'Offer Accepted' }]} /></Field>
+          <Field label="Payment within (days of joining)"><input className={kitInput} type="number" min={1} max={60} value={form.paymentTermsDays} onChange={(e) => setForm({ ...form, paymentTermsDays: e.target.value })} /></Field>
+          <Field label="Replacement window (days)"><input className={kitInput} type="number" min={0} max={365} value={form.replacementDays} onChange={(e) => setForm({ ...form, replacementDays: e.target.value })} /></Field>
+          <div className="sm:col-span-2 text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200 rounded-xl p-2.5">
+            {(() => { const s = slabOf(form.hiringType); if (!s) return 'Slab: loading…'; if (s.negotiated) return `Slab — ${s.hiringType}: ${s.note}. Any rate allowed.`; return `Slab — ${s.hiringType}: ${s.rateMin}%–${s.rateMax}% of annual CTC. GST extra. Payment 15–30 days from joining.`; })()}
+          </div>
           <div className="sm:col-span-2 flex justify-end gap-2">
             <button type="button" onClick={() => setShowAgreement(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
-            <button className={btnPrimary}>Create agreement</button>
+            <button className={btnPrimary}>{form.templateId ? 'Create from template' : 'Create agreement'}</button>
           </div>
         </form>
       </Modal>
       <div className="text-xs font-extrabold text-slate-700">Agreements ({agreements.length})</div>
       {agreements.map((a) => (
-        <div key={a.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold">{a.id} • {a.orgId} • {a.rate}% • trigger {a.trigger} • {a.status}</div>
+        <div key={a.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
+          <span className="min-w-0 truncate">{a.id} • {a.orgId} • {a.hiringType || '—'} • {a.rate}% • trigger {a.trigger} • pay ≤{a.paymentTermsDays || 30}d • repl {a.replacementDays ?? 90}d • {a.status}{a.companyAccepted ? ' • ✓ company accepted' : ' • pending company acceptance'}</span>
+          {!a.companyAccepted ? <button type="button" onClick={() => accept(a.id)} className="text-[11px] font-bold text-blue-600 underline shrink-0">Mark accepted</button> : null}
+        </div>
       ))}
       <div className="text-xs font-extrabold text-slate-700">Commissions ({filteredComms.length}/{commissions.length})</div>
       {filteredComms.length === 0 && <EmptyState title="No commissions yet" message="Placement triggers auto-create commission records from approved agreements." />}

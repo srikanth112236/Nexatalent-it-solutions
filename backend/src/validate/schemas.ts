@@ -241,6 +241,9 @@ export const invoiceSchema = z.object({
   taxRate: z.number().min(0).max(100).default(18),
   dueDate: z.string().min(1),
   currency: currency.optional(),
+  agreementId: z.string().optional(),
+  paymentTermsDays: z.number().int().min(1).max(60).optional(),
+  replacementNote: z.string().max(500).optional(),
 });
 
 export const paymentSchema = z.object({
@@ -253,18 +256,50 @@ export const paymentSchema = z.object({
   idempotencyKey: z.string().min(12).max(120),
 });
 
+export const HIRING_TYPES = ['Junior IT roles', 'Mid-level IT roles', 'Senior / niche technology roles', 'Leadership / executive search', 'Bulk hiring'] as const;
+
 export const commissionAgreementSchema = z.object({
   orgId: z.string().min(1),
   jobId: z.string().optional(),
   agencyId: z.string().optional(),
+  hiringType: z.enum(HIRING_TYPES).default('Mid-level IT roles'),
   feeModel: z.enum(['percentage', 'fixed']).default('percentage'),
   rate: z.number().min(0).max(100).default(8.33),
   fixedFee: money.optional(),
   currency: currency.optional(),
   trigger: z.enum(['Offer Accepted', 'Joined']).default('Joined'),
+  paymentTermsDays: z.number().int().min(1).max(60).default(30),
   replacementDays: z.number().int().min(0).max(365).default(90),
+  gstApplicable: z.boolean().default(true),
   taxTreatment: z.string().max(120).optional(),
   replacementTerms: z.string().max(1000).optional(),
+  ownershipClause: z.string().max(1000).optional(),
+  duplicatePolicy: z.string().max(1000).optional(),
+  cancellationTerms: z.string().max(1000).optional(),
+  templateId: z.string().optional(),
+});
+
+export const agreementTemplateSchema = z.object({
+  name: z.string().min(3).max(160),
+  orgId: z.string().optional(),
+  hiringType: z.enum(HIRING_TYPES).optional(),
+  rateMin: z.number().min(0).max(100).optional(),
+  rateMax: z.number().min(0).max(100).optional(),
+  paymentTermsDays: z.number().int().min(1).max(60).default(30),
+  replacementDays: z.number().int().min(0).max(365).default(90),
+  gstNote: z.string().max(1000).default('GST charged extra as applicable.'),
+  ownershipClause: z.string().max(2000).default('Candidate ownership rests with the introducing party for 90 days from submission; the client hires only introduced candidates through the platform.'),
+  duplicatePolicy: z.string().max(2000).default('Duplicate profiles are rejected; the earliest valid submission owns the candidate.'),
+  cancellationTerms: z.string().max(2000).default('Either party may cancel with written notice; fees already triggered remain payable.'),
+});
+
+export const feeSlabSchema = z.object({
+  hiringType: z.string().min(1),
+  rateMin: z.number().min(0).max(100),
+  rateMax: z.number().min(0).max(100),
+  note: z.string().max(300).default(''),
+  retainedAllowed: z.boolean().default(false),
+  negotiated: z.boolean().default(false),
 });
 
 export const paginate = z.object({

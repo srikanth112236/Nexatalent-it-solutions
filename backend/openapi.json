@@ -144,12 +144,20 @@
 
     "/api/v1/invoices/{id}/issue": { "post": { "summary": "Issue a Draft invoice", "responses": { "200": { "description": "ok" } } } },
 
-    "/api/v1/invoices/{id}/document": { "get": { "summary": "Printable invoice document (lines, org, payments, credits)", "responses": { "200": { "description": "ok" } } } },
+    "/api/v1/invoices/{id}/document": { "get": { "summary": "Corporate TAX INVOICE document (GSTIN, GST split, agreement terms, reminders)", "responses": { "200": { "description": "ok" } } } },
+    "/api/v1/invoice-reminders": { "get": { "summary": "Reminder log", "responses": { "200": { "description": "ok" } } } },
+    "/api/v1/invoice-reminders/run": { "post": { "summary": "Send overdue/due-soon reminders to superadmin (idempotent per day)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/invoices/{id}/void": { "patch": { "summary": "Void invoice with reason (Paid/Credited blocked)", "responses": { "200": { "description": "ok" }, "422": { "description": "use credit note" } } } },
     "/api/v1/credit-notes": { "post": { "summary": "Amend via credit note (perm: refund)", "responses": { "201": { "description": "created" } } } },
     "/api/v1/payments": { "get": { "summary": "Payments", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Record payment (idempotent)", "responses": { "201": { "description": "created" } } } },
     "/api/v1/payments/webhook": { "post": { "summary": "Provider webhook (signature-verified)", "responses": { "200": { "description": "ok" } } } },
-    "/api/v1/commission-agreements": { "get": { "summary": "Agreements", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Create (configurable trigger)", "responses": { "201": { "description": "created" } } } },
+    "/api/v1/commission-agreements": { "get": { "summary": "Agreements (hiring type, slab rate, acceptance)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Create (slab-validated rate, configurable trigger)", "responses": { "201": { "description": "created" }, "422": { "description": "outside fee slab" } } } },
+    "/api/v1/commission-agreements/{id}/accept": { "patch": { "summary": "Company accepts agreement", "responses": { "200": { "description": "ok" } } } },
+    "/api/v1/fee-slabs": { "get": { "summary": "Fee slabs by hiring type", "responses": { "200": { "description": "ok" } } }, "put": { "summary": "Update slabs (perm: manage_billing)", "responses": { "200": { "description": "ok" } } } },
+    "/api/v1/agreement-templates": { "get": { "summary": "Agreement templates (company scope)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Create template Draft", "responses": { "201": { "description": "created" } } } },
+    "/api/v1/agreement-templates/{id}": { "put": { "summary": "Edit template (mints new version)", "responses": { "200": { "description": "ok" } } } },
+    "/api/v1/agreement-templates/{id}/status": { "post": { "summary": "Draft|Active|Archived", "responses": { "200": { "description": "ok" } } } },
+    "/api/v1/agreement-templates/{id}/instantiate": { "post": { "summary": "Create agreement from template", "responses": { "201": { "description": "created" } } } },
 
     "/api/v1/commissions/check": { "get": { "summary": "Duplicate placement+trigger diagnostic", "responses": { "200": { "description": "ok" }, "400": { "description": "bad query" } } } },    "/api/v1/commissions": { "get": { "summary": "Commission ledger", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/commissions/{id}/approve": { "patch": { "summary": "Approve (perm: approve)", "responses": { "200": { "description": "ok" } } } },
