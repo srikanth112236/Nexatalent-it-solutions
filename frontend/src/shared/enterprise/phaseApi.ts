@@ -86,6 +86,8 @@ export const directoryApi = {
 // Phase 2 — experience
 export const applicationsApi = {
   list: (params = '') => apiClient.get(`/api/v1/applications${params}`),
+  detail: (id: string) => apiClient.get(`/api/v1/applications/${id}`),
+  history: (id: string) => apiClient.get(`/api/v1/applications/${id}/history`),
   apply: (jobId: string, candidateEmail: string) => apiClient.post('/api/v1/applications', { jobId, candidateEmail }),
   setStage: (id: string, stage: string, reason?: string) => apiClient.patch(`/api/v1/applications/${id}/stage`, { stage, reason }),
   withdraw: (id: string, reason?: string) => apiClient.post(`/api/v1/applications/${id}/withdraw`, { reason }),
@@ -119,6 +121,7 @@ export const offersPlacementsApi = {
   offer: (body: unknown) => apiClient.post('/api/v1/offers', body),
   place: (applicationId: string, joinDate?: string, feeBasis?: number) => apiClient.post('/api/v1/placements', { applicationId, joinDate, feeBasis }),
   placements: () => apiClient.get('/api/v1/placements'),
+  offerLetter: (id: string) => apiClient.get(`/api/v1/placements/${id}/offer-letter`),
   matchFee: (applicationId: string, feeBasis?: number) => apiClient.get(`/api/v1/commission-agreements/match?applicationId=${encodeURIComponent(applicationId)}${feeBasis ? `&feeBasis=${feeBasis}` : ''}`),
 };
 
@@ -164,7 +167,7 @@ export const billingApi = {
   templateStatus: (id: string, status: string) => apiClient.post(`/api/v1/agreement-templates/${id}/status`, { status }),
   instantiateTemplate: (id: string, body: unknown) => apiClient.post(`/api/v1/agreement-templates/${id}/instantiate`, body),
   invoiceReminders: () => apiClient.get('/api/v1/invoice-reminders'),
-  runInvoiceReminders: () => apiClient.post('/api/v1/invoice-reminders/run', {}),
+  runInvoiceReminders: (invoiceIds?: string[]) => apiClient.post('/api/v1/invoice-reminders/run', invoiceIds ? { invoiceIds } : {}),
   commissions: (params = '') => apiClient.get(`/api/v1/commissions${params}`),
   checkDuplicate: (params: string) => apiClient.get(`/api/v1/commissions/check${params}`),
   approveCommission: (id: string) => apiClient.patch(`/api/v1/commissions/${id}/approve`, {}),
@@ -189,7 +192,7 @@ export const salesApi = {
   createTarget: (body: unknown) => apiClient.post('/api/v1/targets', body),
   updateTarget: (id: string, body: unknown) => apiClient.put(`/api/v1/targets/${id}`, body),
   deleteTarget: (id: string) => apiClient.delete(`/api/v1/targets/${id}`),
-  performance: () => apiClient.get('/api/v1/performance'),
+  performance: (params = '') => apiClient.get(`/api/v1/performance${params}`),
   submissions: (params = '') => apiClient.get(`/api/v1/submissions${params}`),
   submit: (body: unknown) => apiClient.post('/api/v1/submissions', body),
   setSubmission: (id: string, status: string) => apiClient.patch(`/api/v1/submissions/${id}/status`, { status }),
@@ -239,8 +242,9 @@ export const workforceApi = {
 
 // Phase 5 — platform
 export const platformApi = {
-  notifications: () => apiClient.get('/api/v1/notifications'),
+  notifications: (kind = '') => apiClient.get(`/api/v1/notifications${kind ? `?kind=${encodeURIComponent(kind)}` : ''}`),
   markRead: (id: string) => apiClient.patch(`/api/v1/notifications/${id}/read`, {}),
+  markAllRead: () => apiClient.post('/api/v1/notifications/read-all', {}),
   prefs: () => apiClient.get('/api/v1/notifications/prefs'),
   savePrefs: (body: unknown) => apiClient.put('/api/v1/notifications/prefs', body),
   report: (name: string) => apiClient.get(`/api/v1/reports/${name}`),

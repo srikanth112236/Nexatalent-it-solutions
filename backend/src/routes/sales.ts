@@ -48,9 +48,10 @@ salesRouter.patch('/leads/:id/stage', requireAuth(['superadmin','platform_owner'
   const next = String(req.body.stage);
   if (!(LEAD_FLOW[l.stage] || []).includes(next)) return res.status(422).json({ success: false, message: `Invalid ${l.stage} → ${next}` });
   if (next === 'Lost' && !req.body.reason) return res.status(400).json({ success: false, message: 'Lost reason required.' });
+  const from = l.stage;
   l.stage = next; (l.history ||= []).push({ stage: next, at: nowIso(), reason: req.body.reason || '' });
   db.leadActivities.unshift({ id: uid('LACT'), leadId: l.id, type: 'stage', outcome: next, notes: req.body.reason || '', owner: ctxOf(req).email, createdAt: nowIso() });
-  audit(ctxOf(req).email, `LEAD_STAGE:${l.id}->${next}`, 'TNT-GLOBAL', 'lead', l.id, req.ip); persist();
+  audit(ctxOf(req).email, `LEAD_STAGE:${l.id}->${next}`, 'TNT-GLOBAL', 'lead', l.id, req.ip, { before: from, after: next, reason: req.body.reason || '' }); persist();
   res.json({ success: true, data: l });
 });
 salesRouter.post('/leads/:id/activities', requireAuth(['superadmin','platform_owner','sales_admin','employee','bda','sales_manager']), (req: Request, res: Response) => {
@@ -123,24 +124,51 @@ salesRouter.delete('/targets/:id', requireAuth(['superadmin','platform_owner','s
   const [removed] = db.targets.splice(i, 1); persist();
   res.json({ success: true, data: removed });
 });
-salesRouter.get('/performance', requireAuth(['superadmin','platform_owner','sales_admin','sales_manager','employee']), (_req, res) => {
+salesRouter.get('/performance', requireAuth(['superadmin','platform_owner','sales_admin','sales_manager','employee']), (req, res) => {
   const db = loadDb();
-  const by = (s: string) => db.leads.filter((l: any) => l.stage === s).length;
-  const won = by('Won'), total = db.leads.length || 1;
+  const q = req.query as Record<string, string>;
+  let leads = db.leads as any[];
+  if (q.from) leads = leads.filter((l: any) => String(l.createdAt || '') >= String(q.from));
+  if (q.to) leads = leads.filter((l: any) => String(l.createdAt || '') <= `${q.to}T23:59:59.999Z`.slice(0, 24));
+  if (q.owner) leads = leads.filter((l: any) => l.owner === q.owner);
+  if (q.source) leads = leads.filter((l: any) => l.source === q.source);
+  if (q.service) leads = leads.filter((l: any) => l.service === q.service);
+  if (q.stage) leads = leads.filter((l: any) => l.stage === q.stage);
+  if (q.branch) leads = leads.filter((l: any) => l.branch === q.branch);
+  const ids = new Set(leads.map((l: any) => l.id));
+  const by = (s: string) => leads.filter((l: any) => l.stage === s).length;
+  const won = by('Won'), total = leads.length || 1;
   // Response-time: hours from lead creation to first touch (activity/meeting/proposal/opportunity).
   const touches: Record<string, number> = {};
   for (const [coll, key] of [['leadActivities', 'leadId'], ['meetings', 'leadId'], ['proposals', 'leadId'], ['opportunities', 'leadId']] as const) {
     for (const t of (db[coll] as any[] || [])) {
       const id = (t as any)[key]; const at = new Date((t as any).createdAt).getTime();
-      if (id && Number.isFinite(at) && (touches[id] === undefined || at < touches[id])) touches[id] = at;
+      if (id && ids.has(id) && Number.isFinite(at) && (touches[id] === undefined || at < touches[id])) touches[id] = at;
     }
   }
   let respSum = 0; let respN = 0;
-  for (const l of db.leads as any[]) {
+  for (const l of leads) {
     const born = new Date(l.createdAt).getTime(); const first = touches[l.id];
     if (Number.isFinite(born) && first !== undefined && first >= born) { respSum += (first - born) / 36e5; respN += 1; }
   }
-  res.json({ success: true, data: { leadsAssigned: total, qualified: by('Qualified'), proposals: by('Proposal Sent'), won, lost: by('Lost'), conversionRate: +(won / total).toFixed(3), pipelineValue: db.leads.reduce((a: number, l: any) => a + Number(l.value || 0), 0), overdueFollowups: db.leads.filter((l: any) => l.nextFollowUp && new Date(l.nextFollowUp) < new Date()).length, avgResponseHrs: respN > 0 ? +(respSum / respN).toFixed(1) : 0, respondedLeads: respN } });
+  const meetings = (db.meetings as any[]).filter((m: any) => ids.has(m.leadId)).length;
+  const proposals = (db.proposals as any[]).filter((p: any) => ids.has(p.leadId)).length;
+  const opps = (db.opportunities as any[]).filter((o: any) => ids.has(o.leadId));
+  const revenueBooked = opps.filter((o: any) => o.stage === 'Won').reduce((a: number, o: any) => a + Number(o.value || 0), 0);
+  const owners = [...new Set((db.leads as any[]).map((l: any) => l.owner).filter(Boolean))].sort();
+  const sources = [...new Set((db.leads as any[]).map((l: any) => l.source).filter(Boolean))].sort();
+  const services = [...new Set((db.leads as any[]).map((l: any) => l.service).filter(Boolean))].sort();
+  const branches = [...new Set((db.leads as any[]).map((l: any) => l.branch).filter(Boolean))].sort();
+  res.json({ success: true, data: {
+    leadsAssigned: total, contacted: by('Contacted'), qualified: by('Qualified'),
+    meetingsBooked: meetings, proposals: proposals + by('Proposal Sent'), won, lost: by('Lost'),
+    conversionRate: +(won / total).toFixed(3),
+    pipelineValue: leads.reduce((a: number, l: any) => a + Number(l.value || 0), 0),
+    revenueBooked,
+    overdueFollowups: leads.filter((l: any) => l.nextFollowUp && new Date(l.nextFollowUp) < new Date()).length,
+    avgResponseHrs: respN > 0 ? +(respSum / respN).toFixed(1) : 0, respondedLeads: respN,
+    filters: { owners, sources, services, branches },
+  } });
 });
 // ---- Agency submissions (§9.4) with duplicate/ownership window ----
 salesRouter.get('/submissions', requireAuth(), (req, res) => {

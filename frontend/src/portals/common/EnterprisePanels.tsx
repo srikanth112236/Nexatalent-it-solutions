@@ -1741,11 +1741,12 @@ export function InterviewsPanel() {
 /* ---------------- Phase 2: Interview-only chat ---------------- */
 
 /* ---------------- Phase 2: Interview-only chat ---------------- */
-export function ChatPanel() {
-  const [appId, setAppId] = useState('');
+export function ChatPanel({ initialAppId = '' }: { initialAppId?: string } = {}) {
+  const [appId, setAppId] = useState(initialAppId);
   const [convs, setConvs] = useState<any[]>([]);
   const [active, setActive] = useState('');
   const [msgs, setMsgs] = useState<any[]>([]);
+  const [threadConv, setThreadConv] = useState<any>(null);
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -1762,7 +1763,8 @@ export function ChatPanel() {
     try {
       const thread = unwrapObj(await chatApi.thread(id));
       setMsgs(thread?.messages || []);
-    } catch (e) { setError(errMsg(e)); setLoadError(errStatus(e)); setMsgs([]); }
+      setThreadConv((thread as any)?.conversation || null);
+    } catch (e) { setError(errMsg(e)); setLoadError(errStatus(e)); setMsgs([]); setThreadConv(null); }
   };
   const send = async (e: React.FormEvent) => {
     e.preventDefault(); if (!draft.trim() || !active) return;
@@ -1773,6 +1775,7 @@ export function ChatPanel() {
       syncAll();
     } catch (e) { setError(errMsg(e)); }
   };
+  useEffect(() => { if (initialAppId) find(); }, []);
 
   return (
     <div className={cardCls}>
@@ -1793,9 +1796,22 @@ export function ChatPanel() {
       )}
       {active !== '' && (
         <div className="space-y-2 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+          {threadConv && (
+            <div className="p-3 rounded-xl bg-white border border-slate-200 text-[11px] font-medium text-slate-600 grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-1">
+              <span><strong className="text-slate-800">Conversation</strong> {threadConv.id}</span>
+              <span><strong className="text-slate-800">Application</strong> {threadConv.applicationId || '—'}</span>
+              <span><strong className="text-slate-800">Job</strong> {threadConv.jobId || '—'}</span>
+              <span><strong className="text-slate-800">Company</strong> {threadConv.companyId || '—'}</span>
+              <span><strong className="text-slate-800">Candidate</strong> {threadConv.candidateId || '—'}</span>
+              <span><strong className="text-slate-800">Status</strong> {threadConv.status || 'active'}</span>
+              <span><strong className="text-slate-800">Created</strong> {String(threadConv.createdAt || '').slice(0, 16).replace('T', ' ') || '—'}</span>
+              <span><strong className="text-slate-800">Last message</strong> {String(threadConv.lastMessageAt || '').slice(0, 16).replace('T', ' ') || '—'}</span>
+              <span className="col-span-2 sm:col-span-4 text-slate-500">Retention: messages are preserved per platform policy after reschedule, cancellation or completion.</span>
+            </div>
+          )}
           {msgs.length === 0 && <div className="text-xs text-slate-500 font-medium">No messages yet.</div>}
           {msgs.map((m) => (
-            <div key={m.id} className="text-xs"><strong>{m.sender}:</strong> {m.body}</div>
+            <div key={m.id} className="text-xs"><strong>{m.sender}:</strong> {m.body} <span className="text-slate-400">• {String(m.createdAt || '').slice(0, 16).replace('T', ' ')}{m.editedAt ? ' • edited' : ''}{m.deliveryStatus ? ` • ${m.deliveryStatus}` : ''}</span></div>
           ))}
           <form onSubmit={send} className="flex gap-2">
             <input className={inputCls} placeholder="Write a message…" value={draft} onChange={(e) => setDraft(e.target.value)} />
@@ -2021,6 +2037,21 @@ export function OffersPlacementsPanel() {
   const [showOffer, setShowOffer] = useState(false);
   const [showPlace, setShowPlace] = useState(false);
   const [placeDetail, setPlaceDetail] = useState<any>(null);
+  const [offerLetter, setOfferLetter] = useState<any>(null);
+  const [offerLetterBusy, setOfferLetterBusy] = useState(false);
+  const openOfferLetter = async (p: any) => {
+    setOfferLetterBusy(true);
+    try {
+      const d = unwrapObj(await offersPlacementsApi.offerLetter(p.id));
+      setOfferLetter(d);
+    } catch (e) { setError(errMsg(e)); } finally { setOfferLetterBusy(false); }
+  };
+  const offerLetterHtml = (d: any) => `
+    <h2>Offer of Employment</h2>
+    <p>Dear <strong>${d.candidate?.name || d.candidate?.email || ''}</strong>,</p>
+    <p><strong>${d.organization?.legalName || ''}</strong> is pleased to offer you the position of <strong>${d.job?.title || ''}</strong>${d.job?.location ? ` (${d.job.location})` : ''}.</p>
+    <table><tr><th>Annual CTC</th><td>₹${Number(d.offer?.ctc || 0).toLocaleString('en-IN')}</td></tr><tr><th>Joining date</th><td>${String(d.offer?.joinDate || d.placement?.joinDate || '').slice(0, 10)}</td></tr><tr><th>Employment</th><td>${d.job?.employmentType || 'Full-time'}</td></tr><tr><th>Placement ref</th><td>${d.placement?.id || ''}</td></tr></table>
+    <div class="terms"><h3>Terms</h3><p>• This offer is subject to successful completion of verification and background checks.</p><p>• Fees between the company and NexaTalent are governed by the commercial agreement${d.terms?.hiringType ? ` (${d.terms.hiringType}${d.terms?.rate !== null ? ` @ ${d.terms.rate}%` : ''})` : ''}.</p><p>• Payment within ${d.terms?.paymentTermsDays ?? 30} days of joining; ${d.terms?.replacementDays ?? 90}-day replacement applies.</p></div>`;
   const [feeMatch, setFeeMatch] = useState<any>(null);
   const [feeBusy, setFeeBusy] = useState(false);
   const [placeConfirm, setPlaceConfirm] = useState(false);
@@ -2123,7 +2154,10 @@ export function OffersPlacementsPanel() {
                   <div className="font-extrabold text-slate-900 text-sm truncate">{p.candidateEmail}</div>
                   <div className="font-mono text-[11px] text-slate-500">{p.id} • {p.jobId}</div>
                 </div>
-                <button type="button" onClick={() => setPlaceDetail(p)} className="text-[11px] font-bold text-blue-600 underline shrink-0">View</button>
+                <RowMenu label={`Placement ${p.id}`} items={[
+                  { label: 'View detail', onSelect: () => setPlaceDetail(p) },
+                  { label: 'Offer letter…', onSelect: () => openOfferLetter(p) },
+                ]} />
               </div>
               <div className="font-bold text-slate-700">joined {String(p.joinDate).slice(0, 10)} • basis ₹{Number(p.feeBasis || 0).toLocaleString('en-IN')}</div>
             </div>
@@ -2143,7 +2177,10 @@ export function OffersPlacementsPanel() {
                   <td className="px-4 py-3">{String(p.joinDate).slice(0, 10)}</td>
                   <td className="px-4 py-3 text-right font-bold">₹{Number(p.feeBasis || 0).toLocaleString('en-IN')}</td>
                   <td className="px-4 py-3 font-mono">{p.agreementId || '—'}</td>
-                  <td className="px-4 py-3"><div className="flex justify-end"><button type="button" onClick={() => setPlaceDetail(p)} className="text-[11px] font-bold text-blue-600 underline">View detail</button></div></td>
+                  <td className="px-4 py-3"><div className="flex justify-end"><RowMenu label={`Placement ${p.id}`} items={[
+                    { label: 'View detail', onSelect: () => setPlaceDetail(p) },
+                    { label: 'Offer letter…', onSelect: () => openOfferLetter(p) },
+                  ]} /></div></td>
                 </tr>
               ))}
             </tbody>
@@ -2158,8 +2195,21 @@ export function OffersPlacementsPanel() {
             ))}
           </div>
           <PlacementLinks placement={placeDetail} />
+          <div className="flex flex-wrap gap-2 pt-1">
+            <button type="button" disabled={offerLetterBusy} onClick={() => openOfferLetter(placeDetail)} className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs disabled:opacity-50">{offerLetterBusy ? 'Loading…' : 'Offer letter…'}</button>
+          </div>
         </DetailDrawer>
       )}
+      <Modal open={offerLetter !== null} onClose={() => setOfferLetter(null)} title={`Offer letter — ${offerLetter?.placement?.id || ''}`} subtitle={`${offerLetter?.candidate?.name || offerLetter?.candidate?.email || ''} • ${offerLetter?.job?.title || ''}`} wide>
+        <div className="space-y-3">
+          <div className="p-5 rounded-2xl bg-white border border-slate-200 text-xs leading-relaxed max-h-[52vh] overflow-y-auto" data-lenis-prevent
+            dangerouslySetInnerHTML={{ __html: offerLetter ? offerLetterHtml(offerLetter) : '' }} />
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => offerLetter && downloadDocFile(`Offer-letter-${offerLetter.placement?.id || 'placement'}`, 'Offer letter', offerLetterHtml(offerLetter))} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Download .doc (Word)</button>
+            <button type="button" onClick={() => offerLetter && printHtmlDocument('Offer letter', offerLetterHtml(offerLetter))} className="px-4 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs">Print / Save PDF</button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -2735,6 +2785,115 @@ export function InvoicesPanel() {
         <div className="flex-1"><Pager page={invPage} total={invTotal} pageSize={ips} onPage={setInvPage} /></div>
         <InfoTip title="About this pagination" body={<><p>Server-side pagination: the API returns {ips} records per page ({invTotal} total). Use Show 20/50/100 to change page size; filters apply server-side before paging.</p></>} />
       </div>
+    </div>
+  );
+}
+
+/* ---------------- Payments & Reminders: status tabs over open + paid invoices ---------------- */
+export function PaymentsRemindersPanel() {
+  const navigate = useNavigate();
+  const [tab, setTab] = useQueryState('pay_tab');
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
+  const [busyId, setBusyId] = useState('');
+  const load = async () => {
+    setLoading(true); setError('');
+    try {
+      const [openRes, paidRes] = await Promise.all([
+        billingApi.invoices('?page=1&pageSize=100'), billingApi.invoices('?page=1&pageSize=100&status=Paid'),
+      ]);
+      const open = unwrapList(openRes).filter((i: any) => Number(i.balance || 0) > 0 && ['Issued', 'Partially Paid'].includes(i.status));
+      const paid = unwrapList(paidRes);
+      const seen = new Set(open.map((i: any) => i.id));
+      setRows([...open, ...paid.filter((i: any) => !seen.has(i.id))]);
+    } catch (e) { setError(errMsg(e)); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
+  const age = (i: any) => { const ms = new Date(i.dueDate).getTime(); if (!Number.isFinite(ms)) return null; return Math.floor((ms - Date.now()) / 864e5); };
+  const bucket = (i: any): 'overdue' | 'soon' | 'upcoming' | 'paid' | 'other' => {
+    if (i.status === 'Paid' || Number(i.balance || 0) <= 0) return 'paid';
+    const d = age(i);
+    if (d === null) return 'other';
+    if (d < 0) return 'overdue';
+    if (d <= 7) return 'soon';
+    if (d <= 30) return 'upcoming';
+    return 'other';
+  };
+  const counts = (k: string) => rows.filter((i) => bucket(i) === k).length;
+  const active = tab || 'overdue';
+  const list = rows.filter((i) => bucket(i) === active);
+  const remindOne = async (id: string) => {
+    setBusyId(id); setError(''); setOk('');
+    try {
+      const r = unwrapObj(await billingApi.runInvoiceReminders([id]));
+      setOk(`Reminder sent for ${id} (${r?.sent ?? 0} notification${(r?.sent ?? 0) === 1 ? '' : 's'}).`); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusyId(''); }
+  };
+  const openInvoice = (id: string) => navigate(`/superadmin/invoices?inv_q=${encodeURIComponent(id)}`);
+  return (
+    <div className={cardCls}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-base font-extrabold text-slate-900">Payments & Reminders</h3>
+          <InfoTip title="How this page works" body={<><p>Open invoices grouped by payment urgency. <strong>Remind now</strong> sends one reminder (same daily idempotency as bulk runs). Use the Invoices page for documents and the Billing page to record money.</p></>} />
+        </div>
+        <div className="flex rounded-xl bg-slate-100 border border-slate-200 p-0.5" role="tablist" aria-label="Payment status">
+          {([['overdue', `Overdue (${counts('overdue')})`], ['soon', `Due ≤7d (${counts('soon')})`], ['upcoming', `8–30d (${counts('upcoming')})`], ['paid', `Paid (${counts('paid')})`]] as const).map(([v, label]) => (
+            <button key={v} role="tab" aria-selected={active === v} type="button" onClick={() => setTab(v)}
+              className={`px-3 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap ${active === v ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>{label}</button>
+          ))}
+        </div>
+      </div>
+      {error && <PanelError message={error} onRetry={load} />}
+      {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
+      {loading ? <InlineLoading message="Loading payment status…" /> : list.length === 0 ? (
+        <EmptyState title={`No ${active} invoices`} message="All clear in this bucket (latest 100 invoices scanned)." />
+      ) : (<>
+        <div className="space-y-2 md:hidden">
+          {list.map((i) => (
+            <div key={i.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-extrabold text-slate-900 text-sm truncate">{i.number || i.id}</div>
+                  <div className="font-mono text-[11px] text-slate-500">{i.orgId}</div>
+                </div>
+                <RowMenu label={`Invoice ${i.id}`} items={[
+                  { label: 'Open invoice…', onSelect: () => openInvoice(i.id) },
+                  ...(Number(i.balance || 0) > 0 && i.status !== 'Paid' ? [{ label: 'Remind now', onSelect: () => remindOne(i.id) }] : []),
+                ]} />
+              </div>
+              <div className="font-bold">bal <strong>₹{Number(i.balance || 0).toLocaleString('en-IN')}</strong> of ₹{Number(i.total || 0).toLocaleString('en-IN')} • {active === 'paid' ? 'paid' : age(i) !== null && age(i)! < 0 ? `${-age(i)!}d overdue` : `due in ${age(i)}d`}</div>
+            </div>
+          ))}
+        </div>
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
+          <table className="w-full text-left text-xs min-w-[920px]">
+            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
+              <th className="px-4 py-3">Invoice</th><th className="px-4 py-3">Company</th><th className="px-4 py-3 text-right">Total</th><th className="px-4 py-3 text-right">Paid</th><th className="px-4 py-3 text-right">Balance</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Due / Age</th><th className="px-4 py-3 text-right">Actions</th>
+            </tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {list.map((i) => (
+                <tr key={i.id} className="hover:bg-slate-50/70">
+                  <td className="px-4 py-3"><div className="font-bold">{i.number || i.id}</div><div className="font-mono text-[11px] text-slate-500">{i.id}</div></td>
+                  <td className="px-4 py-3 font-mono font-bold text-amber-700">{i.orgId}</td>
+                  <td className="px-4 py-3 text-right">₹{Number(i.total || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-4 py-3 text-right text-emerald-700 font-bold">₹{Number(i.amountPaid || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-4 py-3 text-right font-extrabold">₹{Number(i.balance || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${i.status === 'Paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : i.overdue ? 'bg-red-50 text-red-700 border-red-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>{i.status}</span></td>
+                  <td className="px-4 py-3">{active === 'paid' ? String(i.updatedAt || i.issueDate || '').slice(0, 10) : `${String(i.dueDate || '').slice(0, 10)}${age(i) !== null && age(i)! < 0 ? ` (${-age(i)!}d)` : ''}`}</td>
+                  <td className="px-4 py-3"><div className="flex justify-end gap-1">
+                    <button type="button" onClick={() => openInvoice(i.id)} className="text-[11px] font-bold text-blue-600 underline">Open</button>
+                    {Number(i.balance || 0) > 0 && i.status !== 'Paid' ? <button type="button" disabled={busyId === i.id} onClick={() => remindOne(i.id)} className="text-[11px] font-bold text-amber-700 underline disabled:opacity-50">{busyId === i.id ? 'Sending…' : 'Remind'}</button> : null}
+                  </div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </>)}
     </div>
   );
 }
@@ -3860,21 +4019,23 @@ export function LeadsPanel() {
   const [oppValue, setOppValue] = useState('');
   const [q, setQ] = useQueryState('lead_q');
   const dqLead = useDebounced(q);
+  const [stageF, setStageF] = useQueryState('lead_stage');
   const [editing, setEditing] = useState<any>(null);
   const [detail, setDetail] = useState<any>(null);
   const [deleteFor, setDeleteFor] = useState<any>(null);
   const [activities, setActivities] = useState<any[]>([]);
   const pageSize = 10;
-  const load = async (p = page) => {
+  const load = async (p = page, st = stageF) => {
     setLoading(true); setError('');
     try {
-      const res: any = await salesApi.leads(`?page=${p}&pageSize=${pageSize}`);
+      const res: any = await salesApi.leads(`?page=${p}&pageSize=${pageSize}${st ? `&status=${encodeURIComponent(st)}` : ''}`);
       setRows(unwrapList(res));
       setTotal(Number(res?.pagination?.total || unwrapList(res).length));
     } catch (e) { setError(errMsg(e)); setLoadError(errStatus(e)); }
     finally { setLoading(false); }
   };
-  useEffect(() => { load(page); }, [page ]);
+  useEffect(() => { setPage(1); }, [stageF]);
+  useEffect(() => { load(page, stageF); }, [page, stageF ]);
   const create = async (e: React.FormEvent) => {
     e.preventDefault(); if (!form.contactName.trim() || !form.companyName.trim()) return;
     setBusy(true);
@@ -3963,9 +4124,15 @@ export function LeadsPanel() {
             <button type="button" onClick={() => setShowCreate(true)} className={btnPrimary}>+ New lead</button>
           </div>
         </div>
-        <input className={inputCls} placeholder="Search contact, company, email, ID…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <div className="flex flex-col lg:flex-row gap-2">
+          <input className={`${inputCls} flex-1`} placeholder="Search contact, company, email, ID…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <div className="w-full lg:w-44 shrink-0">
+            <Select value={stageF} onChange={setStageF} ariaLabel="Stage filter" placeholder="All stages"
+              options={[{ value: '', label: 'All stages' }, ...LEAD_STAGES.map((s) => ({ value: s, label: s }))]} />
+          </div>
+        </div>
       </div>
-      {error && <PanelError message={error} status={loadError} onRetry={() => load(page)} />}
+      {error && <PanelError message={error} status={loadError} onRetry={() => load(page, stageF)} />}
       {okMerge && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{okMerge}</div>}
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New lead" subtitle="New → Contacted → Qualified → … → Won / Lost" wide>
         <form onSubmit={create} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -4257,12 +4424,63 @@ export function PerformancePanel() {
   const [form, setForm] = useState({ owner: '', period: '', goal: '' });
   const [showTarget, setShowTarget] = useState(false);
   const [editingTargetState, setEditingTargetState] = useState('');
+  const [fFrom, setFFrom] = useQueryState('perf_from');
+  const [fTo, setFTo] = useQueryState('perf_to');
+  const [fOwner, setFOwner] = useQueryState('perf_owner');
+  const [fSource, setFSource] = useQueryState('perf_source');
+  const [fService, setFService] = useQueryState('perf_service');
+  const [fStage, setFStage] = useQueryState('perf_stage');
+  const [fBranch, setFBranch] = useQueryState('perf_branch');
+  const [drill, setDrill] = useState<{ title: string; subtitle: string; columns: string[]; rows: string[][] } | null>(null);
+  const perfParams = () => {
+    const sp = new URLSearchParams();
+    if (fFrom) sp.set('from', fFrom);
+    if (fTo) sp.set('to', fTo);
+    if (fOwner) sp.set('owner', fOwner);
+    if (fSource) sp.set('source', fSource);
+    if (fService) sp.set('service', fService);
+    if (fStage) sp.set('stage', fStage);
+    if (fBranch) sp.set('branch', fBranch);
+    const qs = sp.toString();
+    return qs ? `?${qs}` : '';
+  };
   const load = async () => {
     setError('');
-    try { setKpi(unwrapObj(await salesApi.performance())); setTargets(unwrapList(await salesApi.targets())); setOpps(unwrapList(await salesApi.opportunities())); }
+    try { setKpi(unwrapObj(await salesApi.performance(perfParams()))); setTargets(unwrapList(await salesApi.targets())); setOpps(unwrapList(await salesApi.opportunities())); }
     catch (e) { setError(errMsg(e)); }
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [fFrom, fTo, fOwner, fSource, fService, fStage, fBranch]);
+  const drillLeads = async (title: string, stage?: string, pick?: (l: any) => boolean) => {
+    try {
+      const sp = new URLSearchParams({ page: '1', pageSize: '50' });
+      if (stage) sp.set('status', stage);
+      if (fOwner) sp.set('q', fOwner);
+      const res: any = await salesApi.leads(`?${sp.toString()}`);
+      const list = unwrapList(res).filter((l: any) => (!fOwner || l.owner === fOwner) && (!stage || l.stage === stage) && (!pick || pick(l)));
+      setDrill({ title, subtitle: `${list.length} record(s) behind this metric`, columns: ['Lead', 'Company', 'Stage', 'Value', 'Owner'], rows: list.map((l: any) => [`${l.contactName} (${l.id})`, l.companyName, l.stage, `₹${Number(l.value || 0).toLocaleString('en-IN')}`, l.owner || '—']) });
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const drillMeetings = async () => {
+    try {
+      const res: any = await salesApi.meetings();
+      const list = unwrapList(res).filter((m: any) => !fOwner || m.owner === fOwner).slice(0, 50);
+      setDrill({ title: 'Meetings booked', subtitle: `${list.length} record(s) behind this metric`, columns: ['Meeting', 'Lead', 'When', 'Outcome'], rows: list.map((m: any) => [`${m.title} (${m.id})`, m.leadId, String(m.at || '').slice(0, 16).replace('T', ' '), m.outcome || '—']) });
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const drillProposals = async () => {
+    try {
+      const res: any = await salesApi.proposals();
+      const list = unwrapList(res).filter((p: any) => !fOwner || p.owner === fOwner).slice(0, 50);
+      setDrill({ title: 'Proposals sent', subtitle: `${list.length} record(s) behind this metric`, columns: ['Proposal', 'Lead', 'Amount', 'Status'], rows: list.map((p: any) => [`${p.title} (${p.id})`, p.leadId, `₹${Number(p.amount || 0).toLocaleString('en-IN')}`, p.status || '—']) });
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const drillRevenue = async () => {
+    try {
+      const res: any = await salesApi.opportunities('?page=1&pageSize=100');
+      const list = unwrapList(res).filter((o: any) => o.stage === 'Won' && (!fOwner || o.owner === fOwner));
+      setDrill({ title: 'Revenue booked', subtitle: `${list.length} won opportunitie(s)`, columns: ['Opportunity', 'Value', 'Owner'], rows: list.map((o: any) => [`${o.title} (${o.id})`, `₹${Number(o.value || 0).toLocaleString('en-IN')}`, o.owner || '—']) });
+    } catch (e) { setError(errMsg(e)); }
+  };
   const create = async (e: React.FormEvent) => {
     e.preventDefault(); if (!form.owner) return;
     try {
@@ -4283,13 +4501,55 @@ export function PerformancePanel() {
         <button type="button" onClick={() => { setForm({ owner: '', period: '', goal: '' }); setEditingTargetState(''); setShowTarget(true); }} className={btnDark}>+ Set target</button>
       </div>
       {error && <PanelError message={error} onRetry={load} />}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+        <Field label="From"><DatePicker value={fFrom} onChange={setFFrom} ariaLabel="From date" /></Field>
+        <Field label="To"><DatePicker value={fTo} onChange={setFTo} ariaLabel="To date" /></Field>
+        <Field label="Salesperson"><Select value={fOwner} onChange={setFOwner} placeholder="All" options={[{ value: '', label: 'All' }, ...((kpi?.filters?.owners || []) as string[]).map((o: string) => ({ value: o, label: o }))]} /></Field>
+        <Field label="Lead source"><Select value={fSource} onChange={setFSource} placeholder="All" options={[{ value: '', label: 'All' }, ...((kpi?.filters?.sources || []) as string[]).map((o: string) => ({ value: o, label: o }))]} /></Field>
+        <Field label="Service"><Select value={fService} onChange={setFService} placeholder="All" options={[{ value: '', label: 'All' }, ...((kpi?.filters?.services || []) as string[]).map((o: string) => ({ value: o, label: o }))]} /></Field>
+        <Field label="Stage"><Select value={fStage} onChange={setFStage} placeholder="All" options={[{ value: '', label: 'All' }, ...LEAD_STAGES.map((s) => ({ value: s, label: s }))]} /></Field>
+        <Field label="Branch"><Select value={fBranch} onChange={setFBranch} placeholder="All" options={[{ value: '', label: 'All' }, ...((kpi?.filters?.branches || []) as string[]).map((o: string) => ({ value: o, label: o }))]} /></Field>
+        <div className="flex items-end"><button type="button" onClick={() => { setFFrom(''); setFTo(''); setFOwner(''); setFSource(''); setFService(''); setFStage(''); setFBranch(''); }} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">Clear filters</button></div>
+      </div>
       {kpi ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {[['Assigned', kpi.leadsAssigned], ['Qualified', kpi.qualified], ['Won', kpi.won], ['Lost', kpi.lost], ['Conversion', `${(Number(kpi.conversionRate || 0) * 100).toFixed(1)}%`], ['Pipeline ₹', kpi.pipelineValue], ['Proposals', kpi.proposals], ['Overdue follow-ups', kpi.overdueFollowups], ['Avg response', `${kpi.avgResponseHrs ?? '—'}h`], ['Responded leads', kpi.respondedLeads ?? '—']].map(([k, v]) => (
-            <div key={k as string} className="p-4 rounded-2xl bg-slate-50 border border-slate-200"><div className="text-[11px] font-bold text-slate-500">{k}</div><div className="text-xl font-extrabold">{String(v)}</div></div>
+          {([
+            ['Assigned', kpi.leadsAssigned, () => drillLeads('Assigned leads')],
+            ['Contacted', kpi.contacted, () => drillLeads('Contacted leads', 'Contacted')],
+            ['Qualified', kpi.qualified, () => drillLeads('Qualified leads', 'Qualified')],
+            ['Meetings booked', kpi.meetingsBooked, () => drillMeetings()],
+            ['Proposals sent', kpi.proposals, () => drillProposals()],
+            ['Won', kpi.won, () => drillLeads('Won leads', 'Won')],
+            ['Lost', kpi.lost, () => drillLeads('Lost leads', 'Lost')],
+            ['Conversion', `${(Number(kpi.conversionRate || 0) * 100).toFixed(1)}%`, () => drillLeads('Converted (Won) leads', 'Won')],
+            ['Pipeline ₹', Number(kpi.pipelineValue || 0).toLocaleString('en-IN'), () => drillLeads('Pipeline leads by value')],
+            ['Revenue booked ₹', Number(kpi.revenueBooked || 0).toLocaleString('en-IN'), () => drillRevenue()],
+            ['Avg response', `${kpi.avgResponseHrs ?? '—'}h`, () => drillLeads('Responded leads')],
+            ['Overdue follow-ups', kpi.overdueFollowups, () => drillLeads('Overdue follow-ups', undefined, (l) => !!(l.nextFollowUp && new Date(l.nextFollowUp) < new Date()))],
+          ] as Array<[string, unknown, () => void]>).map(([k, v, go]) => (
+            <button key={k as string} type="button" onClick={go} title={`Drill into ${k}`}
+              className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left hover:border-[#087BFF] hover:shadow-sm transition cursor-pointer">
+              <div className="text-[11px] font-bold text-slate-500">{k} <span className="text-[#087BFF]">→</span></div>
+              <div className="text-xl font-extrabold">{String(v)}</div>
+            </button>
           ))}
         </div>
       ) : <InlineLoading message="Loading performance…" />}
+      <Modal open={drill !== null} onClose={() => setDrill(null)} title={drill?.title || ''} subtitle={drill?.subtitle || ''} wide>
+        <div className="overflow-x-auto rounded-2xl border border-slate-200">
+          <table className="w-full text-left text-xs min-w-[640px]">
+            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
+              {(drill?.columns || []).map((c) => <th key={c} className="px-4 py-3">{c}</th>)}
+            </tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {(drill?.rows || []).map((r, i) => (
+                <tr key={i} className="hover:bg-slate-50/70">{r.map((cell, j) => <td key={j} className="px-4 py-2.5 font-medium">{cell}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {(drill?.rows || []).length === 0 && <div className="text-xs text-slate-500">No source records behind this metric for the current filters.</div>}
+      </Modal>
       <Modal open={showTarget} onClose={() => setShowTarget(false)} title="Set sales target">
         <form onSubmit={create} className="space-y-3">
           <Field label="Owner email *"><input className={kitInput} value={form.owner} onChange={(e) => setForm({ ...form, owner: e.target.value })} /></Field>
@@ -4532,15 +4792,44 @@ export function ReportsPanel() {
 }
 
 /* ---------------- Phase 5: Notifications ---------------- */
+const NOTIF_KIND_OPTIONS: { key: string; label: string; hint: string }[] = [
+  { key: 'application', label: 'Stage changes', hint: 'Applied, review, shortlist, reject' },
+  { key: 'interview', label: 'Interviews', hint: 'Scheduled, rescheduled, cancelled' },
+  { key: 'offer', label: 'Offers', hint: 'Selected, offer issued, joining' },
+  { key: 'placement', label: 'Placements', hint: 'Joining confirmations' },
+  { key: 'chat', label: 'Messages', hint: 'New chat messages' },
+  { key: 'info_request', label: 'Info requests', hint: 'Recruiter asks for documents' },
+  { key: 'billing', label: 'Billing & ATS', hint: 'Invoices, commercial updates' },
+  { key: 'other', label: 'Other', hint: 'Everything else' },
+];
+const NOTIF_KIND_DEFAULTS: Record<string, boolean> = {
+  application: true, interview: true, offer: true, placement: true, chat: true, info_request: true, billing: true, other: true,
+};
 export function NotificationsPanel() {
   const [rows, setRows] = useState<any[]>([]);
-  const [prefs, setPrefs] = useState<any>({ inApp: true, email: true });
+  const [prefs, setPrefs] = useState<any>({ inApp: true, email: true, emailCh: true, kinds: { ...NOTIF_KIND_DEFAULTS } });
+  const [kindFilter, setKindFilter] = useState('');
+  const [savedTick, setSavedTick] = useState(0);
   const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
   const [mail, setMail] = useState<any[]>([]);
   const [mailConfigured, setMailConfigured] = useState<boolean | null>(null);
   const load = async () => {
     setError('');
-    try { setRows(unwrapList(await platformApi.notifications())); const p = unwrapList(await platformApi.prefs()); if (p[0]) setPrefs(p[0]); }
+    try {
+      setRows(unwrapList(await platformApi.notifications()));
+      const p = unwrapList(await platformApi.prefs());
+      if (p[0]) {
+        const raw = p[0] as any;
+        setPrefs({
+          ...raw,
+          inApp: raw.inApp !== false,
+          email: raw.emailCh !== undefined ? raw.emailCh : raw.email !== false,
+          emailCh: raw.emailCh !== undefined ? raw.emailCh : raw.email !== false,
+          kinds: { ...NOTIF_KIND_DEFAULTS, ...(raw.kinds || {}) },
+        });
+      }
+    }
     catch (e) { setError(errMsg(e)); }
     try {
       const m: any = await billingApi.mailOutbox();
@@ -4549,19 +4838,90 @@ export function NotificationsPanel() {
   };
   useEffect(() => { load(); }, []);
   const save = async () => {
-    try { await platformApi.savePrefs(prefs); } catch (e) { setError(errMsg(e)); }
+    setError(''); setOk('');
+    try {
+      const updated = unwrapObj(await platformApi.savePrefs({
+        inApp: !!prefs.inApp,
+        email: !!(prefs.emailCh ?? prefs.email),
+        emailCh: !!(prefs.emailCh ?? prefs.email),
+        kinds: prefs.kinds || {},
+      }));
+      if (updated?.kinds) setPrefs((x: any) => ({ ...x, kinds: { ...NOTIF_KIND_DEFAULTS, ...updated.kinds } }));
+      setOk('Notification preferences saved.');
+      setSavedTick((t) => t + 1);
+      syncAll();
+    } catch (e) { setError(errMsg(e)); }
   };
+  const visible = kindFilter ? rows.filter((n) => String(n.kind) === kindFilter) : rows;
+  const unread = rows.filter((n) => n.status !== 'read').length;
+  const kindsOn = Object.values((prefs.kinds || {}) as Record<string, boolean>).filter(Boolean).length;
   return (
     <div className={cardCls}>
-      <h3 className="text-base font-extrabold text-slate-900">Notifications & Preferences</h3>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h3 className="text-base font-extrabold text-slate-900">Notifications & Preferences</h3>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-bold text-slate-500">{unread} unread • {kindsOn}/{NOTIF_KIND_OPTIONS.length} kinds on</span>
+          {unread > 0 && (
+            <button
+              type="button"
+              className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold text-[11px]"
+              onClick={async () => {
+                try { await platformApi.markAllRead(); setRows((x) => x.map((y) => ({ ...y, status: 'read' }))); syncAll(); }
+                catch (e) { setError(errMsg(e)); }
+              }}
+            >
+              Mark all read
+            </button>
+          )}
+        </div>
+      </div>
       {error && <PanelError message={error} onRetry={load} />}
-      <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
-        <input type="checkbox" checked={!!prefs.inApp} onChange={(e) => setPrefs({ ...prefs, inApp: e.target.checked })} /> In-app
-        <input type="checkbox" checked={!!prefs.email} onChange={(e) => setPrefs({ ...prefs, email: e.target.checked })} className="ml-3" /> Email
-        <button type="button" className={btnDark} onClick={save}>Save</button>
-      </label>
-      {rows.length === 0 ? <EmptyState title="No notifications" message="Stage changes, interviews, payments and chat events land here." /> : (
-        <div className="space-y-2">{rows.slice(0, 30).map((n) => (
+      {ok && <div key={savedTick} className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
+      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+        <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Delivery channels</div>
+        <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+          <input type="checkbox" checked={!!prefs.inApp} onChange={(e) => setPrefs({ ...prefs, inApp: e.target.checked })} /> In-app
+          <input type="checkbox" checked={!!(prefs.emailCh ?? prefs.email)} onChange={(e) => setPrefs({ ...prefs, email: e.target.checked, emailCh: e.target.checked })} className="ml-3" /> Email
+          <button type="button" className={btnDark} onClick={save}>Save preferences</button>
+        </label>
+        <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 pt-1">Per-kind preferences — muted kinds are hidden from this feed</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {NOTIF_KIND_OPTIONS.map((o) => (
+            <label key={o.key} className="flex items-start gap-2 p-2.5 rounded-xl bg-white border border-slate-200 text-xs cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={(prefs.kinds?.[o.key] ?? true) !== false}
+                onChange={(e) => setPrefs({ ...prefs, kinds: { ...(prefs.kinds || {}), [o.key]: e.target.checked } })}
+              />
+              <span>
+                <span className="font-bold text-slate-800">{o.label}</span>
+                <span className="block text-[11px] text-slate-500 font-medium">{o.hint}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+        <div className="text-[11px] text-slate-500 font-medium">Account-security notices are always delivered and cannot be muted.</div>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="text-xs font-extrabold text-slate-700">Filter by kind</div>
+        <select
+          aria-label="Filter notifications by kind"
+          value={kindFilter}
+          onChange={(e) => setKindFilter(e.target.value)}
+          className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none"
+        >
+          <option value="">All kinds ({rows.length})</option>
+          {Array.from(new Set(rows.map((n) => String(n.kind || 'other')))).sort().map((k) => (
+            <option key={k} value={k}>{k} ({rows.filter((n) => String(n.kind) === k).length})</option>
+          ))}
+        </select>
+        {kindFilter && (
+          <button type="button" onClick={() => setKindFilter('')} className="text-[11px] font-bold text-blue-600 underline">Clear</button>
+        )}
+      </div>
+      {visible.length === 0 ? <EmptyState title={rows.length === 0 ? 'No notifications' : `No “${kindFilter}” notifications`} message={rows.length === 0 ? 'Stage changes, interviews, payments and chat events land here.' : 'Try another kind, or unmute it in preferences above.'} /> : (
+        <div className="space-y-2">{visible.slice(0, 30).map((n) => (
           <div key={n.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between gap-2">
             <span><strong>[{n.kind}]</strong> {n.body} <span className="text-slate-500">• {n.status}</span></span>
             {n.status !== 'read' && (
@@ -5588,7 +5948,8 @@ export function SkillsPanel() {
   );
 }
 
-/* ---------------- Phase 5: Admin controls ---------------- */export function AdminControlsPanel() {
+/* ---------------- Phase 5: Admin controls (sectionable for tabbed layout) ---------------- */export function AdminControlsPanel({ section = 'all' }: { section?: 'all' | 'verification' | 'users' | 'exceptions' }) {
+  const show = (s: string) => section === 'all' || section === s;
   const [users, setUsers] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
   const [error, setError] = useState('');
@@ -5631,7 +5992,10 @@ export function SkillsPanel() {
     <div className={cardCls}>
       <h3 className="text-base font-extrabold text-slate-900">Verification, Suspension & Access Control</h3>
       {error && <PanelError message={error} onRetry={load} />}
-      <input className={inputCls} placeholder="Reason (recorded with actor + timestamp — required)" value={reason} onChange={(e) => setReason(e.target.value)} />
+      {(show('verification') || show('users')) && (
+        <input className={inputCls} placeholder="Reason (recorded with actor + timestamp — required)" value={reason} onChange={(e) => setReason(e.target.value)} />
+      )}
+      {show('verification') && (<>
       <div className="text-xs font-extrabold text-slate-700">Companies — verify / suspend / reactivate ({tenants.length})</div>
       <div className="space-y-2 md:hidden">{tenants.map((t) => (
         <OrgRow key={t.id} t={t} reason={reason} act={act} confirm={confirm} />
@@ -5646,6 +6010,8 @@ export function SkillsPanel() {
           </tbody>
         </table>
       </div>
+      </>)}
+      {show('users') && (<>
       <div className="text-xs font-extrabold text-slate-700">Users — suspend / reactivate (revokes sessions) ({users.length})</div>
       <div className="space-y-2 md:hidden">{users.map((u) => (
         <UserRow key={u.id} u={u} reason={reason} act={act} confirm={confirm} />
@@ -5660,6 +6026,8 @@ export function SkillsPanel() {
           </tbody>
         </table>
       </div>
+      </>)}
+      {show('exceptions') && (<>
       <div className="text-xs font-extrabold text-slate-700">Permission exceptions — explicit grant/revoke over role templates (§4.2)</div>
       <form onSubmit={saveException} className="grid grid-cols-1 sm:grid-cols-4 gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200">
         <input className={kitInput} placeholder="user@company.com *" value={excForm.email} onChange={(e) => setExcForm({ ...excForm, email: e.target.value })} />
@@ -5668,13 +6036,35 @@ export function SkillsPanel() {
         <button className={btnDark}>Save exception</button>
       </form>
       {exceptions.length === 0 ? <div className="text-[11px] text-slate-500 font-medium">No exceptions — every account runs on its role template.</div> : (
-        <div className="space-y-2">{exceptions.map((o) => (
-          <div key={o.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
-            <span className="truncate">{o.email} • <strong className={o.effect === 'grant' ? 'text-emerald-600' : 'text-red-600'}>{o.effect}</strong> • {o.permission} • by {o.by}</span>
-            <button type="button" onClick={() => clearException(o)} className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] shrink-0">Clear</button>
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
+          <table className="w-full text-left text-xs min-w-[640px]">
+            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
+              <th className="px-4 py-3">User</th><th className="px-4 py-3">Effect</th><th className="px-4 py-3">Permission</th><th className="px-4 py-3">By</th><th className="px-4 py-3 text-right">Actions</th>
+            </tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {exceptions.map((o) => (
+                <tr key={o.id} className="hover:bg-slate-50/70">
+                  <td className="px-4 py-3 font-bold">{o.email}</td>
+                  <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${o.effect === 'grant' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>{o.effect}</span></td>
+                  <td className="px-4 py-3 font-mono">{o.permission}</td>
+                  <td className="px-4 py-3 text-slate-500">{o.by}</td>
+                  <td className="px-4 py-3"><div className="flex justify-end"><button type="button" onClick={() => clearException(o)} className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px]">Clear</button></div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {exceptions.length > 0 && (
+        <div className="space-y-2 md:hidden">{exceptions.map((o) => (
+          <div key={o.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+            <div className="font-extrabold text-slate-900 truncate">{o.email}</div>
+            <div><span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${o.effect === 'grant' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>{o.effect} {o.permission}</span></div>
+            <button type="button" onClick={() => clearException(o)} className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px]">Clear</button>
           </div>
         ))}</div>
       )}
+      </>)}
       <ConfirmDialog
         open={pending !== null}
         title={pending?.title || 'Confirm'}

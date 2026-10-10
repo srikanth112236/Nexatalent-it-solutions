@@ -80,7 +80,7 @@ recruitmentRouter.patch('/requisitions/:id/status', requireAuth(), (req: Request
   r.status = next; r.updatedAt = nowIso();
   if (req.body.reason) r.statusReason = String(req.body.reason).slice(0, 1000);
   r.history = [...(r.history || []), { from, to: next, by: ctx.email, reason: req.body.reason || '', at: nowIso() }];
-  audit(ctx.email, `REQUISITION_STATUS:${r.id} ${from}->${next}`, r.orgId, 'requisition', r.id, req.ip); persist();
+  audit(ctx.email, `REQUISITION_STATUS:${r.id} ${from}->${next}`, r.orgId, 'requisition', r.id, req.ip, { before: from, after: next, reason: req.body.reason || '' }); persist();
   res.json({ success: true, data: r });
 });
 
@@ -99,6 +99,30 @@ recruitmentRouter.get('/jobs', requireAuth(), (req, res) => {
   } else if (req.query.orgId) rows = rows.filter((j) => j.orgId === req.query.orgId);
   if (req.query.requisitionId) rows = rows.filter((j) => j.requisitionId === req.query.requisitionId);
   if (status) rows = rows.filter((j) => j.status === status);
+  // §7.4 candidate filters (all optional, combined with AND).
+  const has = (v: unknown) => v !== undefined && String(v).trim() !== '';
+  if (has(req.query.skills)) {
+    const want = String(req.query.skills).toLowerCase().split(',').map((s) => s.trim()).filter(Boolean);
+    rows = rows.filter((j) => { const hay = `${j.requiredSkills || ''} ${j.preferredSkills || ''}`.toLowerCase(); return want.every((w) => hay.includes(w)); });
+  }
+  if (has(req.query.company)) { const s = String(req.query.company).toLowerCase(); rows = rows.filter((j) => `${(j as any).companyName || ''}`.toLowerCase().includes(s)); }
+  if (has(req.query.industry)) { const s = String(req.query.industry).toLowerCase(); rows = rows.filter((j) => `${(j as any).industry || ''}`.toLowerCase().includes(s)); }
+  if (has(req.query.location)) { const s = String(req.query.location).toLowerCase(); rows = rows.filter((j) => `${j.location || ''}`.toLowerCase().includes(s)); }
+  if (has(req.query.experience)) { const n = Number(req.query.experience); if (Number.isFinite(n)) rows = rows.filter((j) => Number((j as any).experienceMin ?? (j as any).experienceYears ?? 0) <= n && n <= Number((j as any).experienceMax ?? (j as any).experienceYears ?? 99)); }
+  if (has(req.query.employmentType)) rows = rows.filter((j) => String(j.employmentType || '').toLowerCase() === String(req.query.employmentType).toLowerCase());
+  if (has(req.query.workArrangement)) rows = rows.filter((j) => String((j as any).workArrangement || '').toLowerCase() === String(req.query.workArrangement).toLowerCase());
+  if (has(req.query.salaryMin) || has(req.query.salaryMax)) {
+    const lo = has(req.query.salaryMin) ? Number(req.query.salaryMin) : -Infinity;
+    const hi = has(req.query.salaryMax) ? Number(req.query.salaryMax) : Infinity;
+    rows = rows.filter((j) => { const a = Number(j.salaryMin ?? 0); const b = Number((j as any).salaryMax ?? j.salaryMin ?? 0); return a <= hi && b >= lo; });
+  }
+  if (has(req.query.postedAfter)) { const t = new Date(String(req.query.postedAfter)).getTime(); if (Number.isFinite(t)) rows = rows.filter((j) => new Date((j as any).createdAt || 0).getTime() >= t); }
+  if (has(req.query.qualifications)) { const s = String(req.query.qualifications).toLowerCase(); rows = rows.filter((j) => `${(j as any).qualifications || ''}`.toLowerCase().includes(s)); }
+  // §7.4: non-platform roles never see expired jobs in search (no-expiry jobs still pass).
+  if (!PLATFORM_ROLES.includes(ctx.role)) {
+    const now = new Date();
+    rows = rows.filter((j) => !(j as any).expiryDate || new Date((j as any).expiryDate) > now);
+  }
   if (q) { const s = String(q).toLowerCase(); rows = rows.filter((j) => `${j.title} ${j.description} ${j.location}`.toLowerCase().includes(s)); }
   // Counts over the complete set; non-owners receive the public allowlist only.
   const enriched = rows.map((j) => {
@@ -203,7 +227,7 @@ recruitmentRouter.patch('/jobs/:id/status', requireAuth(['employer','superadmin'
   j.status = next; j.updatedAt = nowIso();
   if (reason) j.statusReason = String(reason).slice(0, 1000);
   j.history = [...(j.history || []), { from, to: next, by: ctx.email, reason: reason ? String(reason).slice(0, 1000) : '', at: nowIso() }];
-  audit(ctx.email, `JOB_STATUS:${j.id} ${from}->${next}`, j.orgId, 'job', j.id, req.ip); persist();
+  audit(ctx.email, `JOB_STATUS:${j.id} ${from}->${next}`, j.orgId, 'job', j.id, req.ip, { before: from, after: next, reason: reason ? String(reason).slice(0, 1000) : '' }); persist();
   if (next === 'Published') emit('job.published', j, j.orgId, ctx.email);
   res.json({ success: true, data: j });
 });
@@ -271,7 +295,7 @@ recruitmentRouter.patch('/applications/:id/stage', requireAuth(['employer','supe
   const from = a.stage; a.stage = parsed.data; a.updatedAt = nowIso();
   if (req.body.reason) a.stageReason = String(req.body.reason);
   db.stageHistory.unshift({ id: uid('STG'), applicationId: a.id, from, to: a.stage, actor: ctx.email, reason: req.body.reason || '', createdAt: nowIso() });
-  audit(ctx.email, `APPLICATION_STAGE:${a.id} ${from}->${a.stage}`, a.orgId, 'application', a.id, req.ip); persist();
+  audit(ctx.email, `APPLICATION_STAGE:${a.id} ${from}->${a.stage}`, a.orgId, 'application', a.id, req.ip, { before: from, after: a.stage, reason: req.body.reason || '' }); persist();
   emit('application.stage', { ...a }, a.orgId, ctx.email);
   res.json({ success: true, data: a });
 });
@@ -373,6 +397,28 @@ recruitmentRouter.post('/placements', requireAuth(['employer','superadmin','comp
   persist();
   res.status(201).json({ success: true, data: { ...pl, agreementId: agreement.id, autoInvoiced: autoInvoice ? autoInvoice.id : null } });
 });
+recruitmentRouter.get('/placements/:id/offer-letter', requireAuth(), (req, res) => {
+  const db = loadDb();
+  const pl: any = db.placements.find((x: any) => x.id === req.params.id);
+  if (!pl) return res.status(404).json({ success: false, message: 'Placement not found.' });
+  const ctx = ctxOf(req);
+  if (!['superadmin','platform_owner','operations_admin','employee','finance_admin'].includes(ctx.role) && pl.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Placement not found.' });
+  const app: any = db.applications.find((a: any) => a.id === pl.applicationId) || null;
+  const job: any = db.jobs.find((j: any) => j.id === pl.jobId) || null;
+  const org: any = db.organizations.find((o: any) => o.id === pl.orgId) || null;
+  const offer: any = db.offers.filter((o: any) => o.applicationId === pl.applicationId).sort((x: any, y: any) => String(y.createdAt).localeCompare(String(x.createdAt)))[0] || null;
+  const cand: any = db.candidateProfiles.find((c: any) => String(c.email || '').toLowerCase() === String(pl.candidateEmail || '').toLowerCase()) || null;
+  const ag: any = pl.agreementId ? db.commissionAgreements.find((a: any) => a.id === pl.agreementId) : null;
+  res.json({ success: true, data: {
+    placement: pl,
+    candidate: cand ? { name: cand.name, email: cand.email, roleTitle: cand.roleTitle } : { name: '', email: pl.candidateEmail, roleTitle: '' },
+    job: job ? { id: job.id, title: job.title, location: job.location, employmentType: job.employmentType } : { id: pl.jobId, title: app?.jobTitle || '', location: '', employmentType: '' },
+    organization: org ? { id: org.id, legalName: org.legalName, displayName: org.displayName } : { id: pl.orgId, legalName: pl.orgId, displayName: pl.orgId },
+    offer: offer ? { id: offer.id, ctc: offer.ctc, currency: offer.currency || 'INR', joinDate: offer.joinDate, status: offer.status } : null,
+    terms: { paymentTermsDays: ag?.paymentTermsDays ?? 30, replacementDays: ag?.replacementDays ?? 90, hiringType: ag?.hiringType || '', rate: ag?.rate ?? null },
+    generatedAt: nowIso(),
+  } });
+});
 recruitmentRouter.get('/placements', requireAuth(), (req, res) => {
   const ctx = ctxOf(req); let rows = loadDb().placements as any[];
   if (!['superadmin','platform_owner','operations_admin','employee','finance_admin'].includes(ctx.role)) rows = rows.filter((p) => p.orgId === ctx.tenantId);
@@ -452,6 +498,21 @@ recruitmentRouter.patch('/interviews/:id', requireAuth(['employer','superadmin',
   db.notifications.unshift({ id: uid('NOTIF'), recipient: ctx.role === 'candidate' ? `company:${iv.companyId}` : iv.candidateEmail, kind: 'interview', body: `Interview ${iv.id} ${prev} → ${iv.status}${reason ? `: ${reason}` : ''}`, channel: 'in-app', status: 'queued', createdAt: nowIso(), tenantId: iv.companyId || iv.orgId });
   audit(ctx.email, `INTERVIEW_${iv.status.toUpperCase()}:${iv.id}`, iv.companyId || iv.orgId, 'interview', iv.id, req.ip); persist();
   res.json({ success: true, data: iv });
+});
+
+// ---- Single application (§7.6 detail page) ----
+recruitmentRouter.get('/applications/:id', requireAuth(), (req, res) => {
+  const db = loadDb(); const ctx = ctxOf(req);
+  const a: any = db.applications.find((x: any) => x.id === req.params.id);
+  if (!a) return res.status(404).json({ success: false, message: 'Application not found.' });
+  if (ctx.role === 'candidate' && String(a.candidateEmail).toLowerCase() !== ctx.email.toLowerCase()) return res.status(404).json({ success: false, message: 'Application not found.' });
+  if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && ctx.role !== 'candidate' && a.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Application not found.' });
+  const history = db.stageHistory.filter((h: any) => h.applicationId === a.id);
+  const interviews = (db.interviews as any[]).filter((i: any) => i.applicationId === a.id);
+  const nextInterview = interviews.filter((i: any) => ['Scheduled','Rescheduled'].includes(i.status)).sort((x: any, y: any) => String(x.scheduledAt || '').localeCompare(String(y.scheduledAt || '')))[0] || null;
+  const conv: any = db.conversations.find((c: any) => c.applicationId === a.id) || null;
+  const job: any = db.jobs.find((j: any) => j.id === a.jobId) || null;
+  res.json({ success: true, data: { ...a, history, interviews, nextInterview, conversation: conv ? { id: conv.id, status: conv.status } : null, jobClosed: job ? job.status === 'Closed' || (job.expiryDate && new Date(job.expiryDate) <= new Date()) : false } });
 });
 
 // ---- Application stage history (read timeline, §8.8) ----

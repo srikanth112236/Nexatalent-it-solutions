@@ -326,9 +326,21 @@ export function uid(prefix: string): string {
 
 export function nowIso(): string { return new Date().toISOString(); }
 
+const SENSITIVE_KEYS = ['password', 'passwd', 'secret', 'token', 'apikey', 'api_key', 'authorization'];
+function scrubSecrets(value: any): any {
+  if (Array.isArray(value)) return value.map(scrubSecrets);
+  if (value && typeof value === 'object') {
+    const out: any = {};
+    for (const [k, v] of Object.entries(value)) {
+      out[k] = SENSITIVE_KEYS.some((s) => k.toLowerCase().includes(s)) ? '[redacted]' : scrubSecrets(v);
+    }
+    return out;
+  }
+  return value;
+}
 export function audit(actor: string, action: string, tenantId: string, resource = '-', recordId = '-', ip = '127.0.0.1', meta: any = {}): void {
   const d = loadDb();
-  d.auditLogs.unshift({ id: uid('AUD'), timestamp: nowIso(), actor, action, resource, recordId, tenantId, ipAddress: ip, ...meta });
+  d.auditLogs.unshift({ id: uid('AUD'), timestamp: nowIso(), actor, action, resource, recordId, tenantId, ipAddress: ip, ...scrubSecrets(meta) });
   if (d.auditLogs.length > 5000) d.auditLogs.length = 5000;
   persist();
 }

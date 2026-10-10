@@ -274,7 +274,9 @@ commercialRouter.get('/invoice-reminders', requireAuth(), (req, res) => {
 });
 commercialRouter.post('/invoice-reminders/run', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), (req, res) => {
   const db = loadDb(); const today = nowIso().slice(0, 10);
-  const open = (db.invoices as any[]).map(withOverdue).filter((i: any) => Number(i.balance || 0) > 0 && ['Issued', 'Partially Paid'].includes(i.status));
+  let open = (db.invoices as any[]).map(withOverdue).filter((i: any) => Number(i.balance || 0) > 0 && ['Issued', 'Partially Paid'].includes(i.status));
+  const only = Array.isArray(req.body?.invoiceIds) ? new Set(req.body.invoiceIds.map(String)) : null;
+  if (only) open = open.filter((i: any) => only.has(i.id));
   const sent: any[] = [];
   for (const inv of open) {
     const dueMs = new Date(inv.dueDate).getTime();
@@ -339,7 +341,7 @@ commercialRouter.post('/invoices/:id/issue', requireAuth(['superadmin','platform
   if (!inv) return res.status(404).json({ success: false, message: 'Invoice not found.' });
   if (inv.status !== 'Draft') return res.status(422).json({ success: false, message: `Only Draft invoices can be issued (current: ${inv.status}).` });
   inv.status = 'Issued'; inv.issueDate = nowIso(); inv.issuedBy = ctxOf(req).email;
-  audit(ctxOf(req).email, `INVOICE_ISSUED:${inv.id}`, inv.orgId, 'invoice', inv.id, req.ip); persist();
+  audit(ctxOf(req).email, `INVOICE_ISSUED:${inv.id}`, inv.orgId, 'invoice', inv.id, req.ip, { before: 'Draft', after: 'Issued', total: inv.total, balance: inv.balance }); persist();
   const org: any = db.organizations.find((o: any) => o.id === inv.orgId);
   const financeTo = org?.financeEmail || org?.billingContact;
   if (financeTo && String(financeTo).includes('@')) {
@@ -646,7 +648,7 @@ commercialRouter.patch('/commissions/:id/approve', requireAuth(['superadmin','pl
   const db = loadDb(); const c: any = db.commissions.find((x: any) => x.id === req.params.id);
   if (!c) return res.status(404).json({ success: false, message: 'Not found.' });
   c.approvalStatus = 'Approved'; c.approvedAt = nowIso(); c.approvedBy = ctxOf(req).email;
-  audit(ctxOf(req).email, `COMMISSION_APPROVED:${c.id}`, c.orgId, 'commission', c.id, req.ip); persist();
+  audit(ctxOf(req).email, `COMMISSION_APPROVED:${c.id}`, c.orgId, 'commission', c.id, req.ip, { before: 'Pending', after: 'Approved', gross: c.gross, total: c.total }); persist();
   emit('commission.approved', c, c.orgId, ctxOf(req).email);
   res.json({ success: true, data: c });
 });

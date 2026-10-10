@@ -8,7 +8,7 @@ import {
   SubscriptionsPanel, BillingPanel, InvoicesPanel, CommissionsPanel, LeadsPanel, PerformancePanel,
   ReportsPanel, NotificationsPanel, AdminControlsPanel, RequisitionsPanel, ApplicationsPanel,
   CandidatesPanel, AgencyPanel, BranchesPanel, JobsPanel, SupportPanel,
-  InterviewsPanel, OffersPlacementsPanel, RequirementCreatePage, JobCreatePage, RolesPanel, SkillsPanel,
+  InterviewsPanel, OffersPlacementsPanel, RequirementCreatePage, JobCreatePage, RolesPanel, SkillsPanel, PaymentsRemindersPanel,
 } from '../common/EnterprisePanels';
 import { Modal, Select, Field } from '../../shared/ui/EnterpriseKit';
 import { MfaPanel } from '../../auth/components/MfaPanel';
@@ -28,6 +28,7 @@ const navItems = [
   { label: 'Placements', path: '/superadmin/placements', group: 'Recruitment' },
   { label: 'Subscriptions & Plans', path: '/superadmin/subscriptions', group: 'Commercial' },
   { label: 'Invoices', path: '/superadmin/invoices', group: 'Commercial' },
+  { label: 'Payments & Reminders', path: '/superadmin/payments', group: 'Commercial' },
   { label: 'Billing & Payments', path: '/superadmin/billing', group: 'Commercial' },
   { label: 'Commissions & Payouts', path: '/superadmin/commissions', group: 'Commercial' },
   { label: 'Leads & Pipeline', path: '/superadmin/leads', group: 'Sales' },
@@ -43,7 +44,7 @@ const navItems = [
 export function SuperAdminPortal() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [controlsTab, setControlsTab] = useState<'verification' | 'roles' | 'skills'>('verification');
+  const [controlsTab, setControlsTab] = useState<'verification' | 'users' | 'exceptions' | 'roles' | 'skills'>('verification');
 
   const currentTab = (() => {
     const p = location.pathname;
@@ -61,7 +62,8 @@ export function SuperAdminPortal() {
     if (p.includes('/placements') || p.includes('/offers')) return 'placements';
     if (p.includes('/subscriptions')) return 'subscriptions';
     if (p.includes('/invoices')) return 'invoices';
-    if (p.includes('/billing') || p.includes('/payments')) return 'billing';
+    if (p.includes('/superadmin/payments')) return 'payments';
+    if (p.includes('/billing')) return 'billing';
     if (p.includes('/commissions') || p.includes('/payouts')) return 'commissions';
     if (p.includes('/leads') || p.includes('/pipeline')) return 'leads';
     if (p.includes('/performance') || p.includes('/targets')) return 'performance';
@@ -333,6 +335,9 @@ export function SuperAdminPortal() {
                     <th className="pb-3">Timestamp</th>
                     <th className="pb-3">Actor Email</th>
                     <th className="pb-3">Security Action</th>
+                    <th className="pb-3">Resource</th>
+                    <th className="pb-3">Record</th>
+                    <th className="pb-3">Reason / Change</th>
                     <th className="pb-3">Target Tenant ID</th>
                     <th className="pb-3">IP Address</th>
                   </tr>
@@ -344,6 +349,9 @@ export function SuperAdminPortal() {
                       <td className="py-3 text-slate-500">{new Date(log.timestamp).toLocaleTimeString()}</td>
                       <td className="py-3 font-bold text-slate-900 font-sans">{log.actor}</td>
                       <td className="py-3 font-bold text-blue-600">{log.action}</td>
+                      <td className="py-3 text-slate-600">{log.resource || '—'}</td>
+                      <td className="py-3 text-slate-600">{log.recordId || '—'}</td>
+                      <td className="py-3 text-slate-600 max-w-[260px] break-words">{[log.reason, log.before !== undefined || log.after !== undefined ? `${log.before ?? ''} → ${log.after ?? ''}` : ''].filter(Boolean).join(' • ') || '—'}</td>
                       <td className="py-3 text-amber-700 font-bold">{log.tenantId}</td>
                       <td className="py-3 text-slate-500">{log.ipAddress}</td>
                     </tr>
@@ -490,6 +498,7 @@ export function SuperAdminPortal() {
         {currentTab === 'placements' && <OffersPlacementsPanel />}
         {currentTab === 'subscriptions' && <SubscriptionsPanel />}
         {currentTab === 'invoices' && <InvoicesPanel />}
+        {currentTab === 'payments' && <PaymentsRemindersPanel />}
         {currentTab === 'billing' && <BillingPanel />}
         {currentTab === 'commissions' && <CommissionsPanel />}
         {currentTab === 'leads' && <LeadsPanel />}
@@ -499,12 +508,14 @@ export function SuperAdminPortal() {
         {currentTab === 'controls' && (
           <div className="space-y-4">
             <div className="flex rounded-xl bg-slate-100 border border-slate-200 p-0.5 w-fit" role="tablist" aria-label="Access control views">
-              {([['verification', 'Verification & Access'], ['roles', 'Roles'], ['skills', 'Skills']] as const).map(([v, label]) => (
+              {([['verification', 'Verification'], ['users', 'Users'], ['exceptions', 'Exceptions'], ['roles', 'Roles'], ['skills', 'Skills']] as const).map(([v, label]) => (
                 <button key={v} role="tab" aria-selected={controlsTab === v} type="button" onClick={() => setControlsTab(v)}
                   className={`px-4 py-1.5 rounded-lg font-bold text-xs ${controlsTab === v ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>{label}</button>
               ))}
             </div>
-            {controlsTab === 'verification' && (<><AdminControlsPanel /><MfaPanel admin /></>)}
+            {controlsTab === 'verification' && (<><AdminControlsPanel section="verification" /><MfaPanel admin /></>)}
+            {controlsTab === 'users' && <AdminControlsPanel section="users" />}
+            {controlsTab === 'exceptions' && <AdminControlsPanel section="exceptions" />}
             {controlsTab === 'roles' && <RolesPanel />}
             {controlsTab === 'skills' && <SkillsPanel />}
           </div>

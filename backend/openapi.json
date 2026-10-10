@@ -162,6 +162,7 @@
     "/api/v1/commission-agreements": { "get": { "summary": "Agreements (hiring type, slab rate, acceptance)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Create (slab-validated rate, configurable trigger)", "responses": { "201": { "description": "created" }, "422": { "description": "outside fee slab" } } } },
     "/api/v1/commission-agreements/{id}/accept": { "patch": { "summary": "Company accepts agreement", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/commission-agreements/match": { "get": { "summary": "Hire fee preview: matched agreement + computed fee (422 without agreement/basis)", "responses": { "200": { "description": "ok" }, "422": { "description": "NO_AGREEMENT|NO_BASIS" } } } },
+    "/api/v1/placements/{id}/offer-letter": { "get": { "summary": "Filled offer letter (candidate, job, org, offer, terms)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/fee-slabs": { "get": { "summary": "Fee slabs by hiring type", "responses": { "200": { "description": "ok" } } }, "put": { "summary": "Update slabs (perm: manage_billing)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/agreement-templates": { "get": { "summary": "Agreement templates (company scope)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Create template Draft", "responses": { "201": { "description": "created" } } } },
     "/api/v1/agreement-templates/{id}": { "put": { "summary": "Edit template (mints new version)", "responses": { "200": { "description": "ok" } } } },
