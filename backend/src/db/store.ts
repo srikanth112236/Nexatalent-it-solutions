@@ -77,8 +77,8 @@ function seed(): DbShape {
     candidateSkills: [], certifications: [],
     documents: [], consents: [],
     requisitions: [
-      { id: 'REQ-9901', orgId: 'TNT-9011', title: 'Senior React / Node Fullstack Architect', department: 'Core Engineering', status: 'Sourcing', openings: 3, employmentType: 'Full-time', location: 'Bengaluru / Hybrid', budgetMin: 3500000, budgetMax: 4500000, currency: 'INR', createdAt: now },
-      { id: 'REQ-8890', orgId: 'TNT-9011', title: 'Senior AWS Cloud Security Lead', department: 'Infra Security', status: 'Sourcing', openings: 2, employmentType: 'Contract', location: 'Bengaluru / Hybrid', budgetMin: 3000, budgetMax: 3500, currency: 'INR', payPeriod: 'hourly', createdAt: now },
+      { id: 'REQ-9901', orgId: 'TNT-9011', title: 'Senior React / Node Fullstack Architect', department: 'Core Engineering', status: 'Sourcing', openings: 3, employmentType: 'Full-time', location: 'Bengaluru / Hybrid', branch: 'Bengaluru HQ', hiringManager: 'aditi@fintechscaleops.io', recruiter: 'kiran@nexatalent.com', experienceMin: 6, experienceMax: 10, deadline: '2027-02-01T00:00:00.000Z', budgetMin: 3500000, budgetMax: 4500000, currency: 'INR', createdAt: now },
+      { id: 'REQ-8890', orgId: 'TNT-9011', title: 'Senior AWS Cloud Security Lead', department: 'Infra Security', status: 'Sourcing', openings: 2, employmentType: 'Contract', location: 'Bengaluru / Hybrid', branch: 'Bengaluru HQ', hiringManager: 'aditi@fintechscaleops.io', recruiter: 'kiran@nexatalent.com', experienceMin: 7, experienceMax: 12, deadline: '2027-02-01T00:00:00.000Z', budgetMin: 3000, budgetMax: 3500, currency: 'INR', payPeriod: 'hourly', createdAt: now },
     ],
     jobs: [
       { id: 'JOB-9901', requisitionId: 'REQ-9901', orgId: 'TNT-9011', title: 'Senior React / Node Fullstack Architect', description: 'Enterprise fintech fullstack role.', status: 'Published', visibility: 'public', location: 'Bengaluru / Hybrid', employmentType: 'Full-time', salaryMin: 3500000, salaryMax: 4500000, currency: 'INR', applicantsCount: 12, startDate: now, expiryDate: '2027-03-01T00:00:00.000Z', assignedAgencies: ['Apex Tech Search'], assignedVendors: ['Global TechSolutions Vendor'], createdAt: now },
@@ -163,6 +163,13 @@ export function loadDb(): DbShape {
       if ((db!.agencyProfiles || []).length === 0) db!.agencyProfiles = fresh.agencyProfiles;
       if (!Array.isArray((db as any).candidateInfoRequests)) (db as any).candidateInfoRequests = [];
       if (!Array.isArray((db as any).privacyRequests)) (db as any).privacyRequests = [];
+      // Backfill filterable requirement fields on older requisitions.
+      for (const r of (db!.requisitions as any[])) {
+        const ref = (fresh.requisitions as any[]).find((f) => f.id === r.id);
+        if (ref) for (const k of ['branch', 'recruiter', 'hiringManager', 'experienceMin', 'experienceMax', 'deadline']) {
+          if (r[k] === undefined || r[k] === '') r[k] = ref[k];
+        }
+      }
       // Backfill login-tenant links + new columns on seed agencies.
       for (const a of (db!.agencyProfiles as any[])) {
         const ref = (fresh.agencyProfiles as any[]).find((f) => f.id === a.id);

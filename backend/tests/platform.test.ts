@@ -477,6 +477,147 @@ describe('user directory extras (§6.6)', () => {
   });
 });
 
+describe('requirements rollups + transitions (§6.7)', () => {
+  const tag = `Pipe ${stamp}`;
+  let reqId = '';
+  let jobA = '';
+  let jobB = '';
+  const cand = `pipe-${stamp}@example.com`;
+  let empToken = '';
+  const empAuth = () => auth(empToken);
+  it('rolls up funnel + openingsFilled over complete data, paginated or not', async () => {
+    empToken = (await login('aditi@fintechscaleops.io')).body.data.accessToken;
+    const r = await request(app).post('/api/v1/requisitions').set(empAuth()).send({ title: `${tag} Req`, openings: 2 });
+    reqId = r.body.data.id;
+    await request(app).patch(`/api/v1/requisitions/${reqId}/status`).set(empAuth()).send({ status: 'Pending Approval' });
+    await request(app).patch(`/api/v1/requisitions/${reqId}/status`).set(empAuth()).send({ status: 'Approved' });
+    const ja = await request(app).post('/api/v1/jobs').set(empAuth()).send({ title: `${tag} A`, requisitionId: reqId, expiryDate: '2027-06-01' });
+    const jb = await request(app).post('/api/v1/jobs').set(empAuth()).send({ title: `${tag} B`, requisitionId: reqId, expiryDate: '2027-06-01' });
+    jobA = ja.body.data.id; jobB = jb.body.data.id;
+    for (const jid of [jobA, jobB]) {
+      await request(app).patch(`/api/v1/jobs/${jid}/status`).set(empAuth()).send({ status: 'Pending Review' });
+      await request(app).patch(`/api/v1/jobs/${jid}/status`).set(empAuth()).send({ status: 'Approved' });
+      await request(app).patch(`/api/v1/jobs/${jid}/status`).set(empAuth()).send({ status: 'Published' });
+    }
+    const aa = await request(app).post('/api/v1/applications').set(auth(superToken)).send({ jobId: jobA, candidateEmail: cand });
+    const ab = await request(app).post('/api/v1/applications').set(auth(superToken)).send({ jobId: jobB, candidateEmail: cand });
+    await request(app).post('/api/v1/placements').set(auth(superToken)).send({ applicationId: aa.body.data.id, feeBasis: 1000000 });
+    await request(app).post('/api/v1/placements').set(auth(superToken)).send({ applicationId: ab.body.data.id, feeBasis: 1000000 });
+    const full = await request(app).get(`/api/v1/requisitions?q=${encodeURIComponent(tag)}`).set(auth(superToken));
+    const row = (full.body.data as any[]).find((x) => x.id === reqId);
+    expect(row.rollup.applications).toBe(2);
+    expect(row.rollup.hired).toBe(2);
+    expect(row.rollup.openingsFilled).toBe(1); // same candidate twice → deduped, capped
+    expect(row.rollup.ageingDays).toBeGreaterThanOrEqual(0);
+    expect(row.rollup.linkedJobs.length).toBe(2);
+    const one = await request(app).get(`/api/v1/requisitions?q=${encodeURIComponent(tag)}&page=1&pageSize=1`).set(auth(superToken));
+    const row1 = (one.body.data as any[]).find((x) => x.id === reqId) || one.body.data[0];
+    if (row1?.id === reqId) expect(row1.rollup.applications).toBe(2); // math ignores pagination
+    const byReq = await request(app).get(`/api/v1/applications?requisitionId=${reqId}`).set(auth(superToken));
+    expect(byReq.body.data.length).toBe(2);
+  });
+  it('enforces request-changes, publish guards, unpublish and reopen rules', async () => {
+    const rc = await request(app).post('/api/v1/requisitions').set(empAuth()).send({ title: `${tag} RC`, openings: 1 });
+    const rcId = rc.body.data.id;
+    const early = await request(app).post(`/api/v1/requisitions/${rcId}/request-changes`).set(empAuth()).send({ note: 'too early' });
+    expect(early.status).toBe(422);
+    await request(app).patch(`/api/v1/requisitions/${rcId}/status`).set(empAuth()).send({ status: 'Pending Approval' });
+    const nonote = await request(app).post(`/api/v1/requisitions/${rcId}/request-changes`).set(empAuth()).send({});
+    expect(nonote.status).toBe(400);
+    const ok = await request(app).post(`/api/v1/requisitions/${rcId}/request-changes`).set(empAuth()).send({ note: 'Add salary band' });
+    expect(ok.body.data.status).toBe('Draft');
+    expect(ok.body.data.changeRequests.length).toBe(1);
+    // publish guard: parent not approved
+    const j = await request(app).post('/api/v1/jobs').set(empAuth()).send({ title: `${tag} G`, requisitionId: rcId });
+    const jid = j.body.data.id;
+    await request(app).patch(`/api/v1/jobs/${jid}/status`).set(empAuth()).send({ status: 'Pending Review' });
+    await request(app).patch(`/api/v1/jobs/${jid}/status`).set(empAuth()).send({ status: 'Approved' });
+    const blocked = await request(app).patch(`/api/v1/jobs/${jid}/status`).set(empAuth()).send({ status: 'Published' });
+    expect(blocked.status).toBe(422);
+    expect(blocked.body.code).toBe('REQUIREMENT_NOT_APPROVED');
+    const past = await request(app).patch(`/api/v1/jobs/${jid}/status`).set(empAuth()).send({ status: 'Published', expiryDate: '2020-01-01' });
+    expect(past.status).toBe(422);
+    // approve parent, then publish with future expiry
+    await request(app).patch(`/api/v1/requisitions/${rcId}/status`).set(empAuth()).send({ status: 'Pending Approval' });
+    await request(app).patch(`/api/v1/requisitions/${rcId}/status`).set(empAuth()).send({ status: 'Approved' });
+    const pub = await request(app).patch(`/api/v1/jobs/${jid}/status`).set(empAuth()).send({ status: 'Published', expiryDate: '2027-06-01' });
+    expect(pub.status).toBe(200);
+    // unpublish needs approve permission + reason (employer lacks approve)
+    const empNoPerm = await request(app).patch(`/api/v1/jobs/${jid}/status`).set(empAuth()).send({ status: 'Approved', reason: 'taking down' });
+    expect(empNoPerm.status).toBe(403);
+    const noReason = await request(app).patch(`/api/v1/jobs/${jid}/status`).set(auth(superToken)).send({ status: 'Approved' });
+    expect(noReason.status).toBe(400);
+    const unpub = await request(app).patch(`/api/v1/jobs/${jid}/status`).set(auth(superToken)).send({ status: 'Approved', reason: 'role frozen for Q1' });
+    expect(unpub.status).toBe(200);
+    const gone = await request(app).get(`/api/v1/jobs-public?q=${encodeURIComponent(tag)}`).set(auth(superToken));
+    expect((gone.body.data as any[]).some((x) => x.id === jid)).toBe(false);
+    // close, then reopen requires future expiry
+    await request(app).patch(`/api/v1/jobs/${jid}/status`).set(empAuth()).send({ status: 'Published', expiryDate: '2027-06-01' });
+    await request(app).patch(`/api/v1/jobs/${jid}/status`).set(empAuth()).send({ status: 'Closed' });
+    const reopenStale = await request(app).patch(`/api/v1/jobs/${jid}/status`).set(auth(superToken)).send({ status: 'Published', reason: 'backfill', expiryDate: '2020-01-01' });
+    expect(reopenStale.status).toBe(422);
+    const reopen = await request(app).patch(`/api/v1/jobs/${jid}/status`).set(auth(superToken)).send({ status: 'Published', reason: 'backfill approved', expiryDate: '2027-09-01' });
+    expect(reopen.status).toBe(200);
+    expect(reopen.body.data.statusReason).toContain('backfill');
+  });
+  it('projects public allowlist for non-owners and backfills seed fields', async () => {
+    const candLogin = await login('candidate@nexatalent.com');
+    const ctok = candLogin.body.data.accessToken;
+    const list = await request(app).get('/api/v1/jobs?page=1&pageSize=5').set(auth(ctok));
+    expect(list.status).toBe(200);
+    for (const j of list.body.data as any[]) {
+      expect(j).not.toHaveProperty('assignedAgencies');
+      expect(j).not.toHaveProperty('createdBy');
+      expect(j).not.toHaveProperty('orgId');
+    }
+    const one = await request(app).get('/api/v1/jobs/JOB-9901').set(auth(ctok));
+    expect(one.body.data).not.toHaveProperty('assignedAgencies');
+    expect(one.body.data.acceptingApplications).toBe(true);
+    const seed = await request(app).get('/api/v1/requisitions?q=REQ-9901').set(auth(superToken));
+    const req = (seed.body.data as any[]).find((x) => x.id === 'REQ-9901');
+    expect(req.branch).toBeTruthy();
+    expect(req.recruiter).toBeTruthy();
+  });
+});
+
+describe('candidate privacy boundary (§6.7)', () => {
+  const FORBIDDEN = ['orgId', 'hiringManager', 'recruiter', 'createdBy', 'assignedAgencies', 'assignedVendors', 'budgetMin', 'budgetMax'];
+  it('leaks no internal fields in any candidate-visible job payload', async () => {
+    const candLogin = await login('candidate@nexatalent.com');
+    const ctok = candLogin.body.data.accessToken;
+    const list = await request(app).get('/api/v1/jobs?page=1&pageSize=20').set(auth(ctok));
+    expect(list.body.data.length).toBeGreaterThan(0);
+    for (const j of list.body.data as any[]) {
+      expect(j.status).toBe('Published');
+      for (const k of FORBIDDEN) expect(j).not.toHaveProperty(k);
+    }
+    const one = await request(app).get('/api/v1/jobs/JOB-9901').set(auth(ctok));
+    for (const k of FORBIDDEN) expect(one.body.data).not.toHaveProperty(k);
+    const pub = await request(app).get('/api/v1/jobs-public?page=1&pageSize=20');
+    for (const j of pub.body.data as any[]) {
+      for (const k of FORBIDDEN) expect(j).not.toHaveProperty(k);
+    }
+    const draft = await request(app).get('/api/v1/jobs/JOB-9901').set(auth(superToken));
+    expect(draft.body.data).toHaveProperty('orgId'); // owners keep full shape
+  });
+  it('hides expired jobs and refuses applications on them', async () => {
+    const emp = (await login('aditi@fintechscaleops.io')).body.data.accessToken;
+    const j = await request(app).post('/api/v1/jobs').set(auth(emp)).send({ title: `Expiring ${stamp}`, expiryDate: '2027-01-01' });
+    const jid = j.body.data.id;
+    for (const s of ['Pending Review', 'Approved', 'Published']) {
+      await request(app).patch(`/api/v1/jobs/${jid}/status`).set(auth(emp)).send({ status: s });
+    }
+    await request(app).put(`/api/v1/jobs/${jid}`).set(auth(emp)).send({ expiryDate: '2020-01-01' });
+    const pub = await request(app).get('/api/v1/jobs-public?page=1&pageSize=100');
+    expect((pub.body.data as any[]).some((x) => x.id === jid)).toBe(false);
+    const candLogin = await login('candidate@nexatalent.com');
+    const apply = await request(app).post('/api/v1/applications').set(auth(candLogin.body.data.accessToken)).send({ jobId: jid, candidateEmail: 'candidate@nexatalent.com' });
+    expect(apply.status).toBe(422);
+    // hygiene: expired fixtures must not stay Published (other suites grab any published job)
+    await request(app).patch(`/api/v1/jobs/${jid}/status`).set(auth(superToken)).send({ status: 'Closed' });
+  });
+});
+
 describe('commission duplicate guard (§6.11)', () => {
   it('mints once per placement+trigger and reports via check', async () => {
     const ag = await request(app).post('/api/v1/commission-agreements').set(auth(superToken)).send({ orgId: 'TNT-9011', jobId: 'JOB-9901', rate: 8.33, trigger: 'Joined' });

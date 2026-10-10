@@ -63,18 +63,21 @@
     "/api/v1/support-tickets": { "get": { "summary": "Support tickets (platform sees all)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Open ticket", "responses": { "201": { "description": "created" } } } },
 
     "/api/v1/support-tickets/{id}": { "patch": { "summary": "Triage ticket (state machine + staff notes)", "responses": { "200": { "description": "ok" }, "422": { "description": "illegal transition" } } } },
-    "/api/v1/requisitions": { "get": { "summary": "Phase 1: list (paged, tenant-scoped)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Create requisition (zod)", "responses": { "201": { "description": "created" } } } },
+    "/api/v1/requisitions": { "get": { "summary": "List with live rollup (funnel, filled, ageing) over complete data", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Create requisition (zod)", "responses": { "201": { "description": "created" } } } },
     "/api/v1/requisitions/{id}/status": { "patch": { "summary": "State-machine transition", "responses": { "200": { "description": "ok" }, "422": { "description": "illegal transition" } } } },
 
     "/api/v1/requisitions/{id}": { "put": { "summary": "Edit requisition (Draft/Pending only)", "responses": { "200": { "description": "ok" }, "422": { "description": "locked stage" } } }, "delete": { "summary": "Delete requisition (Draft/Cancelled, no linked jobs)", "responses": { "200": { "description": "ok" }, "422": { "description": "blocked" } } } },
+
+
+    "/api/v1/requisitions/{id}/request-changes": { "post": { "summary": "Send back to Draft with note + hiring-manager notification", "responses": { "200": { "description": "ok" }, "400": { "description": "note required" }, "422": { "description": "wrong state" } } } },
     "/api/v1/jobs": { "get": { "summary": "List jobs (paged)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Create job (entitlement: jobs.create)", "responses": { "201": { "description": "created" }, "402": { "description": "no subscription" } } } },
-    "/api/v1/jobs-public": { "get": { "summary": "Eligible public jobs only", "responses": { "200": { "description": "ok" } } } },
-    "/api/v1/jobs/{id}/status": { "patch": { "summary": "Job state machine", "responses": { "200": { "description": "ok" } } } },
+    "/api/v1/jobs-public": { "get": { "summary": "Eligible public jobs, explicit public-field allowlist only", "responses": { "200": { "description": "ok" } } } },
+    "/api/v1/jobs/{id}/status": { "patch": { "summary": "Job state machine + publish guards + approve-gated unpublish/reopen with reason", "responses": { "200": { "description": "ok" }, "400": { "description": "reason required" }, "403": { "description": "needs approve" }, "422": { "description": "guarded" } } } },
     "/api/v1/candidates/search": { "get": { "summary": "Tiered search preview|full|contact (quota-guarded)", "responses": { "200": { "description": "ok" }, "429": { "description": "quota exhausted" } } } },
-    "/api/v1/applications": { "get": { "summary": "ATS list, role-scoped + paged", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Apply (unique job+candidate, expiry-checked)", "responses": { "201": { "description": "applied" }, "409": { "description": "duplicate" } } } },
+    "/api/v1/applications": { "get": { "summary": "ATS list, role-scoped + paged, jobId + requisitionId filters", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Apply (unique job+candidate, expiry-checked)", "responses": { "201": { "description": "applied" }, "409": { "description": "duplicate" } } } },
     "/api/v1/applications/{id}/history": { "get": { "summary": "Stage timeline", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/applications/{id}/stage": { "patch": { "summary": "Move ATS stage + history + event", "responses": { "200": { "description": "ok" } } } },
-    "/api/v1/interviews": { "get": { "summary": "List (role-scoped)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Schedule (auto-enables chat)", "responses": { "201": { "description": "created" } } } },
+    "/api/v1/interviews": { "get": { "summary": "List (role-scoped), jobId + requisitionId filters", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Schedule (auto-enables chat)", "responses": { "201": { "description": "created" } } } },
     "/api/v1/interviews/{id}/feedback": { "post": { "summary": "Panel feedback (rating 1-5, never mutates status)", "responses": { "201": { "description": "created" } } }, "get": { "summary": "List feedback for interview", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/credit-notes": { "get": { "summary": "List credit notes", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/allocations": { "get": { "summary": "Payment allocations ledger", "responses": { "200": { "description": "ok" } } } },

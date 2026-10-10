@@ -4,20 +4,34 @@ import { requireAuth, ctxOf, tenantOf, maskCandidate } from '../middleware/rbac.
 import { requisitionSchema, jobSchema, applicationStage, interviewSchema, paginate, paged } from '../validate/schemas.js';
 import { emit } from '../events/bus.js';
 import { evaluate, consumeQuota } from '../domain/entitlements.js';
+import { requirementRollup, jobCounts, checkTransition, publicJob, notify } from '../domain/pipeline.js';
 
 export const recruitmentRouter = Router();
 
 const REQ_FLOW: Record<string, string[]> = { Draft: ['Pending Approval'], 'Pending Approval': ['Approved','Draft'], Approved: ['Sourcing'], Sourcing: ['Filled','On Hold','Cancelled'], 'On Hold': ['Sourcing','Cancelled'], Filled: [], Cancelled: [] };
 const JOB_FLOW: Record<string, string[]> = { Draft: ['Pending Review'], 'Pending Review': ['Approved','Draft'], Approved: ['Published'], Published: ['Paused','Closed'], Paused: ['Published','Closed'], Closed: ['Archived'], Archived: [] };
+// Extended edges (permission-gated): unpublish + authorized reopen. All other
+// edges keep their existing behavior.
+const EXTENDED_JOB_FLOW: Record<string, string[]> = {
+  ...JOB_FLOW,
+  Published: [...JOB_FLOW.Published, 'Approved'],
+  Closed: [...JOB_FLOW.Closed, 'Published', 'Paused'],
+};
+const PLATFORM_ROLES = ['superadmin','platform_owner','operations_admin','employee'];
 
 // ---- Requisitions ----
 recruitmentRouter.get('/requisitions', requireAuth(), (req, res) => {
+  const db = loadDb();
   const t = tenantOf(req); const { page, pageSize, q, status } = paginate.parse(req.query);
-  let rows = loadDb().requisitions as any[];
-  if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctxOf(req).role)) rows = rows.filter((r) => r.orgId === t);
+  const ctx = ctxOf(req);
+  let rows = db.requisitions as any[];
+  if (!PLATFORM_ROLES.includes(ctx.role)) rows = rows.filter((r) => r.orgId === t);
+  else if (req.query.orgId) rows = rows.filter((r) => r.orgId === req.query.orgId);
   if (status) rows = rows.filter((r) => r.status === status);
   if (q) rows = rows.filter((r) => JSON.stringify(r).toLowerCase().includes(String(q).toLowerCase()));
-  res.json({ success: true, ...paged(rows, page, pageSize) });
+  // Rollups run over the COMPLETE filtered set — pagination slices rows, never math.
+  const enriched = rows.map((r) => ({ ...r, rollup: requirementRollup(db, r) }));
+  res.json({ success: true, ...paged(enriched, page, pageSize) });
 });
 recruitmentRouter.post('/requisitions', requireAuth(['employer','superadmin','company_admin','hiring_manager','employee','operations_admin']), (req: Request, res: Response) => {
   const parsed = requisitionSchema.safeParse(req.body);
@@ -62,12 +76,16 @@ recruitmentRouter.patch('/requisitions/:id/status', requireAuth(), (req: Request
   if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && r.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Requisition not found.' });
   const next = String(req.body.status);
   if (!(REQ_FLOW[r.status] || []).includes(next)) return res.status(422).json({ success: false, message: `Invalid transition ${r.status} → ${next}. Allowed: ${(REQ_FLOW[r.status] || []).join(', ') || 'none'}` });
+  const from = r.status;
   r.status = next; r.updatedAt = nowIso();
-  audit(ctx.email, `REQUISITION_STATUS:${r.id}->${next}`, r.orgId, 'requisition', r.id, req.ip); persist();
+  if (req.body.reason) r.statusReason = String(req.body.reason).slice(0, 1000);
+  r.history = [...(r.history || []), { from, to: next, by: ctx.email, reason: req.body.reason || '', at: nowIso() }];
+  audit(ctx.email, `REQUISITION_STATUS:${r.id} ${from}->${next}`, r.orgId, 'requisition', r.id, req.ip); persist();
   res.json({ success: true, data: r });
 });
 
 // ---- Jobs ----
+const isOwner = (ctx: any, j: any) => PLATFORM_ROLES.includes(ctx.role) || j.orgId === ctx.tenantId;
 recruitmentRouter.get('/jobs', requireAuth(), (req, res) => {
   const { page, pageSize, q, status } = paginate.parse(req.query);
   const db = loadDb();
@@ -75,20 +93,29 @@ recruitmentRouter.get('/jobs', requireAuth(), (req, res) => {
   let rows = db.jobs as any[];
   const mine = String(req.query.mine || '');
   if (mine) { const t = tenantOf(req); rows = rows.filter((j) => j.orgId === t); }
-  else if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role)) {
+  else if (!PLATFORM_ROLES.includes(ctx.role)) {
     // Non-platform roles discover only published, non-private jobs (drafts stay hidden).
     rows = rows.filter((j) => j.status === 'Published' && j.visibility !== 'private');
-  }
+  } else if (req.query.orgId) rows = rows.filter((j) => j.orgId === req.query.orgId);
+  if (req.query.requisitionId) rows = rows.filter((j) => j.requisitionId === req.query.requisitionId);
   if (status) rows = rows.filter((j) => j.status === status);
   if (q) { const s = String(q).toLowerCase(); rows = rows.filter((j) => `${j.title} ${j.description} ${j.location}`.toLowerCase().includes(s)); }
-  res.json({ success: true, ...paged(rows, page, pageSize) });
+  // Counts over the complete set; non-owners receive the public allowlist only.
+  const enriched = rows.map((j) => {
+    const counts = jobCounts(db, j);
+    const full = { ...j, counts, acceptingApplications: counts.acceptingApplications };
+    return isOwner(ctx, j) ? full : { ...publicJob(j), counts, acceptingApplications: counts.acceptingApplications };
+  });
+  res.json({ success: true, ...paged(enriched, page, pageSize) });
 });
-// Public discovery — only eligible jobs (§7.4)
+// Public discovery — only eligible jobs, public allowlist only (§6.7 privacy)
 recruitmentRouter.get('/jobs-public', (req, res) => {
   const now = new Date();
-  const rows = (loadDb().jobs as any[]).filter((j) => j.status === 'Published' && j.visibility !== 'private' && (!j.expiryDate || new Date(j.expiryDate) > now));
+  const db = loadDb();
+  const rows = (db.jobs as any[]).filter((j) => j.status === 'Published' && j.visibility !== 'private' && (!j.expiryDate || new Date(j.expiryDate) > now));
   const { page, pageSize } = paginate.parse(req.query);
-  res.json({ success: true, ...paged(rows, page, pageSize) });
+  const enriched = rows.map((j) => ({ ...publicJob(j), counts: jobCounts(db, j), acceptingApplications: true }));
+  res.json({ success: true, ...paged(enriched, page, pageSize) });
 });
 recruitmentRouter.post('/jobs', requireAuth(['employer','superadmin','company_admin','hiring_manager']), (req: Request, res: Response) => {
   const parsed = jobSchema.safeParse(req.body);
@@ -103,6 +130,23 @@ recruitmentRouter.post('/jobs', requireAuth(['employer','superadmin','company_ad
   audit(ctx.email, `JOB_CREATED:${job.id}`, t, 'job', job.id, req.ip); persist();
   emit('job.published', job, t, ctx.email);
   res.status(201).json({ success: true, data: job });
+});
+// Explicit request-changes: Pending Approval → Draft with a mandatory note,
+// notifying the hiring manager (distinct from a silent status move).
+recruitmentRouter.post('/requisitions/:id/request-changes', requireAuth(['employer','superadmin','platform_owner','company_admin','hiring_manager','employee','operations_admin']), (req: Request, res: Response) => {
+  const db = loadDb(); const r: any = db.requisitions.find((x: any) => x.id === req.params.id);
+  if (!r) return res.status(404).json({ success: false, message: 'Requisition not found.' });
+  const ctx = ctxOf(req);
+  if (!PLATFORM_ROLES.includes(ctx.role) && r.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Requisition not found.' });
+  if (r.status !== 'Pending Approval') return res.status(422).json({ success: false, message: `Request-changes applies to requisitions in Pending Approval (current: ${r.status}).` });
+  const note = String(req.body?.note || '').trim();
+  if (!note) return res.status(400).json({ success: false, message: 'A change note is required and is sent to the hiring manager.' });
+  r.status = 'Draft'; r.updatedAt = nowIso();
+  r.changeRequests = [...(r.changeRequests || []), { note: note.slice(0, 2000), by: ctx.email, at: nowIso() }];
+  r.changeNote = note.slice(0, 2000);
+  if (r.hiringManager) notify(db, r.hiringManager, 'requisition', `Changes requested on ${r.id} (${r.title}): ${note.slice(0, 140)}`, r.orgId);
+  audit(ctx.email, `REQUISITION_CHANGES_REQUESTED:${r.id}`, r.orgId, 'requisition', r.id, req.ip); persist();
+  res.json({ success: true, data: r });
 });
 recruitmentRouter.put('/jobs/:id', requireAuth(['employer','superadmin','platform_owner','company_admin','hiring_manager']), (req: Request, res: Response) => {
   const db = loadDb(); const j: any = db.jobs.find((x: any) => x.id === req.params.id);
@@ -123,9 +167,42 @@ recruitmentRouter.patch('/jobs/:id/status', requireAuth(['employer','superadmin'
   const ctx = ctxOf(req);
   if (!['superadmin','platform_owner'].includes(ctx.role) && j.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Job not found.' });
   const next = String(req.body.status);
-  if (!(JOB_FLOW[j.status] || []).includes(next)) return res.status(422).json({ success: false, message: `Invalid transition ${j.status} → ${next}` });
+  const reason = req.body.reason;
+  try {
+    const unpublish = j.status === 'Published' && next === 'Approved';
+    const reopen = j.status === 'Closed' && (next === 'Published' || next === 'Paused');
+    if (unpublish || reopen) {
+      // Privileged edges: unpublish + authorized reopen. Never bypass guards.
+      checkTransition({ permissions: ctx.permissions, from: j.status, to: next, flow: EXTENDED_JOB_FLOW, permission: 'approve', reason, needReason: true });
+      if (reopen) {
+        const exp = req.body.expiryDate ?? j.expiryDate;
+        if (!exp || !(new Date(exp) > new Date())) {
+          return res.status(422).json({ success: false, message: 'Cannot reopen: set a future expiryDate. Reopening must never bypass the expiry guard.', code: 'EXPIRY_REQUIRED' });
+        }
+        if (req.body.expiryDate) j.expiryDate = req.body.expiryDate;
+      }
+    } else {
+      checkTransition({ permissions: ctx.permissions, from: j.status, to: next, flow: JOB_FLOW });
+    }
+    if (next === 'Published') {
+      // Publish guards: approved parent, real openings, future expiry.
+      if (j.requisitionId) {
+        const r: any = db.requisitions.find((x: any) => x.id === j.requisitionId);
+        if (!r) return res.status(422).json({ success: false, message: `Cannot publish: linked requirement ${j.requisitionId} was not found.`, code: 'REQUIREMENT_MISSING' });
+        if (!['Approved','Sourcing'].includes(r.status)) return res.status(422).json({ success: false, message: `Cannot publish: parent requirement ${r.id} is ${r.status}. Approve it first.`, code: 'REQUIREMENT_NOT_APPROVED' });
+        if (!(Number(r.openings) > 0)) return res.status(422).json({ success: false, message: `Cannot publish: parent requirement ${r.id} has no openings.`, code: 'NO_OPENINGS' });
+      }
+      const exp = req.body.expiryDate ?? j.expiryDate;
+      if (exp && !(new Date(exp) > new Date())) return res.status(422).json({ success: false, message: 'Cannot publish: expiry date is in the past. Set a future date.', code: 'EXPIRY_PAST' });
+      if (req.body.expiryDate) j.expiryDate = req.body.expiryDate;
+    }
+  } catch (e: any) {
+    return res.status(e.status || 422).json({ success: false, message: e.message, code: e.code });
+  }
+  const from = j.status;
   j.status = next; j.updatedAt = nowIso();
-  audit(ctx.email, `JOB_STATUS:${j.id}->${next}`, j.orgId, 'job', j.id, req.ip); persist();
+  if (reason) j.statusReason = String(reason).slice(0, 1000);
+  audit(ctx.email, `JOB_STATUS:${j.id} ${from}->${next}`, j.orgId, 'job', j.id, req.ip); persist();
   if (next === 'Published') emit('job.published', j, j.orgId, ctx.email);
   res.json({ success: true, data: j });
 });
@@ -160,6 +237,7 @@ recruitmentRouter.get('/applications', requireAuth(), (req, res) => {
   const { page, pageSize, status } = paginate.parse(req.query);
   if (status) rows = rows.filter((a) => a.stage === status);
   if (req.query.jobId) rows = rows.filter((a) => a.jobId === req.query.jobId);
+  if (req.query.requisitionId) rows = rows.filter((a) => a.requisitionId === req.query.requisitionId);
   res.json({ success: true, ...paged(rows, page, pageSize) });
 });
 recruitmentRouter.post('/applications', requireAuth(['candidate','superadmin','agency_recruiter','agency_admin','recruiter','vendor']), (req: Request, res: Response) => {
@@ -198,9 +276,15 @@ recruitmentRouter.patch('/applications/:id/stage', requireAuth(['employer','supe
 
 // ---- Interviews + feedback ----
 recruitmentRouter.get('/interviews', requireAuth(), (req, res) => {
-  const ctx = ctxOf(req); let rows = loadDb().interviews as any[];
+  const db = loadDb();
+  const ctx = ctxOf(req); let rows = db.interviews as any[];
   if (ctx.role === 'candidate') rows = rows.filter((i) => String(i.candidateEmail).toLowerCase() === ctx.email.toLowerCase());
   else if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role)) rows = rows.filter((i) => i.companyId === ctx.tenantId || i.orgId === ctx.tenantId);
+  if (req.query.requisitionId) {
+    const appReq = new Map((db.applications as any[]).map((a: any) => [a.id, a.requisitionId]));
+    rows = rows.filter((i) => appReq.get(i.applicationId) === req.query.requisitionId);
+  }
+  if (req.query.jobId) rows = rows.filter((i) => i.jobId === req.query.jobId);
   res.json({ success: true, data: rows });
 });
 recruitmentRouter.post('/interviews', requireAuth(['employer','superadmin','company_admin','hiring_manager','employee','operations_admin']), (req: Request, res: Response) => {
@@ -311,16 +395,17 @@ recruitmentRouter.delete('/saved-jobs/:jobId', requireAuth(['candidate','superad
   db.savedJobs.splice(i, 1); persist(); res.json({ success: true, message: 'Removed.' });
 });
 
-// ---- Job detail (§7.4) ----
+// ---- Job detail (§7.4, public allowlist for non-owners) ----
 recruitmentRouter.get('/jobs/:id', requireAuth(), (req, res) => {
-  const j: any = loadDb().jobs.find((x: any) => x.id === req.params.id);
+  const db = loadDb();
+  const j: any = db.jobs.find((x: any) => x.id === req.params.id);
   if (!j) return res.status(404).json({ success: false, message: 'Job not found.' });
   const ctx = ctxOf(req);
   const owner = ['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) || j.orgId === ctx.tenantId;
   if (!owner && !(j.status === 'Published' && j.visibility !== 'private')) return res.status(404).json({ success: false, message: 'Job not found.' });
-  const now = new Date();
-  const open = j.status === 'Published' && (!j.expiryDate || new Date(j.expiryDate) > now);
-  res.json({ success: true, data: { ...j, acceptingApplications: open } });
+  const counts = jobCounts(db, j);
+  if (!owner) return res.json({ success: true, data: { ...publicJob(j), counts, acceptingApplications: counts.acceptingApplications } });
+  res.json({ success: true, data: { ...j, counts, acceptingApplications: counts.acceptingApplications } });
 });
 
 // ---- Interview reschedule / cancel (history preserved, §11) ----
