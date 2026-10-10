@@ -249,6 +249,9 @@ describe('DetailDrawer scroll', () => {
     );
     const dialog = container.querySelector('[role="dialog"]');
     assert.ok(dialog, 'dialog exists');
+    assert.ok(dialog!.className.includes('drawer-root'), 'viewport-pinned shell is used');
+    assert.ok(container.querySelector('.drawer-dim'), 'dim layer exists');
+    assert.ok(container.querySelector('.drawer-panel'), 'viewport-pinned panel is used');
     const scroller = container.querySelector('[data-testid="drawer-scroll"]');
     assert.ok(scroller, 'internal scroll region exists');
     assert.ok(scroller!.className.includes('drawer-scroll'), 'bar-free guaranteed scroller is used');
