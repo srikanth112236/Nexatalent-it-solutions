@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
-import { directoryApi } from '../../shared/enterprise/phaseApi';
+import { useEffect, useMemo, useState } from 'react';
+import { directoryApi, mfaApi, permissionsApi } from '../../shared/enterprise/phaseApi';
 import { syncAll } from '../common/EnterprisePanels';
-import { Modal, Select, Field, ConfirmDialog, RowMenu } from '../../shared/ui/EnterpriseKit';
+import { Modal, Select, Field, ConfirmDialog, RowMenu, DatePicker } from '../../shared/ui/EnterpriseKit';
 import { CrudToolbar, DetailDrawer, KeyValues, StatusPill, useQueryState, useDebounced } from '../common/CrudKit';
 import { Company360Drawer } from './SuperAdmin360';
 import { EmptyState } from '../../shared/ui/DataState';
@@ -360,11 +360,39 @@ export function UsersManager({ users, setUsers }: { users: any[]; setUsers: (u: 
   const [ok, setOk] = useState('');
   const [detail, setDetail] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ name: '', department: '', designation: '', branch: '', employeeId: '', reportingManager: '', role: '' });
+  const [editForm, setEditForm] = useState({ name: '', phone: '', department: '', designation: '', branch: '', employeeId: '', reportingManager: '', role: '', startDate: '', endDate: '' });
   const [statusFor, setStatusFor] = useState<any>(null);
   const [statusForm, setStatusForm] = useState({ status: 'Suspended', reason: '', reassignTo: '' });
   const [deleteFor, setDeleteFor] = useState<any>(null);
+  const [mfaFor, setMfaFor] = useState<any>(null);
+  const [assignments, setAssignments] = useState<any>(null);
+  const [exceptions, setExceptions] = useState<any[]>([]);
+  const [excForm, setExcForm] = useState({ permission: 'export', effect: 'grant' });
+  const [history, setHistory] = useState<any[]>([]);
   const pageSize = 10;
+  useEffect(() => {
+    if (!detail) { setAssignments(null); setExceptions([]); setHistory([]); return; }
+    (async () => {
+      try {
+        const [aRes, eRes, hRes] = await Promise.all([
+          directoryApi.userAssignments(detail.id).catch(() => null),
+          permissionsApi.all(detail.email).catch(() => null),
+          directoryApi.auditLogs(`?actor=${encodeURIComponent(detail.email)}`).catch(() => null),
+        ]);
+        const unwrap = (r: unknown): any[] => {
+          const d = (r as { data?: unknown })?.data;
+          return Array.isArray(d) ? d : [];
+        };
+        if (aRes) setAssignments((aRes as { data?: any })?.data || null);
+        if (eRes) setExceptions(unwrap(eRes));
+        if (hRes) {
+          const hbody = (hRes as { data?: unknown })?.data;
+          const rows = Array.isArray(hbody) ? hbody : ((hbody as { data?: unknown[] })?.data || []);
+          setHistory(Array.isArray(rows) ? rows.slice(0, 20) : []);
+        }
+      } catch { /* sections are best-effort */ }
+    })();
+  }, [detail]);
 
   const filtered = useMemo(() => {
     const q = dq.toLowerCase();
@@ -380,15 +408,41 @@ export function UsersManager({ users, setUsers }: { users: any[]; setUsers: (u: 
       { label: 'View profile', onSelect: () => setDetail(u) },
       { label: 'Edit details', onSelect: () => openEdit(u) },
       { label: u.status === 'Active' ? 'Suspend…' : 'Reactivate…', onSelect: () => { setStatusFor(u); setStatusForm({ status: u.status === 'Active' ? 'Suspended' : 'Active', reason: '', reassignTo: '' }); } },
+      ...(u.mfaEnabled ? [{ label: 'Reset MFA…', onSelect: () => setMfaFor(u) }] : []),
       { label: 'Delete…', onSelect: () => setDeleteFor(u) },
     ]} />
   );
+  const doMfaReset = async () => {
+    if (!mfaFor) return;
+    setBusy(true); setError('');
+    try {
+      await mfaApi.reset(mfaFor.email);
+      setUsers(users.map((x) => (x.id === mfaFor.id ? { ...x, mfaEnabled: false } : x)));
+      setMfaFor(null); setOk(`MFA reset for ${mfaFor.email}.`); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const saveException = async (email: string) => {
+    setBusy(true); setError('');
+    try {
+      const res: any = await permissionsApi.grant(email, excForm.permission, excForm.effect as 'grant' | 'revoke');
+      const created = (res as { data?: any })?.data;
+      if (created?.id) setExceptions((x) => [created, ...x.filter((o) => !(o.permission === created.permission))]);
+      setOk(`Permission ${excForm.effect} ${excForm.permission} for ${email}.`); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const clearException = async (email: string, permission: string, id: string) => {
+    setBusy(true); setError('');
+    try {
+      await permissionsApi.clear(email, permission);
+      setExceptions((x) => x.filter((o) => o.id !== id)); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const pageRows = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const openEdit = (u: any) => {
     setEditing(u);
-    setEditForm({ name: u.name || '', department: u.department || '', designation: u.designation || '', branch: u.branch || '', employeeId: u.employeeId || '', reportingManager: u.reportingManager || '', role: u.role || '' });
+    setEditForm({ name: u.name || '', phone: u.phone || '', department: u.department || '', designation: u.designation || '', branch: u.branch || '', employeeId: u.employeeId || '', reportingManager: u.reportingManager || '', role: u.role || '', startDate: u.startDate ? String(u.startDate).slice(0, 10) : '', endDate: u.endDate ? String(u.endDate).slice(0, 10) : '' });
   };
   const saveEdit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!editing) return;
@@ -431,7 +485,7 @@ export function UsersManager({ users, setUsers }: { users: any[]; setUsers: (u: 
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
       <div className="flex flex-col lg:flex-row gap-2">
         <div className="flex-1"><CrudToolbar search={search} onSearch={(v) => { setSearch(v); setPage(1); }} searchPh="Search name, email, tenant…"
-          exportProps={{ filename: 'users.csv', rows: filtered, columns: ['id', 'name', 'email', 'role', 'tenantId', 'status', 'lastLogin'] }} /></div>
+          exportProps={{ filename: 'users.csv', rows: filtered, columns: ['id', 'name', 'email', 'phone', 'employeeId', 'department', 'designation', 'role', 'branch', 'reportingManager', 'tenantId', 'status', 'invitationStatus', 'mfaEnabled', 'startDate', 'endDate', 'lastLogin'] }} /></div>
         <div className="flex gap-2">
           <div className="w-40 shrink-0">
             <Select value={role} onChange={(v) => { setRole(v); setPage(1); }} ariaLabel="Role filter" placeholder="All roles"
@@ -457,23 +511,26 @@ export function UsersManager({ users, setUsers }: { users: any[]; setUsers: (u: 
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 font-bold text-[11px] capitalize">{u.role}</span>
                 <StatusPill value={u.status} />
+                {u.mfaEnabled ? <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px]">MFA on</span> : null}
               </div>
               <div className="text-slate-600 font-medium font-mono">{u.tenantId}</div>
             </div>
           ))}
         </div>
         <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
-          <table className="w-full text-left text-xs min-w-[920px]">
+          <table className="w-full text-left text-xs min-w-[1180px]">
             <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
-              <th className="px-4 py-3">User</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Tenant</th>
+              <th className="px-4 py-3">User</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Tenant</th><th className="px-4 py-3">MFA</th><th className="px-4 py-3">Invitation</th>
               <th className="px-4 py-3">Last active</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
             </tr></thead>
             <tbody className="divide-y divide-slate-100 font-medium">
               {pageRows.map((u) => (
                 <tr key={u.id} className="hover:bg-slate-50/70">
-                  <td className="px-4 py-3"><div className="font-bold text-slate-900">{u.name}</div><div className="text-slate-500 text-[11px]">{u.email} • <span className="font-mono">{u.id}</span></div></td>
-                  <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 font-bold text-[11px] capitalize">{u.role}</span></td>
+                  <td className="px-4 py-3"><div className="font-bold text-slate-900">{u.name}</div><div className="text-slate-500 text-[11px]">{u.email}{u.phone ? ` • ${u.phone}` : ''} • <span className="font-mono">{u.id}</span></div></td>
+                  <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 font-bold text-[11px] capitalize">{u.role}</span><div className="text-slate-500 text-[11px] mt-0.5">{u.designation || u.department || ''}</div></td>
                   <td className="px-4 py-3 font-mono font-bold text-amber-700">{u.tenantId}</td>
+                  <td className="px-4 py-3">{u.mfaEnabled ? <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px]">On</span> : <span className="text-slate-400">Off</span>}</td>
+                  <td className="px-4 py-3 text-slate-500">{u.invitationStatus || '—'}</td>
                   <td className="px-4 py-3 text-slate-500">{u.lastLogin || 'Never'}</td>
                   <td className="px-4 py-3"><StatusPill value={u.status} /></td>
                   <td className="px-4 py-3"><div className="flex justify-end">{userMenuFor(u)}</div></td>
@@ -494,28 +551,90 @@ export function UsersManager({ users, setUsers }: { users: any[]; setUsers: (u: 
       {detail && (
         <DetailDrawer title={detail.name} subtitle={`${detail.email} • ${detail.id}`} onClose={() => setDetail(null)}>
           <KeyValues data={[
-            ['Email', detail.email], ['Role', detail.role], ['Tenant', detail.tenantId],
+            ['Email', detail.email], ['Work phone', detail.phone || '—'], ['Role', detail.role], ['Tenant', detail.tenantId],
             ['Employee ID', detail.employeeId || '—'], ['Department', detail.department || '—'],
             ['Designation', detail.designation || '—'], ['Branch', detail.branch || '—'],
             ['Manager', detail.reportingManager || '—'], ['Status', <StatusPill value={detail.status} />],
+            ['Invitation', `${detail.invitationStatus || '—'}${detail.invitedAt ? ` • ${String(detail.invitedAt).slice(0, 10)}` : ''}`],
+            ['MFA', detail.mfaEnabled ? 'Enabled' : 'Disabled'],
+            ['Start date', detail.startDate ? String(detail.startDate).slice(0, 10) : '—'],
+            ['End date', detail.endDate ? String(detail.endDate).slice(0, 10) : '—'],
             ['Last login', detail.lastLogin || 'Never'],
           ]} />
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => { openEdit(detail); setDetail(null); }} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs">Edit</button>
             <button type="button" onClick={() => { setStatusFor(detail); setDetail(null); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Suspend / Reactivate</button>
+            {detail.mfaEnabled && <button type="button" onClick={() => { setMfaFor(detail); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Reset MFA</button>}
+          </div>
+          <div>
+            <div className="text-xs font-extrabold text-slate-900 mb-2">Assigned work — companies, jobs, leads, candidates, tasks, interviews</div>
+            {!assignments ? <div className="text-[11px] text-slate-500">Loading assignments…</div> : (
+              <div className="space-y-2">
+                {(['companies', 'jobs', 'requisitions', 'leads', 'candidates', 'tasks', 'interviews', 'targets', 'opportunities', 'meetings'] as const).map((k) => (
+                  <div key={k} className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                    <div className="font-extrabold capitalize">{k} ({k === 'companies' ? assignments[k].length : assignments.counts?.[k] ?? assignments[k]?.length ?? 0})</div>
+                    {(assignments[k] || []).slice(0, 5).map((r: any) => (
+                      <div key={r.id} className="text-slate-600 font-medium truncate mt-1">
+                        {r.name || r.title || r.companyName || r.candidateName || r.clientName || r.id} • {r.status || r.stage || ''}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
+            <div className="text-xs font-extrabold text-slate-900 mb-2">Permission exceptions (over role template)</div>
+            <div className="flex gap-2 mb-2">
+              <div className="flex-1 min-w-0">
+                <Select value={excForm.permission} onChange={(v) => setExcForm({ ...excForm, permission: v })} ariaLabel="Permission" options={['view', 'create', 'edit', 'archive', 'delete', 'approve', 'reject', 'suspend', 'restore', 'assign', 'export', 'manage_billing', 'manage_permissions', 'view_sensitive_fields', 'reconcile', 'refund', 'adjust_commission'].map((p) => ({ value: p, label: p }))} />
+              </div>
+              <div className="w-28 shrink-0">
+                <Select value={excForm.effect} onChange={(v) => setExcForm({ ...excForm, effect: v })} ariaLabel="Effect" options={[{ value: 'grant', label: 'Grant' }, { value: 'revoke', label: 'Revoke' }]} />
+              </div>
+              <button type="button" disabled={busy} onClick={() => saveException(detail.email)} className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs shrink-0 disabled:opacity-50">Save</button>
+            </div>
+            {exceptions.length === 0 ? <div className="text-[11px] text-slate-500">No exceptions — role template applies.</div> : (
+              <div className="space-y-1.5">
+                {exceptions.map((o) => (
+                  <div key={o.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
+                    <span><strong className={o.effect === 'grant' ? 'text-emerald-600' : 'text-red-600'}>{o.effect}</strong> • {o.permission}</span>
+                    <button type="button" onClick={() => clearException(detail.email, o.permission, o.id)} className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 font-bold text-[11px]">Clear</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
+            <div className="text-xs font-extrabold text-slate-900 mb-2">Access history (latest 20)</div>
+            {history.length === 0 ? <div className="text-[11px] text-slate-500">No recorded actions by this account yet.</div> : (
+              <div className="space-y-1.5">
+                {history.map((h: any, i: number) => (
+                  <div key={h.id || i} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-600">
+                    {h.action} • {h.resource}/{h.recordId} • {String(h.timestamp || '').slice(0, 16).replace('T', ' ')}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </DetailDrawer>
       )}
+      <ConfirmDialog open={mfaFor !== null} onCancel={() => setMfaFor(null)} title={`Reset MFA for ${mfaFor?.email || ''}?`}
+        body="Their second factor is cleared immediately (audited). They re-enroll on next sign-in."
+        confirmLabel="Reset MFA" onConfirm={doMfaReset} />
 
       <Modal open={editing !== null} onClose={() => setEditing(null)} title={`Edit user — ${editing?.email || ''}`} subtitle="Role changes are audited">
         <form onSubmit={saveEdit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Full name"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} /></Field>
+          <Field label="Work phone"><input type="tel" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} /></Field>
           <Field label="Role"><Select value={editForm.role} onChange={(v) => setEditForm({ ...editForm, role: v })} options={ALL_ROLES.map((r) => ({ value: r, label: r }))} /></Field>
           <Field label="Department"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.department} onChange={(e) => setEditForm({ ...editForm, department: e.target.value })} /></Field>
           <Field label="Designation"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.designation} onChange={(e) => setEditForm({ ...editForm, designation: e.target.value })} /></Field>
           <Field label="Branch"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.branch} onChange={(e) => setEditForm({ ...editForm, branch: e.target.value })} /></Field>
           <Field label="Employee ID"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.employeeId} onChange={(e) => setEditForm({ ...editForm, employeeId: e.target.value })} /></Field>
-          <div className="sm:col-span-2"><Field label="Reporting manager"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.reportingManager} onChange={(e) => setEditForm({ ...editForm, reportingManager: e.target.value })} /></Field></div>
+          <Field label="Reporting manager"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.reportingManager} onChange={(e) => setEditForm({ ...editForm, reportingManager: e.target.value })} /></Field>
+          <Field label="Start date"><DatePicker value={editForm.startDate} onChange={(v) => setEditForm({ ...editForm, startDate: v })} ariaLabel="Start date" placeholder="Start date" /></Field>
+          <Field label="End date"><DatePicker value={editForm.endDate} onChange={(v) => setEditForm({ ...editForm, endDate: v })} ariaLabel="End date" placeholder="End date" /></Field>
           <div className="sm:col-span-2 flex justify-end gap-2">
             <button type="button" onClick={() => setEditing(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
             <button disabled={busy} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50">{busy ? 'Saving…' : 'Save changes'}</button>

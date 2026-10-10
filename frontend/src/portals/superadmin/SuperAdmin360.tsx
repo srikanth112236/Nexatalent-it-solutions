@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { directoryApi } from '../../shared/enterprise/phaseApi';
+import { directoryApi, jobsApi, workforceApi } from '../../shared/enterprise/phaseApi';
 import { DetailDrawer, KeyValues, StatusPill, ExportButton } from '../common/CrudKit';
+import { Modal, RowMenu } from '../../shared/ui/EnterpriseKit';
 import { InlineLoading } from '../../shared/ui/DataState';
 
 function errMsg(err: unknown): string {
@@ -351,6 +352,158 @@ export function Candidate360Drawer({ candidateId, onClose }: { candidateId: stri
           )}
         </div>
       )}
+    </DetailDrawer>
+  );
+}
+
+/* ---------------- Agency 360° — spec §6.5 ---------------- */
+const AGENCY_TABS = ['Overview', 'Assignments & Jobs', 'Submissions', 'Agreements & Payouts', 'Audit Log'];
+const SUBMISSION_REVIEWS = ['Under Review', 'Shortlisted', 'Selected', 'Rejected'];
+
+export function AgencyDrawer({ agencyId, onClose }: { agencyId: string; onClose: () => void }) {
+  const [tab, setTab] = useState('Overview');
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [showAssign, setShowAssign] = useState(false);
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [assignSel, setAssignSel] = useState<Set<string>>(new Set());
+
+  const load = async () => {
+    setLoading(true); setError('');
+    try {
+      const res: any = await workforceApi.agency360(agencyId);
+      setData((res as { data?: any })?.data || res);
+    } catch (e) { setError(errMsg(e)); } finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, [agencyId]);
+  const nameOf = (a: any) => a?.displayName || a?.legalName || '';
+  const openAssign = async () => {
+    setShowAssign(true); setJobs([]);
+    try {
+      const res: any = await jobsApi.list('?page=1&pageSize=100');
+      const all = ((res as { data?: any })?.data || []) as any[];
+      setJobs(all.filter((j) => j.status === 'Published'));
+      const mine = new Set<string>();
+      for (const j of all) {
+        const listed = [...(j.assignedAgencies || [])].map((x: string) => String(x).toLowerCase());
+        const me = nameOf(data?.profile).toLowerCase();
+        if (me && listed.some((l) => l.includes(me) || me.includes(l))) mine.add(j.id);
+      }
+      setAssignSel(mine);
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const saveAssign = async () => {
+    setBusy(true); setError(''); setOk('');
+    try {
+      const me = nameOf(data?.profile);
+      for (const j of jobs) {
+        const listed = [...(j.assignedAgencies || [])];
+        const has = listed.some((l: string) => { const a = String(l).toLowerCase(); const b = me.toLowerCase(); return a.includes(b) || b.includes(a); });
+        const want = assignSel.has(j.id);
+        if (want && !has) await jobsApi.update(j.id, { assignedAgencies: [...listed, me] });
+        else if (!want && has) await jobsApi.update(j.id, { assignedAgencies: listed.filter((l: string) => { const a = String(l).toLowerCase(); const b = me.toLowerCase(); return !(a.includes(b) || b.includes(a)); }) });
+      }
+      setShowAssign(false); await load(); setOk('Job assignments updated.');
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const reviewSubmission = async (id: string, status: string) => {
+    setBusy(true); setError('');
+    try {
+      const { salesApi } = await import('../../shared/enterprise/phaseApi');
+      await salesApi.setSubmission(id, status);
+      await load(); setOk(`Submission ${id} → ${status}.`);
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+
+  const p = data?.profile || {};
+  return (
+    <DetailDrawer title={nameOf(p) || agencyId} subtitle={`${agencyId} • Agency 360° • spec §6.5`} onClose={onClose} width="max-w-4xl">
+      {loading ? <InlineLoading message="Loading agency 360°…" /> : error && !data ? (
+        <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-800 text-xs font-bold flex items-center justify-between gap-3">
+          <span>{error}</span><button type="button" onClick={load} className="px-3 py-1.5 rounded-lg bg-red-600 text-white font-bold">Retry</button>
+        </div>
+      ) : !data ? <div className="text-xs text-slate-500">No data.</div> : (
+        <div className="space-y-4">
+          <TabBar tabs={AGENCY_TABS} active={tab} onPick={setTab} />
+          {error && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs font-bold">{error}</div>}
+          {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
+          {tab === 'Overview' && (
+            <KeyValues data={[
+              ['Agency ID', <span className="font-mono">{agencyId}</span>],
+              ['Legal name', p.legalName], ['Display name', p.displayName], ['Entity type', p.entityType],
+              ['Registration number', p.registrationNumber], ['Tax IDs', p.taxIds], ['Country', p.country],
+              ['Website', p.website], ['Address', p.address],
+              ['Primary contact', `${p.contactName || ''} ${p.contactEmail || ''} ${p.contactPhone || ''}`],
+              ['Specialties', p.specialties], ['Locations served', p.locations], ['Recruiters', p.recruiterCount ?? '—'],
+              ['Verification', <StatusPill value={p.verificationStatus || 'Pending'} />],
+              ['Agreement', p.agreementStatus || '—'], ['Commercial model', p.commercialModel || '—'],
+              ['Account', <StatusPill value={p.accountStatus || 'Invited'} />],
+              ['Account manager', p.accountManager || '—'], ['Login tenant', <span className="font-mono">{p.tenantId || '—'}</span>],
+              ['Active assignments', p.activeAssignments ?? '—'], ['Submissions', p.submissions ?? '—'],
+              ['Placements', p.placements ?? '—'], ['Payout due', `₹${Number(p.payoutBalance || 0).toLocaleString('en-IN')}`],
+            ].map(([k, v]) => [k, (v as React.ReactNode) || '—'] as [string, React.ReactNode])} />
+          )}
+          {tab === 'Assignments & Jobs' && (
+            <div className="space-y-3">
+              <div className="flex justify-end">
+                <button type="button" onClick={openAssign} className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-xs">Assign jobs…</button>
+              </div>
+              <Rows items={data.jobs || []} empty="No jobs assigned. Use Assign jobs to allocate published requisitions." render={(j: any) => (
+                <div key={j.id} className={rowCls}><strong>{j.title}</strong> • {j.id} • {j.location || '—'} • <StatusPill value={j.status} /></div>
+              )} />
+            </div>
+          )}
+          {tab === 'Submissions' && (
+            <Rows items={data.submissions || []} empty="No candidate submissions from this agency." render={(s: any) => (
+              <div key={s.id} className={`${rowCls} flex items-center justify-between gap-2`}>
+                <div className="min-w-0"><strong>{s.candidateEmail}</strong> → {s.jobId} • <StatusPill value={s.status} />
+                  <div className="text-slate-500 text-[11px]">by {s.submittedBy} • {String(s.createdAt || '').slice(0, 10)}</div>
+                </div>
+                <RowMenu label="Review submission" items={SUBMISSION_REVIEWS.filter((x) => x !== s.status).map((x) => ({ label: `Mark ${x}`, onSelect: () => reviewSubmission(s.id, x) }))} />
+              </div>
+            )} />
+          )}
+          {tab === 'Agreements & Payouts' && (
+            <div className="space-y-3">
+              <div className="text-xs font-extrabold text-slate-900">Commission agreements ({(data.agreements || []).length})</div>
+              <Rows items={data.agreements || []} empty="No commission agreements." render={(a: any) => (
+                <div key={a.id} className={rowCls}><strong>{a.id}</strong> • {a.feeModel} {a.rate}% • trigger {a.trigger} • {a.status}</div>
+              )} />
+              <div className="text-xs font-extrabold text-slate-900">Commissions ({(data.commissions || []).length})</div>
+              <Rows items={data.commissions || []} empty="No commissions yet." render={(c: any) => (
+                <div key={c.id} className={rowCls}><strong>{c.id}</strong> • gross ₹{c.gross} • total ₹{c.total || c.net} • {c.approvalStatus}/{c.paymentStatus}</div>
+              )} />
+              <div className="text-xs font-extrabold text-slate-900">Payouts ({(data.payouts || []).length})</div>
+              <Rows items={data.payouts || []} empty="No payouts yet." render={(x: any) => (
+                <div key={x.id} className={rowCls}><strong>{x.id}</strong> • ₹{x.amount} • {x.status}</div>
+              )} />
+            </div>
+          )}
+          {tab === 'Audit Log' && (
+            <Rows items={data.activity || []} empty="No audit rows for this agency." render={(l: any, i: number) => (
+              <div key={l.id || i} className={`${rowCls} font-mono`}>{l.action} • {l.actor} • {String(l.timestamp || '').slice(0, 16).replace('T', ' ')}</div>
+            )} />
+          )}
+        </div>
+      )}
+      <Modal open={showAssign} onClose={() => setShowAssign(false)} title={`Assign jobs — ${nameOf(data?.profile)}`} subtitle="Only explicitly assigned jobs accept this agency's submissions" wide>
+        <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+          {jobs.length === 0 && <div className="text-xs text-slate-500">No published jobs available.</div>}
+          {jobs.map((j) => (
+            <label key={j.id} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs cursor-pointer">
+              <input type="checkbox" checked={assignSel.has(j.id)} onChange={() => setAssignSel((s) => { const n = new Set(s); if (n.has(j.id)) n.delete(j.id); else n.add(j.id); return n; })} className="w-4 h-4 accent-[#087BFF]" />
+              <span className="min-w-0"><strong>{j.title}</strong> • <span className="font-mono text-slate-500">{j.id}</span> • {j.location || '—'}</span>
+            </label>
+          ))}
+        </div>
+        <div className="flex justify-end gap-2 pt-3">
+          <button type="button" onClick={() => setShowAssign(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+          <button type="button" disabled={busy} onClick={saveAssign} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50">{busy ? 'Saving…' : `Save (${assignSel.size} assigned)`}</button>
+        </div>
+      </Modal>
     </DetailDrawer>
   );
 }

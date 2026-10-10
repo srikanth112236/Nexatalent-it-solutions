@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { apiClient } from '../../shared/api-client';
-import { Candidate360Drawer } from '../superadmin/SuperAdmin360';
+import { Candidate360Drawer, AgencyDrawer } from '../superadmin/SuperAdmin360';
 import { ExportButton, useQueryState, useDebounced } from './CrudKit';
 import {
   applicationsApi, interviewsApi, chatApi, talentApi, requisitionsApi, jobsApi,
@@ -2683,75 +2683,293 @@ export function ConsentPanel() {
 }
 
 /* ---------------- Agency directory (§6.5/§9.1) ---------------- */
+const blankAgency: Record<string, string> = { legalName: '', displayName: '', entityType: '', country: '', registrationNumber: '', taxIds: '', website: '', address: '', contactName: '', contactEmail: '', contactPhone: '', specialties: '', locations: '', recruiterCount: '', tenantId: '', accountManager: '', commercialModel: '', agreementStatus: 'Draft' };
+
 export function AgencyPanel() {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
+  const [q, setQ] = useQueryState('ag_q');
+  const [status, setStatus] = useQueryState('ag_status');
+  const [verification, setVerification] = useQueryState('ag_ver');
+  const dq = useDebounced(q);
+  const [showAdv, setShowAdv] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ legalName: '', displayName: '', contactName: '', contactEmail: '', specialties: '', locations: '', commercialModel: '' });
-  const load = async () => {
+  const [form, setForm] = useState<Record<string, string>>({ ...blankAgency });
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [detail, setDetail] = useState<any>(null);
+  const [editing, setEditing] = useState<any>(null);
+  const [suspendFor, setSuspendFor] = useState<any>(null);
+  const [suspendForm, setSuspendForm] = useState({ action: 'Suspended', reason: '' });
+  const [deleteFor, setDeleteFor] = useState<any>(null);
+  const [delReason, setDelReason] = useState('');
+  const [inviteFor, setInviteFor] = useState<any>(null);
+  const [inviteForm, setInviteForm] = useState({ name: '', email: '', role: 'agency_recruiter', password: '' });
+  const [busy, setBusy] = useState(false);
+  const pageSize = 10;
+  const params = useMemo(() => {
+    const sp = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (status) sp.set('status', status);
+    if (verification) sp.set('verification', verification);
+    if (dq.trim()) sp.set('q', dq.trim());
+    return sp.toString();
+  }, [page, status, verification, dq]);
+  const load = async (qs: string) => {
     setLoading(true); setError('');
-    try { setRows(unwrapList(await workforceApi.agencies())); }
-    catch (e) { setError(errMsg(e)); }
+    try {
+      const res: any = await workforceApi.agencies(`?${qs}`);
+      setRows(unwrapList(res));
+      setTotal(Number((res as { pagination?: { total?: number } })?.pagination?.total ?? unwrapList(res).length));
+    } catch (e) { setError(errMsg(e)); }
     finally { setLoading(false); }
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(params); }, [params]);
+  const resetPage = () => setPage(1);
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.legalName.trim()) return;
+    setBusy(true);
     try {
-      const created = unwrapObj(await workforceApi.createAgency(form));
-      if (created?.id) setRows((r) => [created, ...r]);
-      setForm({ legalName: '', displayName: '', contactName: '', contactEmail: '', specialties: '', locations: '', commercialModel: '' });
-      setShowCreate(false); syncAll();
+      const created = unwrapObj(await workforceApi.createAgency({ ...form, recruiterCount: Number(form.recruiterCount) || 0 }));
+      if (created?.id) { setRows((r) => [created, ...r]); setTotal((t) => t + 1); }
+      setForm({ ...blankAgency });
+      setShowCreate(false); setOk('Agency onboarded (verification Pending).'); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const openEdit = (a: any) => {
+    setEditing(a);
+    const next: Record<string, string> = {};
+    for (const k of Object.keys(blankAgency)) next[k] = a[k] === undefined || a[k] === null ? '' : String(a[k]);
+    setForm(next);
+  };
+  const saveEdit = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!editing) return;
+    setBusy(true); setError('');
+    try {
+      const updated = unwrapObj(await workforceApi.updateAgency(editing.id, { ...form, recruiterCount: Number(form.recruiterCount) || 0 }));
+      setRows((r) => r.map((x) => (x.id === editing.id ? { ...x, ...(updated?.id ? updated : form) } : x)));
+      setEditing(null); setOk(`Agency ${editing.id} updated (audited).`); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const doVerify = async (a: any, decision: 'approve' | 'reject') => {
+    try {
+      const u = unwrapObj(await workforceApi.updateAgency(a.id, { verificationStatus: decision === 'approve' ? 'Approved' : 'Rejected' }));
+      setRows((r) => r.map((x) => (x.id === a.id ? { ...x, ...(u?.id ? u : {}) } : x)));
+      setOk(`Agency ${a.id} verification ${decision === 'approve' ? 'approved' : 'rejected'}.`); syncAll();
     } catch (e) { setError(errMsg(e)); }
   };
-  const update = async (id: string, body: any) => {
-    try { const u = unwrapObj(await workforceApi.updateAgency(id, body)); setRows((r) => r.map((x) => (x.id === id ? u : x))); syncAll(); }
-    catch (e) { setError(errMsg(e)); }
+  const doSuspend = async () => {
+    if (!suspendFor || !suspendForm.reason.trim()) { setError('Reason is required (audit).'); return; }
+    setBusy(true); setError('');
+    try {
+      const res: any = await workforceApi.updateAgency(suspendFor.id, { accountStatus: suspendForm.action, reason: suspendForm.reason.trim() });
+      const updated = (res as { data?: any })?.data || res;
+      const revoked = (res as { sessionsRevoked?: number })?.sessionsRevoked || 0;
+      setRows((r) => r.map((x) => (x.id === suspendFor.id ? { ...x, ...(updated?.id ? updated : { accountStatus: suspendForm.action }) } : x)));
+      setSuspendFor(null); setOk(`Agency ${suspendFor.id} → ${suspendForm.action}${revoked ? ` (${revoked} session(s) revoked)` : ''}.`); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
   };
+  const doDelete = async () => {
+    if (!deleteFor || !delReason.trim()) { setError('Closure reason is required.'); return; }
+    setBusy(true); setError('');
+    try {
+      const res: any = await workforceApi.deleteAgency(deleteFor.id, delReason.trim());
+      const updated = (res as { data?: any })?.data;
+      if (updated && updated.accountStatus === 'Closed') {
+        setRows((r) => r.map((x) => (x.id === deleteFor.id ? { ...x, ...updated } : x)));
+        setOk(`Agency ${deleteFor.id} has live work — closed instead of deleted.`);
+      } else {
+        setRows((r) => r.filter((x) => x.id !== deleteFor.id)); setTotal((t) => Math.max(0, t - 1));
+        setOk(`Agency ${deleteFor.id} deleted.`);
+      }
+      setDeleteFor(null); setDelReason(''); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const doInvite = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!inviteFor) return;
+    if (!inviteForm.email.trim() || inviteForm.password.length < 8) { setError('Valid email + 8-char temporary password required.'); return; }
+    setBusy(true); setError('');
+    try {
+      await workforceApi.inviteAgencyUser(inviteFor.id, { name: inviteForm.name.trim(), email: inviteForm.email.trim(), role: inviteForm.role, password: inviteForm.password });
+      setInviteFor(null); setInviteForm({ name: '', email: '', role: 'agency_recruiter', password: '' });
+      setOk(`Recruiter invited to ${inviteFor.id}.`); load(params); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const agencyColumns = ['id', 'legalName', 'displayName', 'contactName', 'contactEmail', 'contactPhone', 'specialties', 'locations', 'recruiterCount', 'verificationStatus', 'agreementStatus', 'commercialModel', 'accountStatus', 'accountManager', 'assignments', 'submissions', 'placements', 'payoutBalance'];
+  const menuFor = (a: any) => (
+    <RowMenu label="Agency actions" items={[
+      { label: 'View 360°', onSelect: () => setDetail(a) },
+      { label: 'Edit details', onSelect: () => openEdit(a) },
+      { label: 'Invite recruiter…', onSelect: () => { setInviteFor(a); setInviteForm({ name: '', email: '', role: 'agency_recruiter', password: '' }); } },
+      ...((a.verificationStatus === 'Pending') ? [
+        { label: 'Verify — Approve', onSelect: () => doVerify(a, 'approve') },
+        { label: 'Verify — Reject', danger: true, onSelect: () => doVerify(a, 'reject') },
+      ] : []),
+      { label: a.accountStatus === 'Suspended' ? 'Reactivate…' : 'Suspend…', danger: a.accountStatus !== 'Suspended', onSelect: () => { setSuspendFor(a); setSuspendForm({ action: a.accountStatus === 'Suspended' ? 'Active' : 'Suspended', reason: '' }); } },
+      { label: 'Close / Delete…', danger: true, onSelect: () => { setDeleteFor(a); setDelReason(''); } },
+    ]} />
+  );
   return (
     <div className={cardCls}>
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-base font-extrabold text-slate-900">Agency Directory — Onboard & Verify</h3>
-        <button type="button" onClick={() => setShowCreate(true)} className={btnPrimary}>+ Onboard agency</button>
+      <div className="flex flex-col gap-1">
+        <h3 className="text-base font-extrabold text-slate-900">Agency Directory — Onboard / Verify / Assign / Review</h3>
+        <p className="text-xs text-slate-500 font-medium">{total} record(s) match. Assignments, submissions, placements and payout balance are computed live.</p>
       </div>
-      {error && <PanelError message={error} onRetry={load} />}
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Onboard agency">
+      {error && <PanelError message={error} onRetry={() => load(params)} />}
+      {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
+      <div className="flex flex-col lg:flex-row gap-2">
+        <div className="relative flex-1"><input className={inputCls} placeholder="Search ID, name, contact, specialty…" value={q} onChange={(e) => { setQ(e.target.value); resetPage(); }} /></div>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => setShowAdv((v) => !v)} aria-expanded={showAdv} className={`px-4 py-2 rounded-xl border font-bold text-xs whitespace-nowrap ${showAdv || status || verification ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-slate-200 text-slate-700'}`}>
+            Filters {(status || verification) ? '•' : ''} {showAdv ? '▴' : '▾'}
+          </button>
+          <ExportButton filename="agencies.csv" rows={rows} columns={agencyColumns} />
+          <button type="button" onClick={() => { setForm({ ...blankAgency }); setShowCreate(true); }} className={btnPrimary}>+ Onboard agency</button>
+        </div>
+      </div>
+      {showAdv && (
+        <div className="flex flex-col sm:flex-row gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200">
+          <div className="flex-1 min-w-0">
+            <Select value={status} onChange={(v) => { setStatus(v); resetPage(); }} ariaLabel="Account status" placeholder="All statuses"
+              options={[{ value: '', label: 'All statuses' }, ...['Invited', 'Active', 'Suspended', 'Closed'].map((s) => ({ value: s, label: s }))]} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <Select value={verification} onChange={(v) => { setVerification(v); resetPage(); }} ariaLabel="Verification" placeholder="Any verification"
+              options={[{ value: '', label: 'Any verification' }, ...['Pending', 'Approved', 'Rejected'].map((s) => ({ value: s, label: s }))]} />
+          </div>
+          <button type="button" onClick={() => { setStatus(''); setVerification(''); resetPage(); }} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs shrink-0">Clear</button>
+        </div>
+      )}
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Onboard agency" subtitle="Starts at verification Pending / account Invited" wide>
         <form onSubmit={create} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Legal name *"><input className={kitInput} value={form.legalName} onChange={(e) => setForm({ ...form, legalName: e.target.value })} /></Field>
+          <Field label="Legal name *"><input required className={kitInput} value={form.legalName} onChange={(e) => setForm({ ...form, legalName: e.target.value })} /></Field>
           <Field label="Display name"><input className={kitInput} value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} /></Field>
+          <Field label="Entity type"><input className={kitInput} value={form.entityType} onChange={(e) => setForm({ ...form, entityType: e.target.value })} /></Field>
+          <Field label="Country"><input className={kitInput} value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} /></Field>
+          <Field label="Registration number"><input className={`${kitInput} font-mono`} value={form.registrationNumber} onChange={(e) => setForm({ ...form, registrationNumber: e.target.value })} /></Field>
+          <Field label="Tax IDs"><input className={kitInput} value={form.taxIds} onChange={(e) => setForm({ ...form, taxIds: e.target.value })} /></Field>
+          <Field label="Website"><input className={kitInput} value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} /></Field>
+          <Field label="Address"><input className={kitInput} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></Field>
           <Field label="Contact name"><input className={kitInput} value={form.contactName} onChange={(e) => setForm({ ...form, contactName: e.target.value })} /></Field>
-          <Field label="Contact email"><input className={kitInput} value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} /></Field>
-          <Field label="Specialties"><input className={kitInput} value={form.specialties} onChange={(e) => setForm({ ...form, specialties: e.target.value })} /></Field>
+          <Field label="Contact email"><input type="email" className={kitInput} value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} /></Field>
+          <Field label="Contact phone"><input type="tel" className={kitInput} value={form.contactPhone} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} /></Field>
+          <Field label="Recruiter count"><input className={kitInput} type="number" min={0} value={form.recruiterCount} onChange={(e) => setForm({ ...form, recruiterCount: e.target.value })} /></Field>
+          <Field label="Specialties"><input className={kitInput} value={form.specialties} onChange={(e) => setForm({ ...form, specialties: e.target.value })} placeholder="Engineering, Product" /></Field>
           <Field label="Locations served"><input className={kitInput} value={form.locations} onChange={(e) => setForm({ ...form, locations: e.target.value })} /></Field>
-          <div className="sm:col-span-2"><Field label="Commercial model"><input className={kitInput} value={form.commercialModel} onChange={(e) => setForm({ ...form, commercialModel: e.target.value })} placeholder="e.g. 8.33% CTC, 90-day replacement" /></Field></div>
+          <Field label="Login tenant ID (for invites)"><input className={`${kitInput} font-mono`} value={form.tenantId} onChange={(e) => setForm({ ...form, tenantId: e.target.value })} placeholder="TNT-AGENCY-__" /></Field>
+          <Field label="Account manager"><input className={kitInput} value={form.accountManager} onChange={(e) => setForm({ ...form, accountManager: e.target.value })} /></Field>
+          <Field label="Agreement status"><Select value={form.agreementStatus} onChange={(v) => setForm({ ...form, agreementStatus: v })} options={['Draft', 'Sent', 'Signed', 'Expired'].map((s) => ({ value: s, label: s }))} /></Field>
+          <div><Field label="Commercial model"><input className={kitInput} value={form.commercialModel} onChange={(e) => setForm({ ...form, commercialModel: e.target.value })} placeholder="e.g. 8.33% CTC, 90-day replacement" /></Field></div>
           <div className="sm:col-span-2 flex justify-end gap-2">
             <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
-            <button className={btnPrimary}>Onboard</button>
+            <button disabled={busy || !form.legalName.trim()} className={btnPrimary}>{busy ? 'Onboarding…' : 'Onboard'}</button>
           </div>
         </form>
       </Modal>
       {loading ? <InlineLoading message="Loading agencies…" /> : rows.length === 0 ? (
-        <EmptyState title="No agencies" message="Onboard the first recruitment partner." />
-      ) : (
-        <div className="space-y-2">
+        <EmptyState title="No agencies match" message="Adjust filters or onboard the first recruitment partner." />
+      ) : (<>
+        <div className="space-y-2 md:hidden">
           {rows.map((a) => (
-            <div key={a.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <div className="font-extrabold text-slate-900 text-sm truncate">{a.displayName || a.legalName}</div>
-                <div className="text-xs text-slate-500 font-medium">{a.id} • verification <strong>{a.verificationStatus}</strong> • account <strong>{a.accountStatus}</strong> • {a.specialties || '—'}</div>
+            <div key={a.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-extrabold text-slate-900 text-sm truncate">{a.displayName || a.legalName}</div>
+                  <div className="font-mono text-[11px] text-slate-500">{a.id}</div>
+                </div>
+                {menuFor(a)}
               </div>
-              <RowMenu label="Agency actions" items={[
-                { label: 'Approve verification', onSelect: () => update(a.id, { verificationStatus: 'Approved' }) },
-                { label: 'Reject verification', danger: true, onSelect: () => update(a.id, { verificationStatus: 'Rejected' }) },
-                { label: 'Suspend agency', danger: true, onSelect: () => update(a.id, { accountStatus: 'Suspended', reason: 'suspended by admin' }) },
-                { label: 'Reactivate agency', onSelect: () => update(a.id, { accountStatus: 'Active' }) },
-              ]} />
+              <div className="flex flex-wrap gap-1.5">
+                <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">{a.verificationStatus}</span>
+                <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-bold text-[11px]">{a.accountStatus}</span>
+              </div>
+              <div className="text-slate-600 font-medium">{a.assignments ?? 0} jobs • {a.submissions ?? 0} subs • {a.placements ?? 0} placed • bal ₹{a.payoutBalance ?? 0}</div>
             </div>
           ))}
         </div>
-      )}
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
+          <table className="w-full text-left text-xs min-w-[1380px]">
+            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
+              <th className="px-4 py-3">Agency</th><th className="px-4 py-3">Contact</th><th className="px-4 py-3">Specialties</th><th className="px-4 py-3">Verification</th><th className="px-4 py-3">Agreement</th><th className="px-4 py-3">Account</th><th className="px-4 py-3">Work</th><th className="px-4 py-3">Payout due</th><th className="px-4 py-3 text-right">Actions</th>
+            </tr></thead>
+            <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
+              {rows.map((a) => (
+                <tr key={a.id} className="hover:bg-slate-50/70">
+                  <td className="px-4 py-3"><div className="font-bold text-slate-900">{a.displayName || a.legalName}</div><div className="font-mono text-[11px] text-slate-500">{a.id} • {a.recruiterCount || 0} recruiters</div></td>
+                  <td className="px-4 py-3"><div>{a.contactName || '—'}</div><div className="text-slate-500 text-[11px]">{a.contactEmail || ''} {a.contactPhone || ''}</div></td>
+                  <td className="px-4 py-3 max-w-[200px]"><div className="truncate" title={`${a.specialties || ''} — ${a.locations || ''}`}>{a.specialties || '—'}</div><div className="text-slate-500 text-[11px] truncate">{a.locations || ''}</div></td>
+                  <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">{a.verificationStatus}</span></td>
+                  <td className="px-4 py-3"><div>{a.agreementStatus || '—'}</div><div className="text-slate-500 text-[11px] max-w-[160px] truncate" title={a.commercialModel}>{a.commercialModel || ''}</div></td>
+                  <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-bold text-[11px]">{a.accountStatus}</span><div className="text-slate-500 text-[11px]">{a.accountManager || ''}</div></td>
+                  <td className="px-4 py-3 font-bold">{a.assignments ?? '—'} jobs • {a.submissions ?? '—'} subs • {a.placements ?? '—'} placed</td>
+                  <td className="px-4 py-3 font-bold text-purple-700">₹{Number(a.payoutBalance || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-4 py-3"><div className="flex justify-end">{menuFor(a)}</div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </>)}
+      <Pager page={page} total={total} pageSize={pageSize} onPage={setPage} />
+      {detail && <AgencyDrawer agencyId={detail.id} onClose={() => { setDetail(null); load(params); }} />}
+      <Modal open={editing !== null} onClose={() => setEditing(null)} title={`Edit agency — ${editing?.id || ''}`} subtitle="Audited edit" wide>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Display name"><input className={kitInput} value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} /></Field>
+          <Field label="Entity type"><input className={kitInput} value={form.entityType} onChange={(e) => setForm({ ...form, entityType: e.target.value })} /></Field>
+          <Field label="Country"><input className={kitInput} value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} /></Field>
+          <Field label="Registration number"><input className={`${kitInput} font-mono`} value={form.registrationNumber} onChange={(e) => setForm({ ...form, registrationNumber: e.target.value })} /></Field>
+          <Field label="Tax IDs"><input className={kitInput} value={form.taxIds} onChange={(e) => setForm({ ...form, taxIds: e.target.value })} /></Field>
+          <Field label="Website"><input className={kitInput} value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} /></Field>
+          <div className="sm:col-span-2"><Field label="Address"><input className={kitInput} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></Field></div>
+          <Field label="Contact name"><input className={kitInput} value={form.contactName} onChange={(e) => setForm({ ...form, contactName: e.target.value })} /></Field>
+          <Field label="Contact email"><input type="email" className={kitInput} value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} /></Field>
+          <Field label="Contact phone"><input type="tel" className={kitInput} value={form.contactPhone} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} /></Field>
+          <Field label="Recruiter count"><input className={kitInput} type="number" min={0} value={form.recruiterCount} onChange={(e) => setForm({ ...form, recruiterCount: e.target.value })} /></Field>
+          <Field label="Specialties"><input className={kitInput} value={form.specialties} onChange={(e) => setForm({ ...form, specialties: e.target.value })} /></Field>
+          <Field label="Locations served"><input className={kitInput} value={form.locations} onChange={(e) => setForm({ ...form, locations: e.target.value })} /></Field>
+          <Field label="Login tenant ID"><input className={`${kitInput} font-mono`} value={form.tenantId} onChange={(e) => setForm({ ...form, tenantId: e.target.value })} /></Field>
+          <Field label="Account manager"><input className={kitInput} value={form.accountManager} onChange={(e) => setForm({ ...form, accountManager: e.target.value })} /></Field>
+          <Field label="Agreement status"><Select value={form.agreementStatus} onChange={(v) => setForm({ ...form, agreementStatus: v })} options={['Draft', 'Sent', 'Signed', 'Expired'].map((s) => ({ value: s, label: s }))} /></Field>
+          <div><Field label="Commercial model"><input className={kitInput} value={form.commercialModel} onChange={(e) => setForm({ ...form, commercialModel: e.target.value })} /></Field></div>
+          <div className="sm:col-span-2 flex justify-end gap-2">
+            <button type="button" onClick={() => setEditing(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button type="button" disabled={busy} onClick={saveEdit} className={btnPrimary}>{busy ? 'Saving…' : 'Save changes'}</button>
+          </div>
+        </div>
+      </Modal>
+      <Modal open={suspendFor !== null} onClose={() => setSuspendFor(null)} title={`${suspendForm.action === 'Active' ? 'Reactivate' : 'Suspend'} — ${suspendFor?.displayName || suspendFor?.id || ''}`} subtitle="Reason is mandatory. Suspending revokes member sessions.">
+        <div className="space-y-3">
+          <Field label="Action"><Select value={suspendForm.action} onChange={(v) => setSuspendForm({ ...suspendForm, action: v })} options={[{ value: 'Suspended', label: 'Suspend' }, { value: 'Active', label: 'Reactivate' }]} /></Field>
+          <Field label="Reason *"><textarea rows={3} className={kitInput} value={suspendForm.reason} onChange={(e) => setSuspendForm({ ...suspendForm, reason: e.target.value })} placeholder="e.g. Contract breach — legal ticket LEG-12" /></Field>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setSuspendFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button type="button" disabled={busy || !suspendForm.reason.trim()} onClick={doSuspend} className={btnDark}>{busy ? 'Working…' : 'Confirm'}</button>
+          </div>
+        </div>
+      </Modal>
+      <Modal open={deleteFor !== null} onClose={() => setDeleteFor(null)} title={`Close / delete ${deleteFor?.displayName || deleteFor?.id || ''}?`} subtitle="Live assignments, pending submissions or unpaid payouts close the agency instead of deleting it.">
+        <div className="space-y-3">
+          <Field label="Reason *"><textarea rows={3} className={kitInput} value={delReason} onChange={(e) => setDelReason(e.target.value)} placeholder="e.g. Contract ended by mutual agreement" /></Field>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setDeleteFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button type="button" disabled={busy || !delReason.trim()} onClick={doDelete} className="px-4 py-2.5 rounded-xl bg-red-600 text-white font-bold text-xs disabled:opacity-50">{busy ? 'Working…' : 'Close / Delete'}</button>
+          </div>
+        </div>
+      </Modal>
+      <Modal open={inviteFor !== null} onClose={() => setInviteFor(null)} title={`Invite recruiter — ${inviteFor?.displayName || inviteFor?.id || ''}`} subtitle={inviteFor?.tenantId ? `Scoped to tenant ${inviteFor.tenantId}` : 'Link a login tenant first (edit agency).'}>
+        <form onSubmit={doInvite} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Full name"><input className={kitInput} value={inviteForm.name} onChange={(e) => setInviteForm({ ...inviteForm, name: e.target.value })} /></Field>
+          <Field label="Work email *"><input type="email" required className={kitInput} value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} /></Field>
+          <Field label="Role"><Select value={inviteForm.role} onChange={(v) => setInviteForm({ ...inviteForm, role: v })} options={[{ value: 'agency_admin', label: 'Agency Admin' }, { value: 'agency_recruiter', label: 'Agency Recruiter' }]} /></Field>
+          <Field label="Temporary password (8+ chars) *"><input type="password" required minLength={8} autoComplete="new-password" className={kitInput} value={inviteForm.password} onChange={(e) => setInviteForm({ ...inviteForm, password: e.target.value })} /></Field>
+          <div className="sm:col-span-2 flex justify-end gap-2">
+            <button type="button" onClick={() => setInviteFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button disabled={busy} className={btnPrimary}>{busy ? 'Inviting…' : 'Invite recruiter'}</button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
