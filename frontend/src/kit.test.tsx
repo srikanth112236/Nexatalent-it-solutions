@@ -364,6 +364,15 @@ describe('LeadsKanban', () => {
   });
 });
 
+describe('BulkImportModal', () => {
+  it('walks preview-then-commit with duplicate report', async () => {
+    const { BulkImportModal } = await import('./portals/common/EnterprisePanels.js');
+    render(<BulkImportModal open onClose={() => {}} title="Bulk import skills" collection="skills" columns={['name', 'category']} sample="name,category" onDone={() => {}} />);
+    assert.ok(container.textContent?.includes('Preview & dedupe check'));
+    assert.ok(container.textContent?.includes('Confirm import'));
+  });
+});
+
 describe('DetailDrawer scroll', () => {
   it('pins the panel to the viewport with a dedicated internal scroller', () => {
     render(

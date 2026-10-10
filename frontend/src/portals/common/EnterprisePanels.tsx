@@ -233,7 +233,7 @@ export function BulkImportModal({ open, onClose, title, subtitle, collection, co
 }
 
 /** Application picker — search applications by candidate/job/ID, pick one (body portal, never clips). */
-export function ApplicationPicker({ value, onChange, placeholder = 'Search candidate, job, application ID…' }: { value: string; onChange: (id: string) => void; placeholder?: string }) {
+export function ApplicationPicker({ value, onChange, onPick, placeholder = 'Search candidate, job, application ID…' }: { value: string; onChange: (id: string) => void; onPick?: (app: any) => void; placeholder?: string }) {
   const [q, setQ] = useState(value);
   const dq = useDebounced(q);
   const [opts, setOpts] = useState<any[]>([]);
@@ -270,7 +270,7 @@ export function ApplicationPicker({ value, onChange, placeholder = 'Search candi
       {open && opts.length > 0 && createPortal(
         <div style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width, zIndex: 210 }} className="bg-white rounded-2xl border border-slate-200 shadow-xl py-1.5 max-h-56 overflow-y-auto" data-lenis-prevent>
           {opts.map((a: any) => (
-            <button key={a.id} type="button" onClick={() => { onChange(a.id); setQ(a.id); setOpen(false); }}
+            <button key={a.id} type="button" onClick={() => { onChange(a.id); onPick?.(a); setQ(a.id); setOpen(false); }}
               className="w-full text-left px-3.5 py-2 hover:bg-slate-50">
               <div className="text-xs font-extrabold text-slate-900">{a.jobTitle || a.jobId}</div>
               <div className="text-[11px] text-slate-500 font-medium">{a.id} • {a.candidateEmail} • <strong className="text-blue-600">{a.stage}</strong></div>
@@ -1199,6 +1199,18 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
   };
 
   const filteredApps = rows.filter((a) => !dqApp.trim() || `${a.id} ${a.jobTitle} ${a.candidateEmail}`.toLowerCase().includes(dqApp.toLowerCase()));
+  const appMenuFor = (a: any) => {
+    const moves = ['Shortlisted', 'Interview Scheduled', 'Offer', 'Hired', 'Rejected', 'Withdrawn', 'On Hold'].filter((s) => s !== a.stage).slice(0, 5);
+    const canWithdraw = !['Hired', 'Withdrawn', 'Rejected'].includes(a.stage);
+    return (
+      <RowMenu label={`Application ${a.id}`} items={[
+        { label: 'View + history', onSelect: () => openDetail(a) },
+        ...moves.map((s) => ({ label: `Move to ${s}…`, onSelect: () => { if (['Hired', 'Withdrawn', 'Rejected'].includes(a.stage)) { setError(`${a.stage} applications are terminal — reopen explicitly to continue.`); return; } if (s === 'Withdrawn') { setWithdrawId(a.id); return; } setMoveFor({ app: a, to: s }); } })),
+        ...(canWithdraw ? [{ label: 'Withdraw application', danger: true, onSelect: () => setWithdrawId(a.id) }] : []),
+        ...(checkRecordAction('application', a, 'reopen', {}).allowed ? [{ label: 'Reopen…', onSelect: () => { setReopenFor(a); setReopenTarget('Applied'); } }] : []),
+      ]} />
+    );
+  };
   const openDetail = async (a: any) => {
     setDetail(a); setHistory([]);
     try {
@@ -1238,28 +1250,44 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
         ) : <ApplicationsKanban apps={boardRows} onOpen={openDetail} onDropMove={dropMove} />
       ) : loading ? <InlineLoading message="Loading applications…" /> : filteredApps.length === 0 ? (
         <EmptyState title="No applications" message="Applications appear here once candidates apply or agencies submit." />
-      ) : (
-        <div className="space-y-2">
-          {filteredApps.map((a) => {
-            const moves = ['Shortlisted', 'Interview Scheduled', 'Offer', 'Hired', 'Rejected', 'Withdrawn', 'On Hold'].filter((s) => s !== a.stage).slice(0, 5);
-            const canWithdraw = !['Hired', 'Withdrawn', 'Rejected'].includes(a.stage);
-            return (
-            <div key={a.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="font-extrabold text-slate-900 text-sm truncate">{a.jobTitle || a.jobId}</div>
-                <div className="text-xs text-slate-500 font-medium">{a.id} • {a.candidateEmail} • <strong className="text-blue-600">{a.stage}</strong> • applied {String(a.createdAt || '').slice(0, 10) || '—'}</div>
+      ) : (<>
+        <div className="space-y-2 md:hidden">
+          {filteredApps.map((a) => (
+            <div key={a.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-extrabold text-slate-900 text-sm truncate">{a.jobTitle || a.jobId}</div>
+                  <div className="font-mono text-[11px] text-slate-500">{a.id} • {a.candidateEmail}</div>
+                </div>
+                {appMenuFor(a)}
               </div>
-              <RowMenu items={[
-                { label: 'View + history', onSelect: () => openDetail(a) },
-                ...moves.map((s) => ({ label: `Move to ${s}…`, onSelect: () => { if (['Hired', 'Withdrawn', 'Rejected'].includes(a.stage)) { setError(`${a.stage} applications are terminal — reopen explicitly to continue.`); return; } if (s === 'Withdrawn') { setWithdrawId(a.id); return; } setMoveFor({ app: a, to: s }); } })),
-                ...(canWithdraw ? [{ label: 'Withdraw application', danger: true, onSelect: () => setWithdrawId(a.id) }] : []),
-                ...(checkRecordAction('application', a, 'reopen', {}).allowed ? [{ label: 'Reopen…', onSelect: () => { setReopenFor(a); setReopenTarget('Applied'); } }] : []),
-              ]} />
+              <div className="flex items-center gap-2">
+                <span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${APP_STAGE_TONE[a.stage] || APP_STAGE_TONE.New}`}>{a.stage}</span>
+                <span className="text-slate-500 font-medium">applied {String(a.createdAt || '').slice(0, 10) || '—'}</span>
+              </div>
             </div>
-            );
-          })}
+          ))}
         </div>
-      )}
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
+          <table className="w-full text-left text-xs min-w-[900px]">
+            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
+              <th className="px-4 py-3">Application</th><th className="px-4 py-3">Job</th><th className="px-4 py-3">Candidate</th><th className="px-4 py-3">Stage</th><th className="px-4 py-3">Applied</th><th className="px-4 py-3 text-right">Actions</th>
+            </tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredApps.map((a) => (
+                <tr key={a.id} className="hover:bg-slate-50/70">
+                  <td className="px-4 py-3 font-mono font-bold">{a.id}</td>
+                  <td className="px-4 py-3"><div className="font-bold text-slate-900 truncate max-w-[220px]">{a.jobTitle || a.jobId}</div><div className="font-mono text-[11px] text-slate-500">{a.jobId}</div></td>
+                  <td className="px-4 py-3">{a.candidateEmail}</td>
+                  <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${APP_STAGE_TONE[a.stage] || APP_STAGE_TONE.New}`}>{a.stage}</span></td>
+                  <td className="px-4 py-3">{String(a.createdAt || '').slice(0, 10) || '—'}</td>
+                  <td className="px-4 py-3"><div className="flex justify-end">{appMenuFor(a)}</div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </>)}
       <ConfirmDialog
         open={withdrawId !== ''}
         title="Withdraw application"
@@ -1378,6 +1406,15 @@ export function InterviewsPanel() {
   const [resched, setResched] = useState({ id: '', date: '', hour: '10', minute: '00', reason: '' });
   const [cancelId, setCancelId] = useState('');
   const emptyForm = { applicationId: '', jobId: '', round: 'Technical Round 1', date: '', hour: '10', minute: '00', mode: 'video', interviewer: '', meetingLink: '', venue: '', instructions: '' };
+  const ivMenuFor = (i: any) => (
+    <RowMenu label={`Interview ${i.id}`} items={[
+      ...(i.meetingLink ? [{ label: 'Join meeting', onSelect: () => window.open(i.meetingLink, '_blank', 'noopener') }] : []),
+      ...(['Scheduled', 'Rescheduled'].includes(i.status) ? [
+        { label: 'Reschedule…', onSelect: () => setResched({ id: i.id, date: '', hour: '10', minute: '00', reason: '' }) },
+        { label: 'Cancel interview…', danger: true, onSelect: () => setCancelId(i.id) },
+      ] : []),
+    ]} />
+  );
   const HOURS = Array.from({ length: 24 }, (_, h) => ({ value: `${h}`.padStart(2, '0'), label: `${h}`.padStart(2, '0') }));
   const MINUTES = ['00', '15', '30', '45'].map((m) => ({ value: m, label: m }));
 
@@ -1418,7 +1455,7 @@ export function InterviewsPanel() {
       {error && <PanelError message={error} status={loadError} onRetry={load} />}
       <Modal open={showSchedule} onClose={() => setShowSchedule(false)} title="Schedule interview" subtitle="Scheduling auto-enables the application chat">
         <form onSubmit={schedule} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Application ID *"><input className={kitInput} value={form.applicationId} onChange={(e) => setForm({ ...form, applicationId: e.target.value })} /></Field>
+          <div className="sm:col-span-2"><Field label="Candidate / application *"><ApplicationPicker value={form.applicationId} onChange={(v) => setForm({ ...form, applicationId: v })} onPick={(a) => setForm((f) => ({ ...f, jobId: a.jobId || f.jobId }))} /></Field></div>
           <Field label="Job ID *"><input className={kitInput} value={form.jobId} onChange={(e) => setForm({ ...form, jobId: e.target.value })} /></Field>
           <Field label="Round"><input className={kitInput} value={form.round} onChange={(e) => setForm({ ...form, round: e.target.value })} /></Field>
           <Field label="Mode"><Select value={form.mode} onChange={(v) => setForm({ ...form, mode: v })} options={[{ value: 'video', label: 'Video' }, { value: 'phone', label: 'Phone' }, { value: 'onsite', label: 'Onsite' }]} /></Field>
@@ -1439,27 +1476,23 @@ export function InterviewsPanel() {
       </Modal>
       {loading ? <InlineLoading message="Loading interviews…" /> : rows.length === 0 ? (
         <EmptyState title="No interviews" message="Scheduled interviews appear here; scheduling auto-enables application chat." />
-      ) : (
-        <div className="space-y-2">
+      ) : (<>
+        <div className="space-y-2 md:hidden">
           {rows.map((i) => (
-            <div key={i.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <div className="font-extrabold text-slate-900 text-sm">{i.round} — {i.candidateName || i.candidateEmail}</div>
-                  <div className="text-xs text-slate-500 font-medium">{i.id} • App {i.applicationId} • {i.scheduledAt} • <strong className="text-emerald-600">{i.status}</strong></div>
+            <div key={i.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-extrabold text-slate-900 text-sm truncate">{i.round} — {i.candidateName || i.candidateEmail}</div>
+                  <div className="font-mono text-[11px] text-slate-500">{i.id} • App {i.applicationId}</div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <RowMenu items={[
-                    ...(i.meetingLink ? [{ label: 'Join meeting', onSelect: () => window.open(i.meetingLink, '_blank', 'noopener') }] : []),
-                    ...(['Scheduled', 'Rescheduled'].includes(i.status) ? [
-                      { label: 'Reschedule', onSelect: () => setResched({ id: i.id, date: '', hour: '10', minute: '00', reason: '' }) },
-                      { label: 'Cancel interview', danger: true, onSelect: () => setCancelId(i.id) },
-                    ] : []),
-                  ]} />
-                </div>
+                {ivMenuFor(i)}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${i.status === 'Cancelled' ? 'bg-red-50 text-red-700 border-red-200' : i.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>{i.status}</span>
+                <span className="text-slate-500 font-medium">{String(i.scheduledAt || '').slice(0, 16).replace('T', ' ')}</span>
               </div>
               {resched.id === i.id && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 rounded-xl bg-white border border-slate-200">
+                <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-white border border-slate-200">
                   <DatePicker value={resched.date} onChange={(v) => setResched({ ...resched, date: v })} ariaLabel="New date" />
                   <Select value={resched.hour} onChange={(v) => setResched({ ...resched, hour: v })} ariaLabel="Hour" options={HOURS} />
                   <input className={inputCls} placeholder="Reason" value={resched.reason} onChange={(e) => setResched({ ...resched, reason: e.target.value })} />
@@ -1469,7 +1502,27 @@ export function InterviewsPanel() {
             </div>
           ))}
         </div>
-      )}
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
+          <table className="w-full text-left text-xs min-w-[920px]">
+            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
+              <th className="px-4 py-3">Interview</th><th className="px-4 py-3">Candidate</th><th className="px-4 py-3">Application</th><th className="px-4 py-3">Scheduled</th><th className="px-4 py-3">Mode</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
+            </tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {rows.map((i) => (
+                <tr key={i.id} className="hover:bg-slate-50/70">
+                  <td className="px-4 py-3"><div className="font-bold text-slate-900">{i.round}</div><div className="font-mono text-[11px] text-slate-500">{i.id}</div></td>
+                  <td className="px-4 py-3">{i.candidateName || i.candidateEmail}</td>
+                  <td className="px-4 py-3 font-mono">{i.applicationId}</td>
+                  <td className="px-4 py-3">{String(i.scheduledAt || '').slice(0, 16).replace('T', ' ')}</td>
+                  <td className="px-4 py-3 capitalize">{i.mode || '—'}</td>
+                  <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${i.status === 'Cancelled' ? 'bg-red-50 text-red-700 border-red-200' : i.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>{i.status}</span></td>
+                  <td className="px-4 py-3"><div className="flex justify-end">{ivMenuFor(i)}</div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </>)}
       <ActionConfirm
         open={cancelId !== ''}
         onCancel={() => setCancelId('')}
@@ -1776,6 +1829,7 @@ export function OffersPlacementsPanel() {
   const [place, setPlace] = useState({ applicationId: '', joinDate: '', feeBasis: '' });
   const [showOffer, setShowOffer] = useState(false);
   const [showPlace, setShowPlace] = useState(false);
+  const [placeDetail, setPlaceDetail] = useState<any>(null);
   const [feeMatch, setFeeMatch] = useState<any>(null);
   const [feeBusy, setFeeBusy] = useState(false);
   const [placeConfirm, setPlaceConfirm] = useState(false);
@@ -1824,7 +1878,7 @@ export function OffersPlacementsPanel() {
       </div>
       {error && <PanelError message={error} onRetry={load} />}
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
-      <Modal open={showOffer} onClose={() => setShowOffer(false)} title="Issue offer">
+      <Modal open={showOffer} onClose={() => setShowOffer(false)} title="Issue offer" subtitle="Offer CTC becomes the default fee basis at joining">
         <form onSubmit={issue} className="space-y-3">
           <Field label="Candidate / application *"><ApplicationPicker value={offer.applicationId} onChange={(v) => setOffer({ ...offer, applicationId: v })} /></Field>
           <Field label="CTC (annual)"><input className={kitInput} type="number" value={offer.ctc} onChange={(e) => setOffer({ ...offer, ctc: e.target.value })} /></Field>
@@ -1868,11 +1922,50 @@ export function OffersPlacementsPanel() {
         tone="dark"
         onConfirm={async () => { await mark(); setPlaceConfirm(false); }}
       />
-      {placements.length > 0 && (
-        <div className="space-y-2">{placements.map((p) => (
-          <div key={p.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold">{p.id} • {p.candidateEmail} • joined {String(p.joinDate).slice(0, 10)}</div>
-        ))}</div>
-      )}
+      <div className="text-xs font-extrabold text-slate-700">Placements ({placements.length})</div>
+      {placements.length === 0 ? <div className="text-xs text-slate-500">No joinings recorded yet.</div> : (<>
+        <div className="space-y-2 md:hidden">
+          {placements.map((p) => (
+            <div key={p.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-extrabold text-slate-900 text-sm truncate">{p.candidateEmail}</div>
+                  <div className="font-mono text-[11px] text-slate-500">{p.id} • {p.jobId}</div>
+                </div>
+                <button type="button" onClick={() => setPlaceDetail(p)} className="text-[11px] font-bold text-blue-600 underline shrink-0">View</button>
+              </div>
+              <div className="font-bold text-slate-700">joined {String(p.joinDate).slice(0, 10)} • basis ₹{Number(p.feeBasis || 0).toLocaleString('en-IN')}</div>
+            </div>
+          ))}
+        </div>
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
+          <table className="w-full text-left text-xs min-w-[860px]">
+            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
+              <th className="px-4 py-3">Placement</th><th className="px-4 py-3">Candidate</th><th className="px-4 py-3">Job</th><th className="px-4 py-3">Joined</th><th className="px-4 py-3 text-right">Fee basis</th><th className="px-4 py-3">Agreement</th><th className="px-4 py-3 text-right">Actions</th>
+            </tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {placements.map((p) => (
+                <tr key={p.id} className="hover:bg-slate-50/70">
+                  <td className="px-4 py-3 font-mono font-bold">{p.id}</td>
+                  <td className="px-4 py-3">{p.candidateEmail}</td>
+                  <td className="px-4 py-3 font-mono">{p.jobId}</td>
+                  <td className="px-4 py-3">{String(p.joinDate).slice(0, 10)}</td>
+                  <td className="px-4 py-3 text-right font-bold">₹{Number(p.feeBasis || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-4 py-3 font-mono">{p.agreementId || '—'}</td>
+                  <td className="px-4 py-3"><div className="flex justify-end"><button type="button" onClick={() => setPlaceDetail(p)} className="text-[11px] font-bold text-blue-600 underline">View detail</button></div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </>)}
+      <Modal open={placeDetail !== null} onClose={() => setPlaceDetail(null)} title={`Placement ${placeDetail?.id || ''}`} subtitle={`${placeDetail?.candidateEmail || ''} → ${placeDetail?.jobId || ''}`}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+          {[['Joined', String(placeDetail?.joinDate || '').slice(0, 10)], ['Fee basis', `₹${Number(placeDetail?.feeBasis || 0).toLocaleString('en-IN')}`], ['Agreement', placeDetail?.agreementId || '—'], ['Application', placeDetail?.applicationId || '—'], ['Organization', placeDetail?.orgId || '—'], ['Auto-invoiced', placeDetail?.autoInvoiced || '—']].map(([k, v]) => (
+            <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—')}</div></div>
+          ))}
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -3558,9 +3651,10 @@ export function LeadsPanel() {
       syncAll();
     } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
   };
-  const move = async (id: string, stage: string) => {
-    if (stage === 'Lost' && !reason.trim()) { setError('A lost reason is required.'); return; }
-    try { const u = unwrapObj(await salesApi.setLeadStage(id, stage, reason || undefined)); setRows((x) => x.map((l) => (l.id === id ? u : l))); syncAll(); }
+  const move = async (id: string, stage: string, reasonOverride?: string) => {
+    const eff = reasonOverride ?? reason;
+    if (stage === 'Lost' && !eff.trim()) { setError('A lost reason is required.'); return; }
+    try { const u = unwrapObj(await salesApi.setLeadStage(id, stage, eff || undefined)); setRows((x) => x.map((l) => (l.id === id ? u : l))); syncAll(); }
     catch (e) { setError(errMsg(e)); }
   };
   const convert = async (id: string) => {
@@ -3578,6 +3672,20 @@ export function LeadsPanel() {
     move(l.id, to);
   };
   const filteredLeads = rows.filter((l) => !dqLead.trim() || `${l.id} ${l.contactName} ${l.companyName} ${l.email}`.toLowerCase().includes(dqLead.toLowerCase()));
+  const [leadMoveFor, setLeadMoveFor] = useState<{ lead: any; to: string } | null>(null);
+  const leadMenuFor = (l: any) => (
+    <RowMenu label={`Actions for ${l.id}`} items={[
+      { label: 'View 360°', onSelect: () => openLeadDetail(l) },
+      { label: 'Edit lead…', onSelect: () => setEditing({ ...l }) },
+      ...LEAD_STAGES.filter((s) => s !== l.stage).map((s) => ({ label: `Move to ${s}…`, onSelect: () => { if (s === 'Lost' && !reason.trim()) { setError('Type a lost reason in the note box first — it is recorded with the move.'); return; } setLeadMoveFor({ lead: l, to: s }); } })),
+      { label: 'Log meeting', onSelect: () => { setMeetingLead(l); setMeetingForm({ title: 'Follow-up meeting', date: '', hour: '10', minute: '00', outcome: '', notes: '', nextAction: '', followUp: '' }); } },
+      { label: 'Proposals', onSelect: async () => { setProposalLead(l); setProposalForm({ title: '', amount: '', validUntil: '' }); try { setProposals(unwrapList(await salesApi.proposals(l.id))); } catch (e) { setError(errMsg(e)); } } },
+      { label: 'New opportunity', onSelect: () => { setOppLead(l); setOppValue(String(l.value || '')); } },
+      { label: 'Convert to company', onSelect: () => setConvertId(l.id) },
+      ...(l.stage !== 'Won' && !l.mergedInto ? [{ label: 'Merge duplicates…', onSelect: () => { setMergeFor(l); setMergeTarget(''); setMergeReason(''); setMergeQ(''); } }] : []),
+      { label: 'Delete…', danger: true, onSelect: () => setDeleteFor(l) },
+    ]} />
+  );
   const saveLeadEdit = async () => {
     if (!editing) return;
     setBusy(true);
@@ -3659,30 +3767,61 @@ export function LeadsPanel() {
         loading ? <InlineLoading message="Loading board…" /> : <LeadsKanban leads={filteredLeads} onOpen={(l) => openLeadDetail(l)} onDropMove={dropMove} />
       ) : loading ? <InlineLoading message="Loading leads…" /> : filteredLeads.length === 0 ? (
         <EmptyState title="No leads" message="Add the first sales lead to start the pipeline." />
-      ) : (
-        <div className="space-y-2">{filteredLeads.map((l) => (
-          <div key={l.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <div className="font-extrabold text-slate-900 text-sm">{l.contactName} — {l.companyName}{l.mergedInto ? <span className="ml-2 px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 text-[10px]">merged → {l.mergedInto}</span> : null}</div>
-              <div className="text-xs text-slate-500 font-medium">{l.id} • <strong className="text-blue-600">{l.stage}</strong> • ₹{l.value || 0} • owner {l.owner}</div>
+      ) : (<>
+        <div className="space-y-2 md:hidden">
+          {filteredLeads.map((l) => (
+            <div key={l.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-extrabold text-slate-900 text-sm truncate">{l.contactName} — {l.companyName}</div>
+                  <div className="font-mono text-[11px] text-slate-500">{l.id} • owner {l.owner || '—'}</div>
+                </div>
+                {leadMenuFor(l)}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${LEAD_STAGE_TONE[l.stage] || LEAD_STAGE_TONE.New}`}>{l.stage}</span>
+                <span className="font-bold">₹{Number(l.value || 0).toLocaleString('en-IN')}</span>
+                {l.mergedInto ? <span className="px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 text-[10px]">merged → {l.mergedInto}</span> : null}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              <RowMenu label={`Actions for ${l.id}`} items={[
-                { label: 'View 360°', onSelect: () => openLeadDetail(l) },
-                { label: 'Edit lead…', onSelect: () => setEditing({ ...l }) },
-                ...LEAD_STAGES.filter((s) => s !== l.stage).map((s) => ({ label: `Move to ${s}`, onSelect: () => move(l.id, s) })),
-                { label: 'Log meeting', onSelect: () => { setMeetingLead(l); setMeetingForm({ title: 'Follow-up meeting', date: '', hour: '10', minute: '00', outcome: '', notes: '', nextAction: '', followUp: '' }); } },
-                { label: 'Proposals', onSelect: async () => { setProposalLead(l); setProposalForm({ title: '', amount: '', validUntil: '' }); try { setProposals(unwrapList(await salesApi.proposals(l.id))); } catch (e) { setError(errMsg(e)); } } },
-                { label: 'New opportunity', onSelect: () => { setOppLead(l); setOppValue(String(l.value || '')); } },
-                { label: 'Convert to company', onSelect: () => setConvertId(l.id) },
-                ...(l.stage !== 'Won' && !l.mergedInto ? [{ label: 'Merge duplicates…', onSelect: () => { setMergeFor(l); setMergeTarget(''); setMergeReason(''); setMergeQ(''); } }] : []),
-                { label: 'Delete…', danger: true, onSelect: () => setDeleteFor(l) },
-              ]} />
-            </div>
-          </div>
-        ))}</div>
-      )}
+          ))}
+        </div>
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
+          <table className="w-full text-left text-xs min-w-[900px]">
+            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
+              <th className="px-4 py-3">Lead</th><th className="px-4 py-3">Company</th><th className="px-4 py-3">Stage</th><th className="px-4 py-3 text-right">Value</th><th className="px-4 py-3">Owner</th><th className="px-4 py-3">Follow-up</th><th className="px-4 py-3 text-right">Actions</th>
+            </tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredLeads.map((l) => (
+                <tr key={l.id} className="hover:bg-slate-50/70">
+                  <td className="px-4 py-3"><div className="font-bold text-slate-900">{l.contactName}</div><div className="font-mono text-[11px] text-slate-500">{l.id}</div></td>
+                  <td className="px-4 py-3">{l.companyName}{l.mergedInto ? <span className="ml-2 px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 text-[10px]">merged</span> : null}</td>
+                  <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${LEAD_STAGE_TONE[l.stage] || LEAD_STAGE_TONE.New}`}>{l.stage}</span></td>
+                  <td className="px-4 py-3 text-right font-bold">₹{Number(l.value || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-4 py-3">{l.owner || '—'}</td>
+                  <td className="px-4 py-3">{String(l.nextFollowUp || '').slice(0, 10) || '—'}</td>
+                  <td className="px-4 py-3"><div className="flex justify-end">{leadMenuFor(l)}</div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </>)}
       <Pager page={page} total={total} pageSize={pageSize} onPage={setPage} />
+      <ActionConfirm
+        open={leadMoveFor !== null}
+        onCancel={() => setLeadMoveFor(null)}
+        title={`Move to ${leadMoveFor?.to || ''} — ${leadMoveFor?.lead?.id || ''}`}
+        subtitle={`${leadMoveFor?.lead?.contactName || ''} • ${leadMoveFor?.lead?.companyName || ''} (currently ${leadMoveFor?.lead?.stage || ''})`}
+        why={[`Lead is currently ${leadMoveFor?.lead?.stage || ''}`, leadMoveFor?.to === 'Lost' ? 'Lost closes the lead with a recorded reason' : `Moving to ${leadMoveFor?.to || ''} advances the pipeline`]}
+        steps={[`Stage moves to ${leadMoveFor?.to || ''}`, 'History entry with actor + timestamp']}
+        consequences={leadMoveFor?.to === 'Lost' ? ['Lead leaves the active pipeline'] : []}
+        requireReason={leadMoveFor?.to === 'Lost'}
+        reasonLabel="Lost reason *"
+        confirmLabel={`Move to ${leadMoveFor?.to || ''}`}
+        tone={leadMoveFor?.to === 'Lost' ? 'danger' : 'dark'}
+        onConfirm={async (r) => { if (leadMoveFor) { await move(leadMoveFor.lead.id, leadMoveFor.to, r); setLeadMoveFor(null); } }}
+      />
       <ActionConfirm
         open={convertId !== ''}
         onCancel={() => setConvertId('')}
@@ -5169,16 +5308,33 @@ export function SkillsPanel() {
             options={[{ value: '', label: 'All industries' }, ...cats.map((c) => ({ value: c, label: c }))]} />
         </div>
       </div>
-      {rows.length === 0 ? <EmptyState title="No skills" message="Widen the search or add the skill." /> : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      {rows.length === 0 ? <EmptyState title="No skills" message="Widen the search or add the skill." /> : (<>
+        <div className="space-y-2 md:hidden">
           {rows.map((s) => (
-            <div key={s.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
-              <span className="truncate">{s.name}</span>
-              <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[11px] shrink-0">{s.category}</span>
+            <div key={s.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+              <div className="font-extrabold text-slate-900 text-sm truncate">{s.name}</div>
+              <div className="font-mono text-[11px] text-slate-500">{s.id}</div>
+              <div><span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">{s.category}</span></div>
             </div>
           ))}
         </div>
-      )}
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
+          <table className="w-full text-left text-xs min-w-[640px]">
+            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
+              <th className="px-4 py-3">Skill</th><th className="px-4 py-3">Industry</th><th className="px-4 py-3">Reference</th>
+            </tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {rows.map((s) => (
+                <tr key={s.id} className="hover:bg-slate-50/70">
+                  <td className="px-4 py-3 font-bold text-slate-900">{s.name}</td>
+                  <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">{s.category}</span></td>
+                  <td className="px-4 py-3 font-mono text-[11px] text-slate-500">{s.id}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </>)}
       <Pager page={page} total={total} pageSize={pageSize} onPage={setPage} />
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New skill" subtitle="Duplicates are rejected (409)">
         <form onSubmit={create} className="space-y-3">

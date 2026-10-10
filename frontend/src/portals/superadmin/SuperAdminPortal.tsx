@@ -43,6 +43,7 @@ const navItems = [
 export function SuperAdminPortal() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [controlsTab, setControlsTab] = useState<'verification' | 'roles' | 'skills'>('verification');
 
   const currentTab = (() => {
     const p = location.pathname;
@@ -495,7 +496,19 @@ export function SuperAdminPortal() {
         {currentTab === 'performance' && <PerformancePanel />}
         {currentTab === 'reports' && <ReportsPanel />}
         {currentTab === 'support' && <SupportPanel />}
-        {currentTab === 'controls' && (<div className="space-y-4"><AdminControlsPanel /><RolesPanel /><SkillsPanel /><MfaPanel admin /></div>)}
+        {currentTab === 'controls' && (
+          <div className="space-y-4">
+            <div className="flex rounded-xl bg-slate-100 border border-slate-200 p-0.5 w-fit" role="tablist" aria-label="Access control views">
+              {([['verification', 'Verification & Access'], ['roles', 'Roles'], ['skills', 'Skills']] as const).map(([v, label]) => (
+                <button key={v} role="tab" aria-selected={controlsTab === v} type="button" onClick={() => setControlsTab(v)}
+                  className={`px-4 py-1.5 rounded-lg font-bold text-xs ${controlsTab === v ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>{label}</button>
+              ))}
+            </div>
+            {controlsTab === 'verification' && (<><AdminControlsPanel /><MfaPanel admin /></>)}
+            {controlsTab === 'roles' && <RolesPanel />}
+            {controlsTab === 'skills' && <SkillsPanel />}
+          </div>
+        )}
         {currentTab === 'notifications' && <NotificationsPanel />}
 
       </div>
