@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, Fragment } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../../shared/api-client';
 import { Candidate360Drawer, AgencyDrawer } from '../superadmin/SuperAdmin360';
 import { ExportButton, useQueryState, useDebounced, checkRecordAction, useActionGuard, DetailDrawer, GlobalCreateModal } from './CrudKit';
@@ -771,6 +772,9 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
   const [history, setHistory] = useState<any[]>([]);
   const [reopenFor, setReopenFor] = useState<any>(null);
   const [reopenTarget, setReopenTarget] = useState('Applied');
+  const [view, setView] = useQueryState('app_view');
+  const [boardRows, setBoardRows] = useState<any[]>([]);
+  const [boardLoading, setBoardLoading] = useState(false);
   const pageSize = 10;
 
   const load = async (p = page, f = appliedFilter) => {
@@ -783,25 +787,48 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
     finally { setLoading(false); }
   };
   useEffect(() => { load(page, appliedFilter); }, [page, appliedFilter]);
+  useEffect(() => {
+    if ((view || 'list') !== 'board') return;
+    (async () => {
+      setBoardLoading(true);
+      try {
+        const res: any = await applicationsApi.list(`?page=1&pageSize=100${appliedFilter ? `&status=${encodeURIComponent(appliedFilter)}` : ''}`);
+        setBoardRows(unwrapList(res));
+      } catch (e) { setError(errMsg(e)); }
+      finally { setBoardLoading(false); }
+    })();
+  }, [view, appliedFilter]);
 
+  const patchBoth = (id: string, updated: any) => {
+    if (!updated?.id) return;
+    setRows((r) => r.map((x) => (x.id === id ? updated : x)));
+    setBoardRows((r) => r.map((x) => (x.id === id ? updated : x)));
+  };
   const move = async (id: string, stage: string) => {
     try {
       const updated = unwrapObj(await applicationsApi.setStage(id, stage, reason || undefined));
-      setRows((r) => r.map((x) => (x.id === id ? updated : x)));
+      patchBoth(id, updated);
       syncAll();
     } catch (e) { setError(errMsg(e)); }
   };
   const withdraw = async (id: string, reasonText?: string) => {
     try {
       const updated = unwrapObj(await applicationsApi.withdraw(id, reasonText || reason || undefined));
-      setRows((r) => r.map((x) => (x.id === id ? updated : x)));
+      patchBoth(id, updated);
       if (detail?.id === id && updated?.id) setDetail(updated);
       syncAll();
     } catch (e) { setError(errMsg(e)); }
   };
+  const dropMove = (a: any, to: string) => {
+    if (to === a.stage) return;
+    if (['Hired', 'Withdrawn', 'Rejected'].includes(a.stage)) { setError(`${a.stage} applications are terminal — reopen explicitly to continue.`); return; }
+    if (to === 'Withdrawn') { setWithdrawId(a.id); return; }
+    if (to === 'Rejected' && !reason.trim()) { setError('Type a rejection reason in the note box first — it is recorded with the move.'); return; }
+    move(a.id, to);
+  };
   const reopen = async (app: any, target: string, reasonText?: string) => {
     const updated = unwrapObj(await applicationsApi.reopen(app.id, target, reasonText || ''));
-    setRows((r) => r.map((x) => (x.id === app.id ? updated : x)));
+    patchBoth(app.id, updated);
     if (detail?.id === app.id && updated?.id) setDetail(updated);
     const hRes: any = await apiClient.get(`/api/v1/applications/${app.id}/history`).catch(() => null);
     const h = (hRes as { data?: any[] })?.data || [];
@@ -825,6 +852,12 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h3 className="text-base font-extrabold text-slate-900">Application Pipeline — View / Move / Withdraw / Export</h3>
           <div className="flex gap-2 items-center">
+            <div className="flex rounded-xl bg-slate-100 border border-slate-200 p-0.5" role="tablist" aria-label="Applications view">
+              {(['list', 'board'] as const).map((v) => (
+                <button key={v} role="tab" aria-selected={(view || 'list') === v} type="button" onClick={() => setView(v)}
+                  className={`px-3 py-1.5 rounded-lg font-bold text-xs capitalize ${((view || 'list') === v) ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>{v}</button>
+              ))}
+            </div>
             <div style={{ width: 170 }}>
               <Select value={filter} onChange={setFilter} ariaLabel="Filter by stage" placeholder="All stages" options={[{ value: '', label: 'All stages' }, ...APP_STAGES.map((s) => ({ value: s, label: s }))]} />
             </div>
@@ -838,7 +871,11 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
       {!compact && (
         <input className={inputCls} placeholder="Reason / note attached to next stage move (required when rejecting)" value={reason} onChange={(e) => setReason(e.target.value)} />
       )}
-      {loading ? <InlineLoading message="Loading applications…" /> : filteredApps.length === 0 ? (
+      {(view || 'list') === 'board' ? (
+        boardLoading ? <InlineLoading message="Loading board…" /> : boardRows.length === 0 ? (
+          <EmptyState title="No applications" message="Applications appear here once candidates apply or agencies submit." />
+        ) : <ApplicationsKanban apps={boardRows} onOpen={openDetail} onDropMove={dropMove} />
+      ) : loading ? <InlineLoading message="Loading applications…" /> : filteredApps.length === 0 ? (
         <EmptyState title="No applications" message="Applications appear here once candidates apply or agencies submit." />
       ) : (
         <div className="space-y-2">
@@ -904,6 +941,42 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
         ))}
       </Modal>
       <Pager page={page} total={total} pageSize={pageSize} onPage={setPage} />
+    </div>
+  );
+}
+
+/* ---------------- Applications Kanban (drop moves stage; terminal drops route to withdraw/reopen confirms) ---------------- */
+export function ApplicationsKanban({ apps, onOpen, onDropMove }: { apps: any[]; onOpen: (a: any) => void; onDropMove: (a: any, to: string) => void }) {
+  const [dragId, setDragId] = useState<string | null>(null);
+  const cols = APP_STAGES.map((s) => ({ stage: s, items: apps.filter((a) => a.stage === s) }));
+  return (
+    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50/50 p-3" data-lenis-prevent>
+      <div className="flex gap-3 min-w-[1180px]">
+        {cols.map((c) => (
+          <div key={c.stage} className="flex-1 min-w-[200px] rounded-2xl bg-white border border-slate-200 p-2 space-y-2"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              const a = apps.find((x) => x.id === dragId);
+              setDragId(null);
+              if (a && c.stage !== a.stage) onDropMove(a, c.stage);
+            }}>
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">{c.stage}</span>
+              <span className="text-[11px] font-extrabold text-slate-400">{c.items.length}</span>
+            </div>
+            {c.items.map((a) => (
+              <div key={a.id} draggable onDragStart={() => setDragId(a.id)}
+                onClick={() => onOpen(a)}
+                className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs cursor-grab active:cursor-grabbing hover:border-[#087BFF]">
+                <div className="font-extrabold text-slate-900 truncate">{a.jobTitle || a.jobId}</div>
+                <div className="text-slate-500 font-medium truncate">{a.candidateEmail}</div>
+                <div className="font-mono text-[10px] text-slate-400">{a.id}</div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1012,12 +1085,18 @@ export function InterviewsPanel() {
           ))}
         </div>
       )}
-      <ConfirmDialog
+      <ActionConfirm
         open={cancelId !== ''}
-        title="Cancel interview"
-        body="The interview is marked Cancelled with history preserved, and both sides are notified. Continue?"
+        onCancel={() => setCancelId('')}
+        title={`Cancel interview ${cancelId || ''}`}
+        subtitle={rows.find((x) => x.id === cancelId)?.round || ''}
+        why={['Interview is currently Scheduled / Rescheduled', 'Cancellation is an explicit, audited terminal step']}
+        steps={['Status moves to Cancelled', 'Feedback history is preserved', 'Both sides are notified']}
+        consequences={['The slot is released', 'Candidate stays in pipeline — reschedule creates a fresh round']}
+        requireReason
+        reasonLabel="Cancellation reason *"
         confirmLabel="Cancel interview"
-        requireReason="Reason"
+        tone="danger"
         onConfirm={async (reasonText) => {
           const u = unwrapObj(await interviewsApi.reschedule(cancelId, { status: 'Cancelled', reason: reasonText || 'cancelled' }));
           setRows((r) => r.map((x) => (x.id === cancelId ? u : x)));
@@ -1025,7 +1104,6 @@ export function InterviewsPanel() {
           setResched({ id: '', date: '', hour: '10', minute: '00', reason: '' });
           syncAll();
         }}
-        onCancel={() => setCancelId('')}
       />
     </div>
   );
@@ -2387,6 +2465,11 @@ export function LeadsPanel() {
 
 /* ---------------- Phase 4: Performance ---------------- */
 export function PerformancePanel() {
+  const navigate = useNavigate();
+  const drillToLead = (leadId: string) => {
+    const base = window.location.pathname.startsWith('/employee') ? '/employee' : '/superadmin';
+    navigate(`${base}/leads?lead_q=${encodeURIComponent(leadId)}`);
+  };
   const [kpi, setKpi] = useState<any>(null);
   const [targets, setTargets] = useState<any[]>([]);
   const [opps, setOpps] = useState<any[]>([]);
@@ -2422,7 +2505,7 @@ export function PerformancePanel() {
       {error && <PanelError message={error} onRetry={load} />}
       {kpi ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {[['Assigned', kpi.leadsAssigned], ['Qualified', kpi.qualified], ['Won', kpi.won], ['Lost', kpi.lost], ['Conversion', `${(Number(kpi.conversionRate || 0) * 100).toFixed(1)}%`], ['Pipeline ₹', kpi.pipelineValue], ['Proposals', kpi.proposals], ['Overdue follow-ups', kpi.overdueFollowups]].map(([k, v]) => (
+          {[['Assigned', kpi.leadsAssigned], ['Qualified', kpi.qualified], ['Won', kpi.won], ['Lost', kpi.lost], ['Conversion', `${(Number(kpi.conversionRate || 0) * 100).toFixed(1)}%`], ['Pipeline ₹', kpi.pipelineValue], ['Proposals', kpi.proposals], ['Overdue follow-ups', kpi.overdueFollowups], ['Avg response', `${kpi.avgResponseHrs ?? '—'}h`], ['Responded leads', kpi.respondedLeads ?? '—']].map(([k, v]) => (
             <div key={k as string} className="p-4 rounded-2xl bg-slate-50 border border-slate-200"><div className="text-[11px] font-bold text-slate-500">{k}</div><div className="text-xl font-extrabold">{String(v)}</div></div>
           ))}
         </div>
@@ -2453,11 +2536,14 @@ export function PerformancePanel() {
       {opps.length === 0 && <div className="text-[11px] text-slate-500 font-medium">No opportunities yet — create one from a lead.</div>}
       {opps.map((o) => (
         <div key={o.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
-          <span className="truncate">{o.title} • ₹{o.value} • <strong className="text-blue-600">{o.stage}</strong></span>
+          <span className="truncate">{o.title} • ₹{o.value} • <strong className="text-blue-600">{o.stage}</strong>{o.leadId ? <span className="text-slate-500"> • {o.leadId}</span> : null}</span>
+          <div className="flex items-center gap-1 shrink-0">
+            {o.leadId ? <button type="button" className="text-[11px] font-bold text-blue-600 underline" onClick={() => drillToLead(o.leadId)}>View lead →</button> : null}
           <RowMenu label="Opportunity actions" items={['Qualified', 'Proposal Sent', 'Negotiation', 'Won', 'Lost'].filter((s) => s !== o.stage).map((s) => ({ label: `Move to ${s}`, danger: s === 'Lost', onSelect: async () => {
             try { const u = unwrapObj(await salesApi.setOpportunityStage(o.id, s)); setOpps((x) => x.map((y) => (y.id === o.id ? u : y))); syncAll(); }
             catch (e) { setError(errMsg(e)); }
           } }))} />
+          </div>
         </div>
       ))}
     </div>
@@ -2630,7 +2716,7 @@ export function TimesheetsPanel({ canApprove = false }: { canApprove?: boolean }
 }
 
 /* ---------------- Phase 4/5: Reports ---------------- */
-const REPORTS = ['candidate-pipeline', 'requisition-ageing', 'receivables', 'commission-liabilities', 'sales-pipeline', 'recruiter-workload'];
+const REPORTS = ['candidate-pipeline', 'requisition-ageing', 'receivables', 'commission-liabilities', 'sales-pipeline', 'recruiter-workload', 'interview-offer', 'offer-joining', 'company-hiring', 'subscription-revenue', 'agency-performance', 'duplicates'];
 export function ReportsPanel() {
   const [name, setName] = useState('candidate-pipeline');
   const [report, setReport] = useState<any>(null);
@@ -3639,8 +3725,26 @@ export function BranchesPanel() {
       </Modal>
       {loading ? <InlineLoading message="Loading branches…" /> : filtered.length === 0 ? (
         <EmptyState title="No branches" message="Create the first branch office." />
-      ) : (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200">
+      ) : (<>
+        <div className="space-y-2 md:hidden">
+          {filtered.map((b) => (
+            <div key={b.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-extrabold text-slate-900 text-sm truncate">{b.name}</div>
+                  <div className="font-mono text-[11px] text-slate-500">{b.id} • {b.orgId}</div>
+                </div>
+                <RowMenu items={[
+                  { label: 'Edit…', onSelect: () => setEditing({ ...b }) },
+                  { label: 'Delete…', danger: true, onSelect: () => setDeleteFor(b) },
+                ]} />
+              </div>
+              <div className="font-bold text-slate-700">{b.city || '—'}</div>
+              <div><span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px]">{b.status}</span></div>
+            </div>
+          ))}
+        </div>
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
           <table className="w-full text-left text-xs min-w-[720px]">
             <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
               <th className="px-4 py-3">Branch</th><th className="px-4 py-3">City</th><th className="px-4 py-3">Organization</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
@@ -3661,7 +3765,7 @@ export function BranchesPanel() {
             </tbody>
           </table>
         </div>
-      )}
+      </>)}
       <Modal open={editing !== null} onClose={() => setEditing(null)} title={`Edit branch — ${editing?.id || ''}`}>
         <div className="space-y-3">
           <Field label="Branch name"><input className={kitInput} value={editing?.name || ''} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></Field>

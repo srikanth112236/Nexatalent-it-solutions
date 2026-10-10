@@ -127,7 +127,20 @@ salesRouter.get('/performance', requireAuth(['superadmin','platform_owner','sale
   const db = loadDb();
   const by = (s: string) => db.leads.filter((l: any) => l.stage === s).length;
   const won = by('Won'), total = db.leads.length || 1;
-  res.json({ success: true, data: { leadsAssigned: total, qualified: by('Qualified'), proposals: by('Proposal Sent'), won, lost: by('Lost'), conversionRate: +(won / total).toFixed(3), pipelineValue: db.leads.reduce((a: number, l: any) => a + Number(l.value || 0), 0), overdueFollowups: db.leads.filter((l: any) => l.nextFollowUp && new Date(l.nextFollowUp) < new Date()).length } });
+  // Response-time: hours from lead creation to first touch (activity/meeting/proposal/opportunity).
+  const touches: Record<string, number> = {};
+  for (const [coll, key] of [['leadActivities', 'leadId'], ['meetings', 'leadId'], ['proposals', 'leadId'], ['opportunities', 'leadId']] as const) {
+    for (const t of (db[coll] as any[] || [])) {
+      const id = (t as any)[key]; const at = new Date((t as any).createdAt).getTime();
+      if (id && Number.isFinite(at) && (touches[id] === undefined || at < touches[id])) touches[id] = at;
+    }
+  }
+  let respSum = 0; let respN = 0;
+  for (const l of db.leads as any[]) {
+    const born = new Date(l.createdAt).getTime(); const first = touches[l.id];
+    if (Number.isFinite(born) && first !== undefined && first >= born) { respSum += (first - born) / 36e5; respN += 1; }
+  }
+  res.json({ success: true, data: { leadsAssigned: total, qualified: by('Qualified'), proposals: by('Proposal Sent'), won, lost: by('Lost'), conversionRate: +(won / total).toFixed(3), pipelineValue: db.leads.reduce((a: number, l: any) => a + Number(l.value || 0), 0), overdueFollowups: db.leads.filter((l: any) => l.nextFollowUp && new Date(l.nextFollowUp) < new Date()).length, avgResponseHrs: respN > 0 ? +(respSum / respN).toFixed(1) : 0, respondedLeads: respN } });
 });
 // ---- Agency submissions (§9.4) with duplicate/ownership window ----
 salesRouter.get('/submissions', requireAuth(), (req, res) => {

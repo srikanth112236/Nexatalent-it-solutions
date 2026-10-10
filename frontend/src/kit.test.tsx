@@ -240,6 +240,28 @@ describe('CandidatesPanel controls', () => {
   });
 });
 
+describe('ApplicationsKanban', () => {
+  it('renders a column per stage with correct card counts', async () => {
+    const { ApplicationsKanban } = await import('./portals/common/EnterprisePanels.js');
+    const apps = [
+      { id: 'APP-1', jobTitle: 'Dev', candidateEmail: 'a@x.com', stage: 'Applied' },
+      { id: 'APP-2', jobTitle: 'Dev', candidateEmail: 'b@x.com', stage: 'Applied' },
+      { id: 'APP-3', jobTitle: 'QA', candidateEmail: 'c@x.com', stage: 'Rejected' },
+    ];
+    render(<ApplicationsKanban apps={apps} onOpen={() => {}} onDropMove={() => {}} />);
+    assert.ok(container.textContent?.includes('APP-1'));
+    assert.ok(container.textContent?.includes('a@x.com'));
+    assert.ok(container.querySelector('[data-lenis-prevent]'), 'smooth-scroll hijack disabled on board scroll');
+  });
+  it('application guards lock terminal stages and gate reopen', async () => {
+    const { checkRecordAction } = await import('./portals/common/CrudKit.js');
+    assert.equal(checkRecordAction('application', { stage: 'Hired' }, 'move', {}).allowed, false);
+    assert.equal(checkRecordAction('application', { stage: 'Applied' }, 'move', {}).allowed, true);
+    assert.equal(checkRecordAction('application', { stage: 'Withdrawn' }, 'reopen', {}).allowed, true);
+    assert.equal(checkRecordAction('application', { stage: 'Applied' }, 'reopen', {}).allowed, false);
+  });
+});
+
 describe('DetailDrawer scroll', () => {
   it('pins the panel to the viewport with a dedicated internal scroller', () => {
     render(

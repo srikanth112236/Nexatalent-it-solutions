@@ -586,15 +586,91 @@ directoryRouter.get('/reports/:name', requireAuth(['superadmin','platform_owner'
     'commission-liabilities': { definition: 'Approved commissions not yet settled.', data: db.commissions.filter((c: any) => c.approvalStatus === 'Approved' && c.paymentStatus !== 'Paid') },
     'sales-pipeline': { definition: 'Leads by stage with pipeline value.', data: stageCounts(db.leads.map((l: any) => ({ stage: l.stage }))) },
     'recruiter-workload': { definition: 'Open applications + interviews per org.', data: { openApplications: db.applications.filter((a: any) => !['Hired','Rejected','Withdrawn'].includes(a.stage)).length, scheduledInterviews: db.interviews.filter((i: any) => i.status === 'Scheduled').length } },
+    'interview-offer': { definition: 'Scheduled (non-cancelled) interviews vs offers issued = interview-to-offer conversion.', data: interviewOffer(db) },
+    'offer-joining': { definition: 'Offers issued vs placements joined = offer-to-joining conversion + avg days offer to joining.', data: offerJoining(db) },
+    'company-hiring': { definition: 'Per-organization funnel: requisitions, published jobs, applications, placements.', data: companyHiring(db) },
+    'subscription-revenue': { definition: 'Subscriptions by status/plan with contracted monthly value (price minus discount, live non-ended subscriptions).', data: subscriptionRevenue(db) },
+    'agency-performance': { definition: 'Per-agency verification, submissions and signed agreements.', data: agencyPerformance(db) },
+    'duplicates': { definition: 'Candidate emails and job+candidate pairs appearing more than once.', data: duplicates(db) },
   };
   const r = defs[name];
-  if (!r) return res.status(404).json({ success: false, message: 'Unknown report. Try candidate-pipeline|requisition-ageing|receivables|commission-liabilities|sales-pipeline|recruiter-workload' });
+  if (!r) return res.status(404).json({ success: false, message: 'Unknown report. Try candidate-pipeline|requisition-ageing|receivables|commission-liabilities|sales-pipeline|recruiter-workload|interview-offer|offer-joining|company-hiring|subscription-revenue|agency-performance|duplicates' });
   res.json({ success: true, data: { ...r, generatedAt: nowIso(), freshness: 'live' } });
 });
 function stageCounts(rows: any[]): any {
   const m: Record<string, number> = {};
   for (const r of rows) m[r.stage] = (m[r.stage] || 0) + 1;
   return m;
+}
+// ---- Derived reports (§6.14): computed live from source collections, never stored ----
+function interviewOffer(db: any): any {
+  const byStatus: Record<string, number> = {};
+  for (const i of db.interviews as any[]) byStatus[i.status] = (byStatus[i.status] || 0) + 1;
+  const scheduled = (db.interviews as any[]).filter((i: any) => i.status !== 'Cancelled').length;
+  const offersIssued = (db.offers as any[]).length;
+  return { byStatus, scheduledInterviews: scheduled, offersIssued, conversionRate: scheduled > 0 ? +(offersIssued / scheduled).toFixed(3) : 0 };
+}
+function offerJoining(db: any): any {
+  const offers = db.offers as any[]; const placements = db.placements as any[];
+  const offerByApp: Record<string, any> = {};
+  for (const o of offers) if (!offerByApp[o.applicationId]) offerByApp[o.applicationId] = o;
+  let matched = 0; let daySum = 0;
+  for (const p of placements) {
+    const o = offerByApp[p.applicationId];
+    if (o && o.createdAt && p.joinDate) {
+      const d = (new Date(p.joinDate).getTime() - new Date(o.createdAt).getTime()) / 864e5;
+      if (Number.isFinite(d) && d >= 0) { matched += 1; daySum += d; }
+    }
+  }
+  return { offersIssued: offers.length, placementsJoined: placements.length, conversionRate: offers.length > 0 ? +(placements.length / offers.length).toFixed(3) : 0, avgDaysOfferToJoin: matched > 0 ? +((daySum / matched).toFixed(1)) : 0, matchedPairs: matched };
+}
+function companyHiring(db: any): any {
+  return (db.organizations as any[])
+    .filter((o: any) => o.id !== 'TNT-GLOBAL')
+    .map((o: any) => ({
+      orgId: o.id, name: o.displayName || o.legalName,
+      requisitions: (db.requisitions as any[]).filter((r: any) => r.orgId === o.id).length,
+      publishedJobs: (db.jobs as any[]).filter((j: any) => j.orgId === o.id && j.status === 'Published').length,
+      applications: (db.applications as any[]).filter((a: any) => a.orgId === o.id).length,
+      placements: (db.placements as any[]).filter((p: any) => p.orgId === o.id).length,
+    }));
+}
+function subscriptionRevenue(db: any): any {
+  const live = (db.subscriptions as any[]).filter((s: any) => !['Cancelled', 'Expired'].includes(s.status));
+  const byStatus: Record<string, number> = {}; const byPlan: Record<string, { count: number; contractedMonthly: number }> = {};
+  let total = 0;
+  for (const s of live) {
+    byStatus[s.status] = (byStatus[s.status] || 0) + 1;
+    const val = Math.max(0, Number(s.price || 0) - Number(s.discount || 0));
+    total += val;
+    const p = byPlan[s.planId] || { count: 0, contractedMonthly: 0 };
+    p.count += 1; p.contractedMonthly += val; byPlan[s.planId] = p;
+  }
+  return { liveSubscriptions: live.length, byStatus, byPlan, contractedMonthly: total };
+}
+function agencyPerformance(db: any): any {
+  return (db.agencyProfiles as any[]).map((a: any) => ({
+    id: a.id, name: a.displayName || a.legalName, verificationStatus: a.verificationStatus, accountStatus: a.accountStatus,
+    submissions: ((db as any).submissions as any[] || []).filter((s: any) => (a.tenantId && s.agencyId === a.tenantId) || (s.submittedBy && a.contactEmail && String(s.submittedBy).toLowerCase() === String(a.contactEmail).toLowerCase())).length,
+    agreements: (db.commissionAgreements as any[]).filter((x: any) => (a.tenantId && (x.agencyId === a.tenantId || x.orgId === a.tenantId))).length,
+  }));
+}
+function duplicates(db: any): any {
+  const byEmail: Record<string, string[]> = {};
+  for (const c of db.candidateProfiles as any[]) {
+    const e = String(c.email || '').toLowerCase().trim();
+    if (!e) continue;
+    byEmail[e] = byEmail[e] || []; byEmail[e].push(c.id);
+  }
+  const byApp: Record<string, string[]> = {};
+  for (const a of db.applications as any[]) {
+    const k = `${a.jobId}|${String(a.candidateEmail || '').toLowerCase().trim()}`;
+    byApp[k] = byApp[k] || []; byApp[k].push(a.id);
+  }
+  return {
+    candidateEmails: Object.entries(byEmail).filter(([, ids]) => ids.length > 1).map(([email, ids]) => ({ email, ids, count: ids.length })),
+    applications: Object.entries(byApp).filter(([, ids]) => ids.length > 1).map(([key, ids]) => { const [jobId, candidateEmail] = key.split('|'); return { jobId, candidateEmail, ids, count: ids.length }; }),
+  };
 }
 
 // Settings + tasks + company profile + contractors/compliance (compat)

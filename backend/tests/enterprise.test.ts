@@ -139,6 +139,32 @@ describe('entitlements (§12)', () => {
   });
 });
 
+describe('derived reports (§6.14)', () => {
+  it('serves all 12 reports with definitions + freshness', async () => {
+    for (const name of ['candidate-pipeline', 'requisition-ageing', 'receivables', 'commission-liabilities', 'sales-pipeline', 'recruiter-workload', 'interview-offer', 'offer-joining', 'company-hiring', 'subscription-revenue', 'agency-performance', 'duplicates']) {
+      const r = await request(app).get(`/api/v1/reports/${name}`).set(auth(superToken));
+      expect(r.status).toBe(200);
+      expect(r.body.data.definition).toBeTruthy();
+      expect(r.body.data.freshness).toBe('live');
+    }
+  });
+  it('interview-offer and offer-joining carry conversion math', async () => {
+    const io = await request(app).get('/api/v1/reports/interview-offer').set(auth(superToken));
+    expect(io.body.data.data.scheduledInterviews).toBeGreaterThanOrEqual(1);
+    expect(io.body.data.data.conversionRate).toBeGreaterThanOrEqual(0);
+    const oj = await request(app).get('/api/v1/reports/offer-joining').set(auth(superToken));
+    expect(oj.body.data.data).toHaveProperty('avgDaysOfferToJoin');
+    const ch = await request(app).get('/api/v1/reports/company-hiring').set(auth(superToken));
+    expect(Array.isArray(ch.body.data.data)).toBe(true);
+  });
+  it('rejects unknown reports and non-privileged roles', async () => {
+    const bad = await request(app).get('/api/v1/reports/nope').set(auth(superToken));
+    expect(bad.status).toBe(404);
+    const denied = await request(app).get('/api/v1/reports/duplicates').set(auth(candidateToken));
+    expect([403, 404]).toContain(denied.status);
+  });
+});
+
 describe('commission math (§6.11)', () => {
   it('computes gross + 18% tax total', async () => {
     // 8.33% of 100000 basis = 8330 gross, 1499.4 tax, 9829.4 total

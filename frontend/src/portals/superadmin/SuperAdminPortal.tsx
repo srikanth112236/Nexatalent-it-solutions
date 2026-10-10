@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { PortalShell } from '../common/PortalShell';
 import { apiClient } from '../../shared/api-client';
 import { Users, ShieldCheck, Plus, Lock, Key } from 'lucide-react';
@@ -41,6 +41,7 @@ const navItems = [
 
 export function SuperAdminPortal() {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const currentTab = (() => {
     const p = location.pathname;
@@ -212,37 +213,35 @@ export function SuperAdminPortal() {
         {currentTab === 'overview' && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-6 bg-white rounded-3xl border border-slate-200/90 shadow-sm space-y-1">
-                <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Client Organizations</div>
-                <div className="text-3xl font-extrabold text-slate-900">{tenants.length} Tenants</div>
-                <div className="text-xs font-bold text-emerald-600">Tenant-scoped records</div>
-              </div>
-              <div className="p-6 bg-white rounded-3xl border border-slate-200/90 shadow-sm space-y-1">
-                <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Platform Users</div>
-                <div className="text-3xl font-extrabold text-slate-900">{users.length} Users</div>
-                <div className="text-xs font-bold text-[#087BFF]">{users.length} accounts in directory</div>
-              </div>
-              <div className="p-6 bg-white rounded-3xl border border-slate-200/90 shadow-sm space-y-1">
-                <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Security Audit Events</div>
-                <div className="text-3xl font-extrabold text-slate-900">{auditLogs.length} Events</div>
-                <div className="text-xs font-bold text-emerald-600">{auditLogs.length} events recorded</div>
-              </div>
+              {[
+                ['Active Client Organizations', `${tenants.length} Tenants`, 'Tenant-scoped records', '/superadmin/organizations'],
+                ['Platform Users', `${users.length} Users`, `${users.length} accounts in directory`, '/superadmin/users'],
+                ['Security Audit Events', `${auditLogs.length} Events`, `${auditLogs.length} events recorded`, '/superadmin/audit-logs'],
+              ].map(([label, value, sub, to]) => (
+                <button key={label} type="button" onClick={() => navigate(to)}
+                  className="p-6 bg-white rounded-3xl border border-slate-200/90 shadow-sm space-y-1 text-left hover:border-[#087BFF] hover:shadow-md transition cursor-pointer">
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">{label} <span className="text-[#087BFF]">→</span></div>
+                  <div className="text-3xl font-extrabold text-slate-900">{value}</div>
+                  <div className="text-xs font-bold text-emerald-600">{sub}</div>
+                </button>
+              ))}
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                ['Published Jobs', `${kpis.publishedJobs} / ${kpis.jobs}`],
-                ['Applications', `${kpis.applications}`],
-                ['Active Subscriptions', `${kpis.activeSubs} / ${kpis.subscriptions}`],
-                ['Outstanding Receivables', `₹${kpis.outstanding.toLocaleString('en-IN')}`],
-                ['Overdue Invoices', `${kpis.overdueInvoices}`],
-                ['New Leads', `${kpis.newLeads} / ${kpis.leads}`],
-                ['Placements', `${kpis.placements}`],
-                ['Commissions Due', `${kpis.commissionsDue}`],
-              ].map(([label, value]) => (
-                <div key={label} className="p-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm space-y-1">
-                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{label}</div>
+                ['Published Jobs', `${kpis.publishedJobs} / ${kpis.jobs}`, '/superadmin/jobs?job_status=Published'],
+                ['Applications', `${kpis.applications}`, '/superadmin/applications'],
+                ['Active Subscriptions', `${kpis.activeSubs} / ${kpis.subscriptions}`, '/superadmin/subscriptions'],
+                ['Outstanding Receivables', `₹${kpis.outstanding.toLocaleString('en-IN')}`, '/superadmin/billing'],
+                ['Overdue Invoices', `${kpis.overdueInvoices}`, '/superadmin/billing'],
+                ['New Leads', `${kpis.newLeads} / ${kpis.leads}`, '/superadmin/leads'],
+                ['Placements', `${kpis.placements}`, '/superadmin/placements'],
+                ['Commissions Due', `${kpis.commissionsDue}`, '/superadmin/commissions'],
+              ].map(([label, value, to]) => (
+                <button key={label} type="button" onClick={() => navigate(to)} title={`Open ${label}`}
+                  className="p-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm space-y-1 text-left hover:border-[#087BFF] hover:shadow-md transition cursor-pointer">
+                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{label} <span className="text-[#087BFF]">→</span></div>
                   <div className="text-2xl font-extrabold text-slate-900">{value}</div>
-                </div>
+                </button>
               ))}
             </div>
 
