@@ -1619,6 +1619,26 @@ export function InvoicesPanel() {
   const [invPageSize, setInvPageSize] = useQueryState('inv_ps');
   const ips = Number(invPageSize) === 50 ? 50 : Number(invPageSize) === 100 ? 100 : 20;
   const [invTotal, setInvTotal] = useState(0);
+  const [typeF, setTypeF] = useQueryState('inv_type');
+  const [orgs, setOrgs] = useState<any[]>([]);
+  const [showSeries, setShowSeries] = useState(false);
+  const [seriesForm, setSeriesForm] = useState({ orgId: '', label: 'Monthly payroll fee', amount: '', startMonth: '', months: '12', taxRate: '18', draft: true });
+  const loadOrgs = async () => {
+    try {
+      const { directoryApi } = await import('../../shared/enterprise/phaseApi');
+      setOrgs(unwrapList(await directoryApi.tenants()));
+    } catch { setOrgs([]); }
+  };
+  const doSeries = async (e: React.FormEvent) => {
+    e.preventDefault(); setError(''); setOk('');
+    if (!seriesForm.orgId || !seriesForm.amount || !/^\d{4}-\d{2}$/.test(seriesForm.startMonth) || !seriesForm.months) { setError('Company + amount + start month (YYYY-MM) + months are required.'); return; }
+    try {
+      const r = unwrapObj(await billingApi.createSeries({ orgId: seriesForm.orgId, label: seriesForm.label, monthlyAmount: Number(seriesForm.amount), startMonth: seriesForm.startMonth, months: Number(seriesForm.months), taxRate: Number(seriesForm.taxRate) || 0, draft: seriesForm.draft }));
+      setOk(`Series created: ${(r?.invoices || []).length} monthly invoice(s).`);
+      setSeriesForm({ orgId: '', label: 'Monthly payroll fee', amount: '', startMonth: '', months: '12', taxRate: '18', draft: true });
+      setShowSeries(false); load(1, ips, dqInv, statusF, typeF); syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
   const [showInvoice, setShowInvoice] = useState(false);
   const [invForm, setInvForm] = useState({ orgId: '', agreementId: '', label: 'Placement fee', qty: '1', unit: '', discount: '', taxRate: '18', dueDate: '', draft: false });
   const [docFor, setDocFor] = useState<any>(null);
@@ -1661,21 +1681,22 @@ export function InvoicesPanel() {
   const [reminders, setReminders] = useState<any[]>([]);
   const [remResult, setRemResult] = useState('');
   const [remBusy, setRemBusy] = useState(false);
-  const load = async (p = invPage, size = ips, qq = dqInv, st = statusF) => {
+  const load = async (p = invPage, size = ips, qq = dqInv, st = statusF, ty = typeF) => {
     setLoading(true); setError('');
     try {
       const params = new URLSearchParams({ page: String(p), pageSize: String(size) });
       if (qq.trim()) params.set('q', qq.trim());
       if (st) params.set('status', st);
+      if (ty) params.set('type', ty);
       const res: any = await billingApi.invoices(`?${params.toString()}`);
       setInvoices(unwrapList(res)); setInvTotal(Number(res?.pagination?.total || unwrapList(res).length));
-      loadReminders(); loadDues();
+      loadReminders(); loadDues(); loadOrgs();
     }
     catch (e) { setError(errMsg(e)); setLoadError(errStatus(e)); }
     finally { setLoading(false); }
   };
-  useEffect(() => { setInvPage(1); }, [dqInv, statusF, ips]);
-  useEffect(() => { load(invPage, ips, dqInv, statusF); }, [invPage, ips, dqInv, statusF]);
+  useEffect(() => { setInvPage(1); }, [dqInv, statusF, typeF, ips]);
+  useEffect(() => { load(invPage, ips, dqInv, statusF, typeF); }, [invPage, ips, dqInv, statusF, typeF]);
   const loadReminders = async () => {
     try { setReminders(unwrapList(await billingApi.invoiceReminders())); } catch { setReminders([]); }
   };
@@ -1749,7 +1770,8 @@ export function InvoicesPanel() {
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-base font-extrabold text-slate-900">Invoices — Tax invoices, statuses, documents</h3>
           <div className="flex gap-2">
-            <ExportButton filename="invoices.csv" rows={filteredInv} columns={['id', 'number', 'orgId', 'agreementId', 'subtotal', 'tax', 'total', 'amountPaid', 'balance', 'status', 'dueDate']} />
+            <ExportButton filename="invoices.csv" rows={filteredInv} columns={['id', 'number', 'orgId', 'agreementId', 'invoiceType', 'billingPeriod', 'subtotal', 'tax', 'total', 'amountPaid', 'balance', 'status', 'dueDate']} />
+            {canBill ? <button type="button" onClick={() => setShowSeries(true)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">+ Monthly series</button> : null}
             {canBill ? <button type="button" onClick={() => setShowInvoice(true)} className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">+ Invoice</button> : null}
           </div>
         </div>
@@ -1758,6 +1780,10 @@ export function InvoicesPanel() {
           <div className="w-full lg:w-44 shrink-0">
             <Select value={statusF} onChange={setStatusF} ariaLabel="Invoice status filter" placeholder="All statuses"
               options={[{ value: '', label: 'All statuses' }, ...INV_STATUSES.map((s) => ({ value: s, label: s }))]} />
+          </div>
+          <div className="w-full lg:w-44 shrink-0">
+            <Select value={typeF} onChange={setTypeF} ariaLabel="Invoice type filter" placeholder="All types"
+              options={[{ value: '', label: 'All types' }, { value: 'one_time', label: 'One-time' }, { value: 'monthly', label: 'Monthly' }, { value: 'recurring', label: 'Recurring' }]} />
           </div>
           <div className="flex items-center gap-2">
             <PageSize value={ips} onChange={(n) => setInvPageSize(String(n))} />
@@ -1789,7 +1815,7 @@ export function InvoicesPanel() {
       )}
       <Modal open={editFor !== null} onClose={() => setEditFor(null)} title={`Edit draft — ${editFor?.number || editFor?.id || ''}`} subtitle="Draft-only: issuing locks the invoice permanently">
         <form onSubmit={doEdit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Organization ID *"><input className={kitInput} value={editForm.orgId} onChange={(e) => setEditForm({ ...editForm, orgId: e.target.value })} /></Field>
+          <div className="sm:col-span-2"><Field label="Company *"><Select value={editForm.orgId} onChange={(v) => setEditForm({ ...editForm, orgId: v })} placeholder="Choose company" options={orgs.map((o: any) => ({ value: o.id, label: `${o.displayName || o.legalName || o.id} (${o.id})` }))} /></Field></div>
           <Field label="Agreement ID"><input className={kitInput} value={editForm.agreementId} onChange={(e) => setEditForm({ ...editForm, agreementId: e.target.value })} /></Field>
           <Field label="Due date *"><DatePicker value={editForm.dueDate} onChange={(v) => setEditForm({ ...editForm, dueDate: v })} /></Field>
           <div className="sm:col-span-2"><Field label="Line label"><input className={kitInput} value={editForm.label} onChange={(e) => setEditForm({ ...editForm, label: e.target.value })} /></Field></div>
@@ -1803,9 +1829,27 @@ export function InvoicesPanel() {
           </div>
         </form>
       </Modal>
+      <Modal open={showSeries} onClose={() => setShowSeries(false)} title="New monthly / recurring series" subtitle="Creates one invoice per month — each billable, payable and voidable on its own">
+        <form onSubmit={doSeries} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="sm:col-span-2"><Field label="Company *"><Select value={seriesForm.orgId} onChange={(v) => setSeriesForm({ ...seriesForm, orgId: v })} placeholder="Choose company" options={orgs.map((o: any) => ({ value: o.id, label: `${o.displayName || o.legalName || o.id} (${o.id})` }))} /></Field></div>
+          <div className="sm:col-span-2"><Field label="Label"><input className={kitInput} value={seriesForm.label} onChange={(e) => setSeriesForm({ ...seriesForm, label: e.target.value })} /></Field></div>
+          <Field label="Monthly amount (₹) *"><input className={kitInput} type="number" value={seriesForm.amount} onChange={(e) => setSeriesForm({ ...seriesForm, amount: e.target.value })} /></Field>
+          <Field label="Start month (YYYY-MM) *"><input className={kitInput} value={seriesForm.startMonth} onChange={(e) => setSeriesForm({ ...seriesForm, startMonth: e.target.value })} placeholder="2026-11" /></Field>
+          <Field label="Months (1–24) *"><input className={kitInput} type="number" min={1} max={24} value={seriesForm.months} onChange={(e) => setSeriesForm({ ...seriesForm, months: e.target.value })} /></Field>
+          <Field label="GST rate %"><input className={kitInput} type="number" min={0} max={100} value={seriesForm.taxRate} onChange={(e) => setSeriesForm({ ...seriesForm, taxRate: e.target.value })} /></Field>
+          <div className="sm:col-span-2 flex items-center gap-2 text-xs font-bold text-slate-700">
+            <input id="ser-draft" type="checkbox" checked={seriesForm.draft} onChange={(e) => setSeriesForm({ ...seriesForm, draft: e.target.checked })} className="w-4 h-4" />
+            <label htmlFor="ser-draft">Save as Draft (issue each month later)</label>
+          </div>
+          <div className="sm:col-span-2 flex justify-end gap-2">
+            <button type="button" onClick={() => setShowSeries(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">Create series</button>
+          </div>
+        </form>
+      </Modal>
       <Modal open={showInvoice} onClose={() => setShowInvoice(false)} title="New invoice" subtitle="Drafts are editable; issued invoices are immutable (void/credit only)">
         <form onSubmit={createInvoice} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Organization ID *"><input className={kitInput} value={invForm.orgId} onChange={(e) => setInvForm({ ...invForm, orgId: e.target.value })} placeholder="TNT-9011" /></Field>
+          <div className="sm:col-span-2"><Field label="Company *"><Select value={invForm.orgId} onChange={(v) => setInvForm({ ...invForm, orgId: v })} placeholder="Choose company" options={orgs.map((o: any) => ({ value: o.id, label: `${o.displayName || o.legalName || o.id} (${o.id})` }))} /></Field></div>
           <Field label="Agreement ID (links terms)"><input className={kitInput} value={invForm.agreementId} onChange={(e) => setInvForm({ ...invForm, agreementId: e.target.value })} placeholder="AGR-…" /></Field>
           <Field label="Due date *"><DatePicker value={invForm.dueDate} onChange={(v) => setInvForm({ ...invForm, dueDate: v })} /></Field>
           <div className="sm:col-span-2"><Field label="Line label"><input className={kitInput} value={invForm.label} onChange={(e) => setInvForm({ ...invForm, label: e.target.value })} /></Field></div>
@@ -1924,7 +1968,7 @@ export function InvoicesPanel() {
                 </div>
                 {invMenuFor(i)}
               </div>
-              <div className="font-bold text-slate-700">Total ₹{Number(i.total || 0).toLocaleString('en-IN')} • paid ₹{Number(i.amountPaid || 0).toLocaleString('en-IN')} • bal <strong>₹{Number(i.balance || 0).toLocaleString('en-IN')}</strong></div>
+              <div className="font-bold text-slate-700">{i.invoiceType === 'one_time' || !i.invoiceType ? 'One-time' : i.invoiceType === 'monthly' ? `Monthly${i.billingPeriod ? ` ${i.billingPeriod}` : ''}` : `Recurring ${i.recurrenceIndex || ''}/${i.recurrenceTotal || ''}`} • Total ₹{Number(i.total || 0).toLocaleString('en-IN')} • paid ₹{Number(i.amountPaid || 0).toLocaleString('en-IN')} • bal <strong>₹{Number(i.balance || 0).toLocaleString('en-IN')}</strong></div>
               <div className="flex flex-wrap gap-1 items-center">
                 <span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${st === 'Paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : st === 'Overdue' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>{st}</span>
                 <span className="text-slate-500 font-medium">due {String(i.dueDate || '').slice(0, 10)}{i.overdue ? ` • ${i.daysOverdue}d overdue` : ''}</span>
@@ -1936,7 +1980,7 @@ export function InvoicesPanel() {
         <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
           <table className="w-full text-left text-xs min-w-[1020px]">
             <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
-              <th className="px-4 py-3">Invoice</th><th className="px-4 py-3">Company</th><th className="px-4 py-3">Agreement</th><th className="px-4 py-3 text-right">Subtotal</th><th className="px-4 py-3 text-right">GST</th><th className="px-4 py-3 text-right">Total</th><th className="px-4 py-3 text-right">Paid</th><th className="px-4 py-3 text-right">Balance</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Due</th><th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-4 py-3">Invoice</th><th className="px-4 py-3">Company</th><th className="px-4 py-3">Agreement</th><th className="px-4 py-3">Type</th><th className="px-4 py-3 text-right">Subtotal</th><th className="px-4 py-3 text-right">GST</th><th className="px-4 py-3 text-right">Total</th><th className="px-4 py-3 text-right">Paid</th><th className="px-4 py-3 text-right">Balance</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Due</th><th className="px-4 py-3 text-right">Actions</th>
             </tr></thead>
             <tbody className="divide-y divide-slate-100">
               {filteredInv.map((i) => {
@@ -1946,6 +1990,7 @@ export function InvoicesPanel() {
                   <td className="px-4 py-3"><div className="font-bold text-slate-900">{i.number || i.id}</div><div className="font-mono text-[11px] text-slate-500">{i.id}</div></td>
                   <td className="px-4 py-3 font-mono font-bold text-amber-700">{i.orgId}</td>
                   <td className="px-4 py-3 font-mono">{i.agreementId || '—'}</td>
+                  <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 font-bold text-[11px]">{i.invoiceType === 'recurring' ? `Recurring ${i.recurrenceIndex || ''}/${i.recurrenceTotal || ''}` : i.invoiceType === 'monthly' ? `Monthly${i.billingPeriod ? ` ${i.billingPeriod}` : ''}` : 'One-time'}</span></td>
                   <td className="px-4 py-3 text-right">₹{Number(i.subtotal || 0).toLocaleString('en-IN')}</td>
                   <td className="px-4 py-3 text-right">₹{Number(i.tax || 0).toLocaleString('en-IN')}</td>
                   <td className="px-4 py-3 text-right font-bold">₹{Number(i.total || 0).toLocaleString('en-IN')}</td>
@@ -2424,8 +2469,18 @@ export function AgreementTemplatesPanel({ templates, onChanged }: { templates: a
           ]} />
         </div>
       ))}
-      <Modal open={showTemplate} onClose={() => setShowTemplate(false)} title={editingTpl ? 'Edit template (mints a new version)' : 'New agreement template'} subtitle="Terms sync to every agreement instantiated from this template" wide>
-        <form onSubmit={saveTemplate} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {showTemplate && (
+        <div className="fixed inset-0 z-50 bg-slate-100 overflow-y-auto" data-lenis-prevent role="dialog" aria-label="Template editor">
+          <div className="max-w-4xl mx-auto p-4 sm:p-8 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <button type="button" onClick={() => setShowTemplate(false)} className="text-xs font-bold text-blue-600 underline">← Back to templates</button>
+                <h2 className="text-lg font-extrabold text-slate-900">{editingTpl ? 'Edit template (mints a new version)' : 'New agreement template'}</h2>
+                <p className="text-xs text-slate-500 font-medium">Terms sync to every agreement instantiated from this template</p>
+              </div>
+              <span className="text-[11px] font-bold text-slate-500 bg-white border border-slate-200 rounded-full px-3 py-1">Full-page editor</span>
+            </div>
+        <form onSubmit={saveTemplate} className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-sm">
           <div className="sm:col-span-2"><Field label="Template name *"><input className={kitInput} value={tplForm.name} onChange={(e) => setTplForm({ ...tplForm, name: e.target.value })} placeholder="e.g. Standard Placement Terms — Mid-level" /></Field></div>
           <Field label="Company scope (blank = global)"><input className={kitInput} value={tplForm.orgId} onChange={(e) => setTplForm({ ...tplForm, orgId: e.target.value })} placeholder="TNT-9011" /></Field>
           <Field label="Hiring type"><Select value={tplForm.hiringType} onChange={(v) => setTplForm({ ...tplForm, hiringType: v })} placeholder="Any" options={[{ value: '', label: 'Any' }, ...['Junior IT roles', 'Mid-level IT roles', 'Senior / niche technology roles', 'Leadership / executive search', 'Bulk hiring'].map((h) => ({ value: h, label: h }))]} /></Field>
@@ -2489,7 +2544,9 @@ export function AgreementTemplatesPanel({ templates, onChanged }: { templates: a
             <button className={btnPrimary}>{editingTpl ? 'Save as new version' : 'Create template'}</button>
           </div>
         </form>
-      </Modal>
+          </div>
+        </div>
+      )}
       <Modal open={tplPreview !== null} onClose={() => setTplPreview(null)} title={tplPreview?.name || ''} subtitle={`${tplPreview?.id || ''} • v${tplPreview?.version || ''} • ${tplPreview?.status || ''}`} wide>
         <div className="space-y-3">
           <div className="p-5 rounded-2xl bg-white border border-slate-200 text-xs leading-relaxed max-h-[52vh] overflow-y-auto" data-lenis-prevent
@@ -2623,20 +2680,22 @@ export function CommissionsPanel() {
   const [commDetail, setCommDetail] = useState<any>(null);
   const [agDetail, setAgDetail] = useState<any>(null);
   const [invoiceFor, setInvoiceFor] = useState<any>(null);
+  const monthsLeft = (c: any) => c.basisType === 'monthly_ctc' ? Math.max(0, Number(c.contractMonths || 12) - Number(c.billedMonths || 0)) : (c.invoiceId ? 0 : 1);
   const doInvoice = async (c: any) => {
-    const res = unwrapObj(await billingApi.commissionInvoice(c.id)) as any;
+    const monthly = c.basisType === 'monthly_ctc';
+    const res = unwrapObj(await billingApi.commissionInvoice(c.id, monthly ? { forMonths: 1 } : undefined)) as any;
     const updated = res?.commission || { ...c, invoiceId: res?.invoice?.id };
     setCommissions((x) => x.map((y) => (y.id === c.id ? { ...y, ...updated } : y)));
     if (commDetail?.id === c.id) setCommDetail((d: any) => ({ ...d, ...updated }));
     setInvoiceFor(null);
-    setOk(`Invoice ${res?.invoice?.number || res?.invoice?.id || ''} generated from ${c.id}.`);
+    setOk(`Invoice ${res?.invoice?.number || res?.invoice?.id || ''} generated from ${c.id}${monthly ? ` (month ${Number(c.billedMonths || 0) + 1} of ${c.contractMonths || 12}).` : '.'}`);
     syncAll();
   };
   const commMenuFor = (c: any) => (
     <RowMenu label={`Commission ${c.id}`} items={[
       { label: 'View detail', onSelect: () => setCommDetail(c) },
       ...(c.approvalStatus !== 'Approved' ? [{ label: 'Approve commission…', onSelect: () => setApproveFor(c) }] : []),
-      ...(c.approvalStatus === 'Approved' && !c.invoiceId ? [{ label: 'Generate invoice…', onSelect: () => setInvoiceFor(c) }] : []),
+      ...(c.approvalStatus === 'Approved' && monthsLeft(c) > 0 ? [{ label: c.basisType === 'monthly_ctc' ? `Generate month invoice (${Number(c.billedMonths || 0) + 1}/${c.contractMonths || 12})…` : 'Generate invoice…', onSelect: () => setInvoiceFor(c) }] : []),
       ...(c.approvalStatus === 'Approved' && c.paymentStatus !== 'Paid' ? [{ label: 'Process payout…', onSelect: () => setPayoutFor(c) }] : []),
       { label: 'Verify uniqueness…', onSelect: () => checkDup(c) },
       { label: 'Adjustments…', onSelect: async () => {
@@ -2909,7 +2968,7 @@ export function CommissionsPanel() {
         title={`Generate invoice — ${invoiceFor?.id || ''}`}
         subtitle={`${invoiceFor?.candidateEmail || ''} • ${invoiceFor?.jobId || ''}`}
         why={['Commission is Approved', 'One invoice per commission — duplicates are blocked (409)']}
-        steps={[`Invoice line: fee basis ₹${Number(invoiceFor?.feeBasis || 0).toLocaleString('en-IN')} × ${invoiceFor?.rate}%`, 'GST 18% added extra, due date = trigger + payment terms', 'Commission links to the invoice id']}
+        steps={[`Invoice line: fee basis ₹${Number(invoiceFor?.feeBasis || 0).toLocaleString('en-IN')} × ${invoiceFor?.rate}%${invoiceFor?.basisType === 'monthly_ctc' ? ` — this billing run covers 1 month (month ${Number(invoiceFor?.billedMonths || 0) + 1} of ${invoiceFor?.contractMonths || 12})` : ''}`, 'GST 18% added extra, due date = trigger + payment terms', 'Commission links to the invoice id']}
         consequences={['Invoice is Issued immediately (billable)', 'Amend later via void / credit note only']}
         confirmLabel="Generate invoice"
         tone="dark"
@@ -2918,13 +2977,13 @@ export function CommissionsPanel() {
       {commDetail !== null && (
         <DetailDrawer title={`Commission ${commDetail.id}`} subtitle={`${commDetail.agencyId ? `Payable → ${commDetail.agencyId}` : `Receivable ← ${commDetail.orgId}`} • ${commDetail.approvalStatus} / ${commDetail.paymentStatus}`} onClose={() => setCommDetail(null)}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-            {[['Fee basis', basisText(commDetail)], ['Rate', `${commDetail.rate}%`], ['Gross', `₹${Number(commDetail.gross || 0).toLocaleString('en-IN')}`], ['Adjustments', `₹${Number(commDetail.adjustments || 0).toLocaleString('en-IN')}`], ['GST (18%)', `₹${Number(commDetail.tax || 0).toLocaleString('en-IN')}`], ['Total', `₹${Number(commDetail.total || commDetail.net || 0).toLocaleString('en-IN')}`], ['Trigger', `${commDetail.trigger || '—'} @ ${String(commDetail.triggerDate || '').slice(0, 10)}`], ['Agreement', commDetail.agreementId || '—'], ['Placement / Application', commDetail.placementId || commDetail.applicationId || '—'], ['Candidate', commDetail.candidateEmail || '—'], ['Job', commDetail.jobId || '—'], ['Invoice', commDetail.invoiceId || 'not generated']].map(([k, v]) => (
+            {[['Fee basis', basisText(commDetail)], ['Billed', commDetail.basisType === 'monthly_ctc' ? `${Number(commDetail.billedMonths || 0)} of ${commDetail.contractMonths || 12} months` : (commDetail.invoiceId ? 'invoiced' : 'not billed')], ['Rate', `${commDetail.rate}%`], ['Gross', `₹${Number(commDetail.gross || 0).toLocaleString('en-IN')}`], ['Adjustments', `₹${Number(commDetail.adjustments || 0).toLocaleString('en-IN')}`], ['GST (18%)', `₹${Number(commDetail.tax || 0).toLocaleString('en-IN')}`], ['Total', `₹${Number(commDetail.total || commDetail.net || 0).toLocaleString('en-IN')}`], ['Trigger', `${commDetail.trigger || '—'} @ ${String(commDetail.triggerDate || '').slice(0, 10)}`], ['Agreement', commDetail.agreementId || '—'], ['Placement / Application', commDetail.placementId || commDetail.applicationId || '—'], ['Candidate', commDetail.candidateEmail || '—'], ['Job', commDetail.jobId || '—'], ['Invoice', commDetail.invoiceId || 'not generated']].map(([k, v]) => (
               <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—')}</div></div>
             ))}
           </div>
           <div className="flex flex-wrap gap-2 pt-1">
             {commDetail.approvalStatus !== 'Approved' ? <button type="button" onClick={() => setApproveFor(commDetail)} className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-xs">Approve commission…</button> : null}
-            {commDetail.approvalStatus === 'Approved' && !commDetail.invoiceId ? <button type="button" onClick={() => { setInvoiceFor(commDetail); }} className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs">Generate invoice…</button> : null}
+            {commDetail.approvalStatus === 'Approved' && monthsLeft(commDetail) > 0 ? <button type="button" onClick={() => { setInvoiceFor(commDetail); }} className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs">{commDetail.basisType === 'monthly_ctc' ? `Generate month invoice (${Number(commDetail.billedMonths || 0) + 1}/${commDetail.contractMonths || 12})…` : 'Generate invoice…'}</button> : null}
             {commDetail.approvalStatus === 'Approved' && commDetail.paymentStatus !== 'Paid' ? <button type="button" onClick={() => { setPayoutFor(commDetail); }} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">Process payout…</button> : null}
           </div>
         </DetailDrawer>

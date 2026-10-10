@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { loadDb, persist, uid, nowIso, audit } from '../db/store.js';
 import { requireAuth, requirePermission, ctxOf, tenantOf } from '../middleware/rbac.js';
-import { invoiceSchema, paymentSchema, commissionAgreementSchema, agreementTemplateSchema, feeSlabSchema, paginate, paged } from '../validate/schemas.js';
+import { invoiceSchema, paymentSchema, commissionAgreementSchema, agreementTemplateSchema, feeSlabSchema, invoiceSeriesSchema, paginate, paged } from '../validate/schemas.js';
 import { emit, claimIdempotency } from '../events/bus.js';
 import { usageSummary, evaluate, consumeQuota } from '../domain/entitlements.js';
 
@@ -152,6 +152,8 @@ commercialRouter.get('/invoices', requireAuth(), (req, res) => {
   if (q) rows = rows.filter((i) => `${i.id} ${i.number} ${i.orgId} ${i.status} ${i.agreementId || ''}`.toLowerCase().includes(q));
   const status = String(req.query.status || '');
   if (status) rows = rows.filter((i) => (status === 'Overdue' ? !!i.overdue : i.status === status));
+  const type = String(req.query.type || '');
+  if (type) rows = rows.filter((i) => (i.invoiceType || 'one_time') === type);
   const { page, pageSize } = paginate.parse(req.query);
   res.json({ success: true, ...paged(rows, page, pageSize) });
 });
@@ -543,31 +545,73 @@ commercialRouter.post('/commissions/:id/invoice', requireAuth(['superadmin','pla
   const db = loadDb(); const c: any = db.commissions.find((x: any) => x.id === req.params.id);
   if (!c) return res.status(404).json({ success: false, message: 'Commission not found.' });
   if (c.approvalStatus !== 'Approved') return res.status(422).json({ success: false, message: `Only Approved commissions can be invoiced (current: ${c.approvalStatus}).` });
-  if (c.invoiceId) return res.status(409).json({ success: false, message: `Invoice ${c.invoiceId} already generated for this commission.` });
+  const monthsTotal = c.basisType === 'monthly_ctc' ? Number(c.contractMonths || 12) : 1;
+  const billed = Number(c.billedMonths || 0);
+  const take = req.body?.forMonths !== undefined ? Number(req.body.forMonths) : (monthsTotal - billed);
+  if (!(take > 0) || billed >= monthsTotal) return res.status(409).json({ success: false, message: c.invoiceId && monthsTotal === 1 ? `Invoice ${c.invoiceId} already generated for this commission.` : `All ${monthsTotal} month(s) already billed for this commission.` });
+  if (monthsTotal === 1 && c.invoiceId) return res.status(409).json({ success: false, message: `Invoice ${c.invoiceId} already generated for this commission.` });
   const ag: any = c.agreementId ? db.commissionAgreements.find((a: any) => a.id === c.agreementId) : null;
   const termsDays = Number(ag?.paymentTermsDays || 30);
   const base = new Date(c.triggerDate || c.createdAt).getTime();
   const dueDate = new Date((Number.isFinite(base) ? base : Date.now()) + termsDays * 864e5).toISOString().slice(0, 10);
-  const gross = Number(c.gross || 0);
+  const monthly = c.basisType === 'monthly_ctc';
+  const slice = monthly ? take / monthsTotal : 1;
+  const unit = +(Number(c.gross || 0) * slice).toFixed(2);
+  const gross = unit;
+  const basisLabel = monthly
+    ? `₹${Number(c.feeBasis || 0).toLocaleString('en-IN')}/mo × ${take} mo (month ${billed + 1}${take > 1 ? `–${billed + take}` : ''} of ${monthsTotal})`
+    : `₹${Number(c.feeBasis || 0).toLocaleString('en-IN')}`;
   const tax = +(gross * 18 / 100).toFixed(2);
   const total = +(gross + tax).toFixed(2);
-  const monthly = c.basisType === 'monthly_ctc';
-  const basisLabel = monthly
-    ? `₹${Number(c.feeBasis || 0).toLocaleString('en-IN')}/mo × ${c.contractMonths || 12} mo`
-    : `₹${Number(c.feeBasis || 0).toLocaleString('en-IN')}`;
   const inv = {
     id: uid('INV'), number: `INV-${new Date().getFullYear()}-${String(db.invoices.length + 1).padStart(4, '0')}`,
     orgId: c.orgId, agreementId: c.agreementId || undefined, paymentTermsDays: termsDays,
-    lines: [{ label: `Placement fee — ${c.candidateEmail || c.applicationId || ''} (${c.jobId || ''}) @ ${c.rate || ag?.rate || 0}% of ${basisLabel}`, qty: 1, unit: gross }],
+    invoiceType: monthly ? 'monthly' : 'one_time',
+    lines: [{ label: `Placement fee — ${c.candidateEmail || c.applicationId || ''} (${c.jobId || ''}) @ ${c.rate || ag?.rate || 0}% of ${basisLabel}`, qty: 1, unit }],
     discount: 0, taxRate: 18, subtotal: gross, tax, total, amountPaid: 0, balance: total,
     status: 'Issued', issueDate: nowIso(), dueDate, currency: 'INR', createdAt: nowIso(), createdBy: ctxOf(req).email,
     replacementNote: ag?.replacementTerms || undefined,
   };
   db.invoices.unshift(inv);
   db.invoiceLines.unshift({ id: uid('INVL'), invoiceId: inv.id, label: inv.lines[0].label, qty: 1, unit: gross });
-  c.invoiceId = inv.id;
+  if (!c.invoiceId) c.invoiceId = inv.id;
+  c.invoiceIds = [...(c.invoiceIds || (c.invoiceId ? [c.invoiceId] : [])), inv.id].filter((v, ix, a) => a.indexOf(v) === ix);
+  c.billedMonths = billed + take;
   audit(ctxOf(req).email, `COMMISSION_INVOICED:${c.id}->${inv.id}`, c.orgId, 'commission', c.id, req.ip); persist();
   res.status(201).json({ success: true, data: { commission: c, invoice: withOverdue(inv) } });
+});
+// ---- Recurring/monthly invoice series for companies ----
+commercialRouter.post('/invoices/series', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), (req: Request, res: Response) => {
+  const parsed = invoiceSeriesSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ success: false, message: 'Validation failed.', errors: parsed.error.flatten() });
+  const d = parsed.data;
+  const db = loadDb();
+  const recId = uid('REC');
+  const created: any[] = [];
+  for (let ix = 0; ix < d.months; ix += 1) {
+    const dt = new Date(`${d.startMonth}-01T00:00:00.000Z`);
+    dt.setUTCMonth(dt.getUTCMonth() + ix);
+    const y = dt.getUTCFullYear(); const m = String(dt.getUTCMonth() + 1).padStart(2, '0');
+    const lastDay = new Date(Date.UTC(y, dt.getUTCMonth() + 1, 0)).toISOString().slice(0, 10);
+    const subtotal = Number(d.monthlyAmount);
+    const tax = +((subtotal - d.discount) * d.taxRate / 100).toFixed(2);
+    const total = +(subtotal - d.discount + tax).toFixed(2);
+    const inv = {
+      id: uid('INV'), number: `INV-${new Date().getFullYear()}-${String(db.invoices.length + 1).padStart(4, '0')}`,
+      orgId: d.orgId, agreementId: d.agreementId, paymentTermsDays: d.paymentTermsDays,
+      invoiceType: d.months > 1 ? 'recurring' : 'monthly', recurrenceId: recId, recurrenceIndex: ix + 1, recurrenceTotal: d.months,
+      billingPeriod: `${y}-${m}`,
+      lines: [{ label: `${d.label} — ${y}-${m} (${ix + 1}/${d.months})`, qty: 1, unit: subtotal }],
+      discount: d.discount, taxRate: d.taxRate, subtotal, tax, total, amountPaid: 0, balance: total,
+      status: d.draft ? 'Draft' : 'Issued', issueDate: d.draft ? null : nowIso(), dueDate: lastDay,
+      currency: 'INR', createdAt: nowIso(), createdBy: ctxOf(req).email,
+    };
+    db.invoices.unshift(inv);
+    db.invoiceLines.unshift({ id: uid('INVL'), invoiceId: inv.id, label: inv.lines[0].label, qty: 1, unit: subtotal });
+    created.push(inv);
+  }
+  audit(ctxOf(req).email, `INVOICE_SERIES:${recId}:${created.length}mo`, d.orgId, 'invoice', recId, req.ip); persist();
+  res.status(201).json({ success: true, data: { recurrenceId: recId, invoices: created.map(withOverdue) } });
 });
 commercialRouter.post('/payouts', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), (req: Request, res: Response) => {
   const db = loadDb(); const com: any = db.commissions.find((c: any) => c.id === req.body.commissionId);

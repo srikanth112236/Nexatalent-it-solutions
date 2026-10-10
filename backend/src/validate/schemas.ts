@@ -244,6 +244,23 @@ export const invoiceSchema = z.object({
   agreementId: z.string().optional(),
   paymentTermsDays: z.number().int().min(1).max(60).optional(),
   replacementNote: z.string().max(500).optional(),
+  invoiceType: z.enum(['one_time', 'monthly', 'recurring']).default('one_time'),
+  recurrenceId: z.string().optional(),
+  recurrenceIndex: z.number().int().min(1).optional(),
+  recurrenceTotal: z.number().int().min(1).optional(),
+});
+
+export const invoiceSeriesSchema = z.object({
+  orgId: z.string().min(1),
+  label: z.string().min(1).max(200),
+  monthlyAmount: money,
+  startMonth: z.string().regex(/^\d{4}-\d{2}$/),
+  months: z.number().int().min(1).max(24),
+  taxRate: z.number().min(0).max(100).default(18),
+  discount: money.default(0),
+  draft: z.boolean().default(false),
+  agreementId: z.string().optional(),
+  paymentTermsDays: z.number().int().min(1).max(60).optional(),
 });
 
 export const paymentSchema = z.object({

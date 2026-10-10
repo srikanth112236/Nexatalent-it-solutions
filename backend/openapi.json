@@ -147,6 +147,7 @@
     "/api/v1/invoices/{id}/document": { "get": { "summary": "Corporate TAX INVOICE document (GSTIN, GST split, agreement terms, reminders)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/invoice-reminders": { "get": { "summary": "Reminder log", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/invoice-reminders/run": { "post": { "summary": "Send overdue/due-soon reminders to superadmin (idempotent per day)", "responses": { "200": { "description": "ok" } } } },
+    "/api/v1/invoices/series": { "post": { "summary": "Create monthly/recurring series (N month invoices)", "responses": { "201": { "description": "created" } } } },
     "/api/v1/invoices/{id}/void": { "patch": { "summary": "Void invoice with reason (Paid/Credited blocked)", "responses": { "200": { "description": "ok" }, "422": { "description": "use credit note" } } } },
     "/api/v1/credit-notes": { "post": { "summary": "Amend via credit note (perm: refund)", "responses": { "201": { "description": "created" } } } },
     "/api/v1/payments": { "get": { "summary": "Payments", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Record payment (idempotent)", "responses": { "201": { "description": "created" } } } },

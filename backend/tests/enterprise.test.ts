@@ -247,6 +247,25 @@ describe('commercial terms: slabs, templates, reminders', () => {
     expect(pl.body.code).toBe('NO_AGREEMENT');
     db.commissionAgreements.unshift(...keep);
   });
+  it('creates recurring monthly series and bills commission months', async () => {
+    const s = await request(app).post('/api/v1/invoices/series').set(auth(superToken)).send({ orgId: 'TNT-9011', label: 'Payroll retainer', monthlyAmount: 50000, startMonth: '2026-11', months: 3, draft: true });
+    expect(s.status).toBe(201);
+    expect(s.body.data.invoices.length).toBe(3);
+    expect(s.body.data.invoices[0].invoiceType).toBe('recurring');
+    expect(s.body.data.invoices[0].billingPeriod).toBe('2026-11');
+    expect(s.body.data.invoices[0].status).toBe('Draft');
+    const db = (await import('../src/db/store.js')).loadDb();
+    db.commissions.unshift({ id: 'COM-MO-1', orgId: 'TNT-9011', candidateEmail: 'mo@test.com', jobId: 'JOB-9901', trigger: 'Joined', triggerDate: new Date().toISOString(), feeBasis: 100000, basisType: 'monthly_ctc', contractMonths: 12, rate: 10, gross: 120000, adjustments: 0, tax: 21600, total: 141600, net: 141600, approvalStatus: 'Approved', paymentStatus: 'Unpaid', createdAt: new Date().toISOString() });
+    const m1 = await request(app).post('/api/v1/commissions/COM-MO-1/invoice').set(auth(superToken)).send({ forMonths: 1 });
+    expect(m1.status).toBe(201);
+    expect(m1.body.data.invoice.total).toBe(11800);
+    expect(m1.body.data.commission.billedMonths).toBe(1);
+    const mRest = await request(app).post('/api/v1/commissions/COM-MO-1/invoice').set(auth(superToken)).send({});
+    expect(mRest.body.data.commission.billedMonths).toBe(12);
+    const done = await request(app).post('/api/v1/commissions/COM-MO-1/invoice').set(auth(superToken)).send({});
+    expect(done.status).toBe(409);
+    db.commissions.splice(db.commissions.findIndex((c: any) => c.id === 'COM-MO-1'), 1);
+  });
   it('resolves effective permissions for the caller (mine view)', async () => {
     const r = await request(app).get('/api/v1/permissions?view=mine').set(auth(superToken));
     expect(r.status).toBe(200);
