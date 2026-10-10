@@ -121,9 +121,13 @@ export function DetailDrawer({ title, subtitle, onClose, children, width = 'max-
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/50" onClick={onClose} role="dialog" aria-modal="true" aria-label={title}>
-      <div className={`w-full ${width} h-full bg-white shadow-2xl overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
-        <div className="sticky top-0 bg-white/95 backdrop-blur border-b border-slate-200 px-6 py-4 flex items-start justify-between gap-3">
+    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="absolute inset-0 bg-slate-950/50" onClick={onClose} aria-hidden="true" />
+      {/* Panel is viewport-pinned (inset-y-0); the body below is the ONLY
+          scroller (flex-1 + min-h-0), so long content always scrolls inside
+          the drawer and wheel gestures never leak to the page behind. */}
+      <div className={`absolute inset-y-0 right-0 w-full ${width} bg-white shadow-2xl flex flex-col min-h-0`} onClick={(e) => e.stopPropagation()}>
+        <div className="shrink-0 bg-white/95 backdrop-blur border-b border-slate-200 px-6 py-4 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h3 className="text-base font-extrabold text-slate-900 truncate">{title}</h3>
             {subtitle && <p className="text-xs text-slate-500 font-medium mt-0.5">{subtitle}</p>}
@@ -131,7 +135,9 @@ export function DetailDrawer({ title, subtitle, onClose, children, width = 'max-
           <button type="button" onClick={onClose} aria-label="Close details"
             className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 shrink-0"><X size={16} /></button>
         </div>
-        <div className="px-6 py-5 space-y-5">{children}</div>
+        <div data-testid="drawer-scroll" className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+          <div className="px-6 py-5 space-y-5">{children}</div>
+        </div>
       </div>
     </div>
   );

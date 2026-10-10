@@ -6,7 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { act, Simulate } from 'react-dom/test-utils';
 import { Modal, ConfirmDialog, RowMenu, Select, DatePicker } from './shared/ui/EnterpriseKit.js';
 import { Pager } from './portals/common/EnterprisePanels.js';
-import { toCsv, StatusPill, useQueryState } from './portals/common/CrudKit.js';
+import { toCsv, StatusPill, useQueryState, DetailDrawer } from './portals/common/CrudKit.js';
 import { useState } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { PortalShell } from './portals/common/PortalShell.js';
@@ -237,6 +237,35 @@ describe('CandidatesPanel controls', () => {
     assert.equal(container.querySelector('select'), null, 'native select found');
     assert.equal(container.querySelector('input[type="date"]'), null, 'native date input found');
     assert.ok(container.textContent?.includes('Advanced') || container.textContent?.includes('Filters'));
+  });
+});
+
+describe('DetailDrawer scroll', () => {
+  it('pins the panel to the viewport with a dedicated internal scroller', () => {
+    render(
+      <DetailDrawer title="Flow Case" subtitle="flow@example.com" onClose={() => {}}>
+        <div style={{ height: 3000 }}>tall content</div>
+      </DetailDrawer>,
+    );
+    const dialog = container.querySelector('[role="dialog"]');
+    assert.ok(dialog, 'dialog exists');
+    const scroller = container.querySelector('[data-testid="drawer-scroll"]');
+    assert.ok(scroller, 'internal scroll region exists');
+    assert.ok(scroller!.className.includes('overflow-y-auto'), 'scroller scrolls vertically');
+    assert.ok(scroller!.className.includes('min-h-0'), 'scroller can shrink inside flex column');
+    assert.ok(scroller!.className.includes('overscroll-contain'), 'wheel gestures stay inside the drawer');
+  });
+  it('closes on Escape', () => {
+    let closed = 0;
+    render(
+      <DetailDrawer title="T" onClose={() => { closed += 1; }}>
+        <div>body</div>
+      </DetailDrawer>,
+    );
+    act(() => {
+      document.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    });
+    assert.equal(closed, 1);
   });
 });
 
