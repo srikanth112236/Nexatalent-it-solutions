@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiClient } from '../../shared/api-client';
+import { Select } from '../../shared/ui/EnterpriseKit';
 import { Logo } from '../../website/components/Logo';
 import { 
   Building2, 
@@ -23,36 +25,38 @@ export function EmployerRegisterPage() {
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
   const [refId, setRefId] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
   const [docFile, setDocFile] = useState<File | null>(null);
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     // Step 1: Legal Entity & Corporate Info
-    companyName: 'Fintech ScaleOps Technologies Ltd',
-    website: 'https://fintechscaleops.io',
-    industry: 'BFSI / High-Frequency Trading & Payments',
-    gstCin: '29AAACF1234H1Z1 / U72200KA2021PTC145678',
-    hqAddress: '7th Floor, Prestige Tech Park, Marathahalli-Sarjapur Outer Ring Rd, Kadubeesanahalli, Bengaluru, Karnataka 560103',
-    
+    companyName: '',
+    website: '',
+    industry: '',
+    gstCin: '',
+    hqAddress: '',
+
     // Step 2: Executive Leadership & Primary Contact
-    contactPerson: 'Aditi Deshmukh',
-    designation: 'Vice President of Talent & Engineering Operations',
-    email: 'aditi.d@fintechscaleops.io',
-    phone: '+91 99800 11223',
-    officePhone: '+91 80 4567 8900',
+    contactPerson: '',
+    designation: '',
+    email: '',
+    phone: '',
+    officePhone: '',
 
     // Step 3: Hiring Scale & Target Locations
-    companySize: '250–500 Employees (Series C Funded)',
-    targetLocations: 'Bengaluru, Hyderabad, Pune, Remote India',
-    monthlyHiringVolume: '10–25 Engineers / Month',
-    preferredModel: 'Direct Permanent Sourcing + BOT GCC Pods',
-    estimatedBudget: '₹1.5 Cr – ₹4.0 Cr Annual Hiring Overhead',
+    companySize: '',
+    targetLocations: '',
+    monthlyHiringVolume: '',
+    preferredModel: '',
+    estimatedBudget: '',
 
     // Step 4: Password & Security
     password: '',
     confirmPassword: '',
-    ndaRequired: true,
-    agreeTerms: true
+    ndaRequired: false,
+    agreeTerms: false
   });
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,14 +77,49 @@ export function EmployerRegisterPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const generatedRef = 'NEXA-ENT-REG-' + Math.floor(100000 + Math.random() * 900000);
-    setRefId(generatedRef);
-    setSubmitted(true);
-    setTimeout(() => {
-      navigate('/employer');
-    }, 2800);
+    setFormError('');
+    if (!formData.companyName.trim() || !formData.email.trim()) {
+      setFormError('Company name and corporate email are required.');
+      return;
+    }
+    if (!formData.agreeTerms) {
+      setFormError('You must accept the terms to continue.');
+      return;
+    }
+    if (formData.password.length < 8) {
+      setFormError('Password must be at least 8 characters.');
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setFormError('Passwords do not match.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const res = await apiClient.post<any>('/api/v1/auth/register/employer', {
+        name: formData.contactPerson.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+        companyName: formData.companyName.trim(),
+        phone: formData.phone.trim(),
+      });
+      const created = (res as { data?: { id?: string } })?.data;
+      setRefId(created?.id || 'RECEIVED');
+      setSubmitted(true);
+      setTimeout(() => {
+        navigate('/login', { replace: true });
+      }, 2800);
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        (err as Error)?.message ||
+        'Registration failed. Please try again.';
+      setFormError(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -192,9 +231,9 @@ export function EmployerRegisterPage() {
                       Your GST registration ({formData.gstCin.split('/')[0]}) and corporate domain have been matched against ministry records. An executive account partner has been assigned.
                     </p>
                   </div>
-                  <div className="text-xs font-bold text-slate-500 animate-pulse">
-                    Routing to Employer Workspace Console...
-                  </div>
+                    <div className="text-xs font-bold text-slate-500 animate-pulse">
+                      Redirecting to Sign In...
+                    </div>
                 </motion.div>
               ) : (
                 <form onSubmit={handleSubmit}>
@@ -370,17 +409,18 @@ export function EmployerRegisterPage() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-slate-700 font-bold mb-1">Company Headcount Scale *</label>
-                          <select
+                          <Select
                             value={formData.companySize}
-                            onChange={(e) => setFormData({ ...formData, companySize: e.target.value })}
-                            className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold focus:bg-white focus:border-blue-600 outline-none"
-                          >
-                            <option value="10–50 Employees (Early Stage / Seed)">10–50 Employees (Early Stage / Seed)</option>
-                            <option value="50–250 Employees (Growth / Series A-B)">50–250 Employees (Growth / Series A-B)</option>
-                            <option value="250–500 Employees (Series C Funded)">250–500 Employees (Series C Funded)</option>
-                            <option value="500–2500 Employees (Mid-Enterprise / Unicorn)">500–2500 Employees (Mid-Enterprise / Unicorn)</option>
-                            <option value="2500+ Employees (Global Enterprise / Fortune 500)">2500+ Employees (Global Enterprise / Fortune 500)</option>
-                          </select>
+                            onChange={(v) => setFormData({ ...formData, companySize: v })}
+                            ariaLabel="Company headcount scale"
+                            options={[
+                              '10–50 Employees (Early Stage / Seed)',
+                              '50–250 Employees (Growth / Series A-B)',
+                              '250–500 Employees (Series C Funded)',
+                              '500–2500 Employees (Mid-Enterprise / Unicorn)',
+                              '2500+ Employees (Global Enterprise / Fortune 500)',
+                            ].map((o) => ({ value: o, label: o }))}
+                          />
                         </div>
 
                         <div>
@@ -402,16 +442,17 @@ export function EmployerRegisterPage() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-slate-700 font-bold mb-1">Expected Monthly Hiring Volume *</label>
-                          <select
+                          <Select
                             value={formData.monthlyHiringVolume}
-                            onChange={(e) => setFormData({ ...formData, monthlyHiringVolume: e.target.value })}
-                            className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold focus:bg-white focus:border-blue-600 outline-none"
-                          >
-                            <option value="1–5 Engineers / Month">1–5 Engineers / Month</option>
-                            <option value="5–10 Engineers / Month">5–10 Engineers / Month</option>
-                            <option value="10–25 Engineers / Month">10–25 Engineers / Month</option>
-                            <option value="25+ Engineers / Month (Turnkey GCC Setup)">25+ Engineers / Month (Turnkey GCC Setup)</option>
-                          </select>
+                            onChange={(v) => setFormData({ ...formData, monthlyHiringVolume: v })}
+                            ariaLabel="Expected monthly hiring volume"
+                            options={[
+                              '1–5 Engineers / Month',
+                              '5–10 Engineers / Month',
+                              '10–25 Engineers / Month',
+                              '25+ Engineers / Month (Turnkey GCC Setup)',
+                            ].map((o) => ({ value: o, label: o }))}
+                          />
                         </div>
 
                         <div>
@@ -470,12 +511,19 @@ export function EmployerRegisterPage() {
                       </div>
 
                       {/* Password Fields */}
+                      {formError && (
+                        <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-bold">
+                          {formError}
+                        </div>
+                      )}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-slate-700 font-bold mb-1">Create Account Password *</label>
+                          <label className="block text-slate-700 font-bold mb-1">Create Account Password (min 8) *</label>
                           <input
                             type="password"
                             required
+                            minLength={8}
+                            autoComplete="new-password"
                             value={formData.password}
                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                             placeholder="••••••••••••"
@@ -488,6 +536,8 @@ export function EmployerRegisterPage() {
                           <input
                             type="password"
                             required
+                            minLength={8}
+                            autoComplete="new-password"
                             value={formData.confirmPassword}
                             onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                             placeholder="••••••••••••"
@@ -540,7 +590,7 @@ export function EmployerRegisterPage() {
                       <button
                         type="button"
                         onClick={handleNext}
-                        className="px-7 py-3.5 rounded-xl bg-[#0265FF] hover:bg-blue-600 text-white font-bold text-xs shadow-md shadow-blue-500/20 flex items-center gap-2 transition-all cursor-pointer"
+                        className="px-7 py-3.5 rounded-xl bg-[#087BFF] hover:bg-blue-600 text-white font-bold text-xs shadow-md shadow-blue-500/20 flex items-center gap-2 transition-all cursor-pointer"
                       >
                         <span>Proceed to Step {step + 1}</span>
                         <ArrowRight size={15} />
@@ -548,9 +598,10 @@ export function EmployerRegisterPage() {
                     ) : (
                       <button
                         type="submit"
-                        className="px-8 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition-all cursor-pointer"
+                        disabled={isSubmitting}
+                        className="px-8 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-60"
                       >
-                        <span>Submit Organization Registration</span>
+                        <span>{isSubmitting ? 'Submitting…' : 'Submit Organization Registration'}</span>
                         <CheckCircle2 size={16} />
                       </button>
                     )}
@@ -564,7 +615,7 @@ export function EmployerRegisterPage() {
           {/* Bottom Footer Link */}
           <div className="mt-6 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
             <span>Already registered your company?</span>
-            <Link to="/login" className="text-[#0265FF] font-bold hover:underline">
+            <Link to="/login" className="text-[#087BFF] font-bold hover:underline">
               Sign In to Employer Workspace →
             </Link>
           </div>

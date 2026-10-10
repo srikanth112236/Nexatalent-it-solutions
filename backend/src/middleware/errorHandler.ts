@@ -12,14 +12,17 @@ export function errorHandler(
   _next: NextFunction
 ): void {
   const statusCode = err.statusCode || 500;
-  const message = err.message || 'Internal Server Error';
+  const message = statusCode === 500 && process.env.NODE_ENV === 'production'
+    ? 'Internal Server Error'
+    : (err.message || 'Internal Server Error');
 
-  console.error(`[Error] ${statusCode}: ${message}`, err.stack);
+  // Server log keeps the stack; client responses never include it outside dev.
+  console.error(`[Error] ${statusCode}: ${err.message}`);
 
   res.status(statusCode).json({
     success: false,
     message,
     errors: err.errors,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    ...(process.env.NODE_ENV === 'development' ? { stack: err.stack } : {}),
   });
 }

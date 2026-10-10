@@ -1,4 +1,4 @@
-export type UserRole = 'superadmin' | 'employee' | 'recruiter' | 'employer' | 'candidate';
+export type UserRole = 'superadmin' | 'employee' | 'recruiter' | 'employer' | 'vendor' | 'candidate';
 
 export interface UserSession {
   id: string;

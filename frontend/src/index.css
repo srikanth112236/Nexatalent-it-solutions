@@ -3,13 +3,23 @@
 @tailwind utilities;
 
 :root {
+  /* Enterprise spec §5.1 design tokens (exact). */
+  --spec-navy: #071B3A;
+  --spec-midnight: #0B2548;
+  --spec-electric: #087BFF;
+  --spec-azure: #35A7FF;
+  --spec-white: #FFFFFF;
+  --spec-pale: #F4F7FB;
+  --spec-charcoal: #172338;
+  --spec-slate: #627086;
+  --spec-border: #DCE5F0;
   /* ========================================================
      GLOBAL RESPONSIVE TITLE TYPOGRAPHY SYSTEM (STANDARDIZED)
-     - Manrope Font for Headings & Titles with Jakarta Sans Fallback
+     - Manrope Font for Headings & Titles with Inter Fallback
      - Slightly reduced & balanced scale for clean UI
      ======================================================== */
-  --font-heading: 'Manrope', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  --font-sans: 'Manrope', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Manrope', 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Manrope', 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
 
   --section-title-size: clamp(1.35rem, 0.8rem + 2.1vw, 2.25rem);
   --section-title-lh: 1.15;

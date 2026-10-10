@@ -2,14 +2,24 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Logo } from '../../website/components/Logo';
 import { Check, ShieldCheck, ArrowLeft, KeyRound, CheckCircle2 } from 'lucide-react';
+import { apiClient } from '../../shared/api-client';
 
 export function ForgotPasswordPage() {
-  const [email, setEmail] = useState('user@nexatalent.com');
+  const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSent(true);
+    setIsSubmitting(true);
+    try {
+      await apiClient.post('/api/v1/auth/forgot-password', { email: email.trim() });
+    } catch {
+      // Generic message regardless — prevents account enumeration
+    } finally {
+      setSent(true);
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -76,9 +86,9 @@ export function ForgotPasswordPage() {
               <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-3">
                 <CheckCircle2 className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-1">Recovery Link Dispatched</h3>
+              <h3 className="text-lg font-bold text-slate-900 mb-1">If an account exists, a reset link was sent</h3>
               <p className="text-xs text-slate-600 mb-5 font-medium leading-relaxed">
-                We have sent an encrypted password recovery link to <strong>{email}</strong>. Please check your inbox and follow the link.
+                Check your inbox for further instructions. The link expires shortly.
               </p>
               <Link
                 to="/login"
@@ -106,10 +116,11 @@ export function ForgotPasswordPage() {
 
               <button
                 type="submit"
-                className="w-full py-3 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 mt-2"
+                disabled={isSubmitting}
+                className="w-full py-3 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-60"
               >
                 <KeyRound className="w-3.5 h-3.5" />
-                <span>Send Password Reset Link</span>
+                <span>{isSubmitting ? 'Sending…' : 'Send Password Reset Link'}</span>
               </button>
             </form>
           )}

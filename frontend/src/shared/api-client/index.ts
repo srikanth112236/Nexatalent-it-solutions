@@ -1,4 +1,5 @@
-import { ApiResponse, ApiErrorResponse } from '../types';
+import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+import { ApiResponse } from '../types';
 import { AUTH_STORAGE_KEYS } from '../constants';
 
 export class ApiError extends Error {
@@ -13,76 +14,185 @@ export class ApiError extends Error {
   }
 }
 
-export class ApiClient {
-  private baseUrl: string;
+class ApiClient {
+  private axiosInstance: AxiosInstance;
+  private isRefreshing = false;
+  private failedQueue: Array<{
+    resolve: (value?: unknown) => void;
+    reject: (reason?: unknown) => void;
+  }> = [];
 
-  constructor(baseUrl: string = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000') {
-    this.baseUrl = baseUrl;
-  }
+  constructor() {
+    const baseURL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || 'http://localhost:5000';
 
-  setBaseUrl(url: string) {
-    this.baseUrl = url;
-  }
-
-  private getAuthToken(): string | null {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
-  }
-
-  async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
-    const url = `${this.baseUrl}${endpoint}`;
-    const defaultHeaders: Record<string, string> = {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    };
-
-    const token = this.getAuthToken();
-    if (token) {
-      defaultHeaders['Authorization'] = `Bearer ${token}`;
-    }
-
-    const config: RequestInit = {
-      ...options,
+    this.axiosInstance = axios.create({
+      baseURL,
       headers: {
-        ...defaultHeaders,
-        ...(options.headers as Record<string, string>),
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
       },
-    };
+      timeout: 15000,
+    });
 
-    try {
-      const response = await fetch(url, config);
-      const isJson = response.headers.get('content-type')?.includes('application/json');
-      const data = isJson ? await response.json() : await response.text();
+    this.setupInterceptors();
+  }
 
-      if (!response.ok) {
-        const errorData = data as Partial<ApiErrorResponse>;
-        throw new ApiError(
-          errorData.message || `Request failed with status ${response.status}`,
-          response.status,
-          errorData.errors
-        );
+  private processQueue(error: Error | null, token: string | null = null) {
+    this.failedQueue.forEach((promise) => {
+      if (error) {
+        promise.reject(error);
+      } else {
+        promise.resolve(token);
       }
+    });
+    this.failedQueue = [];
+  }
 
-      return data as ApiResponse<T>;
-    } catch (err: unknown) {
-      if (err instanceof ApiError) {
-        throw err;
+  private setupInterceptors() {
+    // 1. Request Interceptor: Attach Access Token + Tenant context
+    this.axiosInstance.interceptors.request.use(
+      (config: InternalAxiosRequestConfig) => {
+        if (typeof window !== 'undefined') {
+          const token = localStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+          if (token && config.headers) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
+          const tenantId = localStorage.getItem(AUTH_STORAGE_KEYS.ACTIVE_TENANT_ID);
+          if (tenantId && config.headers && !config.headers['X-Tenant-ID']) {
+            config.headers['X-Tenant-ID'] = tenantId;
+          }
+        }
+        return config;
+      },
+      (error: AxiosError) => Promise.reject(error)
+    );
+
+    // 2. Response Interceptor: Auto-Refresh on 401 Unauthorized
+    this.axiosInstance.interceptors.response.use(
+      (response: AxiosResponse) => response,
+      async (error: AxiosError) => {
+        const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+        // Auth endpoints own their errors (wrong password, unknown account, hoop mismatch):
+        // never auto-refresh or hard-redirect on them — that wipes the login form
+        // and traps the user in a login → session_expired → login loop.
+        const requestUrl = String(originalRequest?.url || '');
+        if (requestUrl.includes('/api/v1/auth/')) {
+          return Promise.reject(error);
+        }
+
+        if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+          if (this.isRefreshing) {
+            return new Promise((resolve, reject) => {
+              this.failedQueue.push({ resolve, reject });
+            })
+              .then((token) => {
+                if (originalRequest.headers && token) {
+                  originalRequest.headers.Authorization = `Bearer ${token}`;
+                }
+                return this.axiosInstance(originalRequest);
+              })
+              .catch((err) => Promise.reject(err));
+          }
+
+          originalRequest._retry = true;
+          this.isRefreshing = true;
+
+          const refreshToken = typeof window !== 'undefined' 
+            ? localStorage.getItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN) 
+            : null;
+
+          if (!refreshToken) {
+            this.isRefreshing = false;
+            // No refresh token = nothing to recover (logged out, or pre-login
+            // background fetch). Reject quietly WITHOUT a hard page reload —
+            // otherwise logged-out screens that prefetch data reload forever.
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+              localStorage.removeItem(AUTH_STORAGE_KEYS.ACTIVE_ROLE);
+            }
+            return Promise.reject(error);
+          }
+
+          try {
+            const refreshResponse = await axios.post(
+              `${this.axiosInstance.defaults.baseURL}/api/v1/auth/refresh`,
+              { refreshToken }
+            );
+
+            // Backend may return ApiResponse-wrapped ({success,data:{...}}) or legacy top-level shape.
+            const refreshBody = refreshResponse.data?.data ?? refreshResponse.data ?? {};
+            const { accessToken, refreshToken: newRefreshToken } = refreshBody;
+
+            if (accessToken) {
+              localStorage.setItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+              if (newRefreshToken) {
+                localStorage.setItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
+              }
+
+              this.processQueue(null, accessToken);
+
+              if (originalRequest.headers) {
+                originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+              }
+              return this.axiosInstance(originalRequest);
+            }
+          } catch (refreshErr) {
+            this.processQueue(refreshErr as Error, null);
+            this.clearSessionAndRedirect('refresh_failed');
+            return Promise.reject(refreshErr);
+          } finally {
+            this.isRefreshing = false;
+          }
+        }
+
+        return Promise.reject(error);
       }
-      const message = err instanceof Error ? err.message : 'Unknown network error';
-      throw new ApiError(message, 500);
+    );
+  }
+
+  private clearSessionAndRedirect(reason: string) {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+      localStorage.removeItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
+      localStorage.removeItem(AUTH_STORAGE_KEYS.ACTIVE_ROLE);
+      localStorage.removeItem(AUTH_STORAGE_KEYS.ACTIVE_TENANT_ID);
+      localStorage.removeItem(AUTH_STORAGE_KEYS.USER_SESSION);
+      localStorage.removeItem('user_email');
+      sessionStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+      sessionStorage.removeItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
+      window.location.href = `/login?reason=${reason}`;
     }
   }
 
-  get<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
-    return this.request<T>(endpoint, { ...options, method: 'GET' });
+  /** Shared logout helper — clears every auth key, then redirects. */
+  async logout(reason = 'sign_out') {
+    this.clearSessionAndRedirect(reason);
   }
 
-  post<T>(endpoint: string, body?: unknown, options?: RequestInit): Promise<ApiResponse<T>> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
-    });
+  async get<T>(endpoint: string, config?: any): Promise<ApiResponse<T>> {
+    const res = await this.axiosInstance.get<ApiResponse<T>>(endpoint, config);
+    return res.data;
+  }
+
+  async post<T>(endpoint: string, data?: unknown, config?: any): Promise<ApiResponse<T>> {
+    const res = await this.axiosInstance.post<ApiResponse<T>>(endpoint, data, config);
+    return res.data;
+  }
+
+  async put<T>(endpoint: string, data?: unknown, config?: any): Promise<ApiResponse<T>> {
+    const res = await this.axiosInstance.put<ApiResponse<T>>(endpoint, data, config);
+    return res.data;
+  }
+
+  async patch<T>(endpoint: string, data?: unknown, config?: any): Promise<ApiResponse<T>> {
+    const res = await this.axiosInstance.patch<ApiResponse<T>>(endpoint, data, config);
+    return res.data;
+  }
+
+  async delete<T>(endpoint: string, config?: any): Promise<ApiResponse<T>> {
+    const res = await this.axiosInstance.delete<ApiResponse<T>>(endpoint, config);
+    return res.data;
   }
 }
 

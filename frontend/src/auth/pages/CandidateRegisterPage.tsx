@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiClient } from '../../shared/api-client';
+import { Select } from '../../shared/ui/EnterpriseKit';
 import { Logo } from '../../website/components/Logo';
 import { 
   User, 
@@ -22,35 +24,37 @@ export function CandidateRegisterPage() {
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
   const [refId, setRefId] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     // Step 1: Personal & Contact Details
-    fullName: 'Vikram Sharma',
-    email: 'vikram.sharma.dev@gmail.com',
-    phone: '+91 98450 12890',
-    currentCity: 'Bengaluru, Karnataka',
-    preferredWorkMode: 'Hybrid (2 days office / 3 days remote)',
+    fullName: '',
+    email: '',
+    phone: '',
+    currentCity: '',
+    preferredWorkMode: '',
 
     // Step 2: Technical Footprint & Skills
-    primaryRole: 'Full Stack & Systems Engineer',
-    primaryTechStack: 'Go, React, Node.js, TypeScript, PostgreSQL',
-    secondarySkills: 'Docker, Kubernetes, Redis, AWS Lambda, GraphQL',
-    totalExperience: '6 Years',
-    currentSeniority: 'Senior Software Engineer / Lead',
+    primaryRole: '',
+    primaryTechStack: '',
+    secondarySkills: '',
+    totalExperience: '',
+    currentSeniority: '',
 
     // Step 3: Compensation & Notice Period
-    currentCtc: '₹28,00,000 LPA',
-    expectedCtc: '₹36,00,000 LPA',
-    noticePeriod: '30 Days (Serving Notice)',
-    noticeBuyoutRequired: true,
-    openToRelocation: true,
+    currentCtc: '',
+    expectedCtc: '',
+    noticePeriod: '',
+    noticeBuyoutRequired: false,
+    openToRelocation: false,
 
     // Step 4: Social Links, Resume & Privacy
-    linkedinUrl: 'https://linkedin.com/in/vikramsharmadev',
-    githubUrl: 'https://github.com/vikramsharma-go',
-    portfolioUrl: 'https://vikramsharma.dev',
+    linkedinUrl: '',
+    githubUrl: '',
+    portfolioUrl: '',
     stealthMode: true,
     password: '',
     confirmPassword: ''
@@ -74,14 +78,44 @@ export function CandidateRegisterPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const generatedRef = 'NEXA-CAND-REG-' + Math.floor(100000 + Math.random() * 900000);
-    setRefId(generatedRef);
-    setSubmitted(true);
-    setTimeout(() => {
-      navigate('/candidate');
-    }, 2800);
+    setFormError('');
+    if (!formData.fullName.trim() || !formData.email.trim()) {
+      setFormError('Full name and email are required.');
+      return;
+    }
+    if (formData.password.length < 8) {
+      setFormError('Password must be at least 8 characters.');
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setFormError('Passwords do not match.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const res = await apiClient.post<any>('/api/v1/auth/register/candidate', {
+        name: formData.fullName.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+        phone: formData.phone.trim(),
+      });
+      const created = (res as { data?: { id?: string } })?.data;
+      setRefId(created?.id || 'RECEIVED');
+      setSubmitted(true);
+      setTimeout(() => {
+        navigate('/login', { replace: true });
+      }, 2800);
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        (err as Error)?.message ||
+        'Registration failed. Please try again.';
+      setFormError(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -194,7 +228,7 @@ export function CandidateRegisterPage() {
                     </p>
                   </div>
                   <div className="text-xs font-bold text-slate-500 animate-pulse">
-                    Routing to Candidate Hub Console...
+                    Redirecting to Sign In...
                   </div>
                 </motion.div>
               ) : (
@@ -275,16 +309,17 @@ export function CandidateRegisterPage() {
 
                         <div>
                           <label className="block text-slate-700 font-bold mb-1">Preferred Work Mode *</label>
-                          <select
+                          <Select
                             value={formData.preferredWorkMode}
-                            onChange={(e) => setFormData({ ...formData, preferredWorkMode: e.target.value })}
-                            className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold focus:bg-white focus:border-emerald-600 outline-none"
-                          >
-                            <option value="Hybrid (2 days office / 3 days remote)">Hybrid (2 days office / 3 days remote)</option>
-                            <option value="100% Remote (India / Global)">100% Remote (India / Global)</option>
-                            <option value="Onsite (Full Office)">Onsite (Full Office)</option>
-                            <option value="Open to All Modes">Open to All Modes</option>
-                          </select>
+                            onChange={(v) => setFormData({ ...formData, preferredWorkMode: v })}
+                            ariaLabel="Preferred work mode"
+                            options={[
+                              'Hybrid (2 days office / 3 days remote)',
+                              '100% Remote (India / Global)',
+                              'Onsite (Full Office)',
+                              'Open to All Modes',
+                            ].map((o) => ({ value: o, label: o }))}
+                          />
                         </div>
                       </div>
                     </motion.div>
@@ -318,16 +353,17 @@ export function CandidateRegisterPage() {
 
                         <div>
                           <label className="block text-slate-700 font-bold mb-1">Total Tech Experience *</label>
-                          <select
+                          <Select
                             value={formData.totalExperience}
-                            onChange={(e) => setFormData({ ...formData, totalExperience: e.target.value })}
-                            className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold focus:bg-white focus:border-emerald-600 outline-none"
-                          >
-                            <option value="1 - 3 Years (Junior / Mid)">1 - 3 Years (Junior / Mid)</option>
-                            <option value="4 - 7 Years (Senior Engineer)">4 - 7 Years (Senior Engineer)</option>
-                            <option value="8 - 12 Years (Staff / Lead Architect)">8 - 12 Years (Staff / Lead Architect)</option>
-                            <option value="12+ Years (Principal / Engineering Director)">12+ Years (Principal / Engineering Director)</option>
-                          </select>
+                            onChange={(v) => setFormData({ ...formData, totalExperience: v })}
+                            ariaLabel="Total tech experience"
+                            options={[
+                              '1 - 3 Years (Junior / Mid)',
+                              '4 - 7 Years (Senior Engineer)',
+                              '8 - 12 Years (Staff / Lead Architect)',
+                              '12+ Years (Principal / Engineering Director)',
+                            ].map((o) => ({ value: o, label: o }))}
+                          />
                         </div>
                       </div>
 
@@ -398,16 +434,17 @@ export function CandidateRegisterPage() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-slate-700 font-bold mb-1">Official Notice Period *</label>
-                          <select
+                          <Select
                             value={formData.noticePeriod}
-                            onChange={(e) => setFormData({ ...formData, noticePeriod: e.target.value })}
-                            className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold focus:bg-white focus:border-emerald-600 outline-none"
-                          >
-                            <option value="Immediate / Serving Notice (Under 15 Days)">Immediate / Serving Notice (Under 15 Days)</option>
-                            <option value="30 Days (Serving Notice)">30 Days (Serving Notice)</option>
-                            <option value="60 Days Standard">60 Days Standard</option>
-                            <option value="90 Days Standard">90 Days Standard</option>
-                          </select>
+                            onChange={(v) => setFormData({ ...formData, noticePeriod: v })}
+                            ariaLabel="Notice period"
+                            options={[
+                              'Immediate / Serving Notice (Under 15 Days)',
+                              '30 Days (Serving Notice)',
+                              '60 Days Standard',
+                              '90 Days Standard',
+                            ].map((o) => ({ value: o, label: o }))}
+                          />
                         </div>
 
                         <div className="flex flex-col justify-end">
@@ -488,12 +525,19 @@ export function CandidateRegisterPage() {
                       </div>
 
                       {/* Password Fields */}
+                      {formError && (
+                        <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-bold">
+                          {formError}
+                        </div>
+                      )}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-slate-700 font-bold mb-1">Create Password *</label>
+                          <label className="block text-slate-700 font-bold mb-1">Create Password (min 8) *</label>
                           <input
                             type="password"
                             required
+                            minLength={8}
+                            autoComplete="new-password"
                             value={formData.password}
                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                             placeholder="••••••••••••"
@@ -506,6 +550,8 @@ export function CandidateRegisterPage() {
                           <input
                             type="password"
                             required
+                            minLength={8}
+                            autoComplete="new-password"
                             value={formData.confirmPassword}
                             onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                             placeholder="••••••••••••"
@@ -559,9 +605,10 @@ export function CandidateRegisterPage() {
                     ) : (
                       <button
                         type="submit"
-                        className="px-8 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition-all cursor-pointer"
+                        disabled={isSubmitting}
+                        className="px-8 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-60"
                       >
-                        <span>Create Verified Candidate Account</span>
+                        <span>{isSubmitting ? 'Creating Account…' : 'Create Verified Candidate Account'}</span>
                         <CheckCircle2 size={16} />
                       </button>
                     )}

@@ -4,6 +4,8 @@ import { ScrollToTop } from '../shared/components/ScrollToTop';
 import { ThemeProvider } from '../shared/theme/ThemeContext';
 import { AppRoutes } from '../routes';
 import { SmoothScrollProvider } from '../shared/motion/SmoothScrollProvider';
+import { AuthProvider } from '../shared/auth/AuthContext';
+import { ToastProvider } from '../shared/ui/Toast';
 import '../shared/design-system';
 
 export function App() {
@@ -12,8 +14,12 @@ export function App() {
       <ThemeProvider>
         <SmoothScrollProvider>
           <BrowserRouter>
-            <ScrollToTop />
-            <AppRoutes />
+            <ToastProvider>
+              <AuthProvider>
+                <ScrollToTop />
+                <AppRoutes />
+              </AuthProvider>
+            </ToastProvider>
           </BrowserRouter>
         </SmoothScrollProvider>
       </ThemeProvider>

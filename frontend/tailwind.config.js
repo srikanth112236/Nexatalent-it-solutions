@@ -13,8 +13,17 @@ export default {
         'spin-slow': 'spin 12s linear infinite',
       },
       colors: {
-        /* NexaTalent logo-exact palette (sampled from NT monogram + wordmark).
-           NEXA navy → royal → TALENT bright blue → divider sky. */
+        /* Enterprise spec §5.1 tokens (exact). */
+        spec: {
+          navy: '#071B3A',
+          midnight: '#0B2548',
+          electric: '#087BFF',
+          azure: '#35A7FF',
+          pale: '#F4F7FB',
+          charcoal: '#172338',
+          slate: '#627086',
+          border: '#DCE5F0',
+        },
         nexa: {
           950: '#060F2B',
           900: '#0A1E4E',
@@ -42,9 +51,9 @@ export default {
         }
       },
       fontFamily: {
-        manrope: ['"Manrope"', '"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
-        heading: ['"Manrope"', '"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
-        sans: ['"Manrope"', '"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+        manrope: ['"Manrope"', '"Inter"', '"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+        heading: ['"Manrope"', '"Inter"', '"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['"Manrope"', '"Inter"', '"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
       },
       fontSize: {
         'section-title': ['var(--section-title-size, clamp(1.35rem, 0.8rem + 2.1vw, 2.25rem))', { lineHeight: '1.15', letterSpacing: '-0.025em' }],
