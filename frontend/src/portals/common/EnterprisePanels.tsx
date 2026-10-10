@@ -283,6 +283,138 @@ export function ApplicationPicker({ value, onChange, onPick, placeholder = 'Sear
   );
 }
 
+/** Linked commercial records for a placement: commission + invoices, live. */
+export function PlacementLinks({ placement }: { placement: any }) {
+  const [comms, setComms] = useState<any[]>([]);
+  const [invs, setInvs] = useState<any[]>([]);
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      try {
+        const [c, i] = await Promise.all([
+          billingApi.commissions(`?page=1&pageSize=10&q=${encodeURIComponent(placement.applicationId || placement.id)}`).catch(() => null),
+          billingApi.invoices(`?page=1&pageSize=10&q=${encodeURIComponent(placement.applicationId || '')}`).catch(() => null),
+        ]);
+        if (!live) return;
+        setComms(unwrapList(c)); setInvs(unwrapList(i));
+      } catch { /* best-effort */ }
+    })();
+    return () => { live = false; };
+  }, [placement?.id]);
+  return (
+    <div className="space-y-2">
+      <div className="text-xs font-extrabold text-slate-700">Commission ({comms.length})</div>
+      {comms.length === 0 ? <div className="text-[11px] text-slate-500 font-medium">No commission minted yet.</div> : comms.map((c: any) => (
+        <div key={c.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold">{c.id} • gross ₹{Number(c.gross || 0).toLocaleString('en-IN')} • {c.approvalStatus}/{c.paymentStatus}{c.invoiceId ? ` • inv ${c.invoiceId}` : ''}</div>
+      ))}
+      <div className="text-xs font-extrabold text-slate-700">Invoices ({invs.length})</div>
+      {invs.length === 0 ? <div className="text-[11px] text-slate-500 font-medium">No invoices yet — approve the commission, then generate one.</div> : invs.map((v: any) => (
+        <div key={v.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold">{v.number || v.id} • ₹{Number(v.total || 0).toLocaleString('en-IN')} • {v.status} • bal ₹{Number(v.balance || 0).toLocaleString('en-IN')}</div>
+      ))}
+    </div>
+  );
+}
+
+/** Invoice picker — open (unpaid balance) invoices with company + balance preview. */
+export function InvoicePicker({ value, onChange, placeholder = 'Search invoice number, company…' }: { value: string; onChange: (id: string, inv?: any) => void; placeholder?: string }) {
+  const [q, setQ] = useState(value);
+  const dq = useDebounced(q);
+  const [opts, setOpts] = useState<any[]>([]);
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!dq.trim()) { setOpts([]); return; }
+    let live = true;
+    (async () => {
+      try {
+        const res: any = await billingApi.invoices(`?page=1&pageSize=8&q=${encodeURIComponent(dq.trim())}`);
+        if (!live) return;
+        setOpts(unwrapList(res).filter((i: any) => Number(i.balance || 0) > 0 && ['Issued', 'Partially Paid'].includes(i.status)));
+        setOpen(true);
+        const r = inputRef.current?.getBoundingClientRect();
+        if (r) setPos({ top: Math.min(r.bottom + 4, window.innerHeight - 240), left: Math.max(8, Math.min(r.left, window.innerWidth - 360)), width: Math.max(r.width, 320) });
+      } catch { if (live) setOpts([]); }
+    })();
+    return () => { live = false; };
+  }, [dq]);
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => { window.removeEventListener('scroll', close, true); window.removeEventListener('resize', close); };
+  }, [open ]);
+  return (
+    <>
+      <input ref={inputRef} className={kitInput} value={q} placeholder={placeholder} aria-label="Pick invoice"
+        onChange={(e) => { setQ(e.target.value); onChange(''); }} onFocus={() => { if (opts.length > 0) setOpen(true); }} />
+      {open && opts.length > 0 && createPortal(
+        <div style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width, zIndex: 210 }} className="bg-white rounded-2xl border border-slate-200 shadow-xl py-1.5 max-h-56 overflow-y-auto" data-lenis-prevent>
+          {opts.map((i: any) => (
+            <button key={i.id} type="button" onClick={() => { onChange(i.id, i); setQ(i.id); setOpen(false); }}
+              className="w-full text-left px-3.5 py-2 hover:bg-slate-50">
+              <div className="text-xs font-extrabold text-slate-900">{i.number || i.id} • {i.orgId}</div>
+              <div className="text-[11px] text-slate-500 font-medium">bal <strong>₹{Number(i.balance || 0).toLocaleString('en-IN')}</strong> of ₹{Number(i.total || 0).toLocaleString('en-IN')} • {i.status}</div>
+            </button>
+          ))}
+        </div>,
+        document.body,
+      )}
+    </>
+  );
+}
+
+/** Payment picker — successful payments eligible for refund. */
+export function PaymentPicker({ value, onChange, placeholder = 'Search payment, invoice…' }: { value: string; onChange: (id: string, pay?: any) => void; placeholder?: string }) {
+  const [q, setQ] = useState(value);
+  const dq = useDebounced(q);
+  const [opts, setOpts] = useState<any[]>([]);
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!dq.trim()) { setOpts([]); return; }
+    let live = true;
+    (async () => {
+      try {
+        const res: any = await billingApi.payments(`?page=1&pageSize=8&q=${encodeURIComponent(dq.trim())}`);
+        if (!live) return;
+        setOpts(unwrapList(res).filter((p: any) => p.status === 'succeeded'));
+        setOpen(true);
+        const r = inputRef.current?.getBoundingClientRect();
+        if (r) setPos({ top: Math.min(r.bottom + 4, window.innerHeight - 240), left: Math.max(8, Math.min(r.left, window.innerWidth - 360)), width: Math.max(r.width, 320) });
+      } catch { if (live) setOpts([]); }
+    })();
+    return () => { live = false; };
+  }, [dq]);
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => { window.removeEventListener('scroll', close, true); window.removeEventListener('resize', close); };
+  }, [open ]);
+  return (
+    <>
+      <input ref={inputRef} className={kitInput} value={q} placeholder={placeholder} aria-label="Pick payment"
+        onChange={(e) => { setQ(e.target.value); onChange(''); }} onFocus={() => { if (opts.length > 0) setOpen(true); }} />
+      {open && opts.length > 0 && createPortal(
+        <div style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width, zIndex: 210 }} className="bg-white rounded-2xl border border-slate-200 shadow-xl py-1.5 max-h-56 overflow-y-auto" data-lenis-prevent>
+          {opts.map((p: any) => (
+            <button key={p.id} type="button" onClick={() => { onChange(p.id, p); setQ(p.id); setOpen(false); }}
+              className="w-full text-left px-3.5 py-2 hover:bg-slate-50">
+              <div className="text-xs font-extrabold text-slate-900">{p.id} • ₹{Number(p.amount || 0).toLocaleString('en-IN')}</div>
+              <div className="text-[11px] text-slate-500 font-medium">invoice {p.invoiceId} • {p.orgId}{p.refundedAmount ? ` • refunded ₹${p.refundedAmount}` : ''}</div>
+            </button>
+          ))}
+        </div>,
+        document.body,
+      )}
+    </>
+  );
+}
+
 /** Server pagination controls (§5.2/§5.5). */
 export function Pager({ page, total, pageSize, onPage }: { page: number; total: number; pageSize: number; onPage: (p: number) => void }) {
   const totalPages = Math.max(1, Math.ceil((total || 0) / pageSize));
@@ -1181,6 +1313,33 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
     } catch (e) { setError(errMsg(e)); }
   };
   const [moveFor, setMoveFor] = useState<{ app: any; to: string } | null>(null);
+  const [offerFor, setOfferFor] = useState<any>(null);
+  const [offerForm, setOfferForm] = useState({ ctc: '', joinDate: '' });
+  const [joinFor, setJoinFor] = useState<any>(null);
+  const [joinForm, setJoinForm] = useState({ joinDate: '', feeBasis: '' });
+  const [joinMatch, setJoinMatch] = useState<any>(null);
+  const [joinBusy, setJoinBusy] = useState(false);
+  const doOffer = async () => {
+    if (!offerFor) return;
+    const created = unwrapObj(await offersPlacementsApi.offer({ applicationId: offerFor.id, ctc: Number(offerForm.ctc) || 0, joinDate: offerForm.joinDate || undefined }));
+    if (created?.id) { patchBoth(offerFor.id, { ...offerFor, stage: 'Offer' }); if (detail?.id === offerFor.id) setDetail((d: any) => ({ ...d, stage: 'Offer' })); }
+    setOfferFor(null); setOfferForm({ ctc: '', joinDate: '' }); syncAll();
+  };
+  const checkJoinFee = async () => {
+    if (!joinFor) return;
+    setJoinBusy(true);
+    try {
+      const m = unwrapObj(await offersPlacementsApi.matchFee(joinFor.id, Number(joinForm.feeBasis) || undefined));
+      setJoinMatch(m);
+      if (!joinForm.feeBasis && m?.preview) setJoinForm((f) => ({ ...f, feeBasis: String(m.preview.feeBasis || '') }));
+    } catch (e) { setError(errMsg(e)); } finally { setJoinBusy(false); }
+  };
+  const doJoin = async () => {
+    if (!joinFor) return;
+    const p = unwrapObj(await offersPlacementsApi.place(joinFor.id, joinForm.joinDate || undefined, Number(joinForm.feeBasis) || 0));
+    if (p?.id) { patchBoth(joinFor.id, { ...joinFor, stage: 'Hired' }); if (detail?.id === joinFor.id) setDetail((d: any) => ({ ...d, stage: 'Hired' })); }
+    setJoinFor(null); setJoinForm({ joinDate: '', feeBasis: '' }); setJoinMatch(null); syncAll();
+  };
   const dropMove = (a: any, to: string) => {
     if (to === a.stage) return;
     if (['Hired', 'Withdrawn', 'Rejected'].includes(a.stage)) { setError(`${a.stage} applications are terminal — reopen explicitly to continue.`); return; }
@@ -1205,6 +1364,8 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
     return (
       <RowMenu label={`Application ${a.id}`} items={[
         { label: 'View + history', onSelect: () => openDetail(a) },
+        ...(!['Hired', 'Withdrawn', 'Rejected', 'Offer'].includes(a.stage) ? [{ label: 'Issue offer…', onSelect: () => { setOfferFor(a); setOfferForm({ ctc: '', joinDate: '' }); } }] : []),
+        ...(!['Hired', 'Withdrawn', 'Rejected'].includes(a.stage) ? [{ label: 'Record joining…', onSelect: () => { setJoinFor(a); setJoinForm({ joinDate: '', feeBasis: '' }); setJoinMatch(null); } }] : []),
         ...moves.map((s) => ({ label: `Move to ${s}…`, onSelect: () => { if (['Hired', 'Withdrawn', 'Rejected'].includes(a.stage)) { setError(`${a.stage} applications are terminal — reopen explicitly to continue.`); return; } if (s === 'Withdrawn') { setWithdrawId(a.id); return; } setMoveFor({ app: a, to: s }); } })),
         ...(canWithdraw ? [{ label: 'Withdraw application', danger: true, onSelect: () => setWithdrawId(a.id) }] : []),
         ...(checkRecordAction('application', a, 'reopen', {}).allowed ? [{ label: 'Reopen…', onSelect: () => { setReopenFor(a); setReopenTarget('Applied'); } }] : []),
@@ -1314,6 +1475,34 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
         tone={moveFor?.to === 'Rejected' ? 'danger' : 'dark'}
         onConfirm={async (r) => { if (moveFor) { await move(moveFor.app.id, moveFor.to, r); setMoveFor(null); } }}
       />
+      <Modal open={offerFor !== null} onClose={() => setOfferFor(null)} title={`Issue offer — ${offerFor?.id || ''}`} subtitle={`${offerFor?.jobTitle || ''} • ${offerFor?.candidateEmail || ''}`}>
+        <div className="space-y-3">
+          <Field label="CTC (annual)"><input className={kitInput} type="number" value={offerForm.ctc} onChange={(e) => setOfferForm({ ...offerForm, ctc: e.target.value })} /></Field>
+          <Field label="Joining date"><DatePicker value={offerForm.joinDate} onChange={(v) => setOfferForm({ ...offerForm, joinDate: v })} ariaLabel="Joining date" /></Field>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setOfferFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button type="button" onClick={() => doOffer()} className={btnPrimary}>Issue offer</button>
+          </div>
+          <p className="text-[11px] text-slate-500 font-medium">Offer CTC becomes the default fee basis at joining. Application moves to Offer.</p>
+        </div>
+      </Modal>
+      <Modal open={joinFor !== null} onClose={() => { setJoinFor(null); setJoinMatch(null); }} title={`Record joining — ${joinFor?.id || ''}`} subtitle={`${joinFor?.jobTitle || ''} • ${joinFor?.candidateEmail || ''}`}>
+        <div className="space-y-3">
+          <Field label="Joining date"><DatePicker value={joinForm.joinDate} onChange={(v) => setJoinForm({ ...joinForm, joinDate: v })} ariaLabel="Joining date" /></Field>
+          <Field label="Fee basis (auto-filled from offer)"><input className={kitInput} type="number" value={joinForm.feeBasis} onChange={(e) => { setJoinForm({ ...joinForm, feeBasis: e.target.value }); setJoinMatch(null); }} /></Field>
+          <button type="button" disabled={joinBusy} onClick={checkJoinFee} className={btnDark}>{joinBusy ? 'Checking…' : 'Check fee…'}</button>
+          {joinMatch?.preview && (
+            <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs font-bold space-y-1">
+              <div>Agreement {joinMatch.agreement?.id} • {joinMatch.agreement?.hiringType} @ {joinMatch.agreement?.rate}%</div>
+              <div>Basis ₹{Number(joinMatch.preview.feeBasis).toLocaleString('en-IN')} → gross ₹{Number(joinMatch.preview.gross).toLocaleString('en-IN')} + GST = <strong>₹{Number(joinMatch.preview.total).toLocaleString('en-IN')}</strong></div>
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => { setJoinFor(null); setJoinMatch(null); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button type="button" onClick={doJoin} className={btnPrimary}>Record joining</button>
+          </div>
+        </div>
+      </Modal>
       <ActionConfirm
         open={reopenFor !== null}
         onCancel={() => setReopenFor(null)}
@@ -1364,9 +1553,9 @@ export function ApplicationsKanban({ apps, onOpen, onDropMove }: { apps: any[]; 
   const cols = APP_STAGES.map((s) => ({ stage: s, items: apps.filter((a) => a.stage === s) }));
   return (
     <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50/50 p-3" data-lenis-prevent>
-      <div className="flex gap-3 min-w-[1180px]">
+      <div className="flex gap-3 min-w-[1180px] items-start">
         {cols.map((c) => (
-          <div key={c.stage} className="flex-1 min-w-[200px] rounded-2xl bg-white border border-slate-200 p-2 space-y-2"
+          <div key={c.stage} className="flex-1 min-w-[200px] rounded-2xl bg-white border border-slate-200 p-2 flex flex-col max-h-[62vh]"
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault();
@@ -1374,10 +1563,11 @@ export function ApplicationsKanban({ apps, onOpen, onDropMove }: { apps: any[]; 
               setDragId(null);
               if (a && c.stage !== a.stage) onDropMove(a, c.stage);
             }}>
-            <div className="flex items-center justify-between px-1">
+            <div className="flex items-center justify-between px-1 pb-1.5 sticky top-0 bg-white z-10">
               <span className={`text-[11px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border ${APP_STAGE_TONE[c.stage] || APP_STAGE_TONE.New}`}>{c.stage}</span>
               <span className="text-[11px] font-extrabold text-slate-400">{c.items.length}</span>
             </div>
+            <div className="space-y-2 overflow-y-auto pr-0.5" data-lenis-prevent>
             {c.items.map((a) => (
               <div key={a.id} draggable onDragStart={() => setDragId(a.id)}
                 onClick={() => onOpen(a)}
@@ -1387,6 +1577,7 @@ export function ApplicationsKanban({ apps, onOpen, onDropMove }: { apps: any[]; 
                 <div className="font-mono text-[10px] text-slate-400">{a.id}</div>
               </div>
             ))}
+            </div>
           </div>
         ))}
       </div>
@@ -1959,13 +2150,16 @@ export function OffersPlacementsPanel() {
           </table>
         </div>
       </>)}
-      <Modal open={placeDetail !== null} onClose={() => setPlaceDetail(null)} title={`Placement ${placeDetail?.id || ''}`} subtitle={`${placeDetail?.candidateEmail || ''} → ${placeDetail?.jobId || ''}`}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-          {[['Joined', String(placeDetail?.joinDate || '').slice(0, 10)], ['Fee basis', `₹${Number(placeDetail?.feeBasis || 0).toLocaleString('en-IN')}`], ['Agreement', placeDetail?.agreementId || '—'], ['Application', placeDetail?.applicationId || '—'], ['Organization', placeDetail?.orgId || '—'], ['Auto-invoiced', placeDetail?.autoInvoiced || '—']].map(([k, v]) => (
-            <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—')}</div></div>
-          ))}
-        </div>
-      </Modal>
+      {placeDetail !== null && (
+        <DetailDrawer title={`Placement ${placeDetail.id}`} subtitle={`${placeDetail.candidateEmail || ''} → ${placeDetail.jobId || ''} • joined ${String(placeDetail.joinDate || '').slice(0, 10)}`} onClose={() => setPlaceDetail(null)}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            {[['Candidate', placeDetail?.candidateEmail], ['Job', placeDetail?.jobId], ['Application', placeDetail?.applicationId], ['Organization', placeDetail?.orgId], ['Joined', String(placeDetail?.joinDate || '').slice(0, 10)], ['Fee basis', `₹${Number(placeDetail?.feeBasis || 0).toLocaleString('en-IN')}`], ['Agreement', placeDetail?.agreementId || '—'], ['Auto-invoiced', placeDetail?.autoInvoiced || '—']].map(([k, v]) => (
+              <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—')}</div></div>
+            ))}
+          </div>
+          <PlacementLinks placement={placeDetail} />
+        </DetailDrawer>
+      )}
     </div>
   );
 }
@@ -2288,9 +2482,36 @@ export function InvoicesPanel() {
         {remResult && <div className="font-bold text-emerald-700">{remResult}</div>}
         {schedResult && <div className="font-bold text-emerald-700">{schedResult}</div>}
         {reminders.length > 0 && (
-          <div className="space-y-1 max-h-32 overflow-y-auto" data-lenis-prevent>
-            {reminders.slice(0, 10).map((r: any) => (
-              <div key={r.id} className="font-medium text-amber-900">[{r.kind}] {r.number || r.invoiceId} • {r.orgId} • bal ₹{r.balance}{r.kind === 'overdue' ? ` • ${r.daysOverdue}d overdue` : ` • due in ${r.daysToDue}d`} • {String(r.sentAt || '').slice(0, 16).replace('T', ' ')} • by {r.by}</div>
+          <div className="overflow-x-auto rounded-2xl border border-amber-200 bg-white/60 hidden md:block">
+            <table className="w-full text-left text-xs min-w-[760px]">
+              <thead><tr className="text-amber-800 font-bold uppercase tracking-wider text-[10px]">
+                <th className="px-3 py-2">Reminder</th><th className="px-3 py-2">Invoice</th><th className="px-3 py-2">Company</th><th className="px-3 py-2 text-right">Balance</th><th className="px-3 py-2">Age</th><th className="px-3 py-2">Sent</th>
+              </tr></thead>
+              <tbody className="divide-y divide-amber-100">
+                {reminders.slice(0, 10).map((r: any) => (
+                  <tr key={r.id} className="text-amber-900">
+                    <td className="px-3 py-2"><span className={`px-2 py-0.5 rounded-full border font-bold text-[10px] ${r.kind === 'overdue' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-800 border-amber-300'}`}>{r.kind}</span></td>
+                    <td className="px-3 py-2 font-mono font-bold">{r.number || r.invoiceId}</td>
+                    <td className="px-3 py-2 font-mono">{r.orgId}</td>
+                    <td className="px-3 py-2 text-right font-extrabold">₹{Number(r.balance || 0).toLocaleString('en-IN')}</td>
+                    <td className="px-3 py-2 font-bold">{r.kind === 'overdue' ? `${r.daysOverdue}d overdue` : `due in ${r.daysToDue}d`}</td>
+                    <td className="px-3 py-2 text-[11px]">{String(r.sentAt || '').slice(0, 16).replace('T', ' ')} • {r.by}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {reminders.length > 0 && (
+          <div className="space-y-1.5 md:hidden">
+            {reminders.slice(0, 6).map((r: any) => (
+              <div key={r.id} className="p-3 rounded-xl bg-white/70 border border-amber-200 text-xs space-y-0.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono font-bold text-amber-900">{r.number || r.invoiceId}</span>
+                  <span className={`px-2 py-0.5 rounded-full border font-bold text-[10px] ${r.kind === 'overdue' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-800 border-amber-300'}`}>{r.kind}</span>
+                </div>
+                <div className="font-bold text-amber-900">bal ₹{Number(r.balance || 0).toLocaleString('en-IN')} • {r.kind === 'overdue' ? `${r.daysOverdue}d overdue` : `due in ${r.daysToDue}d`}</div>
+              </div>
             ))}
           </div>
         )}
@@ -2526,7 +2747,9 @@ export function BillingPanel() {
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
   const [pay, setPay] = useState({ invoiceId: '', amount: '' });
+  const [payPreview, setPayPreview] = useState<any>(null);
   const [refund, setRefund] = useState({ paymentId: '', amount: '', reason: '' });
+  const [refundPreview, setRefundPreview] = useState<any>(null);
   const [showPay, setShowPay] = useState(false);
   const [showRefund, setShowRefund] = useState(false);
   const [refundConfirm, setRefundConfirm] = useState(false);
@@ -2558,7 +2781,7 @@ export function BillingPanel() {
     try {
       const key = `ui-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
       await billingApi.pay(pay.invoiceId, Number(pay.amount), key);
-      setOk('Payment recorded and reconciled.'); setPay({ invoiceId: '', amount: '' }); setShowPay(false); load();
+      setOk('Payment recorded and reconciled.'); setPay({ invoiceId: '', amount: '' }); setPayPreview(null); setShowPay(false); load();
       syncAll();
     } catch (e) { setError(errMsg(e)); }
   };
@@ -2568,7 +2791,7 @@ export function BillingPanel() {
     try {
       const r = unwrapObj(await billingApi.refund(refund.paymentId, Number(refund.amount), refund.reason || 'requested'));
       if (r?.id) setRefunds((x) => [r, ...x]);
-      setOk('Refund processed — ledger updated.'); setRefund({ paymentId: '', amount: '', reason: '' }); setShowRefund(false); load(); syncAll();
+      setOk('Refund processed — ledger updated.'); setRefund({ paymentId: '', amount: '', reason: '' }); setRefundPreview(null); setShowRefund(false); load(); syncAll();
     } catch (e) { setError(errMsg(e)); }
   };
   const filteredPay = payments;
@@ -2602,23 +2825,35 @@ export function BillingPanel() {
           ))}
         </div>
       )}
-      <Modal open={showPay} onClose={() => setShowPay(false)} title="Record payment" subtitle="Idempotency key auto-generated per submission">
+      <Modal open={showPay} onClose={() => setShowPay(false)} title="Record payment" subtitle="Pick an open invoice — company, bill and balance load automatically. Idempotent per submission.">
         <form onSubmit={payNow} className="space-y-3">
-          <Field label="Invoice ID *"><input className={kitInput} value={pay.invoiceId} onChange={(e) => setPay({ ...pay, invoiceId: e.target.value })} /></Field>
+          <Field label="Invoice (open balance) *"><InvoicePicker value={pay.invoiceId} onChange={(v, inv) => { setPayPreview(inv || null); setPay((p) => ({ invoiceId: v, amount: !v ? '' : (p.amount || (inv ? String(inv.balance || '') : '')) })); }} /></Field>
+          {payPreview && (
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold space-y-0.5">
+              <div>{payPreview.number || payPreview.id} • {payPreview.orgId} • {payPreview.status}</div>
+              <div>Total ₹{Number(payPreview.total || 0).toLocaleString('en-IN')} • paid ₹{Number(payPreview.amountPaid || 0).toLocaleString('en-IN')} • bal <strong>₹{Number(payPreview.balance || 0).toLocaleString('en-IN')}</strong></div>
+            </div>
+          )}
           <Field label="Amount *"><input className={kitInput} type="number" value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value })} /></Field>
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setShowPay(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
+            <button type="button" onClick={() => { setShowPay(false); setPayPreview(null); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
             <button className={btnPrimary}>Record payment</button>
           </div>
         </form>
       </Modal>
-      <Modal open={showRefund} onClose={() => setShowRefund(false)} title="Process refund" subtitle="Adjusts payment status and invoice balance">
+      <Modal open={showRefund} onClose={() => setShowRefund(false)} title="Process refund" subtitle="Pick a successful payment — invoice and refundable headroom load automatically.">
         <div className="space-y-3">
-          <Field label="Payment ID *"><input className={kitInput} value={refund.paymentId} onChange={(e) => setRefund({ ...refund, paymentId: e.target.value })} /></Field>
+          <Field label="Payment (succeeded) *"><PaymentPicker value={refund.paymentId} onChange={(v, p) => { setRefund({ ...refund, paymentId: v }); setRefundPreview(p || null); }} /></Field>
+          {refundPreview && (
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold space-y-0.5">
+              <div>{refundPreview.id} • invoice {refundPreview.invoiceId} • {refundPreview.orgId}</div>
+              <div>Paid ₹{Number(refundPreview.amount || 0).toLocaleString('en-IN')}{refundPreview.refundedAmount ? ` • already refunded ₹${refundPreview.refundedAmount}` : ''} • refundable <strong>₹{(Number(refundPreview.amount || 0) - Number(refundPreview.refundedAmount || 0)).toLocaleString('en-IN')}</strong></div>
+            </div>
+          )}
           <Field label="Amount *"><input className={kitInput} type="number" value={refund.amount} onChange={(e) => setRefund({ ...refund, amount: e.target.value })} /></Field>
           <Field label="Reason"><input className={kitInput} value={refund.reason} onChange={(e) => setRefund({ ...refund, reason: e.target.value })} /></Field>
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setShowRefund(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
+            <button type="button" onClick={() => { setShowRefund(false); setRefundPreview(null); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
             <button type="button" onClick={() => setRefundConfirm(true)} className={btnDark}>Review refund</button>
           </div>
         </div>
@@ -3974,9 +4209,9 @@ export function LeadsKanban({ leads, onOpen, onDropMove }: { leads: any[]; onOpe
   const cols = LEAD_KANBAN_ORDER.map((s) => ({ stage: s, items: leads.filter((l) => l.stage === s) }));
   return (
     <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50/50 p-3" data-lenis-prevent>
-      <div className="flex gap-3 min-w-[1180px]">
+      <div className="flex gap-3 min-w-[1180px] items-start">
         {cols.map((c) => (
-          <div key={c.stage} className="flex-1 min-w-[190px] rounded-2xl bg-white border border-slate-200 p-2 space-y-2"
+          <div key={c.stage} className="flex-1 min-w-[190px] rounded-2xl bg-white border border-slate-200 p-2 flex flex-col max-h-[62vh]"
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault();
@@ -3984,10 +4219,11 @@ export function LeadsKanban({ leads, onOpen, onDropMove }: { leads: any[]; onOpe
               setDragId(null);
               if (l && c.stage !== l.stage) onDropMove(l, c.stage);
             }}>
-            <div className="flex items-center justify-between px-1">
+            <div className="flex items-center justify-between px-1 pb-1.5 sticky top-0 bg-white z-10">
               <span className={`text-[11px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border ${LEAD_STAGE_TONE[c.stage] || LEAD_STAGE_TONE.New}`}>{c.stage}</span>
               <span className="text-[11px] font-extrabold text-slate-400">{c.items.length}</span>
             </div>
+            <div className="space-y-2 overflow-y-auto pr-0.5" data-lenis-prevent>
             {c.items.map((l) => (
               <div key={l.id} draggable onDragStart={() => setDragId(l.id)}
                 onClick={() => onOpen(l)}
@@ -3997,6 +4233,7 @@ export function LeadsKanban({ leads, onOpen, onDropMove }: { leads: any[]; onOpe
                 <div className="font-mono text-[10px] text-slate-400">{l.id} • ₹{Number(l.value || 0).toLocaleString('en-IN')}</div>
               </div>
             ))}
+            </div>
           </div>
         ))}
       </div>
@@ -5395,14 +5632,34 @@ export function SkillsPanel() {
       <h3 className="text-base font-extrabold text-slate-900">Verification, Suspension & Access Control</h3>
       {error && <PanelError message={error} onRetry={load} />}
       <input className={inputCls} placeholder="Reason (recorded with actor + timestamp — required)" value={reason} onChange={(e) => setReason(e.target.value)} />
-      <div className="text-xs font-extrabold text-slate-700">Companies — verify / suspend / reactivate</div>
-      <div className="space-y-2">{tenants.map((t) => (
+      <div className="text-xs font-extrabold text-slate-700">Companies — verify / suspend / reactivate ({tenants.length})</div>
+      <div className="space-y-2 md:hidden">{tenants.map((t) => (
         <OrgRow key={t.id} t={t} reason={reason} act={act} confirm={confirm} />
       ))}</div>
-      <div className="text-xs font-extrabold text-slate-700">Users — suspend / reactivate (revokes sessions)</div>
-      <div className="space-y-2">{users.map((u) => (
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
+        <table className="w-full text-left text-xs min-w-[720px]">
+          <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
+            <th className="px-4 py-3">Organization</th><th className="px-4 py-3">Verification</th><th className="px-4 py-3">Account</th><th className="px-4 py-3 text-right">Actions</th>
+          </tr></thead>
+          <tbody className="divide-y divide-slate-100">
+            {tenants.map((t) => <OrgTableRow key={t.id} t={t} reason={reason} act={act} confirm={confirm} />)}
+          </tbody>
+        </table>
+      </div>
+      <div className="text-xs font-extrabold text-slate-700">Users — suspend / reactivate (revokes sessions) ({users.length})</div>
+      <div className="space-y-2 md:hidden">{users.map((u) => (
         <UserRow key={u.id} u={u} reason={reason} act={act} confirm={confirm} />
       ))}</div>
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
+        <table className="w-full text-left text-xs min-w-[640px]">
+          <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
+            <th className="px-4 py-3">User</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
+          </tr></thead>
+          <tbody className="divide-y divide-slate-100">
+            {users.map((u) => <UserTableRow key={u.id} u={u} reason={reason} act={act} confirm={confirm} />)}
+          </tbody>
+        </table>
+      </div>
       <div className="text-xs font-extrabold text-slate-700">Permission exceptions — explicit grant/revoke over role templates (§4.2)</div>
       <form onSubmit={saveException} className="grid grid-cols-1 sm:grid-cols-4 gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200">
         <input className={kitInput} placeholder="user@company.com *" value={excForm.email} onChange={(e) => setExcForm({ ...excForm, email: e.target.value })} />
@@ -5430,34 +5687,87 @@ export function SkillsPanel() {
   );
 }
 
-function OrgRow({ t, reason, act, confirm }: { t: any; reason: string; act: (p: Promise<unknown>) => void; confirm: (title: string, body: string, label: string, run: () => unknown) => void }) {
+function useDirectoryApi(): any {
   const [api, setApi] = useState<any>(null);
   useEffect(() => { import('../../shared/enterprise/phaseApi').then((m) => setApi(m.directoryApi)); }, []);
+  return api;
+}
+
+function orgMenuItems(t: any, reason: string, act: (p: Promise<unknown>) => void, confirm: (title: string, body: string, label: string, run: () => unknown) => void, api: any) {
+  return [
+    { label: 'Verify organization', onSelect: () => act(api.verifyTenant(t.id, 'approve')) },
+    { label: 'Reject verification', danger: true, onSelect: () => confirm('Reject verification', `Reject verification for ${t.legalName || t.name}?`, 'Reject', () => act(api.verifyTenant(t.id, 'reject'))) },
+    { label: 'Suspend organization', danger: true, onSelect: () => confirm('Suspend organization', `Suspend ${t.legalName || t.name}? All member sessions are revoked immediately.`, 'Suspend', () => act(reason ? api.suspendTenant(t.id, reason) : Promise.reject(new Error('Enter a reason first.')))) },
+    { label: 'Reactivate organization', onSelect: () => act(api.suspendTenant(t.id, reason || 'reactivated', 'reactivate')) },
+  ];
+}
+
+function userMenuItems(u: any, reason: string, act: (p: Promise<unknown>) => void, confirm: (title: string, body: string, label: string, run: () => unknown) => void, api: any) {
+  return u.status === 'Active'
+    ? [{ label: 'Suspend user', danger: true, onSelect: () => confirm('Suspend user', `Suspend ${u.email}? Sessions are revoked immediately.`, 'Suspend', () => act(reason ? api.setUserStatus(u.id, 'Suspended', reason) : Promise.reject(new Error('Enter a reason first.')))) }]
+    : [{ label: 'Reactivate user', onSelect: () => act(api.setUserStatus(u.id, 'Active', reason || 'reactivated')) }];
+}
+
+function OrgRow({ t, reason, act, confirm }: { t: any; reason: string; act: (p: Promise<unknown>) => void; confirm: (title: string, body: string, label: string, run: () => unknown) => void }) {
+  const api = useDirectoryApi();
   if (!api) return null;
   return (
-    <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
-      <span className="min-w-0 truncate">{t.id} • {t.legalName || t.name} • verification <strong>{t.verificationStatus}</strong> • account <strong>{t.accountStatus}</strong></span>
-      <RowMenu label="Organization actions" items={[
-        { label: 'Verify organization', onSelect: () => act(api.verifyTenant(t.id, 'approve')) },
-        { label: 'Reject verification', danger: true, onSelect: () => confirm('Reject verification', `Reject verification for ${t.legalName || t.name}?`, 'Reject', () => act(api.verifyTenant(t.id, 'reject'))) },
-        { label: 'Suspend organization', danger: true, onSelect: () => confirm('Suspend organization', `Suspend ${t.legalName || t.name}? All member sessions are revoked immediately.`, 'Suspend', () => act(reason ? api.suspendTenant(t.id, reason) : Promise.reject(new Error('Enter a reason first.')))) },
-        { label: 'Reactivate organization', onSelect: () => act(api.suspendTenant(t.id, reason || 'reactivated', 'reactivate')) },
-      ]} />
+    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="font-extrabold text-slate-900 text-sm truncate">{t.legalName || t.name}</div>
+          <div className="font-mono text-[11px] text-slate-500">{t.id}</div>
+        </div>
+        <RowMenu label="Organization actions" items={orgMenuItems(t, reason, act, confirm, api)} />
+      </div>
+      <div className="flex gap-1.5">
+        <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">{t.verificationStatus}</span>
+        <span className="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 font-bold text-[11px]">{t.accountStatus}</span>
+      </div>
     </div>
   );
 }
 
-function UserRow({ u, reason, act, confirm }: { u: any; reason: string; act: (p: Promise<unknown>) => void; confirm: (title: string, body: string, label: string, run: () => unknown) => void }) {
-  const [api, setApi] = useState<any>(null);
-  useEffect(() => { import('../../shared/enterprise/phaseApi').then((m) => setApi(m.directoryApi)); }, []);
+function OrgTableRow({ t, reason, act, confirm }: { t: any; reason: string; act: (p: Promise<unknown>) => void; confirm: (title: string, body: string, label: string, run: () => unknown) => void }) {
+  const api = useDirectoryApi();
   if (!api) return null;
   return (
-    <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
-      <span className="min-w-0 truncate">{u.email} • {u.role} • <strong>{u.status}</strong></span>
-      <RowMenu label="User actions" items={u.status === 'Active'
-        ? [{ label: 'Suspend user', danger: true, onSelect: () => confirm('Suspend user', `Suspend ${u.email}? Sessions are revoked immediately.`, 'Suspend', () => act(reason ? api.setUserStatus(u.id, 'Suspended', reason) : Promise.reject(new Error('Enter a reason first.')))) }]
-        : [{ label: 'Reactivate user', onSelect: () => act(api.setUserStatus(u.id, 'Active', reason || 'reactivated')) }]} />
+    <tr className="hover:bg-slate-50/70">
+      <td className="px-4 py-3"><div className="font-bold text-slate-900">{t.legalName || t.name}</div><div className="font-mono text-[11px] text-slate-500">{t.id}</div></td>
+      <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">{t.verificationStatus}</span></td>
+      <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 font-bold text-[11px]">{t.accountStatus}</span></td>
+      <td className="px-4 py-3"><div className="flex justify-end"><RowMenu label="Organization actions" items={orgMenuItems(t, reason, act, confirm, api)} /></div></td>
+    </tr>
+  );
+}
+
+function UserRow({ u, reason, act, confirm }: { u: any; reason: string; act: (p: Promise<unknown>) => void; confirm: (title: string, body: string, label: string, run: () => unknown) => void }) {
+  const api = useDirectoryApi();
+  if (!api) return null;
+  return (
+    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="font-extrabold text-slate-900 text-sm truncate">{u.email}</div>
+          <div className="font-mono text-[11px] text-slate-500">{u.role}</div>
+        </div>
+        <RowMenu label="User actions" items={userMenuItems(u, reason, act, confirm, api)} />
+      </div>
+      <div><span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${u.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>{u.status}</span></div>
     </div>
+  );
+}
+
+function UserTableRow({ u, reason, act, confirm }: { u: any; reason: string; act: (p: Promise<unknown>) => void; confirm: (title: string, body: string, label: string, run: () => unknown) => void }) {
+  const api = useDirectoryApi();
+  if (!api) return null;
+  return (
+    <tr className="hover:bg-slate-50/70">
+      <td className="px-4 py-3 font-bold">{u.email}</td>
+      <td className="px-4 py-3 font-mono">{u.role}</td>
+      <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${u.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>{u.status}</span></td>
+      <td className="px-4 py-3"><div className="flex justify-end"><RowMenu label="User actions" items={userMenuItems(u, reason, act, confirm, api)} /></div></td>
+    </tr>
   );
 }
 
@@ -5973,15 +6283,20 @@ export function JobDrawerActions({ job, requirement, onDone }: { job: any; requi
 
 /* ---------------- Jobs Kanban (drop opens confirmation, never writes directly) ---------------- */
 const KANBAN_ORDER = ['Draft', 'Pending Review', 'Approved', 'Published', 'Paused', 'Closed', 'Archived'];
+const KANBAN_TONE: Record<string, string> = {
+  Draft: 'bg-slate-100 text-slate-600 border-slate-200', 'Pending Review': 'bg-amber-50 text-amber-700 border-amber-200',
+  Approved: 'bg-blue-50 text-blue-700 border-blue-200', Published: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  Paused: 'bg-orange-50 text-orange-700 border-orange-200', Closed: 'bg-stone-100 text-stone-500 border-stone-200', Archived: 'bg-slate-200 text-slate-500 border-slate-300',
+};
 
 export function JobsKanban({ jobs, onOpen, onDropMove }: { jobs: any[]; onOpen: (j: any) => void; onDropMove: (j: any, to: string) => void }) {
   const [dragId, setDragId] = useState<string | null>(null);
   const cols = KANBAN_ORDER.map((s) => ({ status: s, items: jobs.filter((j) => j.status === s) }));
   return (
     <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50/50 p-3" data-lenis-prevent>
-      <div className="flex gap-3 min-w-[1180px]">
+      <div className="flex gap-3 min-w-[1180px] items-start">
         {cols.map((c) => (
-          <div key={c.status} className="flex-1 min-w-[220px] rounded-2xl bg-white border border-slate-200 p-2 space-y-2"
+          <div key={c.status} className="flex-1 min-w-[220px] rounded-2xl bg-white border border-slate-200 p-2 flex flex-col max-h-[62vh]"
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault();
@@ -5989,10 +6304,11 @@ export function JobsKanban({ jobs, onOpen, onDropMove }: { jobs: any[]; onOpen: 
               setDragId(null);
               if (j && c.status !== j.status) onDropMove(j, c.status);
             }}>
-            <div className="flex items-center justify-between px-1">
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">{c.status}</span>
+            <div className="flex items-center justify-between px-1 pb-1.5 sticky top-0 bg-white z-10">
+              <span className={`text-[11px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border ${KANBAN_TONE[c.status] || KANBAN_TONE.Draft}`}>{c.status}</span>
               <span className="text-[11px] font-extrabold text-slate-400">{c.items.length}</span>
             </div>
+            <div className="space-y-2 overflow-y-auto pr-0.5" data-lenis-prevent>
             {c.items.slice(0, 20).map((j) => {
               const next = [...(JOB_TRANSITIONS[j.status] || []), ...(j.status === 'Published' ? ['Approved'] : []), ...(j.status === 'Closed' ? ['Published', 'Paused'] : [])][0];
               return (
@@ -6011,6 +6327,7 @@ export function JobsKanban({ jobs, onOpen, onDropMove }: { jobs: any[]; onOpen: 
               );
             })}
             {c.items.length > 20 && <div className="text-[10px] text-slate-400 font-bold px-1">+{c.items.length - 20} more — refine filters</div>}
+            </div>
           </div>
         ))}
       </div>

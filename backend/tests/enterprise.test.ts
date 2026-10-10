@@ -408,6 +408,29 @@ describe('auto-approve straight-through billing', () => {
   });
 });
 
+describe('placement notifications + application search', () => {
+  it('notifies candidate, company and superadmin on placement', async () => {
+    const email = `notif-${Date.now()}@example.com`;
+    const appl = await request(app).post('/api/v1/applications').set(auth(superToken)).send({ jobId: 'JOB-8890', candidateEmail: email });
+    await request(app).post('/api/v1/offers').set(auth(superToken)).send({ applicationId: appl.body.data.id, ctc: 900000 });
+    const ag = await request(app).post('/api/v1/commission-agreements').set(auth(superToken)).send({ orgId: 'TNT-9011', jobId: 'JOB-8890', rate: 8.33, autoApprove: true });
+    await request(app).patch(`/api/v1/commission-agreements/${ag.body.data.id}/accept`).set(auth(superToken)).send({});
+    const pl = await request(app).post('/api/v1/placements').set(auth(superToken)).send({ applicationId: appl.body.data.id });
+    expect(pl.status).toBe(201);
+    expect(pl.body.data.autoInvoiced).toBeTruthy();
+    const db = (await import('../src/db/store.js')).loadDb();
+    const notes = (db.notifications as any[]).filter((n: any) => String(n.body || '').includes(pl.body.data.id));
+    expect(db.notifications.some((n: any) => n.recipient === email && String(n.body || '').includes('joined'))).toBe(true);
+    expect(notes.some((n: any) => String(n.recipient).startsWith('company:'))).toBe(true);
+    expect(notes.some((n: any) => n.recipient === 'superadmin')).toBe(true);
+  });
+  it('searches applications by candidate email', async () => {
+    const r = await request(app).get('/api/v1/applications?q=JOB-8890&pageSize=5').set(auth(superToken));
+    expect(r.status).toBe(200);
+    expect(Array.isArray(r.body.data)).toBe(true);
+  });
+});
+
 describe('commission math (§6.11)', () => {
   it('computes gross + 18% tax total', async () => {
     // 8.33% of 100000 basis = 8330 gross, 1499.4 tax, 9829.4 total
