@@ -469,6 +469,32 @@ commercialRouter.post('/agreement-templates/:id/instantiate', requireAuth(['supe
   db.commissionAgreements.unshift(ag); audit(ctx.email, `COMMISSION_AGREEMENT_FROM_TEMPLATE:${ag.id}<-${t.id}v${t.version}`, orgId, 'commission', ag.id, req.ip); persist();
   res.status(201).json({ success: true, data: ag });
 });
+/** Agreement resolution for a hire: job-specific agreement wins, else the org-wide default. Must be Approved + company-accepted. */
+export function matchAgreement(db: any, app: { orgId?: string; jobId?: string }): any {
+  const org = (db.commissionAgreements as any[]).filter((a: any) => a.orgId === app.orgId && a.status === 'Approved' && a.companyAccepted);
+  return org.find((a: any) => a.jobId && app.jobId && a.jobId === app.jobId) || org.find((a: any) => !a.jobId) || null;
+}
+export function feePreview(agreement: any, feeBasis: number): any {
+  const basisType = agreement.basisType === 'monthly_ctc' ? 'monthly_ctc' : 'annual_ctc';
+  const months = basisType === 'monthly_ctc' ? Number(agreement.contractMonths || 12) : 1;
+  const gross = agreement.feeModel === 'fixed' ? Number(agreement.fixedFee || 0) : +(Number(feeBasis || 0) * months * Number(agreement.rate || 0) / 100).toFixed(2);
+  const tax = +(gross * 18 / 100).toFixed(2);
+  return { basisType, months, feeBasis: Number(feeBasis || 0), rate: agreement.rate, gross, tax, total: +(gross + tax).toFixed(2), paymentTermsDays: agreement.paymentTermsDays ?? 30, replacementDays: agreement.replacementDays ?? 90 };
+}
+// Fee math preview for a hire: which agreement applies + computed fee. Drives the company Hire confirm.
+commercialRouter.get('/commission-agreements/match', requireAuth(['employer','superadmin','company_admin','hiring_manager','finance_admin','employee','operations_admin']), (req, res) => {
+  const db = loadDb();
+  const app: any = db.applications.find((a: any) => a.id === req.query.applicationId);
+  if (!app) return res.status(404).json({ success: false, message: 'Application not found.' });
+  const ctx = ctxOf(req);
+  if (!['superadmin','platform_owner','finance_admin','employee','operations_admin'].includes(ctx.role) && app.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Application not found.' });
+  const agreement = matchAgreement(db, app);
+  if (!agreement) return res.status(422).json({ success: false, code: 'NO_AGREEMENT', message: 'No accepted commercial agreement covers this hire. Ask your NexaTalent manager to activate one before recording the joining.' });
+  const offer: any = db.offers.filter((o: any) => o.applicationId === app.id).sort((x: any, y: any) => String(y.createdAt).localeCompare(String(x.createdAt)))[0] || null;
+  const feeBasis = Number(req.query.feeBasis || 0) || Number(offer?.ctc || 0);
+  if (!(feeBasis > 0)) return res.status(422).json({ success: false, code: 'NO_BASIS', message: 'No CTC on record for this application. Enter the fee basis (annual CTC, or monthly CTC for contract hires).', agreement });
+  res.json({ success: true, data: { application: { id: app.id, jobId: app.jobId, orgId: app.orgId, candidateEmail: app.candidateEmail }, agreement, offer: offer ? { id: offer.id, ctc: offer.ctc } : null, preview: feePreview(agreement, feeBasis) } });
+});
 commercialRouter.get('/commission-agreements', requireAuth(), (req, res) => {
   const ctx = ctxOf(req); let rows = loadDb().commissionAgreements as any[];
   if (!['superadmin','platform_owner','finance_admin'].includes(ctx.role)) rows = rows.filter((a) => a.orgId === ctx.tenantId);

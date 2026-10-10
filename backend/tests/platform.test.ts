@@ -501,6 +501,8 @@ describe('requirements rollups + transitions (§6.7)', () => {
     }
     const aa = await request(app).post('/api/v1/applications').set(auth(superToken)).send({ jobId: jobA, candidateEmail: cand });
     const ab = await request(app).post('/api/v1/applications').set(auth(superToken)).send({ jobId: jobB, candidateEmail: cand });
+    const pipeAg = await request(app).post('/api/v1/commission-agreements').set(auth(superToken)).send({ orgId: 'TNT-9011', rate: 9 });
+    await request(app).patch(`/api/v1/commission-agreements/${pipeAg.body.data.id}/accept`).set(auth(superToken)).send({});
     await request(app).post('/api/v1/placements').set(auth(superToken)).send({ applicationId: aa.body.data.id, feeBasis: 1000000 });
     await request(app).post('/api/v1/placements').set(auth(superToken)).send({ applicationId: ab.body.data.id, feeBasis: 1000000 });
     const full = await request(app).get(`/api/v1/requisitions?q=${encodeURIComponent(tag)}`).set(auth(superToken));
@@ -622,6 +624,7 @@ describe('commission duplicate guard (§6.11)', () => {
   it('mints once per placement+trigger and reports via check', async () => {
     const ag = await request(app).post('/api/v1/commission-agreements').set(auth(superToken)).send({ orgId: 'TNT-9011', jobId: 'JOB-9901', rate: 8.33, trigger: 'Joined' });
     expect(ag.status).toBe(201);
+    await request(app).patch(`/api/v1/commission-agreements/${ag.body.data.id}/accept`).set(auth(superToken)).send({});
     const email = `placed-${stamp}@example.com`;
     const appl = await request(app).post('/api/v1/applications').set(auth(superToken)).send({ jobId: 'JOB-9901', candidateEmail: email });
     expect(appl.status).toBe(201);

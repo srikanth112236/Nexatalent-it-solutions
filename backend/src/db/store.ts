@@ -214,6 +214,16 @@ export function loadDb(): DbShape {
           if (r[k] === undefined || r[k] === '') r[k] = ref[k];
         }
       }
+      // Backfill commercial columns on older agreements (slabs, basis, terms).
+      for (const a of (db!.commissionAgreements as any[])) {
+        if (a.hiringType === undefined) a.hiringType = 'Mid-level IT roles';
+        if (a.basisType === undefined) a.basisType = 'annual_ctc';
+        if (a.contractMonths === undefined) a.contractMonths = 12;
+        if (a.paymentTermsDays === undefined) a.paymentTermsDays = 30;
+        if (a.replacementDays === undefined) a.replacementDays = 90;
+        if (a.gstApplicable === undefined) a.gstApplicable = true;
+        if (a.companyAccepted === undefined) { a.companyAccepted = false; a.acceptedAt = null; a.acceptedBy = null; }
+      }
       // Backfill login-tenant links + new columns on seed agencies.
       for (const a of (db!.agencyProfiles as any[])) {
         const ref = (fresh.agencyProfiles as any[]).find((f) => f.id === a.id);

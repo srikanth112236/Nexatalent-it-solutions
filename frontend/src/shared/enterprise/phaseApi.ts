@@ -109,6 +109,7 @@ export const offersPlacementsApi = {
   offer: (body: unknown) => apiClient.post('/api/v1/offers', body),
   place: (applicationId: string, joinDate?: string, feeBasis?: number) => apiClient.post('/api/v1/placements', { applicationId, joinDate, feeBasis }),
   placements: () => apiClient.get('/api/v1/placements'),
+  matchFee: (applicationId: string, feeBasis?: number) => apiClient.get(`/api/v1/commission-agreements/match?applicationId=${encodeURIComponent(applicationId)}${feeBasis ? `&feeBasis=${feeBasis}` : ''}`),
 };
 
 // Phase 3 — monetization

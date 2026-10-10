@@ -72,7 +72,7 @@ function notifyCompany(companyId: string, body: string): void {
 /** Placement-triggered commission creation — dedupe by placement+trigger (§6.11). */
 export function evaluateCommission(p: { placementId?: string; applicationId?: string; jobId?: string; orgId?: string; candidateEmail?: string; stage?: string }): void {
   const db = loadDb();
-  const agreements = db.commissionAgreements.filter((a: any) => (!p.jobId || a.jobId === p.jobId) && a.status === 'Approved');
+  const agreements = db.commissionAgreements.filter((a: any) => a.orgId === p.orgId && a.status === 'Approved' && a.companyAccepted && (!a.jobId || !p.jobId || a.jobId === p.jobId));
   for (const a of agreements) {
     const trigger: string = a.trigger || 'Joined';
     const fired = (trigger === 'Joined' && (p.stage === 'Hired' || p.stage === 'Joined')) || (trigger === 'Offer Accepted' && ['Offer','Selected'].includes(p.stage || ''));

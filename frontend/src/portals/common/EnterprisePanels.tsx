@@ -1419,6 +1419,17 @@ export function OffersPlacementsPanel() {
   const [place, setPlace] = useState({ applicationId: '', joinDate: '', feeBasis: '' });
   const [showOffer, setShowOffer] = useState(false);
   const [showPlace, setShowPlace] = useState(false);
+  const [feeMatch, setFeeMatch] = useState<any>(null);
+  const [feeBusy, setFeeBusy] = useState(false);
+  const checkFee = async () => {
+    if (!place.applicationId.trim()) { setError('Application ID is required.'); return; }
+    setFeeBusy(true); setError(''); setFeeMatch(null);
+    try {
+      const m = unwrapObj(await offersPlacementsApi.matchFee(place.applicationId.trim(), Number(place.feeBasis) || undefined));
+      setFeeMatch(m);
+      if (!place.feeBasis && m?.preview) setPlace((p) => ({ ...p, feeBasis: String(m.preview.feeBasis || '') }));
+    } catch (e) { setError(errMsg(e)); } finally { setFeeBusy(false); }
+  };
   const load = async () => {
     try { setPlacements(unwrapList(await offersPlacementsApi.placements())); }
     catch (e) { setError(errMsg(e)); }
@@ -1438,7 +1449,8 @@ export function OffersPlacementsPanel() {
     try {
       const p = unwrapObj(await offersPlacementsApi.place(place.applicationId, place.joinDate || undefined, Number(place.feeBasis) || 0));
       if (p?.id) setPlacements((x) => [p, ...x]);
-      setOk('Placement recorded — commission engine evaluated.'); setPlace({ applicationId: '', joinDate: '', feeBasis: '' });
+      setOk(`Placement recorded — commission auto-minted under agreement ${p?.agreementId || ''}.`);
+      setPlace({ applicationId: '', joinDate: '', feeBasis: '' }); setFeeMatch(null);
       setShowPlace(false);
       syncAll();
     } catch (e) { setError(errMsg(e)); }
@@ -1465,16 +1477,26 @@ export function OffersPlacementsPanel() {
           </div>
         </form>
       </Modal>
-      <Modal open={showPlace} onClose={() => setShowPlace(false)} title="Record joining" subtitle="Triggers the commission engine">
-        <form onSubmit={mark} className="space-y-3">
-          <Field label="Application ID *"><input className={kitInput} value={place.applicationId} onChange={(e) => setPlace({ ...place, applicationId: e.target.value })} /></Field>
+      <Modal open={showPlace} onClose={() => { setShowPlace(false); setFeeMatch(null); }} title="Record joining" subtitle="Resolves the agreement, previews the fee, then mints placement + commission">
+        <div className="space-y-3">
+          <Field label="Application ID *"><input className={kitInput} value={place.applicationId} onChange={(e) => { setPlace({ ...place, applicationId: e.target.value }); setFeeMatch(null); }} /></Field>
           <Field label="Joining date"><DatePicker value={place.joinDate} onChange={(v) => setPlace({ ...place, joinDate: v })} /></Field>
-          <Field label="Fee basis amount"><input className={kitInput} type="number" value={place.feeBasis} onChange={(e) => setPlace({ ...place, feeBasis: e.target.value })} /></Field>
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setShowPlace(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
-            <button className={btnDark}>Record joining</button>
-          </div>
-        </form>
+          <Field label="Fee basis (annual CTC — or monthly CTC for contract hires; auto-filled from offer)">
+            <input className={kitInput} type="number" value={place.feeBasis} onChange={(e) => { setPlace({ ...place, feeBasis: e.target.value }); setFeeMatch(null); }} />
+          </Field>
+          <button type="button" disabled={feeBusy} onClick={checkFee} className={btnDark}>{feeBusy ? 'Checking…' : 'Check fee…'}</button>
+          {feeMatch?.preview && (
+            <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs font-bold space-y-1">
+              <div>Agreement {feeMatch.agreement?.id} • {feeMatch.agreement?.hiringType} @ {feeMatch.agreement?.rate}%{feeMatch.preview.basisType === 'monthly_ctc' ? ` • monthly × ${feeMatch.preview.months} mo` : ' • annual'}</div>
+              <div>Basis ₹{Number(feeMatch.preview.feeBasis).toLocaleString('en-IN')} → gross ₹{Number(feeMatch.preview.gross).toLocaleString('en-IN')} + GST ₹{Number(feeMatch.preview.tax).toLocaleString('en-IN')} = <strong>₹{Number(feeMatch.preview.total).toLocaleString('en-IN')}</strong></div>
+              <div className="font-medium text-emerald-800">Payable within {feeMatch.preview.paymentTermsDays} days of joining • {feeMatch.preview.replacementDays}-day replacement</div>
+            </div>
+          )}
+          <form onSubmit={mark} className="flex justify-end gap-2">
+            <button type="button" onClick={() => { setShowPlace(false); setFeeMatch(null); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
+            <button className={btnDark}>Record joining{feeMatch?.preview ? ` — ₹${Number(feeMatch.preview.total).toLocaleString('en-IN')}` : ''}</button>
+          </form>
+        </div>
       </Modal>
       {placements.length > 0 && (
         <div className="space-y-2">{placements.map((p) => (
@@ -2299,6 +2321,23 @@ export function SubscriptionsPanel() {
 export function AgreementTemplatesPanel({ templates, onChanged }: { templates: any[]; onChanged: () => void }) {
   const canTemplates = useCan('manage_billing');
   const [error, setError] = useState('');
+  const [slabs, setSlabs] = useState<any[]>([]);
+  const [slabDraft, setSlabDraft] = useState<any[]>([]);
+  const [showSlabs, setShowSlabs] = useState(false);
+  useEffect(() => {
+    (async () => {
+      try {
+        const rows = unwrapList(await billingApi.feeSlabs());
+        setSlabs(rows); setSlabDraft(rows.map((s: any) => ({ ...s })));
+      } catch { setSlabs([]); setSlabDraft([]); }
+    })();
+  }, []);
+  const saveSlabs = async () => {
+    try {
+      const saved = unwrapList(await billingApi.saveFeeSlabs(slabDraft.map((s: any) => ({ hiringType: s.hiringType, rateMin: Number(s.rateMin), rateMax: Number(s.rateMax), note: s.note || '', retainedAllowed: !!s.retainedAllowed, negotiated: !!s.negotiated }))));
+      setSlabs(saved); setSlabDraft(saved.map((s: any) => ({ ...s }))); setShowSlabs(false); syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
   const emptyTpl = { name: '', orgId: '', hiringType: '', rateMin: '', rateMax: '', paymentTermsDays: '30', replacementDays: '90', gstNote: 'GST charged extra as applicable.', ownershipClause: '', duplicatePolicy: '', cancellationTerms: '' };
   const [tplForm, setTplForm] = useState(emptyTpl);
   const [editingTpl, setEditingTpl] = useState('');
@@ -2347,6 +2386,31 @@ export function AgreementTemplatesPanel({ templates, onChanged }: { templates: a
         {canTemplates ? <button type="button" onClick={openTplCreate} className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">+ Template</button> : null}
       </div>
       {error && <PanelError message={error} onRetry={() => setError('')} />}
+      {canTemplates && (
+        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <span className="font-extrabold">Fee slabs by hiring type (superadmin-configured)</span>
+              <InfoTip title="How fee slabs work" body={<><p>Every agreement rate is validated against these slabs: Junior 8.33% · Mid 8.33–10% · Senior 10–12% · Leadership 12–15% · Bulk negotiated. Out-of-slab rates are rejected (422).</p></>} />
+            </div>
+            <button type="button" onClick={() => (showSlabs ? saveSlabs() : setShowSlabs(true))} className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">{showSlabs ? 'Save slabs' : 'Edit slabs'}</button>
+          </div>
+          {showSlabs ? (
+            <div className="space-y-1.5">
+              {slabDraft.map((s: any, ix: number) => (
+                <div key={s.hiringType} className="grid grid-cols-12 gap-1.5 items-center">
+                  <div className="col-span-5 font-bold truncate">{s.hiringType}</div>
+                  <input aria-label={`${s.hiringType} min`} className={kitInput} type="number" step="0.01" value={s.rateMin} onChange={(e) => setSlabDraft((d) => d.map((x, j) => (j === ix ? { ...x, rateMin: e.target.value } : x)))} />
+                  <input aria-label={`${s.hiringType} max`} className={`${kitInput} col-span-2`} type="number" step="0.01" value={s.rateMax} onChange={(e) => setSlabDraft((d) => d.map((x, j) => (j === ix ? { ...x, rateMax: e.target.value } : x)))} />
+                  <input aria-label={`${s.hiringType} note`} className={`${kitInput} col-span-3`} value={s.note || ''} onChange={(e) => setSlabDraft((d) => d.map((x, j) => (j === ix ? { ...x, note: e.target.value } : x)))} placeholder="Note" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="font-medium text-slate-600">{slabs.map((s: any) => `${s.hiringType}: ${s.negotiated ? s.note : `${s.rateMin}%–${s.rateMax}%`}`).join(' • ')}</div>
+          )}
+        </div>
+      )}
       {templates.map((t: any) => (
         <div key={t.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
           <span className="min-w-0 truncate">{t.name} v{t.version} • {t.status}{t.orgId ? ` • ${t.orgId}` : ' • global'} • pay ≤{t.paymentTermsDays}d • repl {t.replacementDays}d{t.history?.length ? ` • ${t.history.length} prior version(s)` : ''}</span>

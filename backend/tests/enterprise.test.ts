@@ -222,6 +222,31 @@ describe('commercial terms: slabs, templates, reminders', () => {
     expect(inst.body.data.basisType).toBe('monthly_ctc');
     expect(inst.body.data.contractMonths).toBe(6);
   });
+  it('previews hire fee and auto-mints the commission on placement', async () => {
+    const ag = await request(app).post('/api/v1/commission-agreements').set(auth(superToken)).send({ orgId: 'TNT-9011', jobId: 'JOB-8890', hiringType: 'Mid-level IT roles', rate: 10 });
+    await request(app).patch(`/api/v1/commission-agreements/${ag.body.data.id}/accept`).set(auth(superToken)).send({});
+    const appl = await request(app).post('/api/v1/applications').set(auth(superToken)).send({ jobId: 'JOB-8890', candidateEmail: `hire-${Date.now()}@example.com` });
+    await request(app).post('/api/v1/offers').set(auth(superToken)).send({ applicationId: appl.body.data.id, ctc: 1000000 });
+    const match = await request(app).get(`/api/v1/commission-agreements/match?applicationId=${appl.body.data.id}`).set(auth(superToken));
+    expect(match.status).toBe(200);
+    expect(match.body.data.preview.gross).toBe(100000);
+    expect(match.body.data.preview.total).toBe(118000);
+    const pl = await request(app).post('/api/v1/placements').set(auth(superToken)).send({ applicationId: appl.body.data.id });
+    expect(pl.status).toBe(201);
+    expect(pl.body.data.agreementId).toBeTruthy();
+    const chk = await request(app).get(`/api/v1/commissions/check?applicationId=${appl.body.data.id}&trigger=Joined`).set(auth(superToken));
+    expect(chk.body.data.duplicate).toBe(true);
+  });
+  it('blocks placement without an accepted agreement', async () => {
+    const appl = await request(app).post('/api/v1/applications').set(auth(superToken)).send({ jobId: 'JOB-8890', candidateEmail: `noag-${Date.now()}@example.com` });
+    const db = (await import('../src/db/store.js')).loadDb();
+    const keep = db.commissionAgreements.filter((a: any) => a.orgId === 'TNT-9011');
+    db.commissionAgreements = db.commissionAgreements.filter((a: any) => a.orgId !== 'TNT-9011');
+    const pl = await request(app).post('/api/v1/placements').set(auth(superToken)).send({ applicationId: appl.body.data.id, feeBasis: 500000 });
+    expect(pl.status).toBe(422);
+    expect(pl.body.code).toBe('NO_AGREEMENT');
+    db.commissionAgreements.unshift(...keep);
+  });
   it('ships a seeded active template with printable HTML body', async () => {
     const all = await request(app).get('/api/v1/agreement-templates').set(auth(superToken));
     const std = all.body.data.find((t: any) => t.id === 'AGT-STD-001');

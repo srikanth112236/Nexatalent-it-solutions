@@ -335,17 +335,23 @@ recruitmentRouter.post('/offers', requireAuth(['employer','superadmin','company_
   emit('application.stage', { ...app, stage: 'Offer' }, app.orgId, ctxOf(req).email);
   res.status(201).json({ success: true, data: offer });
 });
-recruitmentRouter.post('/placements', requireAuth(['employer','superadmin','company_admin','employee','operations_admin']), (req: Request, res: Response) => {
+recruitmentRouter.post('/placements', requireAuth(['employer','superadmin','company_admin','employee','operations_admin']), async (req: Request, res: Response) => {
   const db = loadDb(); const { applicationId, joinDate, feeBasis } = req.body || {};
   const app: any = db.applications.find((a: any) => a.id === applicationId);
   if (!app) return res.status(404).json({ success: false, message: 'Application not found.' });
   if (!['superadmin','platform_owner'].includes(ctxOf(req).role) && app.orgId !== ctxOf(req).tenantId) return res.status(404).json({ success: false, message: 'Application not found.' });
   if (db.placements.find((p: any) => p.applicationId === applicationId)) return res.status(409).json({ success: false, message: 'Placement already recorded.' });
-  const pl = { id: uid('PLC'), applicationId, jobId: app.jobId, orgId: app.orgId, candidateEmail: app.candidateEmail, joinDate: joinDate || nowIso(), feeBasis: Number(feeBasis || 0), status: 'Joined', createdAt: nowIso() };
+  const { matchAgreement } = await import('./commercial.js');
+  const agreement = matchAgreement(db, app);
+  if (!agreement) return res.status(422).json({ success: false, code: 'NO_AGREEMENT', message: 'No accepted commercial agreement covers this hire. Ask your NexaTalent manager to activate one before recording the joining.' });
+  const offer: any = db.offers.filter((o: any) => o.applicationId === app.id).sort((x: any, y: any) => String(y.createdAt).localeCompare(String(x.createdAt)))[0] || null;
+  const basis = Number(feeBasis || 0) || Number(offer?.ctc || 0);
+  if (!(basis > 0)) return res.status(422).json({ success: false, code: 'NO_BASIS', message: 'Fee basis required: enter the annual CTC (or monthly CTC for contract hires).', agreementId: agreement.id });
+  const pl = { id: uid('PLC'), applicationId, jobId: app.jobId, orgId: app.orgId, candidateEmail: app.candidateEmail, joinDate: joinDate || nowIso(), feeBasis: basis, agreementId: agreement.id, status: 'Joined', createdAt: nowIso() };
   db.placements.unshift(pl); app.stage = 'Hired'; app.updatedAt = nowIso();
   audit(ctxOf(req).email, `PLACEMENT_JOINED:${pl.id}`, app.orgId, 'placement', pl.id, req.ip); persist();
-  emit('placement.joined', { placementId: pl.id, applicationId, jobId: app.jobId, orgId: app.orgId, candidateEmail: app.candidateEmail, stage: 'Hired' }, app.orgId, ctxOf(req).email);
-  res.status(201).json({ success: true, data: pl });
+  emit('placement.joined', { placementId: pl.id, applicationId, jobId: app.jobId, orgId: app.orgId, candidateEmail: app.candidateEmail, feeBasis: basis, stage: 'Hired' }, app.orgId, ctxOf(req).email);
+  res.status(201).json({ success: true, data: { ...pl, agreementId: agreement.id } });
 });
 recruitmentRouter.get('/placements', requireAuth(), (req, res) => {
   const ctx = ctxOf(req); let rows = loadDb().placements as any[];
