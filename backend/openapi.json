@@ -50,6 +50,15 @@
 
     "/api/v1/directory/candidates/{id}/360": { "get": { "summary": "Candidate 360: 12 spec tabs", "responses": { "200": { "description": "ok" }, "404": { "description": "not found" } } } },
 
+    "/api/v1/directory/candidates/{id}/info-requests": { "get": { "summary": "List information requests", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Request info (notifies candidate)", "responses": { "201": { "description": "created" } } } },
+
+    "/api/v1/directory/candidates/{id}/info-requests/{reqId}": { "patch": { "summary": "Mark info request Open|Responded|Closed", "responses": { "200": { "description": "ok" } } } },
+
+    "/api/v1/directory/candidates/{id}/deletion-request": { "post": { "summary": "Open privacy deletion request", "responses": { "201": { "description": "created" }, "409": { "description": "already pending" } } } },
+
+    "/api/v1/directory/candidates/{id}/deletion-requests": { "get": { "summary": "List deletion requests", "responses": { "200": { "description": "ok" } } } },
+
+    "/api/v1/directory/candidates/{id}/deletion-requests/{reqId}": { "patch": { "summary": "Approve (anonymize, preserve records) or reject", "responses": { "200": { "description": "ok" }, "422": { "description": "decided" } } } },
     "/api/v1/support-tickets": { "get": { "summary": "Support tickets (platform sees all)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Open ticket", "responses": { "201": { "description": "created" } } } },
 
     "/api/v1/support-tickets/{id}": { "patch": { "summary": "Triage ticket (state machine + staff notes)", "responses": { "200": { "description": "ok" }, "422": { "description": "illegal transition" } } } },

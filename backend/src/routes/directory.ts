@@ -288,15 +288,53 @@ export function completenessOf(c: any): number {
 directoryRouter.get('/directory/candidates', requireAuth(['superadmin','platform_owner','operations_admin','support_admin']), (req, res) => {
   const db = loadDb();
   const canSee = ctxOf(req).permissions.includes('view_sensitive_fields');
+  const q = req.query as Record<string, string>;
   const appCounts: Record<string, number> = {};
+  const latestStage: Record<string, { stage: string; at: string }> = {};
   for (const a of db.applications as any[]) {
     const k = String(a.candidateEmail || '').toLowerCase();
-    if (k) appCounts[k] = (appCounts[k] || 0) + 1;
+    if (!k) continue;
+    appCounts[k] = (appCounts[k] || 0) + 1;
+    const at = String(a.updatedAt || a.createdAt || '');
+    if (!latestStage[k] || at >= latestStage[k].at) latestStage[k] = { stage: a.stage, at };
+  }
+  const lastInterview: Record<string, string> = {};
+  for (const i of db.interviews as any[]) {
+    const k = String(i.candidateEmail || '').toLowerCase();
+    const at = String(i.scheduledAt || i.createdAt || '');
+    if (k && (!lastInterview[k] || at >= lastInterview[k])) lastInterview[k] = at;
   }
   let rows = (db.candidateProfiles as any[]).map((c) => {
     const base = canSee ? c : { ...c, phone: '**********', currentCtc: 'Restricted' };
-    return { ...base, applicationCount: appCounts[String(c.email || '').toLowerCase()] || 0, completeness: completenessOf(c) };
+    const email = String(c.email || '').toLowerCase();
+    const stamps = [c.updatedAt, c.createdAt, latestStage[email]?.at, lastInterview[email]].filter(Boolean).map(String);
+    const lastActivity = stamps.length ? stamps.sort()[stamps.length - 1] : null;
+    return {
+      ...base,
+      applicationCount: appCounts[email] || 0,
+      completeness: completenessOf(c),
+      lastActivity,
+      registrationDate: c.createdAt ? String(c.createdAt).slice(0, 10) : null,
+      recruiter: c.assignedRecruiter || c.submittedBy || null,
+      source: c.source || c.sourceType || null,
+      latestStage: latestStage[email]?.stage || null,
+    };
   });
+  // Spec §6.3 filters — all server-side
+  if (q.status) rows = rows.filter((c) => String(c.status || 'Active') === q.status);
+  if (q.skills) { const s = q.skills.toLowerCase(); rows = rows.filter((c) => String(Array.isArray(c.skills) ? c.skills.join(' ') : (c.skills || '')).toLowerCase().includes(s)); }
+  if (q.expMin !== undefined && q.expMin !== '') rows = rows.filter((c) => Number(c.experienceYears || 0) >= Number(q.expMin));
+  if (q.expMax !== undefined && q.expMax !== '') rows = rows.filter((c) => Number(c.experienceYears || 0) <= Number(q.expMax));
+  if (q.location) { const s = q.location.toLowerCase(); rows = rows.filter((c) => `${c.location || ''} ${c.preferredLocation || ''} ${c.country || ''}`.toLowerCase().includes(s)); }
+  if (q.completeness === 'lt50') rows = rows.filter((c) => c.completeness < 50);
+  else if (q.completeness === 'btw50_80') rows = rows.filter((c) => c.completeness >= 50 && c.completeness <= 80);
+  else if (q.completeness === 'gt80') rows = rows.filter((c) => c.completeness > 80);
+  if (q.stage) rows = rows.filter((c) => c.latestStage === q.stage);
+  if (q.registeredFrom) rows = rows.filter((c) => String(c.createdAt || '') >= q.registeredFrom);
+  if (q.registeredTo) rows = rows.filter((c) => String(c.createdAt || '') <= q.registeredTo + 'T23:59:59');
+  if (q.source) { const s = q.source.toLowerCase(); rows = rows.filter((c) => String(c.source || c.sourceType || '').toLowerCase().includes(s)); }
+  if (q.recruiter) { const s = q.recruiter.toLowerCase(); rows = rows.filter((c) => `${c.assignedRecruiter || ''} ${c.submittedBy || ''}`.toLowerCase().includes(s)); }
+  if (q.q) { const s = q.q.toLowerCase(); rows = rows.filter((c) => `${c.id} ${c.name} ${c.email} ${c.roleTitle}`.toLowerCase().includes(s)); }
   const { page, pageSize } = paginate.parse(req.query);
   res.json({ success: true, ...paged(rows, page, pageSize) });
 });
@@ -317,7 +355,9 @@ directoryRouter.get('/directory/candidates/:id/360', requireAuth(['superadmin','
     stageHistory: (db.stageHistory as any[]).filter((h) => appIds.has(h.applicationId)).slice(0, 200),
     interviews: (db.interviews as any[]).filter((i) => String(i.candidateEmail || '').toLowerCase() === email).slice(0, 200),
     documents: (db.documents as any[]).filter((d) => String(d.ownerEmail || '').toLowerCase() === email).map(({ ...d }) => d).slice(0, 100),
-    consents: (db.consents as any[]).filter((x) => String(x.email || '').toLowerCase() === email),
+    consents: (db.consents as any[]).filter((x) => String(x.email).toLowerCase() === email),
+    infoRequests: (db.candidateInfoRequests as any[]).filter((r) => r.candidateId === c.id).slice(0, 100),
+    deletionRequests: (db.privacyRequests as any[]).filter((r) => r.candidateId === c.id).slice(0, 100),
     activity: (db.auditLogs as any[]).filter((l) => l.recordId === c.id || String(l.actor).toLowerCase() === email).slice(0, 100),
   } });
 });
@@ -327,7 +367,7 @@ directoryRouter.put('/directory/candidates/:id', requireAuth(['superadmin','plat
   const db = loadDb(); const c: any = db.candidateProfiles.find((x: any) => x.id === req.params.id);
   if (!c) return res.status(404).json({ success: false, message: 'Not found.' });
   const b: any = req.body || {};
-  for (const k of ['name','email','phone','headline','roleTitle','experienceYears','location','country','currentCtc','expectedCtc','noticePeriod','skills','summary','education','certifications','visibility','stage']) {
+  for (const k of ['name','email','phone','headline','roleTitle','experienceYears','location','preferredLocation','country','currentCtc','expectedCtc','noticePeriod','skills','summary','education','certifications','visibility','stage','assignedRecruiter','source']) {
     if (b[k] !== undefined) c[k] = b[k];
   }
   c.updatedAt = nowIso();
@@ -341,8 +381,124 @@ directoryRouter.patch('/directory/candidates/:id/status', requireAuth(['superadm
   const s = String(req.body.status);
   if (!['Active','Suspended','Blocked'].includes(s)) return res.status(400).json({ success: false, message: 'Status must be Active|Suspended|Blocked.' });
   const from = c.status; c.status = s; c.statusReason = String(req.body.reason); c.statusAt = nowIso();
+  if (req.body.reviewDate) c.statusReviewDate = String(req.body.reviewDate).slice(0, 10);
+  else delete c.statusReviewDate;
+  // Revoke candidate sessions where suspension must take effect immediately
+  let sessionsRevoked = 0;
+  if (s !== 'Active' && c.email) {
+    const before = db.sessions.length;
+    db.sessions = db.sessions.filter((x: any) => String(x.email).toLowerCase() !== String(c.email).toLowerCase());
+    sessionsRevoked = before - db.sessions.length;
+  }
   audit(ctxOf(req).email, `CANDIDATE_${s.toUpperCase()}:${c.id} ${from}->${s}`, 'TNT-GLOBAL', 'candidate', c.id, req.ip); persist();
+  res.json({ success: true, data: c, sessionsRevoked });
+});
+// Soft delete (status Deleted) + guarded permanent deletion (§6.3)
+directoryRouter.delete('/directory/candidates/:id', requireAuth(['superadmin','platform_owner']), requirePermission('delete'), (req, res) => {
+  const db = loadDb(); const c: any = db.candidateProfiles.find((x: any) => x.id === req.params.id);
+  if (!c) return res.status(404).json({ success: false, message: 'Not found.' });
+  if (c.status === 'Deleted') return res.status(409).json({ success: false, message: 'Candidate already soft-deleted. Use permanent deletion to purge.' });
+  const reason = String((req.body as any)?.reason || req.query.reason || '');
+  if (!reason) return res.status(400).json({ success: false, message: 'Deletion reason required.' });
+  c.status = 'Deleted'; c.statusReason = reason; c.statusAt = nowIso(); c.visibility = 'private'; c.updatedAt = nowIso();
+  audit(ctxOf(req).email, `CANDIDATE_DELETED:${c.id}`, 'TNT-GLOBAL', 'candidate', c.id, req.ip); persist();
   res.json({ success: true, data: c });
+});
+directoryRouter.delete('/directory/candidates/:id/permanent', requireAuth(['superadmin','platform_owner']), requirePermission('delete'), (req, res) => {
+  const db = loadDb(); const i = db.candidateProfiles.findIndex((x: any) => x.id === req.params.id);
+  if (i < 0) return res.status(404).json({ success: false, message: 'Not found.' });
+  const c: any = db.candidateProfiles[i];
+  if (c.status !== 'Deleted') return res.status(422).json({ success: false, message: 'Soft-delete first. Permanent purge requires status Deleted.' });
+  const email = String(c.email || '').toLowerCase();
+  const blockers: string[] = [];
+  const nApps = (db.applications as any[]).filter((a) => String(a.candidateEmail).toLowerCase() === email).length;
+  const nIvs = (db.interviews as any[]).filter((x) => String(x.candidateEmail).toLowerCase() === email).length;
+  const nPlc = (db.placements as any[]).filter((x) => String(x.candidateEmail).toLowerCase() === email).length;
+  const nCom = (db.commissions as any[]).filter((x) => String(x.candidateEmail).toLowerCase() === email).length;
+  if (nApps) blockers.push(`${nApps} application(s)`);
+  if (nIvs) blockers.push(`${nIvs} interview(s)`);
+  if (nPlc) blockers.push(`${nPlc} placement(s)`);
+  if (nCom) blockers.push(`${nCom} commission record(s)`);
+  if (blockers.length > 0) return res.status(422).json({ success: false, message: `Legally required records preserved: ${blockers.join(', ')}. Use anonymized deletion request instead.` });
+  const [removed] = db.candidateProfiles.splice(i, 1);
+  db.documents = (db.documents as any[]).filter((d) => String(d.ownerEmail || '').toLowerCase() !== email);
+  // Consents + audit trail are preserved as deletion evidence.
+  audit(ctxOf(req).email, `CANDIDATE_PURGED:${c.id}`, 'TNT-GLOBAL', 'candidate', c.id, req.ip); persist();
+  res.json({ success: true, data: { id: removed.id } });
+});
+// Information requests (§6.3 — ask the candidate for more data, tracked)
+directoryRouter.get('/directory/candidates/:id/info-requests', requireAuth(['superadmin','platform_owner','operations_admin']), (req, res) => {
+  if (!loadDb().candidateProfiles.some((x: any) => x.id === req.params.id)) return res.status(404).json({ success: false, message: 'Not found.' });
+  res.json({ success: true, data: (loadDb().candidateInfoRequests as any[]).filter((r) => r.candidateId === req.params.id) });
+});
+directoryRouter.post('/directory/candidates/:id/info-requests', requireAuth(['superadmin','platform_owner','operations_admin']), (req: Request, res: Response) => {
+  const db = loadDb(); const c: any = db.candidateProfiles.find((x: any) => x.id === req.params.id);
+  if (!c) return res.status(404).json({ success: false, message: 'Not found.' });
+  const { message } = req.body || {};
+  if (!message || !String(message).trim()) return res.status(400).json({ success: false, message: 'message required.' });
+  const row = { id: uid('INFO'), candidateId: c.id, email: c.email, message: String(message).slice(0, 2000), status: 'Open', by: ctxOf(req).email, createdAt: nowIso() };
+  db.candidateInfoRequests.unshift(row);
+  db.notifications.unshift({ id: uid('NOTIF'), recipient: c.email, kind: 'info-request', body: `NexaTalent needs more information: ${String(message).slice(0, 140)}`, channel: 'in-app', status: 'queued', createdAt: nowIso(), tenantId: 'TNT-GLOBAL' });
+  audit(ctxOf(req).email, `CANDIDATE_INFO_REQUESTED:${c.id}`, 'TNT-GLOBAL', 'candidate', c.id, req.ip); persist();
+  res.status(201).json({ success: true, data: row });
+});
+directoryRouter.patch('/directory/candidates/:id/info-requests/:reqId', requireAuth(['superadmin','platform_owner','operations_admin']), (req, res) => {
+  const db = loadDb();
+  const r: any = (db.candidateInfoRequests as any[]).find((x) => x.id === req.params.reqId && x.candidateId === req.params.id);
+  if (!r) return res.status(404).json({ success: false, message: 'Not found.' });
+  const s = String(req.body.status);
+  if (!['Open','Responded','Closed'].includes(s)) return res.status(400).json({ success: false, message: 'Status must be Open|Responded|Closed.' });
+  r.status = s; r.updatedAt = nowIso();
+  audit(ctxOf(req).email, `CANDIDATE_INFO_${s.toUpperCase()}:${r.candidateId}`, 'TNT-GLOBAL', 'candidate', r.candidateId, req.ip); persist();
+  res.json({ success: true, data: r });
+});
+// Privacy deletion requests (§6.3 — approve anonymizes PII, preserves financial/audit records)
+directoryRouter.get('/directory/candidates/:id/deletion-requests', requireAuth(['superadmin','platform_owner','operations_admin']), (req, res) => {
+  if (!loadDb().candidateProfiles.some((x: any) => x.id === req.params.id)) return res.status(404).json({ success: false, message: 'Not found.' });
+  res.json({ success: true, data: (loadDb().privacyRequests as any[]).filter((r) => r.candidateId === req.params.id) });
+});
+directoryRouter.post('/directory/candidates/:id/deletion-request', requireAuth(['superadmin','platform_owner']), (req: Request, res: Response) => {
+  const db = loadDb(); const c: any = db.candidateProfiles.find((x: any) => x.id === req.params.id);
+  if (!c) return res.status(404).json({ success: false, message: 'Not found.' });
+  const { reason } = req.body || {};
+  if (!reason || !String(reason).trim()) return res.status(400).json({ success: false, message: 'reason required.' });
+  if ((db.privacyRequests as any[]).some((r) => r.candidateId === c.id && r.status === 'Pending')) {
+    return res.status(409).json({ success: false, message: 'A deletion request is already pending for this candidate.' });
+  }
+  const row = { id: uid('PRV'), candidateId: c.id, email: c.email, type: 'deletion', reason: String(reason).slice(0, 2000), status: 'Pending', by: ctxOf(req).email, createdAt: nowIso() };
+  db.privacyRequests.unshift(row);
+  audit(ctxOf(req).email, `CANDIDATE_DELETION_REQUESTED:${c.id}`, 'TNT-GLOBAL', 'candidate', c.id, req.ip); persist();
+  res.status(201).json({ success: true, data: row });
+});
+directoryRouter.patch('/directory/candidates/:id/deletion-requests/:reqId', requireAuth(['superadmin','platform_owner']), (req, res) => {
+  const db = loadDb();
+  const r: any = (db.privacyRequests as any[]).find((x) => x.id === req.params.reqId && x.candidateId === req.params.id);
+  if (!r) return res.status(404).json({ success: false, message: 'Not found.' });
+  if (r.status !== 'Pending') return res.status(422).json({ success: false, message: `Request already ${r.status}.` });
+  const decision = String(req.body.decision);
+  if (!['approve','reject'].includes(decision)) return res.status(400).json({ success: false, message: 'decision must be approve|reject.' });
+  const ctx = ctxOf(req);
+  r.status = decision === 'approve' ? 'Approved' : 'Rejected';
+  r.decidedBy = ctx.email; r.decidedAt = nowIso(); r.note = String(req.body.note || '').slice(0, 1000);
+  let anonymized: any = null;
+  if (decision === 'approve') {
+    const c: any = db.candidateProfiles.find((x: any) => x.id === r.candidateId);
+    if (c) {
+      // Anonymize direct identifiers; keep email + IDs so applications, interviews,
+      // placements, commissions and audit history stay lawfully linked.
+      c.name = 'Deleted User';
+      c.phone = ''; c.headline = ''; c.location = ''; c.preferredLocation = ''; c.country = '';
+      c.summary = ''; c.objectives = ''; c.skills = ''; c.education = ''; c.certifications = '';
+      c.projects = ''; c.links = {}; c.resumeRef = ''; c.currentCtc = ''; c.expectedCtc = '';
+      c.visibility = 'private'; c.status = 'Deleted'; c.statusReason = `deletion-request ${r.id}`; c.statusAt = nowIso();
+      c.anonymizedAt = nowIso(); c.updatedAt = nowIso();
+      anonymized = { id: c.id, status: c.status };
+      const con: any = db.consents.find((x: any) => String(x.email).toLowerCase() === String(c.email).toLowerCase());
+      if (con) { con.marketing = false; con.withdrawn = true; con.withdrawnAt = nowIso(); }
+    }
+  }
+  audit(ctx.email, `CANDIDATE_DELETION_${r.status.toUpperCase()}:${r.candidateId}`, 'TNT-GLOBAL', 'candidate', r.candidateId, req.ip); persist();
+  res.json({ success: true, data: { request: r, anonymized } });
 });
 // Audit logs with filters
 directoryRouter.get('/audit-logs', requireAuth(['superadmin','platform_owner','operations_admin']), (req, res) => {

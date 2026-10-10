@@ -271,6 +271,97 @@ describe('invoice draft lifecycle + documents (§6.10)', () => {
   });
 });
 
+describe('candidate directory filters (§6.3)', () => {
+  it('enriches rows and applies every server-side filter', async () => {
+    const all = await request(app).get('/api/v1/directory/candidates?page=1&pageSize=100').set(auth(superToken));
+    expect(all.status).toBe(200);
+    expect(all.body.data.length).toBeGreaterThan(0);
+    const row = all.body.data[0];
+    for (const k of ['applicationCount', 'completeness', 'lastActivity', 'registrationDate', 'recruiter', 'source', 'latestStage']) {
+      expect(row).toHaveProperty(k);
+    }
+    const exp = await request(app).get('/api/v1/directory/candidates?expMin=5').set(auth(superToken));
+    for (const c of exp.body.data) expect(Number(c.experienceYears || 0)).toBeGreaterThanOrEqual(5);
+    const st = await request(app).get('/api/v1/directory/candidates?status=Active').set(auth(superToken));
+    for (const c of st.body.data) expect(String(c.status || 'Active')).toBe('Active');
+    const comp = await request(app).get('/api/v1/directory/candidates?completeness=gt80').set(auth(superToken));
+    for (const c of comp.body.data) expect(c.completeness).toBeGreaterThan(80);
+    const q = await request(app).get('/api/v1/directory/candidates?q=CND-9041').set(auth(superToken));
+    expect(q.body.data.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('candidate status, deletion and privacy workflows (§6.3)', () => {
+  const email = `flow-${stamp}@example.com`;
+  const password = 'FlowPass123';
+  let pid = '';
+  let userId = '';
+  it('creates profile + user, revokes sessions on suspend with review date', async () => {
+    const p = await request(app).post('/api/v1/candidates').set(auth(superToken)).send({ name: 'Flow Case', email, roleTitle: 'QA Engineer', experienceYears: 3 });
+    expect(p.status).toBe(201);
+    pid = p.body.data.id;
+    const u = await request(app).post('/api/v1/users').set(auth(superToken)).send({ name: 'Flow Case', email, role: 'candidate', tenantId: 'TNT-CANDIDATE', password });
+    userId = u.body.data.id;
+    const l = await login(email, password);
+    expect(l.status).toBe(200);
+    const s = await request(app).patch(`/api/v1/directory/candidates/${pid}/status`).set(auth(superToken)).send({ status: 'Suspended', reason: 'test suspension', reviewDate: '2027-01-15' });
+    expect(s.status).toBe(200);
+    expect(s.body.data.statusReviewDate).toBe('2027-01-15');
+    expect(s.body.sessionsRevoked).toBeGreaterThanOrEqual(1);
+    const r = await request(app).patch(`/api/v1/directory/candidates/${pid}/status`).set(auth(superToken)).send({ status: 'Active', reason: 'review passed' });
+    expect(r.body.data.status).toBe('Active');
+    expect(r.body.data.statusReviewDate).toBeUndefined();
+  });
+  it('tracks information requests with notifications', async () => {
+    const bad = await request(app).post(`/api/v1/directory/candidates/${pid}/info-requests`).set(auth(superToken)).send({});
+    expect(bad.status).toBe(400);
+    const ok = await request(app).post(`/api/v1/directory/candidates/${pid}/info-requests`).set(auth(superToken)).send({ message: 'Upload latest payslip' });
+    expect(ok.status).toBe(201);
+    expect(ok.body.data.status).toBe('Open');
+    const list = await request(app).get(`/api/v1/directory/candidates/${pid}/info-requests`).set(auth(superToken));
+    expect(list.body.data.length).toBe(1);
+    const nope = await request(app).patch(`/api/v1/directory/candidates/${pid}/info-requests/${ok.body.data.id}`).set(auth(superToken)).send({ status: 'Bogus' });
+    expect(nope.status).toBe(400);
+    const done = await request(app).patch(`/api/v1/directory/candidates/${pid}/info-requests/${ok.body.data.id}`).set(auth(superToken)).send({ status: 'Responded' });
+    expect(done.body.data.status).toBe('Responded');
+  });
+  it('approves deletion requests by anonymizing, preserving linkage', async () => {
+    const noreason = await request(app).post(`/api/v1/directory/candidates/${pid}/deletion-request`).set(auth(superToken)).send({});
+    expect(noreason.status).toBe(400);
+    const open = await request(app).post(`/api/v1/directory/candidates/${pid}/deletion-request`).set(auth(superToken)).send({ reason: 'right to erasure' });
+    expect(open.status).toBe(201);
+    const dup = await request(app).post(`/api/v1/directory/candidates/${pid}/deletion-request`).set(auth(superToken)).send({ reason: 'again' });
+    expect(dup.status).toBe(409);
+    const bad = await request(app).patch(`/api/v1/directory/candidates/${pid}/deletion-requests/${open.body.data.id}`).set(auth(superToken)).send({ decision: 'maybe' });
+    expect(bad.status).toBe(400);
+    const yes = await request(app).patch(`/api/v1/directory/candidates/${pid}/deletion-requests/${open.body.data.id}`).set(auth(superToken)).send({ decision: 'approve', note: 'verified identity' });
+    expect(yes.body.data.request.status).toBe('Approved');
+    expect(yes.body.data.anonymized.status).toBe('Deleted');
+    const gone = await request(app).get(`/api/v1/directory/candidates/${pid}/360`).set(auth(superToken));
+    expect(gone.body.data.profile.name).toBe('Deleted User');
+    expect(gone.body.data.profile.email).toBe(email); // linkage preserved
+    const twice = await request(app).patch(`/api/v1/directory/candidates/${pid}/deletion-requests/${open.body.data.id}`).set(auth(superToken)).send({ decision: 'approve' });
+    expect(twice.status).toBe(422);
+  });
+  it('purges clean profiles but blocks when legal records exist', async () => {
+    const guarded = await request(app).post('/api/v1/candidates').set(auth(superToken)).send({ name: 'Guarded', email: `guarded-${stamp}@example.com` });
+    const gid = guarded.body.data.id;
+    await request(app).post('/api/v1/applications').set(auth(superToken)).send({ jobId: 'JOB-9901', candidateEmail: `guarded-${stamp}@example.com` });
+    const soft = await request(app).delete(`/api/v1/directory/candidates/${gid}`).set(auth(superToken)).send({ reason: 'test' });
+    expect(soft.body.data.status).toBe('Deleted');
+    const blocked = await request(app).delete(`/api/v1/directory/candidates/${gid}/permanent`).set(auth(superToken));
+    expect(blocked.status).toBe(422);
+    expect(blocked.body.message).toMatch(/application/);
+    const direct = await request(app).delete(`/api/v1/directory/candidates/CND-9041/permanent`).set(auth(superToken));
+    expect(direct.status).toBe(422); // must soft-delete first
+    const gone = await request(app).delete(`/api/v1/directory/candidates/${pid}/permanent`).set(auth(superToken));
+    expect(gone.status).toBe(200);
+    const missing = await request(app).get(`/api/v1/directory/candidates/${pid}/360`).set(auth(superToken));
+    expect(missing.status).toBe(404);
+    await request(app).delete(`/api/v1/users/${userId}`).set(auth(superToken)).send({ reason: 'test cleanup' });
+  });
+});
+
 describe('commission duplicate guard (§6.11)', () => {
   it('mints once per placement+trigger and reports via check', async () => {
     const ag = await request(app).post('/api/v1/commission-agreements').set(auth(superToken)).send({ orgId: 'TNT-9011', jobId: 'JOB-9901', rate: 8.33, trigger: 'Joined' });
