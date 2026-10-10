@@ -1605,6 +1605,37 @@ export function InvoicesPanel() {
   const [voidReason, setVoidReason] = useState('');
   const [creditFor, setCreditFor] = useState<any>(null);
   const [creditForm, setCreditForm] = useState({ amount: '', reason: '' });
+  const [editFor, setEditFor] = useState<any>(null);
+  const [editForm, setEditForm] = useState({ orgId: '', agreementId: '', label: '', qty: '1', unit: '', discount: '', taxRate: '18', dueDate: '' });
+  const openEdit = async (inv: any) => {
+    setEditFor(inv);
+    setEditForm({ orgId: inv.orgId || '', agreementId: inv.agreementId || '', label: '', qty: '1', unit: '', discount: String(inv.discount || ''), taxRate: String(inv.taxRate ?? 18), dueDate: String(inv.dueDate || '').slice(0, 10) });
+    try {
+      const d = unwrapObj(await billingApi.invoiceDocument(inv.id)) as any;
+      const l = (d?.lines || [])[0];
+      if (l) setEditForm((f) => ({ ...f, label: l.label || '', qty: String(l.qty || 1), unit: String(l.unit || '') }));
+    } catch { /* line prefill is best-effort */ }
+  };
+  const doEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editFor || !editForm.unit) return;
+    try {
+      const u = unwrapObj(await billingApi.editDraftInvoice(editFor.id, { orgId: editForm.orgId.trim(), agreementId: editForm.agreementId.trim() || undefined, dueDate: editForm.dueDate, discount: Number(editForm.discount) || 0, taxRate: Number(editForm.taxRate) || 0, lines: [{ label: editForm.label || 'Placement fee', qty: Number(editForm.qty) || 1, unit: Number(editForm.unit) }] }));
+      setInvoices((x) => x.map((i) => (i.id === editFor.id ? { ...i, ...(u?.id ? u : {}) } : i)));
+      setEditFor(null); setOk('Draft invoice updated.'); syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const [dues, setDues] = useState<any>(null);
+  const loadDues = async () => {
+    try {
+      const all = unwrapList(await billingApi.invoices('?page=1&pageSize=100'));
+      const open = all.filter((i: any) => Number(i.balance || 0) > 0 && ['Issued', 'Partially Paid'].includes(i.status));
+      const bucket = (pred: (d: number) => boolean) => open.filter((i: any) => { const ms = new Date(i.dueDate).getTime(); if (!Number.isFinite(ms)) return false; return pred(Math.floor((ms - Date.now()) / 864e5)); });
+      const sum = (rows: any[]) => rows.reduce((a, i) => a + Number(i.balance || 0), 0);
+      const od = bucket((d) => d < 0); const w7 = bucket((d) => d >= 0 && d <= 7); const m30 = bucket((d) => d > 7 && d <= 30);
+      setDues({ overdue: { n: od.length, amt: sum(od) }, week: { n: w7.length, amt: sum(w7) }, month: { n: m30.length, amt: sum(m30) } });
+    } catch { setDues(null); }
+  };
   const [reminders, setReminders] = useState<any[]>([]);
   const [remResult, setRemResult] = useState('');
   const [remBusy, setRemBusy] = useState(false);
@@ -1616,7 +1647,7 @@ export function InvoicesPanel() {
       if (st) params.set('status', st);
       const res: any = await billingApi.invoices(`?${params.toString()}`);
       setInvoices(unwrapList(res)); setInvTotal(Number(res?.pagination?.total || unwrapList(res).length));
-      loadReminders();
+      loadReminders(); loadDues();
     }
     catch (e) { setError(errMsg(e)); setLoadError(errStatus(e)); }
     finally { setLoading(false); }
@@ -1682,6 +1713,7 @@ export function InvoicesPanel() {
   const invMenuFor = (i: any) => (
     <RowMenu label={`Invoice ${i.number || i.id}`} items={[
       { label: 'View document', onSelect: () => openDocument(i) },
+      ...(canBill && i.status === 'Draft' ? [{ label: 'Edit draft…', onSelect: () => openEdit(i) }] : []),
       ...(canBill && i.status === 'Draft' ? [{ label: 'Issue now', onSelect: () => issueInvoice(i.id) }] : []),
       ...(canBill ? [
         { label: 'Void…', danger: true, onSelect: () => { setVoidFor(i); setVoidReason(''); } },
@@ -1726,6 +1758,29 @@ export function InvoicesPanel() {
           </div>
         )}
       </div>
+      {dues && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+          <div className="p-3 rounded-2xl bg-red-50 border border-red-200"><div className="text-[10px] font-bold text-red-700 uppercase">Overdue dues</div><div className="text-base font-extrabold">{dues.overdue.n} • ₹{dues.overdue.amt.toLocaleString('en-IN')}</div></div>
+          <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200"><div className="text-[10px] font-bold text-amber-700 uppercase">Due within 7 days</div><div className="text-base font-extrabold">{dues.week.n} • ₹{dues.week.amt.toLocaleString('en-IN')}</div></div>
+          <div className="p-3 rounded-2xl bg-blue-50 border border-blue-200"><div className="text-[10px] font-bold text-blue-700 uppercase">Due in 8–30 days</div><div className="text-base font-extrabold">{dues.month.n} • ₹{dues.month.amt.toLocaleString('en-IN')}</div></div>
+        </div>
+      )}
+      <Modal open={editFor !== null} onClose={() => setEditFor(null)} title={`Edit draft — ${editFor?.number || editFor?.id || ''}`} subtitle="Draft-only: issuing locks the invoice permanently">
+        <form onSubmit={doEdit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Organization ID *"><input className={kitInput} value={editForm.orgId} onChange={(e) => setEditForm({ ...editForm, orgId: e.target.value })} /></Field>
+          <Field label="Agreement ID"><input className={kitInput} value={editForm.agreementId} onChange={(e) => setEditForm({ ...editForm, agreementId: e.target.value })} /></Field>
+          <Field label="Due date *"><DatePicker value={editForm.dueDate} onChange={(v) => setEditForm({ ...editForm, dueDate: v })} /></Field>
+          <div className="sm:col-span-2"><Field label="Line label"><input className={kitInput} value={editForm.label} onChange={(e) => setEditForm({ ...editForm, label: e.target.value })} /></Field></div>
+          <Field label="Qty"><input className={kitInput} type="number" min={1} value={editForm.qty} onChange={(e) => setEditForm({ ...editForm, qty: e.target.value })} /></Field>
+          <Field label="Unit price (₹) *"><input className={kitInput} type="number" value={editForm.unit} onChange={(e) => setEditForm({ ...editForm, unit: e.target.value })} /></Field>
+          <Field label="Discount (₹)"><input className={kitInput} type="number" min={0} value={editForm.discount} onChange={(e) => setEditForm({ ...editForm, discount: e.target.value })} /></Field>
+          <Field label="GST rate %"><input className={kitInput} type="number" min={0} max={100} value={editForm.taxRate} onChange={(e) => setEditForm({ ...editForm, taxRate: e.target.value })} /></Field>
+          <div className="sm:col-span-2 flex justify-end gap-2">
+            <button type="button" onClick={() => setEditFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">Save draft</button>
+          </div>
+        </form>
+      </Modal>
       <Modal open={showInvoice} onClose={() => setShowInvoice(false)} title="New invoice" subtitle="Drafts are editable; issued invoices are immutable (void/credit only)">
         <form onSubmit={createInvoice} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Organization ID *"><input className={kitInput} value={invForm.orgId} onChange={(e) => setInvForm({ ...invForm, orgId: e.target.value })} placeholder="TNT-9011" /></Field>
@@ -1884,7 +1939,10 @@ export function InvoicesPanel() {
           </table>
         </div>
       </>)}
-      <Pager page={invPage} total={invTotal} pageSize={ips} onPage={setInvPage} />
+      <div className="flex items-center gap-2">
+        <div className="flex-1"><Pager page={invPage} total={invTotal} pageSize={ips} onPage={setInvPage} /></div>
+        <InfoTip title="About this pagination" body={<><p>Server-side pagination: the API returns {ips} records per page ({invTotal} total). Use Show 20/50/100 to change page size; filters apply server-side before paging.</p></>} />
+      </div>
     </div>
   );
 }
@@ -2235,19 +2293,12 @@ export function SubscriptionsPanel() {
   );
 }
 
-/* ---------------- Phase 3/4: Commissions & payouts ---------------- */
-export function CommissionsPanel() {
-  const [agreements, setAgreements] = useState<any[]>([]);
-  const [commissions, setCommissions] = useState<any[]>([]);
-  const [payouts, setPayouts] = useState<any[]>([]);
+/* ---------------- Agreement templates: advanced HTML document editor ----------------
+   Own component: template CRUD + Word-style editing + filled preview + .doc/print.
+   Mounted in the Templates tab; parent passes the list + a reload callback. */
+export function AgreementTemplatesPanel({ templates, onChanged }: { templates: any[]; onChanged: () => void }) {
+  const canTemplates = useCan('manage_billing');
   const [error, setError] = useState('');
-  const [form, setForm] = useState({ orgId: '', jobId: '', hiringType: 'Mid-level IT roles', rate: '8.33', trigger: 'Joined', basisType: 'annual_ctc', contractMonths: '12', paymentTermsDays: '30', replacementDays: '90', templateId: '' });
-  const [slabs, setSlabs] = useState<any[]>([]);
-  const [templates, setTemplates] = useState<any[]>([]);
-  const [showAgreement, setShowAgreement] = useState(false);
-  const [adjustFor, setAdjustFor] = useState<any>(null);
-  const [adjustments, setAdjustments] = useState<any[]>([]);
-  const [adjustForm, setAdjustForm] = useState({ amount: '', reason: '' });
   const emptyTpl = { name: '', orgId: '', hiringType: '', rateMin: '', rateMax: '', paymentTermsDays: '30', replacementDays: '90', gstNote: 'GST charged extra as applicable.', ownershipClause: '', duplicatePolicy: '', cancellationTerms: '' };
   const [tplForm, setTplForm] = useState(emptyTpl);
   const [editingTpl, setEditingTpl] = useState('');
@@ -2276,19 +2327,137 @@ export function CommissionsPanel() {
         bodyHtml: tplBodyRef.current?.innerHTML || undefined,
       };
       const saved = editingTpl ? unwrapObj(await billingApi.updateTemplate(editingTpl, body)) : unwrapObj(await billingApi.createTemplate(body));
-      if (saved?.id) setTemplates((x) => (editingTpl ? x.map((t) => (t.id === editingTpl ? saved : t)) : [saved, ...x]));
+      if (saved?.id) { onChanged(); }
       setTplForm(emptyTpl); setEditingTpl(''); setShowTemplate(false); syncAll();
     } catch (e) { setError(errMsg(e)); }
   };
   const tplStatus = async (id: string, status: string) => {
     try {
-      const u = unwrapObj(await billingApi.templateStatus(id, status));
-      setTemplates((x) => x.map((t) => (t.id === id ? u : t))); syncAll();
+      await billingApi.templateStatus(id, status);
+      onChanged(); syncAll();
     } catch (e) { setError(errMsg(e)); }
+  };
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <div className="text-xs font-extrabold text-slate-700">Agreement templates — company ↔ platform ({templates.length})</div>
+          <InfoTip title="How templates work" body={<><p>A template is the <strong>master commercial document</strong> between NexaTalent and a company (global or per-company scope). Edit terms + document body; saving mints a <strong>new version</strong> with history — instantiated agreements keep their snapshot.</p><p>Use <strong>Preview / download</strong> to check the filled document, print it, or download a Word file. <strong>Activate</strong> before agreements can be created from it.</p></>} />
+        </div>
+        {canTemplates ? <button type="button" onClick={openTplCreate} className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">+ Template</button> : null}
+      </div>
+      {error && <PanelError message={error} onRetry={() => setError('')} />}
+      {templates.map((t: any) => (
+        <div key={t.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
+          <span className="min-w-0 truncate">{t.name} v{t.version} • {t.status}{t.orgId ? ` • ${t.orgId}` : ' • global'} • pay ≤{t.paymentTermsDays}d • repl {t.replacementDays}d{t.history?.length ? ` • ${t.history.length} prior version(s)` : ''}</span>
+          <RowMenu label={`Template ${t.id}`} items={[
+            { label: 'Preview / download…', onSelect: () => setTplPreview(t) },
+            ...(canTemplates ? [
+              { label: 'Edit / new version…', onSelect: () => openTplEdit(t) },
+              ...(t.status === 'Draft' ? [{ label: 'Activate', onSelect: () => tplStatus(t.id, 'Active') }] : []),
+              ...(t.status === 'Active' ? [{ label: 'Archive', danger: true, onSelect: () => tplStatus(t.id, 'Archived') }] : []),
+            ] : []),
+          ]} />
+        </div>
+      ))}
+      <Modal open={showTemplate} onClose={() => setShowTemplate(false)} title={editingTpl ? 'Edit template (mints a new version)' : 'New agreement template'} subtitle="Terms sync to every agreement instantiated from this template" wide>
+        <form onSubmit={saveTemplate} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="sm:col-span-2"><Field label="Template name *"><input className={kitInput} value={tplForm.name} onChange={(e) => setTplForm({ ...tplForm, name: e.target.value })} placeholder="e.g. Standard Placement Terms — Mid-level" /></Field></div>
+          <Field label="Company scope (blank = global)"><input className={kitInput} value={tplForm.orgId} onChange={(e) => setTplForm({ ...tplForm, orgId: e.target.value })} placeholder="TNT-9011" /></Field>
+          <Field label="Hiring type"><Select value={tplForm.hiringType} onChange={(v) => setTplForm({ ...tplForm, hiringType: v })} placeholder="Any" options={[{ value: '', label: 'Any' }, ...['Junior IT roles', 'Mid-level IT roles', 'Senior / niche technology roles', 'Leadership / executive search', 'Bulk hiring'].map((h) => ({ value: h, label: h }))]} /></Field>
+          <Field label="Rate min %"><input className={kitInput} type="number" step="0.01" value={tplForm.rateMin} onChange={(e) => setTplForm({ ...tplForm, rateMin: e.target.value })} /></Field>
+          <Field label="Rate max %"><input className={kitInput} type="number" step="0.01" value={tplForm.rateMax} onChange={(e) => setTplForm({ ...tplForm, rateMax: e.target.value })} /></Field>
+          <Field label="Payment within (days of joining)"><input className={kitInput} type="number" min={1} max={60} value={tplForm.paymentTermsDays} onChange={(e) => setTplForm({ ...tplForm, paymentTermsDays: e.target.value })} /></Field>
+          <Field label="Replacement window (days)"><input className={kitInput} type="number" min={0} max={365} value={tplForm.replacementDays} onChange={(e) => setTplForm({ ...tplForm, replacementDays: e.target.value })} /></Field>
+          <div className="sm:col-span-2"><Field label="GST note"><input className={kitInput} value={tplForm.gstNote} onChange={(e) => setTplForm({ ...tplForm, gstNote: e.target.value })} /></Field></div>
+          <div className="sm:col-span-2"><Field label="Candidate ownership"><textarea rows={2} className={kitInput} value={tplForm.ownershipClause} onChange={(e) => setTplForm({ ...tplForm, ownershipClause: e.target.value })} /></Field></div>
+          <div className="sm:col-span-2"><Field label="Duplicate policy"><textarea rows={2} className={kitInput} value={tplForm.duplicatePolicy} onChange={(e) => setTplForm({ ...tplForm, duplicatePolicy: e.target.value })} /></Field></div>
+          <div className="sm:col-span-2"><Field label="Cancellation terms"><textarea rows={2} className={kitInput} value={tplForm.cancellationTerms} onChange={(e) => setTplForm({ ...tplForm, cancellationTerms: e.target.value })} /></Field></div>
+          <div className="sm:col-span-2 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-extrabold text-slate-700">Document body (Word-style) — saved as a new version</div>
+              <button type="button" onClick={() => setTplPreviewHtml((v) => !v)} className="text-[11px] font-bold text-blue-600 underline">{tplPreviewHtml ? 'Back to edit' : 'Preview filled document'}</button>
+            </div>
+            {!tplPreviewHtml ? (
+              <>
+                <div className="flex flex-wrap items-center gap-1 p-1.5 rounded-xl bg-slate-100 border border-slate-200">
+                  {[['H2', 'formatBlock', '<h2>'], ['H3', 'formatBlock', '<h3>'], ['¶', 'formatBlock', '<p>'], ['B', 'bold'], ['I', 'italic'], ['U', 'underline'], ['S', 'strikeThrough']].map(([label, cmd, val]) => (
+                    <button key={label as string} type="button" title={label as string} onMouseDown={(e) => e.preventDefault()} onClick={() => tplCmd(cmd as string, val as string)}
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-[#087BFF]">{label}</button>
+                  ))}
+                  {[['≡L', 'justifyLeft'], ['≡C', 'justifyCenter'], ['≡R', 'justifyRight'], ['≡J', 'justifyFull']].map(([label, cmd]) => (
+                    <button key={label as string} type="button" title={`Align ${label}`} onMouseDown={(e) => e.preventDefault()} onClick={() => tplCmd(cmd as string)}
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-[#087BFF]">{label}</button>
+                  ))}
+                  {[['• List', 'insertUnorderedList'], ['1. List', 'insertOrderedList'], ['❝', 'formatBlock', '<blockquote>'], ['―', 'insertHorizontalRule']].map(([label, cmd, val]) => (
+                    <button key={label as string} type="button" title={label as string} onMouseDown={(e) => e.preventDefault()} onClick={() => tplCmd(cmd as string, val as string)}
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-[#087BFF]">{label}</button>
+                  ))}
+                  <select aria-label="Font size" title="Font size" className="px-1.5 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px]" defaultValue="" onChange={(e) => { if (e.target.value) { tplCmd('fontSize', e.target.value); e.target.value = ''; } }}>
+                    <option value="">A±</option>
+                    {[1, 2, 3, 4, 5, 6].map((n) => <option key={n} value={n}>Size {n}</option>)}
+                  </select>
+                  <label title="Text color" className="px-2 py-1 rounded-lg bg-white border border-slate-200 font-bold text-[11px] cursor-pointer">A<input type="color" className="sr-only" onChange={(e) => tplCmd('foreColor', e.target.value)} /></label>
+                  <label title="Highlight" className="px-2 py-1 rounded-lg bg-white border border-slate-200 font-bold text-[11px] cursor-pointer">▮<input type="color" className="sr-only" defaultValue="#fef08a" onChange={(e) => tplCmd('hiliteColor', e.target.value)} /></label>
+                  <button type="button" title="Clear formatting" onMouseDown={(e) => e.preventDefault()} onClick={() => tplCmd('removeFormat')}
+                    className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-[#087BFF]">⌫</button>
+                  <button type="button" title="Undo" onMouseDown={(e) => e.preventDefault()} onClick={() => tplCmd('undo')}
+                    className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-[#087BFF]">↩</button>
+                  <button type="button" title="Redo" onMouseDown={(e) => e.preventDefault()} onClick={() => tplCmd('redo')}
+                    className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-[#087BFF]">↪</button>
+                  <select aria-label="Insert placeholder" title="Insert placeholder" className="px-2 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px]" defaultValue="" onChange={(e) => { if (e.target.value) { tplToken(e.target.value); e.target.value = ''; } }}>
+                    <option value="">+ {'{{field}}'}</option>
+                    {TEMPLATE_TOKENS.map((tok) => <option key={tok} value={tok}>{`{{${tok}}}`}</option>)}
+                  </select>
+                </div>
+                <div ref={tplBodyRef} contentEditable suppressContentEditableWarning
+                  key={editingTpl || 'new'}
+                  className="min-h-[280px] p-4 rounded-xl bg-white border border-slate-200 text-xs leading-relaxed focus:outline-none focus:border-[#087BFF]"
+                  dangerouslySetInnerHTML={{ __html: tplBodySeed }} />
+              </>
+            ) : (
+              <div className="p-4 rounded-xl bg-white border border-slate-200 text-xs leading-relaxed max-h-[320px] overflow-y-auto" data-lenis-prevent
+                dangerouslySetInnerHTML={{ __html: fillTemplate({ ...tplForm, rateMin: tplForm.rateMin === '' ? undefined : Number(tplForm.rateMin), rateMax: tplForm.rateMax === '' ? undefined : Number(tplForm.rateMax), bodyHtml: tplBodyRef.current?.innerHTML || tplBodySeed }, tplForm.orgId || undefined) }} />
+            )}
+          </div>
+          <div className="sm:col-span-2 flex justify-end gap-2">
+            <button type="button" onClick={() => setShowTemplate(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button className={btnPrimary}>{editingTpl ? 'Save as new version' : 'Create template'}</button>
+          </div>
+        </form>
+      </Modal>
+      <Modal open={tplPreview !== null} onClose={() => setTplPreview(null)} title={tplPreview?.name || ''} subtitle={`${tplPreview?.id || ''} • v${tplPreview?.version || ''} • ${tplPreview?.status || ''}`} wide>
+        <div className="space-y-3">
+          <div className="p-5 rounded-2xl bg-white border border-slate-200 text-xs leading-relaxed max-h-[52vh] overflow-y-auto" data-lenis-prevent
+            dangerouslySetInnerHTML={{ __html: tplPreview ? fillTemplate(tplPreview) : '' }} />
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => tplPreview && downloadDocFile(`${tplPreview.name || 'agreement'}-v${tplPreview.version || 1}`, tplPreview.name || 'Agreement', fillTemplate(tplPreview))} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Download .doc (Word)</button>
+            <button type="button" onClick={() => tplPreview && printHtmlDocument(tplPreview.name || 'Agreement', fillTemplate(tplPreview))} className="px-4 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs">Print / Save PDF</button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+/* ---------------- Phase 3/4: Commissions & payouts ---------------- */
+export function CommissionsPanel() {
+  const [agreements, setAgreements] = useState<any[]>([]);
+  const [commissions, setCommissions] = useState<any[]>([]);
+  const [payouts, setPayouts] = useState<any[]>([]);
+  const [error, setError] = useState('');
+  const [form, setForm] = useState({ orgId: '', jobId: '', hiringType: 'Mid-level IT roles', rate: '8.33', trigger: 'Joined', basisType: 'annual_ctc', contractMonths: '12', paymentTermsDays: '30', replacementDays: '90', templateId: '' });
+  const [slabs, setSlabs] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [showAgreement, setShowAgreement] = useState(false);
+  const [adjustFor, setAdjustFor] = useState<any>(null);
+  const [adjustments, setAdjustments] = useState<any[]>([]);
+  const [adjustForm, setAdjustForm] = useState({ amount: '', reason: '' });
+  const reloadTemplates = async () => {
+    try { setTemplates(unwrapList(await billingApi.agreementTemplates())); } catch { setTemplates([]); }
   };
   const [loadError, setLoadError] = useState(0);
   const [ok, setOk] = useState('');
-  const canTemplates = useCan('manage_billing');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useQueryState('com_ps');
   const ps = Number(pageSize) === 50 ? 50 : Number(pageSize) === 100 ? 100 : 20;
@@ -2302,6 +2471,7 @@ export function CommissionsPanel() {
   const dqCq = useDebounced(cq);
   const [leg, setLeg] = useQueryState('com_leg');
   const [approvalF, setApprovalF] = useQueryState('com_appr');
+  const [comTab, setComTab] = useQueryState('com_tab');
   const load = async (p = page, size = ps, q = dqCq, lg = leg, appr = approvalF, ap = agrPage, pp = payPage) => {
     setError('');
     try {
@@ -2429,7 +2599,7 @@ export function CommissionsPanel() {
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1.5">
-            <h3 className="text-base font-extrabold text-slate-900">Commissions — Agreements → Approve → Adjust → Payout / Export</h3>
+            <h3 className="text-base font-extrabold text-slate-900">Commercial — Commissions, Agreements & Templates</h3>
             <InfoTip title="How commissions work" body={<><p>Companies pay NexaTalent on every hire. <strong>Receivable</strong> = company owes the platform; <strong>Payable</strong> = platform owes the agency/contractor.</p><p>Fee basis is the <strong>annual CTC</strong> for direct hires, or <strong>monthly CTC × contract months</strong> for contract/payroll hires — set per agreement. Gross = basis × rate%; GST 18% is added extra.</p><p>Flow: placement triggers a commission (Pending) → <strong>Approve</strong> → optionally <strong>Adjust</strong> → <strong>Generate invoice</strong> (once) → <strong>Process payout</strong>. Every step needs confirmation and is audited.</p></>} />
           </div>
           <div className="flex gap-2">
@@ -2437,6 +2607,16 @@ export function CommissionsPanel() {
             <button type="button" onClick={() => setShowAgreement(true)} className={btnPrimary}>+ New agreement</button>
           </div>
         </div>
+        <div className="flex rounded-xl bg-slate-100 border border-slate-200 p-0.5 w-fit" role="tablist" aria-label="Commercial views">
+          {([['commissions', `Commissions (${total})`], ['agreements', `Agreements (${agrTotal})`], ['templates', `Templates (${templates.length})`]] as const).map(([v, label]) => (
+            <button key={v} role="tab" aria-selected={(comTab || 'commissions') === v} type="button" onClick={() => setComTab(v)}
+              className={`px-4 py-1.5 rounded-lg font-bold text-xs ${((comTab || 'commissions') === v) ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>{label}</button>
+          ))}
+        </div>
+      </div>
+      {error && <PanelError message={error} status={loadError} onRetry={() => load(page, ps, dqCq, leg, approvalF, agrPage, payPage)} />}
+      {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
+      {(comTab || 'commissions') === 'commissions' && (<>
         <div className="grid grid-cols-2 gap-2 text-xs">
           <div className="p-3 rounded-2xl bg-blue-50 border border-blue-200"><div className="text-[10px] font-bold text-blue-700 uppercase">Company receivable{summary ? ` (${summary.count} records)` : ''}</div><div className="text-base font-extrabold">₹{recvTotal.toLocaleString('en-IN')}</div></div>
           <div className="p-3 rounded-2xl bg-purple-50 border border-purple-200"><div className="text-[10px] font-bold text-purple-700 uppercase">Agency payable</div><div className="text-base font-extrabold">₹{payTotal.toLocaleString('en-IN')}</div></div>
@@ -2455,82 +2635,10 @@ export function CommissionsPanel() {
             <PageSize value={ps} onChange={(n) => setPageSize(String(n))} />
           </div>
         </div>
-      </div>
-      {error && <PanelError message={error} status={loadError} onRetry={() => load(page, ps, dqCq, leg, approvalF, agrPage, payPage)} />}
-      {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
-      <div className="flex items-center justify-between gap-2">
-        <div className="text-xs font-extrabold text-slate-700">Agreement templates — company ↔ platform ({templates.length})</div>
-        {canTemplates ? <button type="button" onClick={openTplCreate} className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">+ Template</button> : null}
-      </div>
-      {templates.map((t: any) => (
-        <div key={t.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
-          <span className="min-w-0 truncate">{t.name} v{t.version} • {t.status}{t.orgId ? ` • ${t.orgId}` : ' • global'} • pay ≤{t.paymentTermsDays}d • repl {t.replacementDays}d{t.history?.length ? ` • ${t.history.length} prior version(s)` : ''}</span>
-          <RowMenu label={`Template ${t.id}`} items={[
-            { label: 'Preview / download…', onSelect: () => setTplPreview(t) },
-            ...(canTemplates ? [
-              { label: 'Edit / new version…', onSelect: () => openTplEdit(t) },
-              ...(t.status === 'Draft' ? [{ label: 'Activate', onSelect: () => tplStatus(t.id, 'Active') }] : []),
-              ...(t.status === 'Active' ? [{ label: 'Archive', danger: true, onSelect: () => tplStatus(t.id, 'Archived') }] : []),
-            ] : []),
-          ]} />
-        </div>
-      ))}
-      <Modal open={showTemplate} onClose={() => setShowTemplate(false)} title={editingTpl ? 'Edit template (mints a new version)' : 'New agreement template'} subtitle="Terms sync to every agreement instantiated from this template">
-        <form onSubmit={saveTemplate} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="sm:col-span-2"><Field label="Template name *"><input className={kitInput} value={tplForm.name} onChange={(e) => setTplForm({ ...tplForm, name: e.target.value })} placeholder="e.g. Standard Placement Terms — Mid-level" /></Field></div>
-          <Field label="Company scope (blank = global)"><input className={kitInput} value={tplForm.orgId} onChange={(e) => setTplForm({ ...tplForm, orgId: e.target.value })} placeholder="TNT-9011" /></Field>
-          <Field label="Hiring type"><Select value={tplForm.hiringType} onChange={(v) => setTplForm({ ...tplForm, hiringType: v })} placeholder="Any" options={[{ value: '', label: 'Any' }, ...['Junior IT roles', 'Mid-level IT roles', 'Senior / niche technology roles', 'Leadership / executive search', 'Bulk hiring'].map((h) => ({ value: h, label: h }))]} /></Field>
-          <Field label="Rate min %"><input className={kitInput} type="number" step="0.01" value={tplForm.rateMin} onChange={(e) => setTplForm({ ...tplForm, rateMin: e.target.value })} /></Field>
-          <Field label="Rate max %"><input className={kitInput} type="number" step="0.01" value={tplForm.rateMax} onChange={(e) => setTplForm({ ...tplForm, rateMax: e.target.value })} /></Field>
-          <Field label="Payment within (days of joining)"><input className={kitInput} type="number" min={1} max={60} value={tplForm.paymentTermsDays} onChange={(e) => setTplForm({ ...tplForm, paymentTermsDays: e.target.value })} /></Field>
-          <Field label="Replacement window (days)"><input className={kitInput} type="number" min={0} max={365} value={tplForm.replacementDays} onChange={(e) => setTplForm({ ...tplForm, replacementDays: e.target.value })} /></Field>
-          <div className="sm:col-span-2"><Field label="GST note"><input className={kitInput} value={tplForm.gstNote} onChange={(e) => setTplForm({ ...tplForm, gstNote: e.target.value })} /></Field></div>
-          <div className="sm:col-span-2"><Field label="Candidate ownership"><textarea rows={2} className={kitInput} value={tplForm.ownershipClause} onChange={(e) => setTplForm({ ...tplForm, ownershipClause: e.target.value })} /></Field></div>
-          <div className="sm:col-span-2"><Field label="Duplicate policy"><textarea rows={2} className={kitInput} value={tplForm.duplicatePolicy} onChange={(e) => setTplForm({ ...tplForm, duplicatePolicy: e.target.value })} /></Field></div>
-          <div className="sm:col-span-2"><Field label="Cancellation terms"><textarea rows={2} className={kitInput} value={tplForm.cancellationTerms} onChange={(e) => setTplForm({ ...tplForm, cancellationTerms: e.target.value })} /></Field></div>
-          <div className="sm:col-span-2 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="text-xs font-extrabold text-slate-700">Document body (Word-style) — saved as a new version</div>
-              <button type="button" onClick={() => setTplPreviewHtml((v) => !v)} className="text-[11px] font-bold text-blue-600 underline">{tplPreviewHtml ? 'Back to edit' : 'Preview filled document'}</button>
-            </div>
-            {!tplPreviewHtml ? (
-              <>
-                <div className="flex flex-wrap gap-1 p-1.5 rounded-xl bg-slate-100 border border-slate-200">
-                  {[['H2', 'formatBlock', '<h2>'], ['H3', 'formatBlock', '<h3>'], ['B', 'bold'], ['I', 'italic'], ['U', 'underline'], ['• List', 'insertUnorderedList'], ['1. List', 'insertOrderedList']].map(([label, cmd, val]) => (
-                    <button key={label as string} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => tplCmd(cmd as string, val as string)}
-                      className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-[#087BFF]">{label}</button>
-                  ))}
-                  <select aria-label="Insert placeholder" className="px-2 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px]" defaultValue="" onChange={(e) => { if (e.target.value) { tplToken(e.target.value); e.target.value = ''; } }}>
-                    <option value="">+ {'{{field}}'}</option>
-                    {TEMPLATE_TOKENS.map((tok) => <option key={tok} value={tok}>{`{{${tok}}}`}</option>)}
-                  </select>
-                </div>
-                <div ref={tplBodyRef} contentEditable suppressContentEditableWarning
-                  key={editingTpl || 'new'}
-                  className="min-h-[280px] p-4 rounded-xl bg-white border border-slate-200 text-xs leading-relaxed focus:outline-none focus:border-[#087BFF]"
-                  dangerouslySetInnerHTML={{ __html: tplBodySeed }} />
-              </>
-            ) : (
-              <div className="p-4 rounded-xl bg-white border border-slate-200 text-xs leading-relaxed max-h-[320px] overflow-y-auto" data-lenis-prevent
-                dangerouslySetInnerHTML={{ __html: fillTemplate({ ...tplForm, rateMin: tplForm.rateMin === '' ? undefined : Number(tplForm.rateMin), rateMax: tplForm.rateMax === '' ? undefined : Number(tplForm.rateMax), bodyHtml: tplBodyRef.current?.innerHTML || tplBodySeed }, tplForm.orgId || undefined) }} />
-            )}
-          </div>
-          <div className="sm:col-span-2 flex justify-end gap-2">
-            <button type="button" onClick={() => setShowTemplate(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
-            <button className={btnPrimary}>{editingTpl ? 'Save as new version' : 'Create template'}</button>
-          </div>
-        </form>
-      </Modal>
-      <Modal open={tplPreview !== null} onClose={() => setTplPreview(null)} title={tplPreview?.name || ''} subtitle={`${tplPreview?.id || ''} • v${tplPreview?.version || ''} • ${tplPreview?.status || ''}`} wide>
-        <div className="space-y-3">
-          <div className="p-5 rounded-2xl bg-white border border-slate-200 text-xs leading-relaxed max-h-[52vh] overflow-y-auto" data-lenis-prevent
-            dangerouslySetInnerHTML={{ __html: tplPreview ? fillTemplate(tplPreview) : '' }} />
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => tplPreview && downloadDocFile(`${tplPreview.name || 'agreement'}-v${tplPreview.version || 1}`, tplPreview.name || 'Agreement', fillTemplate(tplPreview))} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Download .doc (Word)</button>
-            <button type="button" onClick={() => tplPreview && printHtmlDocument(tplPreview.name || 'Agreement', fillTemplate(tplPreview))} className="px-4 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs">Print / Save PDF</button>
-          </div>
-        </div>
-      </Modal>
+      </>)}
+      {(comTab || 'commissions') === 'templates' && (
+        <AgreementTemplatesPanel templates={templates} onChanged={reloadTemplates} />
+      )}
       <Modal open={showAgreement} onClose={() => setShowAgreement(false)} title="New commission agreement" subtitle="Rate is validated against the hiring-type slab; templates carry payment, replacement and GST terms">
         <form onSubmit={create} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="sm:col-span-2"><Field label="Agreement template (optional — fills commercial terms)"><Select value={form.templateId} onChange={applyTemplate} placeholder="Custom terms (no template)" options={[{ value: '', label: 'Custom terms (no template)' }, ...templates.filter((t: any) => t.status === 'Active').map((t: any) => ({ value: t.id, label: `${t.name} v${t.version}` }))]} /></Field></div>
@@ -2552,6 +2660,7 @@ export function CommissionsPanel() {
           </div>
         </form>
       </Modal>
+      {(comTab || 'commissions') === 'agreements' && (<>
       <div className="flex items-center gap-1.5">
         <div className="text-xs font-extrabold text-slate-700">Agreements ({agrTotal})</div>
         <InfoTip title="How agreements work" body={<><p>An agreement binds a company to commercial terms: <strong>hiring type → slab rate</strong>, <strong>annual-CTC or monthly-CTC × months</strong> basis, trigger (Joined / Offer Accepted), payment window, replacement window and GST treatment.</p><p>Every placement under an approved agreement auto-mints a commission. The company must <strong>accept</strong> the agreement (tracked with actor + timestamp) before invoicing.</p></>} />
@@ -2573,6 +2682,8 @@ export function CommissionsPanel() {
           ))}
         </div>
       </Modal>
+      </>)}
+      {(comTab || 'commissions') === 'commissions' && (<>
       <div className="text-xs font-extrabold text-slate-700">Commissions ({total})</div>
       {filteredComms.length === 0 && <EmptyState title="No commissions yet" message="Placement triggers auto-create commission records from approved agreements." />}
       {filteredComms.length > 0 && (<>
@@ -2629,14 +2740,16 @@ export function CommissionsPanel() {
           </table>
         </div>
       </>)}
-      <div className="flex items-center justify-between gap-2">
-        <Pager page={page} total={total} pageSize={ps} onPage={setPage} />
+      <div className="flex items-center gap-2">
+        <div className="flex-1"><Pager page={page} total={total} pageSize={ps} onPage={setPage} /></div>
+        <InfoTip title="About this pagination" body={<><p>Server-side pagination: the API returns {ps} records per page ({total} total). Ledger totals above always cover the full filtered set, not just this page.</p></>} />
       </div>
       <div className="text-xs font-extrabold text-slate-700">Payouts ({payPgTotal})</div>
       {payouts.map((p) => (
         <div key={p.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold">{p.id} • ₹{p.amount} • {p.status}</div>
       ))}
       <Pager page={payPage} total={payPgTotal} pageSize={20} onPage={setPayPage} />
+      </>)}
       <ActionConfirm
         open={approveFor !== null}
         onCancel={() => setApproveFor(null)}

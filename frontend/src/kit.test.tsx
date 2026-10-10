@@ -263,11 +263,13 @@ describe('ApplicationsKanban', () => {
 });
 
 describe('Commercial terms UI', () => {
-  it('commissions panel shows agreement templates section', async () => {
-    const { CommissionsPanel } = await import('./portals/common/EnterprisePanels.js');
+  it('templates live in their own component with tabs on the page', async () => {
+    const { AgreementTemplatesPanel, CommissionsPanel } = await import('./portals/common/EnterprisePanels.js');
     const { AuthProvider } = await import('./shared/auth/AuthContext.js');
-    render(<AuthProvider><CommissionsPanel /></AuthProvider>);
+    render(<AuthProvider><AgreementTemplatesPanel templates={[]} onChanged={() => {}} /></AuthProvider>);
     assert.ok(container.textContent?.includes('Agreement templates'), 'templates section renders');
+    render(<AuthProvider><CommissionsPanel /></AuthProvider>);
+    assert.ok(container.textContent?.includes('Templates (0)'), 'templates tab exists on the commercial page');
   });
   it('billing panel focuses on payments/refunds (invoices moved out)', async () => {
     const { BillingPanel } = await import('./portals/common/EnterprisePanels.js');
