@@ -79,6 +79,7 @@ export const applicationsApi = {
   apply: (jobId: string, candidateEmail: string) => apiClient.post('/api/v1/applications', { jobId, candidateEmail }),
   setStage: (id: string, stage: string, reason?: string) => apiClient.patch(`/api/v1/applications/${id}/stage`, { stage, reason }),
   withdraw: (id: string, reason?: string) => apiClient.post(`/api/v1/applications/${id}/withdraw`, { reason }),
+  reopen: (id: string, target: string, reason: string) => apiClient.post(`/api/v1/applications/${id}/reopen`, { target, reason }),
 };
 export const interviewsApi = {
   list: (params = '') => apiClient.get(`/api/v1/interviews${params}`),

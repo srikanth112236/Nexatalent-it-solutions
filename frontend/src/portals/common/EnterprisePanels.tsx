@@ -1,14 +1,15 @@
 import { useState, useEffect, useMemo, Fragment } from 'react';
 import { apiClient } from '../../shared/api-client';
 import { Candidate360Drawer, AgencyDrawer } from '../superadmin/SuperAdmin360';
-import { ExportButton, useQueryState, useDebounced } from './CrudKit';
+import { ExportButton, useQueryState, useDebounced, checkRecordAction, useActionGuard, DetailDrawer, GlobalCreateModal } from './CrudKit';
+import { useAuth, usePermissions } from '../../shared/auth/AuthContext';
 import {
   applicationsApi, interviewsApi, chatApi, talentApi, requisitionsApi, jobsApi,
   offersPlacementsApi, billingApi, salesApi, platformApi, documentsApi, workforceApi,
 } from '../../shared/enterprise/phaseApi';
 import { invalidateCollections } from '../../shared/data/store';
 import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
-import { Modal, ConfirmDialog, RowMenu, Select, DatePicker, Field, inputCls as kitInput } from '../../shared/ui/EnterpriseKit';
+import { Modal, ConfirmDialog, RowMenu, Select, DatePicker, Field, ActionConfirm, inputCls as kitInput } from '../../shared/ui/EnterpriseKit';
 
 /** Role-to-role sync: every successful mutation broadcasts so all portals refetch. */
 export function syncAll() {
@@ -160,7 +161,7 @@ export function RequisitionsPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
-  const [form, setForm] = useState({ title: '', department: '', category: '', location: '', branch: '', openings: 1, employmentType: 'Full-time', priority: 'Medium', description: '', recruiter: '', experienceMin: '', experienceMax: '', deadline: '' });
+  const [form, setForm] = useState({ title: '', department: '', category: '', location: '', branch: '', openings: 1, employmentType: 'Full-time', priority: 'Medium', description: '', responsibilities: '', requiredSkills: '', preferredSkills: '', qualifications: '', budgetMin: '', budgetMax: '', currency: 'INR', payPeriod: 'annual', benefits: '', recruiter: '', experienceMin: '', experienceMax: '', deadline: '' });
   const [busy, setBusy] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showCols, setShowCols] = useState(false);
@@ -172,17 +173,21 @@ export function RequisitionsPanel() {
   const [statusF, setStatusF] = useQueryState('req_status');
   const [orgF, setOrgF] = useQueryState('req_org');
   const dq = useDebounced(q);
+  const { user } = useAuth();
+  const perms = usePermissions();
+  const privileged = !!user && ['superadmin', 'platform_owner'].includes(user.role);
+  const can = (p: string) => perms === null || perms.includes(p);
+  const guard = (r: any, action: string) => checkRecordAction('requirement', r, action, { privileged, can });
   const [pipelineFor, setPipelineFor] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
   const [deleteFor, setDeleteFor] = useState<any>(null);
   const [decideFor, setDecideFor] = useState<{ row: any; action: 'approve' | 'reject' | 'changes' } | null>(null);
-  const [decideReason, setDecideReason] = useState('');
-  const [assignFor, setAssignFor] = useState<any[]>([]);
+    const [assignFor, setAssignFor] = useState<any[]>([]);
   const [assignEmail, setAssignEmail] = useState('');
   const [recruiters, setRecruiters] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<Record<string, any[] | null>>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const emptyForm = { title: '', department: '', category: '', location: '', branch: '', openings: 1, employmentType: 'Full-time', priority: 'Medium', description: '', recruiter: '', experienceMin: '', experienceMax: '', deadline: '' };
+  const emptyForm = { title: '', department: '', category: '', location: '', branch: '', openings: 1, employmentType: 'Full-time', priority: 'Medium', description: '', responsibilities: '', requiredSkills: '', preferredSkills: '', qualifications: '', budgetMin: '', budgetMax: '', currency: 'INR', payPeriod: 'annual', benefits: '', recruiter: '', experienceMin: '', experienceMax: '', deadline: '' };
   const pageSize = 10;
 
   const buildParams = (p: number) => {
@@ -219,6 +224,8 @@ export function RequisitionsPanel() {
         openings: Number(form.openings) || 1,
         experienceMin: form.experienceMin === '' ? undefined : Number(form.experienceMin),
         experienceMax: form.experienceMax === '' ? undefined : Number(form.experienceMax),
+        budgetMin: form.budgetMin === '' ? undefined : Number(form.budgetMin),
+        budgetMax: form.budgetMax === '' ? undefined : Number(form.budgetMax),
         deadline: form.deadline || undefined,
         recruiter: form.recruiter.trim() || undefined,
         branch: form.branch.trim() || undefined,
@@ -236,24 +243,6 @@ export function RequisitionsPanel() {
       if (updated?.id) refreshRow(updated);
       setOk(`${id} → ${status}.`); syncAll();
     } catch (e) { setError(errMsg(e)); }
-  };
-  const doDecide = async () => {
-    if (!decideFor) return;
-    const { row, action } = decideFor;
-    if (action !== 'approve' && !decideReason.trim()) { setError('A reason is required — it is recorded and sent onward.'); return; }
-    setBusy(true); setError('');
-    try {
-      if (action === 'approve') {
-        await transition(row.id, 'Approved');
-      } else if (action === 'reject') {
-        await transition(row.id, 'Cancelled', decideReason.trim());
-      } else {
-        const updated = unwrapObj(await requisitionsApi.requestChanges(row.id, decideReason.trim()));
-        if (updated?.id) refreshRow(updated);
-        setOk(`${row.id} sent back to Draft with change note.`); syncAll();
-      }
-      setDecideFor(null); setDecideReason('');
-    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
   };
   const saveEdit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!editing) return;
@@ -362,15 +351,15 @@ export function RequisitionsPanel() {
   const reqMenuFor = (r: any) => (
     <RowMenu items={[
       { label: 'Open pipeline', onSelect: () => setPipelineFor(r) },
-      { label: 'Edit…', onSelect: () => setEditing({ ...r }) },
+      ...(guard(r, 'edit').allowed ? [{ label: 'Edit…', onSelect: () => setEditing({ ...r }) }] : []),
       ...(r.status === 'Pending Approval' ? [
-        { label: 'Approve', onSelect: () => { setDecideFor({ row: r, action: 'approve' }); setDecideReason(''); } },
-        { label: 'Reject…', danger: true, onSelect: () => { setDecideFor({ row: r, action: 'reject' }); setDecideReason(''); } },
-        { label: 'Request changes…', onSelect: () => { setDecideFor({ row: r, action: 'changes' }); setDecideReason(''); } },
+        { label: 'Approve', onSelect: () => { setDecideFor({ row: r, action: 'approve' }); } },
+        { label: 'Reject…', danger: true, onSelect: () => { setDecideFor({ row: r, action: 'reject' }); } },
+        { label: 'Request changes…', onSelect: () => { setDecideFor({ row: r, action: 'changes' }); } },
       ] : []),
       ...(REQ_TRANSITIONS[r.status] || []).filter((s) => !(['Approved', 'Cancelled', 'Draft'].includes(s) && r.status === 'Pending Approval')).map((s) => ({ label: `Move to ${s}`, onSelect: () => transition(r.id, s) })),
       { label: 'Assign recruiter…', onSelect: () => openAssign([r]) },
-      { label: 'Delete…', danger: true, onSelect: () => setDeleteFor(r) },
+      ...(guard(r, 'delete').allowed ? [{ label: 'Delete…', danger: true, onSelect: () => setDeleteFor(r) }] : []),
     ]} />
   );
   const cols = REQ_ALL_COLUMNS.filter((c) => visibleCols.includes(c.key));
@@ -423,23 +412,52 @@ export function RequisitionsPanel() {
         </div>
       )}
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New requirement" subtitle="Internal demand — Draft → Pending Approval → Approved → Sourcing" wide>
-        <form onSubmit={create} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="sm:col-span-2"><Field label="Requirement title *"><input className={kitInput} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Senior QA Automation Engineer" /></Field></div>
-          <Field label="Department"><input className={kitInput} value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} /></Field>
-          <Field label="Category"><input className={kitInput} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></Field>
-          <Field label="Location"><input className={kitInput} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></Field>
-          <Field label="Branch"><input className={kitInput} value={form.branch} onChange={(e) => setForm({ ...form, branch: e.target.value })} placeholder="e.g. Bengaluru HQ" /></Field>
-          <Field label="Employment type"><input className={kitInput} value={form.employmentType} onChange={(e) => setForm({ ...form, employmentType: e.target.value })} /></Field>
-          <Field label="Openings"><input className={kitInput} type="number" min={1} value={form.openings} onChange={(e) => setForm({ ...form, openings: Number(e.target.value) })} /></Field>
-          <Field label="Priority"><Select value={form.priority} onChange={(v) => setForm({ ...form, priority: v })} options={['Low', 'Medium', 'High', 'Critical'].map((p) => ({ value: p, label: p }))} /></Field>
-          <Field label="Min experience (yrs)"><input className={kitInput} type="number" min={0} value={form.experienceMin} onChange={(e) => setForm({ ...form, experienceMin: e.target.value })} /></Field>
-          <Field label="Max experience (yrs)"><input className={kitInput} type="number" min={0} value={form.experienceMax} onChange={(e) => setForm({ ...form, experienceMax: e.target.value })} /></Field>
-          <Field label="Target deadline"><DatePicker value={form.deadline} onChange={(v) => setForm({ ...form, deadline: v })} ariaLabel="Target deadline" /></Field>
-          <Field label="Recruiter (email)"><input className={kitInput} value={form.recruiter} onChange={(e) => setForm({ ...form, recruiter: e.target.value })} placeholder="recruiter@company.com" /></Field>
-          <div className="sm:col-span-2"><Field label="Role description"><input className={kitInput} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Responsibilities, must-haves…" /></Field></div>
-          <div className="sm:col-span-2 flex justify-end gap-2 pt-1">
-            <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
-            <button className={btnPrimary} disabled={busy || !form.title.trim()}>{busy ? 'Creating…' : 'Create requirement'}</button>
+        <form onSubmit={create} className="space-y-4">
+          <div>
+            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Basics</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="sm:col-span-2"><Field label="Requirement title *"><input className={kitInput} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Senior QA Automation Engineer" /></Field></div>
+              <Field label="Department"><input className={kitInput} value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} /></Field>
+              <Field label="Category"><input className={kitInput} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></Field>
+              <Field label="Location"><input className={kitInput} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></Field>
+              <Field label="Branch"><input className={kitInput} value={form.branch} onChange={(e) => setForm({ ...form, branch: e.target.value })} placeholder="e.g. Bengaluru HQ" /></Field>
+              <Field label="Employment type"><input className={kitInput} value={form.employmentType} onChange={(e) => setForm({ ...form, employmentType: e.target.value })} /></Field>
+              <Field label="Priority"><Select value={form.priority} onChange={(v) => setForm({ ...form, priority: v })} options={['Low', 'Medium', 'High', 'Critical'].map((p) => ({ value: p, label: p }))} /></Field>
+            </div>
+          </div>
+          <div>
+            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Role details</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="sm:col-span-2"><Field label="Role description"><input className={kitInput} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Responsibilities, must-haves…" /></Field></div>
+              <div className="sm:col-span-2"><Field label="Responsibilities"><textarea rows={2} className={kitInput} value={form.responsibilities} onChange={(e) => setForm({ ...form, responsibilities: e.target.value })} placeholder="Day-to-day scope…" /></Field></div>
+              <Field label="Required skills (comma separated)"><input className={kitInput} value={form.requiredSkills} onChange={(e) => setForm({ ...form, requiredSkills: e.target.value })} placeholder="React, Node.js, AWS" /></Field>
+              <Field label="Preferred skills"><input className={kitInput} value={form.preferredSkills} onChange={(e) => setForm({ ...form, preferredSkills: e.target.value })} /></Field>
+              <div className="sm:col-span-2"><Field label="Qualifications"><input className={kitInput} value={form.qualifications} onChange={(e) => setForm({ ...form, qualifications: e.target.value })} placeholder="Degree, certifications…" /></Field></div>
+              <Field label="Min experience (yrs)"><input className={kitInput} type="number" min={0} value={form.experienceMin} onChange={(e) => setForm({ ...form, experienceMin: e.target.value })} /></Field>
+              <Field label="Max experience (yrs)"><input className={kitInput} type="number" min={0} value={form.experienceMax} onChange={(e) => setForm({ ...form, experienceMax: e.target.value })} /></Field>
+            </div>
+          </div>
+          <div>
+            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Compensation</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Min budget / CTC"><input className={kitInput} type="number" min={0} value={form.budgetMin} onChange={(e) => setForm({ ...form, budgetMin: e.target.value })} /></Field>
+              <Field label="Max budget / CTC"><input className={kitInput} type="number" min={0} value={form.budgetMax} onChange={(e) => setForm({ ...form, budgetMax: e.target.value })} /></Field>
+              <Field label="Currency"><Select value={form.currency} onChange={(v) => setForm({ ...form, currency: v })} options={['INR', 'USD', 'EUR', 'GBP', 'AED'].map((c) => ({ value: c, label: c }))} /></Field>
+              <Field label="Pay period"><Select value={form.payPeriod} onChange={(v) => setForm({ ...form, payPeriod: v })} options={[{ value: 'annual', label: 'Annual' }, { value: 'monthly', label: 'Monthly' }, { value: 'hourly', label: 'Hourly' }]} /></Field>
+              <div className="sm:col-span-2"><Field label="Benefits"><input className={kitInput} value={form.benefits} onChange={(e) => setForm({ ...form, benefits: e.target.value })} placeholder="Insurance, ESOPs, hybrid…" /></Field></div>
+            </div>
+          </div>
+          <div>
+            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Timeline & ownership</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Openings"><input className={kitInput} type="number" min={1} value={form.openings} onChange={(e) => setForm({ ...form, openings: Number(e.target.value) })} /></Field>
+              <Field label="Target deadline"><DatePicker value={form.deadline} onChange={(v) => setForm({ ...form, deadline: v })} ariaLabel="Target deadline" /></Field>
+              <div className="sm:col-span-2"><Field label="Recruiter (email)"><input className={kitInput} value={form.recruiter} onChange={(e) => setForm({ ...form, recruiter: e.target.value })} placeholder="recruiter@company.com" /></Field></div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-1 border-t border-slate-100 mt-1">
+            <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs mt-3">Cancel</button>
+            <button className={`${btnPrimary} mt-3`} disabled={busy || !form.title.trim()}>{busy ? 'Creating…' : 'Create requirement'}</button>
           </div>
         </form>
       </Modal>
@@ -514,7 +532,9 @@ export function RequisitionsPanel() {
         </div>
       </>)}
       <Pager page={page} total={total} pageSize={pageSize} onPage={setPage} />
-      {pipelineFor && <RequirementPipeline reqId={pipelineFor.id} onClose={() => { setPipelineFor(null); load(page); }} />}
+      {pipelineFor && <RequirementPipeline reqId={pipelineFor.id} onClose={() => { setPipelineFor(null); load(page); }}
+        onDecide={(row, action) => setDecideFor({ row, action })}
+        onEdit={(row) => setEditing({ ...row })} onAssign={(rows) => openAssign(rows)} onDelete={(row) => setDeleteFor(row)} />}
       <Modal open={editing !== null} onClose={() => setEditing(null)} title={`Edit requirement — ${editing?.id || ''}`} subtitle="Only Draft / Pending Approval can be edited" wide>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="sm:col-span-2"><Field label="Title"><input className={kitInput} value={editing?.title || ''} onChange={(e) => setEditing({ ...editing, title: e.target.value })} /></Field></div>
@@ -527,32 +547,51 @@ export function RequisitionsPanel() {
           <Field label="Min experience"><input className={kitInput} type="number" min={0} value={editing?.experienceMin ?? ''} onChange={(e) => setEditing({ ...editing, experienceMin: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
           <Field label="Max experience"><input className={kitInput} type="number" min={0} value={editing?.experienceMax ?? ''} onChange={(e) => setEditing({ ...editing, experienceMax: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
           <Field label="Deadline"><DatePicker value={String(editing?.deadline || '').slice(0, 10)} onChange={(v) => setEditing({ ...editing, deadline: v })} ariaLabel="Target deadline" /></Field>
+          <Field label="Min budget / CTC"><input className={kitInput} type="number" min={0} value={editing?.budgetMin ?? ''} onChange={(e) => setEditing({ ...editing, budgetMin: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
+          <Field label="Max budget / CTC"><input className={kitInput} type="number" min={0} value={editing?.budgetMax ?? ''} onChange={(e) => setEditing({ ...editing, budgetMax: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
+          <Field label="Currency"><Select value={editing?.currency || 'INR'} onChange={(v) => setEditing({ ...editing, currency: v })} options={['INR', 'USD', 'EUR', 'GBP', 'AED'].map((c) => ({ value: c, label: c }))} /></Field>
+          <Field label="Pay period"><Select value={editing?.payPeriod || 'annual'} onChange={(v) => setEditing({ ...editing, payPeriod: v })} options={[{ value: 'annual', label: 'Annual' }, { value: 'monthly', label: 'Monthly' }, { value: 'hourly', label: 'Hourly' }]} /></Field>
           <div className="sm:col-span-2"><Field label="Description"><input className={kitInput} value={editing?.description || ''} onChange={(e) => setEditing({ ...editing, description: e.target.value })} /></Field></div>
+          <div className="sm:col-span-2"><Field label="Responsibilities"><textarea rows={2} className={kitInput} value={editing?.responsibilities || ''} onChange={(e) => setEditing({ ...editing, responsibilities: e.target.value })} /></Field></div>
+          <Field label="Required skills"><input className={kitInput} value={editing?.requiredSkills || ''} onChange={(e) => setEditing({ ...editing, requiredSkills: e.target.value })} /></Field>
+          <Field label="Preferred skills"><input className={kitInput} value={editing?.preferredSkills || ''} onChange={(e) => setEditing({ ...editing, preferredSkills: e.target.value })} /></Field>
+          <div className="sm:col-span-2"><Field label="Qualifications"><input className={kitInput} value={editing?.qualifications || ''} onChange={(e) => setEditing({ ...editing, qualifications: e.target.value })} /></Field></div>
+          <div className="sm:col-span-2"><Field label="Benefits"><input className={kitInput} value={editing?.benefits || ''} onChange={(e) => setEditing({ ...editing, benefits: e.target.value })} /></Field></div>
           <div className="sm:col-span-2 flex justify-end gap-2">
             <button type="button" onClick={() => setEditing(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
             <button type="button" disabled={busy} onClick={saveEdit} className={btnPrimary}>{busy ? 'Saving…' : 'Save changes'}</button>
           </div>
         </div>
       </Modal>
-      <Modal open={decideFor !== null} onClose={() => setDecideFor(null)}
-        title={decideFor?.action === 'approve' ? `Approve ${decideFor?.row.id || ''}?` : decideFor?.action === 'reject' ? `Reject ${decideFor?.row.id || ''}?` : `Request changes — ${decideFor?.row.id || ''}?`}
-        subtitle={decideFor?.action === 'approve' ? 'Moves to Approved. Hiring can begin.' : decideFor?.action === 'reject' ? 'Moves to Cancelled with a recorded reason.' : 'Sends back to Draft with a note to the hiring manager.'}>
-        <div className="space-y-3">
-          {decideFor?.action !== 'approve' && (
-            <Field label={decideFor?.action === 'reject' ? 'Rejection reason *' : 'Change note *'}>
-              <textarea rows={3} className={kitInput} value={decideReason} onChange={(e) => setDecideReason(e.target.value)}
-                placeholder={decideFor?.action === 'reject' ? 'e.g. Headcount frozen for Q3' : 'e.g. Add salary band and must-have skills'} />
-            </Field>
-          )}
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setDecideFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
-            <button type="button" disabled={busy || (decideFor?.action !== 'approve' && !decideReason.trim())} onClick={doDecide}
-              className={decideFor?.action === 'reject' ? 'px-4 py-2.5 rounded-xl bg-red-600 text-white font-bold text-xs disabled:opacity-50' : btnPrimary}>
-              {busy ? 'Working…' : decideFor?.action === 'approve' ? 'Approve' : decideFor?.action === 'reject' ? 'Reject' : 'Send for rework'}
-            </button>
-          </div>
-        </div>
-      </Modal>
+      <ActionConfirm open={decideFor !== null} onCancel={() => setDecideFor(null)}
+        title={decideFor?.action === 'approve' ? `Approve ${decideFor?.row.id || ''}` : decideFor?.action === 'reject' ? `Reject ${decideFor?.row.id || ''}` : `Request changes — ${decideFor?.row.id || ''}`}
+        subtitle={`${decideFor?.row.title || ''} • currently ${decideFor?.row.status || ''}`}
+        why={['Requirement is in Pending Approval', 'You are deciding as an authorized reviewer']}
+        steps={decideFor?.action === 'approve'
+          ? ['Status moves to Approved', 'Hiring manager and recruiter are notified', 'Jobs can now be published under it']
+          : decideFor?.action === 'reject'
+            ? ['Status moves to Cancelled with your reason', 'Hiring manager is notified', 'Record stays auditable; delete allowed once linked jobs are cleared']
+            : ['Status moves back to Draft', 'Your note is stored in history and sent to the hiring manager', 'Record can be resubmitted after rework']}
+        locks={decideFor?.action === 'approve'
+          ? ['Approved requirements lock editing for non-platform roles']
+          : decideFor?.action === 'reject'
+            ? ['Cancelled requirements accept no further transitions']
+            : ['Sourcing cannot start until re-approved']}
+        requireReason={decideFor?.action !== 'approve'} reasonLabel={decideFor?.action === 'reject' ? 'Rejection reason *' : 'Change note *'}
+        confirmLabel={decideFor?.action === 'approve' ? 'Approve' : decideFor?.action === 'reject' ? 'Reject' : 'Send for rework'}
+        tone={decideFor?.action === 'reject' ? 'danger' : 'primary'}
+        onConfirm={async (reason) => {
+          if (!decideFor) return;
+          const { row, action } = decideFor;
+          if (action === 'approve') await transition(row.id, 'Approved');
+          else if (action === 'reject') await transition(row.id, 'Cancelled', reason);
+          else {
+            const updated = unwrapObj(await requisitionsApi.requestChanges(row.id, (reason || '').trim()));
+            if (updated?.id) refreshRow(updated);
+            setOk(`${row.id} sent back to Draft with change note.`); syncAll();
+          }
+          setDecideFor(null);
+        }} />
       <Modal open={assignFor.length > 0} onClose={() => setAssignFor([])} title={`Assign recruiter — ${assignFor.length} requirement(s)`} subtitle="Workload shows open requirements already owned">
         <div className="space-y-2 max-h-64 overflow-y-auto" data-lenis-prevent>
           {recruiters.length === 0 && <div className="text-[11px] text-slate-500 font-medium">No active recruiters found.</div>}
@@ -572,7 +611,13 @@ export function RequisitionsPanel() {
           <button type="button" disabled={busy || !assignEmail.trim()} onClick={doAssign} className={btnPrimary}>{busy ? 'Assigning…' : 'Assign'}</button>
         </div>
       </Modal>
-      <ConfirmDialog open={deleteFor !== null} onCancel={() => setDeleteFor(null)} title={`Delete ${deleteFor?.id || ''}?`} body="Only Draft/Cancelled requirements can be deleted. Linked jobs block deletion." confirmLabel="Delete" onConfirm={doDelete} />
+      <ActionConfirm open={deleteFor !== null} onCancel={() => setDeleteFor(null)}
+        title={`Delete ${deleteFor?.id || ''}`}
+        subtitle={deleteFor?.title || ''}
+        why={['Requirement is in Draft / Cancelled', `No linked job postings (${deleteFor?.rollup?.linkedJobs?.length ?? 0} found)`]}
+        steps={['Record is removed permanently', 'An audit entry is preserved']}
+        consequences={['Linked jobs must already be cleared — the server re-checks this']}
+        confirmLabel="Delete permanently" tone="danger" onConfirm={doDelete} />
     </div>
   );
 }
@@ -581,11 +626,19 @@ export function RequisitionsPanel() {
 const FUNNEL_STEPS = ['applied', 'screening', 'interview', 'offer', 'hired'] as const;
 const FUNNEL_LABELS: Record<string, string> = { applied: 'Applied', screening: 'Screening', interview: 'Interview', offer: 'Offer', hired: 'Hired' };
 
-export function RequirementPipeline({ reqId, onClose }: { reqId: string; onClose: () => void }) {
+export function RequirementPipeline({ reqId, onClose, onDecide, onEdit, onAssign, onDelete }: {
+  reqId: string; onClose: () => void;
+  onDecide: (row: any, action: 'approve' | 'reject' | 'changes') => void;
+  onEdit: (row: any) => void; onAssign: (rows: any[]) => void; onDelete: (row: any) => void;
+}) {
   const [data, setData] = useState<any>(null);
   const [interviews, setInterviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const gApprove = useActionGuard('requirement', data, 'approve');
+  const gEdit = useActionGuard('requirement', data, 'edit');
+  const gDelete = useActionGuard('requirement', data, 'delete');
+  const gAssign = useActionGuard('requirement', data, 'assign');
   useEffect(() => {
     (async () => {
       setLoading(true); setError('');
@@ -604,16 +657,45 @@ export function RequirementPipeline({ reqId, onClose }: { reqId: string; onClose
   }, [reqId]);
   const f = data?.rollup || { applied: 0, screening: 0, interview: 0, offer: 0, hired: 0, applications: 0, interviews: 0, openingsFilled: 0, ageingDays: 0, linkedJobs: [] };
   const max = Math.max(1, f.applied);
+  const lockNotes = [
+    !gApprove.allowed && gApprove.reason,
+    !gEdit.allowed && gEdit.reason,
+    !gDelete.allowed && gDelete.reason,
+  ].filter(Boolean) as string[];
   return (
-    <Modal open onClose={onClose} title={data?.title || reqId} subtitle={`${reqId} • ${data?.status || ''} • ${f.openingsFilled}/${data?.openings || 1} filled`} wide>
+    <DetailDrawer title={data?.title || reqId} subtitle={`${reqId} • ${data?.status || ''} • ${f.openingsFilled}/${data?.openings || 1} filled`} onClose={onClose} width="max-w-4xl">
       {loading ? <InlineLoading message="Loading pipeline…" /> : error ? (
         <PanelError message={error} onRetry={() => window.location.reload()} />
       ) : (
         <div className="space-y-4 text-xs">
+          <div className="flex flex-wrap items-center gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200" role="toolbar" aria-label="Requirement actions">
+            {gApprove.allowed && <button type="button" onClick={() => onDecide(data, 'approve')} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold">Approve</button>}
+            {gApprove.allowed && <button type="button" onClick={() => onDecide(data, 'reject')} className="px-4 py-2 rounded-xl bg-red-600 text-white font-bold">Reject…</button>}
+            {gApprove.allowed && <button type="button" onClick={() => onDecide(data, 'changes')} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold">Request changes…</button>}
+            {gEdit.allowed && <button type="button" onClick={() => onEdit(data)} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold">Edit…</button>}
+            {gAssign.allowed && <button type="button" onClick={() => onAssign([data])} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold">Assign recruiter…</button>}
+            {gDelete.allowed && <button type="button" onClick={() => onDelete(data)} className="px-4 py-2 rounded-xl bg-white border border-red-200 text-red-600 font-bold">Delete…</button>}
+            {lockNotes.length > 0 && (
+              <div className="w-full space-y-1 pt-1 border-t border-slate-200">
+                {lockNotes.map((n) => <div key={n} className="text-[11px] font-bold text-amber-700">🔒 {n}</div>)}
+              </div>
+            )}
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {[['Owner', data?.hiringManager || '—'], ['Recruiter', data?.recruiter || 'Unassigned'], ['Deadline', String(data?.deadline || '').slice(0, 10) || '—']].map(([k, v]) => (
               <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 truncate">{String(v ?? '—')}</div></div>
             ))}
+          </div>
+          <div>
+            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Role profile</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {[['Department / Category', [data?.department, data?.category].filter(Boolean).join(' • ') || '—'], ['Location / Branch', [data?.location, data?.branch].filter(Boolean).join(' • ') || '—'], ['Employment', data?.employmentType || '—'], ['Experience', (data?.experienceMin !== undefined || data?.experienceMax !== undefined) ? `${data?.experienceMin ?? '—'}–${data?.experienceMax ?? '—'} yrs` : '—'], ['Budget', (data?.budgetMin || data?.budgetMax) ? `${data?.currency || 'INR'} ${data?.budgetMin ?? '—'}–${data?.budgetMax ?? '—'} ${data?.payPeriod || ''}` : '—'], ['Priority', data?.priority || '—']].map(([k, v]) => (
+                <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1">{String(v ?? '—')}</div></div>
+              ))}
+              {[['Description', data?.description], ['Responsibilities', data?.responsibilities], ['Required skills', data?.requiredSkills], ['Preferred skills', data?.preferredSkills], ['Qualifications', data?.qualifications], ['Benefits', data?.benefits]].filter(([, v]) => v).map(([k, v]) => (
+                <div key={k as string} className="sm:col-span-2 p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-medium mt-1 whitespace-pre-wrap">{String(v)}</div></div>
+              ))}
+            </div>
           </div>
           <div>
             <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Hiring funnel — live counts</div>
@@ -667,7 +749,7 @@ export function RequirementPipeline({ reqId, onClose }: { reqId: string; onClose
           </div>
         </div>
       )}
-    </Modal>
+    </DetailDrawer>
   );
 }
 
@@ -687,6 +769,8 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
   const dqApp = useDebounced(q);
   const [detail, setDetail] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
+  const [reopenFor, setReopenFor] = useState<any>(null);
+  const [reopenTarget, setReopenTarget] = useState('Applied');
   const pageSize = 10;
 
   const load = async (p = page, f = appliedFilter) => {
@@ -711,8 +795,19 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
     try {
       const updated = unwrapObj(await applicationsApi.withdraw(id, reasonText || reason || undefined));
       setRows((r) => r.map((x) => (x.id === id ? updated : x)));
+      if (detail?.id === id && updated?.id) setDetail(updated);
       syncAll();
     } catch (e) { setError(errMsg(e)); }
+  };
+  const reopen = async (app: any, target: string, reasonText?: string) => {
+    const updated = unwrapObj(await applicationsApi.reopen(app.id, target, reasonText || ''));
+    setRows((r) => r.map((x) => (x.id === app.id ? updated : x)));
+    if (detail?.id === app.id && updated?.id) setDetail(updated);
+    const hRes: any = await apiClient.get(`/api/v1/applications/${app.id}/history`).catch(() => null);
+    const h = (hRes as { data?: any[] })?.data || [];
+    if (detail?.id === app.id && Array.isArray(h)) setHistory(h);
+    setReopenFor(null);
+    syncAll();
   };
 
   const filteredApps = rows.filter((a) => !dqApp.trim() || `${a.id} ${a.jobTitle} ${a.candidateEmail}`.toLowerCase().includes(dqApp.toLowerCase()));
@@ -760,6 +855,7 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
                 { label: 'View + history', onSelect: () => openDetail(a) },
                 ...moves.map((s) => ({ label: `Move to ${s}`, onSelect: () => move(a.id, s) })),
                 ...(canWithdraw ? [{ label: 'Withdraw application', danger: true, onSelect: () => setWithdrawId(a.id) }] : []),
+                ...(checkRecordAction('application', a, 'reopen', {}).allowed ? [{ label: 'Reopen…', onSelect: () => { setReopenFor(a); setReopenTarget('Applied'); } }] : []),
               ]} />
             </div>
             );
@@ -778,12 +874,30 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
         }}
         onCancel={() => setWithdrawId('')}
       />
+      <ActionConfirm
+        open={reopenFor !== null}
+        onCancel={() => setReopenFor(null)}
+        title={`Reopen ${reopenFor?.id || ''}`}
+        subtitle={`${reopenFor?.jobTitle || ''} • ${reopenFor?.candidateEmail || ''}`}
+        why={[`Application is currently ${reopenFor?.stage || ''} (terminal)`, 'Reopening returns it to an active stage — history is preserved']}
+        steps={[`Move back to ${reopenTarget}`, 'Closed interview chat reopens automatically', 'Event recorded with actor + timestamp']}
+        consequences={['Candidate becomes visible in the active pipeline again']}
+        extra={<Field label="Reopen to"><Select value={reopenTarget} onChange={setReopenTarget} options={['Applied', 'Shortlisted'].map((v) => ({ value: v, label: v }))} /></Field>}
+        requireReason
+        reasonLabel="Reopen reason *"
+        confirmLabel={`Reopen to ${reopenTarget}`}
+        tone="dark"
+        onConfirm={async (r) => { if (reopenFor) await reopen(reopenFor, reopenTarget, r); }}
+      />
       <Modal open={detail !== null} onClose={() => setDetail(null)} title={`${detail?.jobTitle || detail?.jobId || ''}`} subtitle={`${detail?.id || ''} • ${detail?.candidateEmail || ''} • ${detail?.stage || ''}`}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
           {[['Application', detail?.id], ['Job', `${detail?.jobTitle || ''} (${detail?.jobId || ''})`], ['Candidate', detail?.candidateEmail], ['Stage', detail?.stage], ['Source', detail?.source], ['Updated', String(detail?.updatedAt || '').slice(0, 10)]].map(([k, v]) => (
             <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—')}</div></div>
           ))}
         </div>
+        {checkRecordAction('application', detail, 'reopen', {}).allowed && (
+          <button type="button" onClick={() => { setReopenFor(detail); setReopenTarget('Applied'); }} className="px-4 py-2 rounded-xl bg-spec-navy text-white font-bold text-xs w-fit">Reopen application…</button>
+        )}
         <div className="text-xs font-extrabold pt-1">Stage history ({history.length})</div>
         {history.length === 0 ? <div className="text-[11px] text-slate-500">No history rows yet.</div> : history.map((h: any) => (
           <div key={h.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">{h.from} → <strong>{h.to}</strong> • by {h.actor} • <span className="text-slate-500">{String(h.createdAt || '').slice(0, 16).replace('T', ' ')}</span>{h.reason ? <div className="text-slate-600">{h.reason}</div> : null}</div>
@@ -3582,10 +3696,15 @@ export function JobsPanel() {
   const dqJob = useDebounced(q);
   const [detail, setDetail] = useState<any>(null);
   const [pipeline, setPipeline] = useState<{ apps: any[]; interviews: any[] }>({ apps: [], interviews: [] });
+  const [detailReq, setDetailReq] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
   const [pubFor, setPubFor] = useState<{ job: any; to: string } | null>(null);
   const [pubReason, setPubReason] = useState('');
   const [pubExpiry, setPubExpiry] = useState('');
+  const [moveFor, setMoveFor] = useState<{ job: any; to: string } | null>(null);
+  const [view, setView] = useQueryState('job_view');
+  const [showCreateJob, setShowCreateJob] = useState(false);
+  const [jobForm, setJobForm] = useState({ orgId: '', title: '', requisitionId: '', location: '', employmentType: 'Full-time', salaryMin: '', salaryMax: '', expiryDate: '', visibility: 'public', description: '' });
   const [busy, setBusy] = useState(false);
   const load = async () => {
     setLoading(true); setError('');
@@ -3600,14 +3719,39 @@ export function JobsPanel() {
   };
   useEffect(() => { load(); }, [orgF]);
   const openDetail = async (j: any) => {
-    setDetail(j); setPipeline({ apps: [], interviews: [] });
+    setDetail(j); setPipeline({ apps: [], interviews: [] }); setDetailReq(null);
     try {
       const [aRes, iRes] = await Promise.all([
         applicationsApi.list(`?jobId=${j.id}&page=1&pageSize=100`).catch(() => null),
         interviewsApi.list(`?jobId=${j.id}`).catch(() => null),
       ]);
       setPipeline({ apps: unwrapList(aRes), interviews: unwrapList(iRes) });
+      if (j.requisitionId) {
+        const rRes: any = await requisitionsApi.list(`?page=1&pageSize=100`).catch(() => null);
+        const req = unwrapList(rRes).find((r: any) => r.id === j.requisitionId);
+        if (req) setDetailReq(req);
+      }
     } catch { /* pipeline is best-effort */ }
+  };
+  const doCreateJob = async () => {
+    if (!jobForm.title.trim()) return;
+    setBusy(true); setError('');
+    try {
+      const payload: any = {
+        title: jobForm.title.trim(),
+        requisitionId: jobForm.requisitionId.trim() || undefined,
+        location: jobForm.location.trim() || undefined,
+        employmentType: jobForm.employmentType,
+        salaryMin: jobForm.salaryMin === '' ? undefined : Number(jobForm.salaryMin),
+        salaryMax: jobForm.salaryMax === '' ? undefined : Number(jobForm.salaryMax),
+        expiryDate: jobForm.expiryDate || undefined,
+        visibility: jobForm.visibility,
+        description: jobForm.description.trim() || undefined,
+      };
+      if (jobForm.orgId) payload.tenantId = jobForm.orgId;
+      const created = unwrapObj(await jobsApi.create(payload));
+      if (created?.id) { setRows((r) => [created, ...r]); setShowCreateJob(false); setJobForm({ orgId: '', title: '', requisitionId: '', location: '', employmentType: 'Full-time', salaryMin: '', salaryMax: '', expiryDate: '', visibility: 'public', description: '' }); setOk('Job posting created as Draft.'); syncAll(); }
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
   };
   const transition = async (id: string, status: string, reason?: string, expiryDate?: string) => {
     try {
@@ -3642,6 +3786,13 @@ export function JobsPanel() {
     return `${j.id} ${j.title} ${j.orgId} ${j.location}`.toLowerCase().includes(dqJob.toLowerCase());
   });
   const pubNeedsForm = (j: any, to: string) => to === 'Published' || (j.status === 'Published' && to === 'Approved') || (j.status === 'Closed' && (to === 'Published' || to === 'Paused'));
+  const dropMove = (j: any, to: string) => {
+    if (to === j.status) return;
+    const legal = [...(JOB_TRANSITIONS[j.status] || []), ...(j.status === 'Published' ? ['Approved'] : []), ...(j.status === 'Closed' ? ['Published', 'Paused'] : [])];
+    if (!legal.includes(to)) { setError(`Invalid transition ${j.status} → ${to} for ${j.id}.`); return; }
+    if (pubNeedsForm(j, to)) { setPubFor({ job: j, to }); setPubReason(''); setPubExpiry(String(j.expiryDate || '').slice(0, 10)); }
+    else setMoveFor({ job: j, to });
+  };
   const jobMenuFor = (j: any) => (
     <RowMenu items={[
       { label: 'View + pipeline', onSelect: () => openDetail(j) },
@@ -3649,7 +3800,7 @@ export function JobsPanel() {
       ...(JOB_TRANSITIONS[j.status] || []).map((s) => (
         pubNeedsForm(j, s)
           ? { label: `${s === 'Published' ? 'Publish' : s}…`, onSelect: () => { setPubFor({ job: j, to: s }); setPubReason(''); setPubExpiry(String(j.expiryDate || '').slice(0, 10)); } }
-          : { label: `Move to ${s}`, onSelect: () => transition(j.id, s) }
+          : { label: `Move to ${s}…`, onSelect: () => setMoveFor({ job: j, to: s }) }
       )),
       ...(j.status === 'Published' ? [{ label: 'Unpublish…', danger: true, onSelect: () => { setPubFor({ job: j, to: 'Approved' }); setPubReason(''); setPubExpiry(''); } }] : []),
       ...(j.status === 'Closed' ? [
@@ -3658,6 +3809,13 @@ export function JobsPanel() {
       ] : []),
     ]} />
   );
+  const MOVE_COPY: Record<string, { steps: string[]; consequences: string[] }> = {
+    Paused: { steps: ['Status moves to Paused', 'Recorded with actor and timestamp'], consequences: ['Posting leaves candidate results while paused', 'Existing applications stay readable'] },
+    Closed: { steps: ['Status moves to Closed', 'Recorded with actor and timestamp'], consequences: ['New applications are blocked', 'Reopen later needs approve permission, a reason and a future expiry'] },
+    Archived: { steps: ['Status moves to Archived', 'Recorded with actor and timestamp'], consequences: ['Terminal state — no further transitions ever'] },
+    Approved: { steps: ['Status moves to Approved', 'Recorded with actor and timestamp'], consequences: ['Eligible for publication once guards pass'] },
+    Published: { steps: ['Status moves to Published', 'Recorded with actor and timestamp'], consequences: ['Becomes visible to eligible candidates'] },
+  };
   const pubCopy: Record<string, { title: string; rules: string[] }> = {
     Published: { title: 'Publish job', rules: ['Parent requirement must be Approved or Sourcing', 'Requirement must have openings left', 'Expiry must be a future date (set below if empty)'] },
     Approved: { title: 'Unpublish job', rules: ['Removes the posting from candidate results immediately', 'Requires the approve permission + a recorded reason'] },
@@ -3671,8 +3829,19 @@ export function JobsPanel() {
       </div>
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
-          <div className="text-xs font-bold text-slate-500">{filtered.length} posting(s) shown</div>
-          <ExportButton filename="jobs.csv" rows={filtered} columns={['id', 'requisitionId', 'title', 'orgId', 'location', 'employmentType', 'status', 'expiryDate']} />
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-xl bg-slate-100 border border-slate-200 p-0.5" role="tablist" aria-label="Jobs view">
+              {(['table', 'kanban'] as const).map((v) => (
+                <button key={v} role="tab" aria-selected={(view || 'table') === v} type="button" onClick={() => setView(v)}
+                  className={`px-3 py-1.5 rounded-lg font-bold text-xs capitalize ${((view || 'table') === v) ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>{v}</button>
+              ))}
+            </div>
+            <div className="text-xs font-bold text-slate-500">{filtered.length} posting(s) shown</div>
+          </div>
+          <div className="flex gap-2">
+            <ExportButton filename="jobs.csv" rows={filtered} columns={['id', 'requisitionId', 'title', 'orgId', 'location', 'employmentType', 'status', 'expiryDate']} />
+            <button type="button" onClick={() => setShowCreateJob(true)} className={btnPrimary}>+ New job</button>
+          </div>
         </div>
         <div className="flex flex-col lg:flex-row gap-2">
           <input className={`${inputCls} flex-1`} placeholder="Search ID, title, org, location…" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -3692,6 +3861,8 @@ export function JobsPanel() {
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
       {loading ? <InlineLoading message="Loading jobs…" /> : filtered.length === 0 ? (
         <EmptyState title="No jobs" message="Published requisitions become jobs here." />
+      ) : (view || 'table') === 'kanban' ? (
+        <JobsKanban jobs={filtered} onOpen={openDetail} onDropMove={dropMove} />
       ) : (<>
         <div className="space-y-2 md:hidden">
           {filtered.map((j) => (
@@ -3731,18 +3902,35 @@ export function JobsPanel() {
         </div>
       </>)}
       {detail && (
-        <Modal open onClose={() => setDetail(null)} title={detail.title} subtitle={`${detail.id} • req ${detail.requisitionId || '—'} • ${detail.status}`} wide>
+        <DetailDrawer title={detail.title} subtitle={`${detail.id} • req ${detail.requisitionId || '—'} • ${detail.status}`} onClose={() => setDetail(null)} width="max-w-4xl">
+          <JobDrawerActions job={detail} requirement={detailReq} onDone={(u) => { setDetail((d: any) => (d && d.id === u.id ? u : d)); setRows((r) => r.map((x) => (x.id === u.id ? u : x))); }} />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-            {[['Organization', detail.orgId], ['Location', detail.location], ['Employment', detail.employmentType], ['Arrangement', detail.workArrangement], ['Salary', detail.salaryMin ? `₹${detail.salaryMin}–₹${detail.salaryMax}` : (detail.budgetRange || '—')], ['Visibility', detail.visibility], ['Applicants', detail.counts?.applications ?? detail.applicantsCount], ['Hired', detail.counts?.hired ?? '—'], ['Expiry', String(detail.expiryDate || '').slice(0, 10)], ['Status reason', detail.statusReason || '—'], ['Agencies', (detail.assignedAgencies || []).join(', ')], ['Vendors', (detail.assignedVendors || []).join(', ')]].map(([k, v]) => (
+            {[['Organization', detail.orgId], ['Location', detail.location], ['Employment', detail.employmentType], ['Arrangement', detail.workArrangement], ['Salary', detail.salaryMin ? `₹${detail.salaryMin}–₹${detail.salaryMax}` : (detail.budgetRange || '—')], ['Visibility', detail.visibility], ['Skills', [detail.requiredSkills, detail.preferredSkills].filter(Boolean).join(' • ') || '—'], ['Qualifications', detail.qualifications || '—'], ['Applicants', detail.counts?.applications ?? detail.applicantsCount], ['Hired', detail.counts?.hired ?? '—'], ['Expiry', String(detail.expiryDate || '').slice(0, 10)], ['Accepting applications', detail.counts ? (detail.counts.acceptingApplications ? 'Yes' : 'No') : '—'], ['Status reason', detail.statusReason || '—'], ['Agencies', (detail.assignedAgencies || []).join(', ')], ['Vendors', (detail.assignedVendors || []).join(', ')]].map(([k, v]) => (
               <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—') || '—'}</div></div>
             ))}
             <div className="sm:col-span-2 p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">Description</div><div className="font-medium mt-1 whitespace-pre-wrap">{detail.description || '—'}</div></div>
+            {detailReq && (
+              <div className="sm:col-span-2 p-3 rounded-2xl bg-blue-50/60 border border-blue-200">
+                <div className="text-[10px] font-extrabold text-blue-800 uppercase tracking-wider">Parent requirement</div>
+                <div className="font-bold mt-1">{detailReq.title} <span className="font-mono text-slate-500">• {detailReq.id} • {detailReq.status} • {detailReq.openings || 1} opening(s)</span></div>
+              </div>
+            )}
           </div>
           <div className="text-xs font-extrabold pt-2">Pipeline — {pipeline.apps.length} applications, {pipeline.interviews.length} interviews</div>
           {pipeline.apps.length === 0 ? <div className="text-[11px] text-slate-500">No applications for this job yet.</div> : pipeline.apps.slice(0, 10).map((a: any) => (
             <div key={a.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">{a.candidateEmail} • <strong>{a.stage}</strong></div>
           ))}
-        </Modal>
+          {(detail.history || []).length > 0 && (
+            <>
+              <div className="text-xs font-extrabold pt-2">Status history</div>
+              <div className="space-y-1.5">
+                {detail.history.slice(0, 20).map((h: any, i: number) => (
+                  <div key={i} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium">{h.from} → <strong>{h.to}</strong> • {h.by}{h.reason ? ` • ${h.reason}` : ''} <span className="text-slate-400">• {String(h.at || '').slice(0, 16).replace('T', ' ')}</span></div>
+                ))}
+              </div>
+            </>
+          )}
+        </DetailDrawer>
       )}
       <Modal open={editing !== null} onClose={() => setEditing(null)} title={`Edit job — ${editing?.id || ''}`} subtitle="Agency/vendor assignment controls who can submit">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -3778,6 +3966,128 @@ export function JobsPanel() {
           </div>
         </div>
       </Modal>
+      <ActionConfirm open={moveFor !== null} onCancel={() => setMoveFor(null)}
+        title={`Move ${moveFor?.job.id || ''} → ${moveFor?.to || ''}`}
+        subtitle={moveFor?.job.title || ''}
+        why={[`Posting is currently ${moveFor?.job.status || ''}`, 'Transition is within the allowed job lifecycle']}
+        steps={['Status changes immediately', 'Move is recorded with actor and timestamp']}
+        consequences={(MOVE_COPY[moveFor?.to || '']?.consequences || []).concat(moveFor?.to === 'Closed' ? ['Reopening later needs approval, a reason and a future expiry'] : [])}
+        confirmLabel={`Move to ${moveFor?.to || ''}`} tone="dark"
+        onConfirm={async () => { if (moveFor) { await transition(moveFor.job.id, moveFor.to); setMoveFor(null); } }} />
+      <GlobalCreateModal open={showCreateJob} onClose={() => setShowCreateJob(false)} title="New job posting" subtitle="Starts as Draft — publish from the board once approved" wide submitLabel="Create job"
+        onSubmit={doCreateJob}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="sm:col-span-2"><Field label="Job title *"><input className={kitInput} value={jobForm.title} onChange={(e) => setJobForm({ ...jobForm, title: e.target.value })} placeholder="e.g. Senior React Developer" /></Field></div>
+          {orgs.length > 0 && <Field label="Organization *"><Select value={jobForm.orgId} onChange={(v) => setJobForm({ ...jobForm, orgId: v })} placeholder="Choose company" options={orgs.map((o: any) => ({ value: o.id, label: `${o.displayName || o.legalName || o.id}` }))} /></Field>}
+          <Field label="Requirement ID (links demand)"><input className={`${kitInput} font-mono`} value={jobForm.requisitionId} onChange={(e) => setJobForm({ ...jobForm, requisitionId: e.target.value })} placeholder="REQ-…" /></Field>
+          <Field label="Location"><input className={kitInput} value={jobForm.location} onChange={(e) => setJobForm({ ...jobForm, location: e.target.value })} /></Field>
+          <Field label="Employment type"><Select value={jobForm.employmentType} onChange={(v) => setJobForm({ ...jobForm, employmentType: v })} options={['Full-time', 'Part-time', 'Contract', 'Internship'].map((t) => ({ value: t, label: t }))} /></Field>
+          <Field label="Min salary (₹)"><input className={kitInput} type="number" min={0} value={jobForm.salaryMin} onChange={(e) => setJobForm({ ...jobForm, salaryMin: e.target.value })} /></Field>
+          <Field label="Max salary (₹)"><input className={kitInput} type="number" min={0} value={jobForm.salaryMax} onChange={(e) => setJobForm({ ...jobForm, salaryMax: e.target.value })} /></Field>
+          <Field label="Expiry date"><DatePicker value={jobForm.expiryDate} onChange={(v) => setJobForm({ ...jobForm, expiryDate: v })} ariaLabel="Expiry date" /></Field>
+          <Field label="Visibility"><Select value={jobForm.visibility} onChange={(v) => setJobForm({ ...jobForm, visibility: v })} options={['public', 'private', 'assigned'].map((v) => ({ value: v, label: v }))} /></Field>
+          <div className="sm:col-span-2"><Field label="Description"><textarea rows={2} className={kitInput} value={jobForm.description} onChange={(e) => setJobForm({ ...jobForm, description: e.target.value })} /></Field></div>
+        </div>
+      </GlobalCreateModal>
+    </div>
+  );
+}
+
+/* ---------------- Job drawer action bar (guards visible, locks explained) ---------------- */
+export function JobDrawerActions({ job, requirement, onDone }: { job: any; requirement?: any; onDone: (updated: any) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [confirm, setConfirm] = useState<{ to: string; needReason: boolean; needExpiry: boolean } | null>(null);
+  const [expiry, setExpiry] = useState('');
+  const g = (action: string) => checkRecordAction('job', job, action, { context: requirement ? { requirement } : undefined });
+  const run = async (to: string, r?: string, exp?: string) => {
+    setBusy(true); setError('');
+    try {
+      const updated = unwrapObj(await jobsApi.setStatus(job.id, to, r, exp));
+      if (updated?.id) onDone(updated);
+      setConfirm(null); setExpiry('');
+      syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const buttons: Array<{ label: string; to: string; primary?: boolean; danger?: boolean }> = [];
+  if (job.status === 'Approved') buttons.push({ label: 'Publish…', to: 'Published', primary: true });
+  if (job.status === 'Published') { buttons.push({ label: 'Pause', to: 'Paused' }); buttons.push({ label: 'Close…', to: 'Closed' }); buttons.push({ label: 'Unpublish…', to: 'Approved', danger: true }); }
+  if (job.status === 'Paused') { buttons.push({ label: 'Republish…', to: 'Published', primary: true }); buttons.push({ label: 'Close…', to: 'Closed' }); }
+  if (job.status === 'Closed') { buttons.push({ label: 'Reopen as Published…', to: 'Published', primary: true }); buttons.push({ label: 'Reopen as Paused…', to: 'Paused' }); }
+  const locks = ['publish', 'unpublish', 'reopen', 'pause', 'close', 'archive'].map((a) => g(a)).filter((x) => !x.allowed).map((x) => x.reason);
+  const openConfirm = (to: string) => {
+    const needReason = to !== 'Published' || job.status === 'Closed';
+    const needExpiry = to === 'Published';
+    if (!needReason && !needExpiry) { run(to); return; }
+    setConfirm({ to, needReason, needExpiry });
+    setExpiry(String(job.expiryDate || '').slice(0, 10));
+  };
+  return (
+    <div className="flex flex-wrap items-center gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200" role="toolbar" aria-label="Job actions">
+      {buttons.map((b) => (
+        <button key={b.label} type="button" disabled={busy} onClick={() => openConfirm(b.to)}
+          className={`px-4 py-2 rounded-xl font-bold text-xs disabled:opacity-50 ${b.primary ? 'bg-[#087BFF] text-white' : b.danger ? 'bg-white border border-red-200 text-red-600' : 'bg-white border border-slate-200'}`}>{b.label}</button>
+      ))}
+      {locks.length > 0 && (
+        <div className="w-full space-y-1 pt-1 border-t border-slate-200">
+          {locks.slice(0, 4).map((n) => <div key={n} className="text-[11px] font-bold text-amber-700">🔒 {n}</div>)}
+        </div>
+      )}
+      {error && <div className="w-full p-2 rounded-xl bg-red-50 border border-red-200 text-red-800 text-[11px] font-bold">{error}</div>}
+      <ActionConfirm open={confirm !== null} onCancel={() => setConfirm(null)}
+        title={`${confirm?.to === 'Published' && job.status !== 'Closed' ? 'Publish' : confirm?.to} ${job.id}`}
+        subtitle={job.title}
+        why={[`Posting is currently ${job.status}`, requirement ? `Parent requirement ${requirement.id} is ${requirement.status}` : 'Parent requirement checks run on confirm']}
+        steps={[`Status moves to ${confirm?.to}`, 'Move recorded with actor and timestamp', confirm?.to === 'Published' ? 'Posting becomes visible to eligible candidates' : 'Posting leaves candidate results']}
+        locks={confirm?.to === 'Approved' ? ['Unpublished postings accept no applications'] : confirm?.to === 'Published' && job.status === 'Closed' ? ['Reopening never bypasses the expiry guard'] : []}
+        requireReason={confirm?.needReason} confirmLabel="Confirm"
+        extra={confirm?.needExpiry ? (
+          <Field label="Expiry date (must be future) *"><DatePicker value={expiry} onChange={setExpiry} ariaLabel="Expiry date" /></Field>
+        ) : undefined}
+        onConfirm={async (r) => {
+          if (confirm?.needExpiry && !(new Date(expiry) > new Date())) throw new Error('Set a future expiry date first.');
+          await run(confirm!.to, r, confirm?.needExpiry ? (expiry || undefined) : undefined);
+        }} />
+    </div>
+  );
+}
+
+/* ---------------- Jobs Kanban (drop opens confirmation, never writes directly) ---------------- */
+const KANBAN_ORDER = ['Draft', 'Pending Review', 'Approved', 'Published', 'Paused', 'Closed', 'Archived'];
+
+export function JobsKanban({ jobs, onOpen, onDropMove }: { jobs: any[]; onOpen: (j: any) => void; onDropMove: (j: any, to: string) => void }) {
+  const [dragId, setDragId] = useState<string | null>(null);
+  const cols = KANBAN_ORDER.map((s) => ({ status: s, items: jobs.filter((j) => j.status === s) }));
+  return (
+    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50/50 p-3" data-lenis-prevent>
+      <div className="flex gap-3 min-w-[1180px]">
+        {cols.map((c) => (
+          <div key={c.status} className="flex-1 min-w-[220px] rounded-2xl bg-white border border-slate-200 p-2 space-y-2"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              const j = jobs.find((x) => x.id === dragId);
+              setDragId(null);
+              if (j && c.status !== j.status) onDropMove(j, c.status);
+            }}>
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">{c.status}</span>
+              <span className="text-[11px] font-extrabold text-slate-400">{c.items.length}</span>
+            </div>
+            {c.items.slice(0, 20).map((j) => (
+              <div key={j.id} draggable onDragStart={() => setDragId(j.id)}
+                onClick={() => onOpen(j)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') onOpen(j); }}
+                className="p-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-blue-300 cursor-grab active:cursor-grabbing space-y-1" title="Open details (drop onto a column to move with confirmation)">
+                <div className="font-extrabold text-xs text-slate-900 truncate">{j.title}</div>
+                <div className="font-mono text-[10px] text-slate-500">{j.id}</div>
+                <div className="text-[11px] font-bold text-slate-600">{j.counts?.applications ?? j.applicantsCount ?? 0} apps → {j.counts?.hired ?? 0} hired</div>
+                <div className="text-[10px] font-bold text-slate-400">exp {String(j.expiryDate || '').slice(0, 10) || '—'}</div>
+              </div>
+            ))}
+            {c.items.length > 20 && <div className="text-[10px] text-slate-400 font-bold px-1">+{c.items.length - 20} more — refine filters</div>}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

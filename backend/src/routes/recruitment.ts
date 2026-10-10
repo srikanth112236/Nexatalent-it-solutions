@@ -49,7 +49,7 @@ recruitmentRouter.put('/requisitions/:id', requireAuth(['employer','superadmin',
   if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && r.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Requisition not found.' });
   if (!['Draft','Pending Approval'].includes(r.status) && !['superadmin','platform_owner'].includes(ctx.role)) return res.status(422).json({ success: false, message: `Only Draft/Pending Approval can be edited (current: ${r.status}).` });
   const b: any = req.body || {};
-  for (const k of ['title','department','category','location','openings','employmentType','priority','description','experienceMin','experienceMax','budgetMin','budgetMax','hiringManager','recruiter']) {
+  for (const k of ['title','department','category','location','branch','openings','employmentType','priority','description','responsibilities','requiredSkills','preferredSkills','qualifications','benefits','experienceMin','experienceMax','budgetMin','budgetMax','currency','payPeriod','deadline','hiringManager','recruiter']) {
     if (b[k] !== undefined) r[k] = b[k];
   }
   r.updatedAt = nowIso();
@@ -202,6 +202,7 @@ recruitmentRouter.patch('/jobs/:id/status', requireAuth(['employer','superadmin'
   const from = j.status;
   j.status = next; j.updatedAt = nowIso();
   if (reason) j.statusReason = String(reason).slice(0, 1000);
+  j.history = [...(j.history || []), { from, to: next, by: ctx.email, reason: reason ? String(reason).slice(0, 1000) : '', at: nowIso() }];
   audit(ctx.email, `JOB_STATUS:${j.id} ${from}->${next}`, j.orgId, 'job', j.id, req.ip); persist();
   if (next === 'Published') emit('job.published', j, j.orgId, ctx.email);
   res.json({ success: true, data: j });
@@ -435,6 +436,25 @@ recruitmentRouter.get('/applications/:id/history', requireAuth(), (req, res) => 
   if (ctx.role === 'candidate' && String(a.candidateEmail).toLowerCase() !== ctx.email.toLowerCase()) return res.status(404).json({ success: false, message: 'Application not found.' });
   if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && a.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Application not found.' });
   res.json({ success: true, data: db.stageHistory.filter((h: any) => h.applicationId === a.id) });
+});
+
+// ---- Reopen a terminal application (explicit authorized workflow) ----
+recruitmentRouter.post('/applications/:id/reopen', requireAuth(['employer','superadmin','company_admin','hiring_manager','company_recruiter','employee','operations_admin']), (req: Request, res: Response) => {
+  const db = loadDb(); const a: any = db.applications.find((x: any) => x.id === req.params.id);
+  if (!a) return res.status(404).json({ success: false, message: 'Application not found.' });
+  const ctx = ctxOf(req);
+  if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && a.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Application not found.' });
+  if (!['Withdrawn','Rejected'].includes(a.stage)) return res.status(422).json({ success: false, message: `Only Withdrawn/Rejected applications can be reopened (current: ${a.stage}).` });
+  const target = String(req.body?.target || 'Applied');
+  if (!['Applied','Shortlisted'].includes(target)) return res.status(400).json({ success: false, message: 'Reopen target must be Applied or Shortlisted.' });
+  const reason = String(req.body?.reason || '').trim();
+  if (!reason) return res.status(400).json({ success: false, message: 'A reopen reason is required and is recorded in the audit log.' });
+  const from = a.stage; a.stage = target; a.updatedAt = nowIso();
+  db.stageHistory.unshift({ id: uid('STG'), applicationId: a.id, from, to: target, actor: ctx.email, reason, createdAt: nowIso() });
+  const conv: any = db.conversations.find((c: any) => c.applicationId === a.id);
+  if (conv && conv.status === 'closed') { conv.status = 'active'; conv.closedReason = ''; conv.reopenedAt = nowIso(); }
+  audit(ctx.email, `APPLICATION_REOPENED:${a.id} ${from}->${target}`, a.orgId, 'application', a.id, req.ip); persist();
+  res.json({ success: true, data: a });
 });
 
 // ---- Candidate withdraws application (§7.6) ----

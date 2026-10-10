@@ -66,7 +66,7 @@
     "/api/v1/requisitions": { "get": { "summary": "List with live rollup (funnel, filled, ageing) over complete data", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Create requisition (zod)", "responses": { "201": { "description": "created" } } } },
     "/api/v1/requisitions/{id}/status": { "patch": { "summary": "State-machine transition", "responses": { "200": { "description": "ok" }, "422": { "description": "illegal transition" } } } },
 
-    "/api/v1/requisitions/{id}": { "put": { "summary": "Edit requisition (Draft/Pending only)", "responses": { "200": { "description": "ok" }, "422": { "description": "locked stage" } } }, "delete": { "summary": "Delete requisition (Draft/Cancelled, no linked jobs)", "responses": { "200": { "description": "ok" }, "422": { "description": "blocked" } } } },
+    "/api/v1/requisitions/{id}": { "put": { "summary": "Edit requisition incl. compensation/spec fields (Draft/Pending only)", "responses": { "200": { "description": "ok" }, "422": { "description": "locked stage" } } }, "delete": { "summary": "Delete requisition (Draft/Cancelled, no linked jobs)", "responses": { "200": { "description": "ok" }, "422": { "description": "blocked" } } } },
 
 
     "/api/v1/requisitions/{id}/request-changes": { "post": { "summary": "Send back to Draft with note + hiring-manager notification", "responses": { "200": { "description": "ok" }, "400": { "description": "note required" }, "422": { "description": "wrong state" } } } },
@@ -87,6 +87,7 @@
     "/api/v1/conversations/{id}/messages": { "get": { "summary": "Thread (locked until interview scheduled)", "responses": { "200": { "description": "ok" }, "403": { "description": "CHAT_LOCKED" } } } },
     "/api/v1/jobs/{id}": { "get": { "summary": "Job detail + acceptingApplications flag", "responses": { "200": { "description": "ok" }, "404": { "description": "not found" } } }, "put": { "summary": "Edit job incl. agency/vendor assignment", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/applications/{id}/withdraw": { "post": { "summary": "Candidate withdraws (closes chat, history kept)", "responses": { "200": { "description": "ok" } } } },
+    "/api/v1/applications/{id}/reopen": { "post": { "summary": "Reopen terminal application (Withdrawn/Rejected -> Applied/Shortlisted, reason required, reopens closed chat)", "responses": { "200": { "description": "ok" }, "400": { "description": "reason/target required" }, "422": { "description": "not terminal" } } } },
     "/api/v1/interviews/{id}": { "patch": { "summary": "Reschedule/cancel with reason (history preserved)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/conversations/{id}/close": { "patch": { "summary": "Close chat, history preserved", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/talent-pools/{id}": { "patch": { "summary": "Edit/archive pool", "responses": { "200": { "description": "ok" } } } },

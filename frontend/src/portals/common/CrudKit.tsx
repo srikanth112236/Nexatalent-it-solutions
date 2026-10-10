@@ -27,9 +27,9 @@ export function useQueryState(key: string, initial = ''): [string, (v: string) =
   return [val, set];
 }
 import { Search, Download, X } from 'lucide-react';
-import { useCan } from '../../shared/auth/AuthContext';
+import { useAuth, useCan, usePermissions } from '../../shared/auth/AuthContext';
 import { permissionsApi } from '../../shared/enterprise/phaseApi';
-import { Select } from '../../shared/ui/EnterpriseKit';
+import { Modal, Select } from '../../shared/ui/EnterpriseKit';
 
 /** Shared enterprise CRUD primitives — Indeed/Naukri-grade table UX. */
 
@@ -175,6 +175,138 @@ export function ExportButton({ filename, rows, columns, label = 'Export' }: {
       <Download size={14} /> {label}
     </button>
   );
+}
+
+/** Global create dialog: one look, one behavior, reusable for any entity. */
+export function GlobalCreateModal({ open, onClose, title, subtitle, submitLabel = 'Create', busy, error, onSubmit, children, wide }: {
+  open: boolean; onClose: () => void; title: string; subtitle?: string;
+  submitLabel?: string; busy?: boolean; error?: string;
+  onSubmit: () => void | Promise<void>; children: React.ReactNode; wide?: boolean;
+}) {
+  const [working, setWorking] = useState(false);
+  const [localError, setLocalError] = useState('');
+  return (
+    <Modal open={open} onClose={onClose} title={title} subtitle={subtitle} wide={wide}>
+      <div className="space-y-4 text-xs">
+        {children}
+        {(localError || error) && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 font-bold" role="alert">{localError || error}</div>}
+        <div className="flex justify-end gap-2 pt-1 border-t border-slate-100 mt-1">
+          <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs mt-3">Cancel</button>
+          <button
+            type="button"
+            disabled={busy || working}
+            onClick={async () => {
+              setWorking(true); setLocalError('');
+              try { await onSubmit(); }
+              catch (e) { setLocalError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || (e as Error)?.message || 'Failed. Try again.'); }
+              finally { setWorking(false); }
+            }}
+            className="px-6 py-2.5 rounded-xl bg-[#087BFF] hover:bg-blue-600 text-white font-bold text-xs shadow-md disabled:opacity-50 mt-3"
+          >
+            {(busy || working) ? 'Creating…' : submitLabel}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+export interface ActionGuard {
+  allowed: boolean;
+  reason: string;
+}
+
+const PRIVILEGED = ['superadmin', 'platform_owner'];
+
+/** Pure record/permission rule check — safe to call per row. Advisory only:
+ *  the server re-validates everything. Unknown states default to allowed. */
+export function checkRecordAction(kind: 'requirement' | 'job' | 'application', record: any, action: string, opts: { privileged?: boolean; can?: (p: string) => boolean; context?: { requirement?: any } }): ActionGuard {
+  const privileged = !!opts.privileged;
+  const can = opts.can || (() => true);
+  if (!record) return { allowed: false, reason: 'Record not loaded yet.' };
+
+  if (kind === 'requirement') {
+    const st = record.status;
+    switch (action) {
+      case 'approve':
+      case 'reject':
+      case 'changes':
+        if (st !== 'Pending Approval') return { allowed: false, reason: `Only requirements in Pending Approval can be decided (current: ${st || 'unknown'}).` };
+        return { allowed: true, reason: '' };
+      case 'edit':
+        if (!privileged && !['Draft', 'Pending Approval'].includes(st)) return { allowed: false, reason: `Only Draft / Pending Approval can be edited (current: ${st}).` };
+        return { allowed: true, reason: '' };
+      case 'delete': {
+        if (!privileged && !['Draft', 'Cancelled'].includes(st)) return { allowed: false, reason: `Only Draft / Cancelled can be deleted (current: ${st}). Cancel first.` };
+        const linked = record.rollup?.linkedJobs?.length ?? 0;
+        if (linked > 0 && !privileged) return { allowed: false, reason: `Has ${linked} linked job posting(s) — cancel them first.` };
+        return { allowed: true, reason: '' };
+      }
+      case 'assign':
+        return { allowed: true, reason: '' };
+      default:
+        return { allowed: true, reason: '' };
+    }
+  }
+  if (kind === 'job') {
+    const st = record.status;
+    switch (action) {
+      case 'publish': {
+        if (st !== 'Approved') return { allowed: false, reason: `Only Approved postings can be published (current: ${st}).` };
+        const req = opts.context?.requirement;
+        if (req && !['Approved', 'Sourcing'].includes(req.status)) return { allowed: false, reason: `Parent requirement ${req.id} is ${req.status} — approve it first.` };
+        if (req && !(Number(req.openings) > 0)) return { allowed: false, reason: `Parent requirement ${req.id} has no openings left.` };
+        return { allowed: true, reason: '' };
+      }
+      case 'unpublish':
+        if (st !== 'Published') return { allowed: false, reason: `Only Published postings can be unpublished (current: ${st}).` };
+        if (!can('approve')) return { allowed: false, reason: `Requires the 'approve' permission.` };
+        return { allowed: true, reason: '' };
+      case 'reopen':
+        if (st !== 'Closed') return { allowed: false, reason: `Only Closed postings can be reopened (current: ${st}).` };
+        if (!can('approve')) return { allowed: false, reason: `Requires the 'approve' permission.` };
+        return { allowed: true, reason: '' };
+      case 'pause':
+        if (!['Published'].includes(st)) return { allowed: false, reason: `Only Published postings can be paused (current: ${st}).` };
+        return { allowed: true, reason: '' };
+      case 'close':
+        if (!['Published', 'Paused'].includes(st)) return { allowed: false, reason: `Only Published / Paused postings can be closed (current: ${st}).` };
+        return { allowed: true, reason: '' };
+      case 'archive':
+        if (st !== 'Closed') return { allowed: false, reason: `Only Closed postings can be archived (current: ${st}).` };
+        return { allowed: true, reason: '' };
+      case 'edit':
+        return { allowed: true, reason: '' };
+      default:
+        return { allowed: true, reason: '' };
+    }
+  }
+  // application
+  const stage = record.stage;
+  switch (action) {
+    case 'move':
+      if (['Hired', 'Withdrawn', 'Rejected'].includes(stage)) return { allowed: false, reason: `${stage} applications are terminal — reopen explicitly to continue.` };
+      return { allowed: true, reason: '' };
+    case 'withdraw':
+      if (['Hired', 'Withdrawn'].includes(stage)) return { allowed: false, reason: `Cannot withdraw from stage ${stage}.` };
+      return { allowed: true, reason: '' };
+    case 'reopen':
+      if (!['Withdrawn', 'Rejected'].includes(stage)) return { allowed: false, reason: `Only Withdrawn / Rejected applications can be reopened (current: ${stage}).` };
+      return { allowed: true, reason: '' };
+    default:
+      return { allowed: true, reason: '' };
+  }
+}
+
+/** Hook wrapper: resolves role + permissions once, then delegates. */
+export function useActionGuard(kind: 'requirement' | 'job' | 'application', record: any, action: string, context?: { requirement?: any }): ActionGuard {
+  const perms = usePermissions();
+  const { user } = useAuth();
+  return checkRecordAction(kind, record, action, {
+    privileged: !!user && PRIVILEGED.includes(user.role),
+    can: (p: string) => perms === null || perms.includes(p),
+    context,
+  });
 }
 
 export function useSelectable() {

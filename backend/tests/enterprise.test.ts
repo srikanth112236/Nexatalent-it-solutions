@@ -84,6 +84,17 @@ describe('applications (§8.8)', () => {
     const r = await request(app).get('/api/v1/applications/APP-DOES-NOT-EXIST/history').set(auth(candidateToken));
     expect(r.status).toBe(404);
   });
+  it('rejects then reopens with reason + history', async () => {
+    const rej = await request(app).patch(`/api/v1/applications/${appId}/stage`).set(auth(superToken)).send({ stage: 'Rejected', reason: 'test rejection' });
+    expect(rej.status).toBe(200);
+    const noReason = await request(app).post(`/api/v1/applications/${appId}/reopen`).set(auth(superToken)).send({ target: 'Applied' });
+    expect(noReason.status).toBe(400);
+    const re = await request(app).post(`/api/v1/applications/${appId}/reopen`).set(auth(superToken)).send({ target: 'Applied', reason: 'test reopen' });
+    expect(re.status).toBe(200);
+    expect(re.body.data.stage).toBe('Applied');
+    const h = await request(app).get(`/api/v1/applications/${appId}/history`).set(auth(superToken));
+    expect(h.body.data.some((x: any) => x.to === 'Applied' && /reopen/i.test(x.reason || ''))).toBe(true);
+  });
 });
 
 describe('tenant isolation (§4.3)', () => {

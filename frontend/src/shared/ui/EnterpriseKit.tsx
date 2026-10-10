@@ -100,6 +100,82 @@ export function ConfirmDialog({ open, title, body, confirmLabel = 'Delete', requ
   );
 }
 
+/* Global consequential-action confirmation (§Action System).
+   Fixed anatomy everywhere: why allowed → numbered steps → consequences +
+   locks → reason (when required) → confirm. Server re-validates everything. */
+export function ActionConfirm({ open, title, subtitle, why, steps, consequences, locks, extra, requireReason, reasonLabel = 'Reason *', confirmLabel = 'Confirm', tone = 'primary', busy: busyProp, error: errorProp, onConfirm, onCancel }: {
+  open: boolean; title: string; subtitle?: string;
+  why?: string[]; steps?: string[]; consequences?: string[]; locks?: string[]; extra?: React.ReactNode;
+  requireReason?: boolean; reasonLabel?: string; confirmLabel?: string;
+  tone?: 'primary' | 'danger' | 'dark'; busy?: boolean; error?: string;
+  onConfirm: (reason?: string) => void | Promise<void>; onCancel: () => void;
+}) {
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => { if (open) { setReason(''); setError(''); setBusy(false); } }, [open ]);
+  const toneCls = tone === 'danger'
+    ? 'bg-red-600 hover:bg-red-700 text-white'
+    : tone === 'dark'
+      ? 'bg-spec-navy hover:bg-spec-midnight text-white'
+      : 'bg-spec-electric hover:bg-[#0069d1] text-white';
+  return (
+    <Modal open={open} onClose={onCancel} title={title} subtitle={subtitle}>
+      <div className="space-y-3 text-xs">
+        {why && why.length > 0 && (
+          <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-1">
+            <div className="font-extrabold text-emerald-900 text-[11px] uppercase tracking-wider">Why this is allowed now</div>
+            {why.map((w) => <div key={w} className="text-emerald-900 font-medium">✓ {w}</div>)}
+          </div>
+        )}
+        {steps && steps.length > 0 && (
+          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
+            <div className="font-extrabold text-slate-900 text-[11px] uppercase tracking-wider">What will happen</div>
+            <ol className="space-y-1">
+              {steps.map((s, i) => (
+                <li key={s} className="flex gap-2 text-slate-700 font-medium">
+                  <span className="shrink-0 w-[18px] h-[18px] rounded-full bg-slate-900 text-white text-[10px] font-extrabold inline-flex items-center justify-center">{i + 1}</span>
+                  <span>{s}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+        {((consequences && consequences.length > 0) || (locks && locks.length > 0)) && (
+          <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 space-y-1">
+            <div className="font-extrabold text-amber-900 text-[11px] uppercase tracking-wider">Consequences</div>
+            {(consequences || []).map((c) => <div key={c} className="text-amber-900 font-medium">• {c}</div>)}
+            {(locks || []).map((l) => <div key={l} className="text-amber-900 font-bold">🔒 {l}</div>)}
+          </div>
+        )}
+        {extra}
+        {requireReason && (
+          <Field label={reasonLabel}>
+            <textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} className={inputCls} placeholder="Recorded with actor + timestamp" />
+          </Field>
+        )}
+        {(error || errorProp) && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs font-bold" role="alert">{error || errorProp}</div>}
+        <div className="flex justify-end gap-2 pt-1">
+          <button type="button" onClick={onCancel} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
+          <button
+            type="button"
+            disabled={busy || busyProp || (!!requireReason && !reason.trim())}
+            onClick={async () => {
+              setBusy(true); setError('');
+              try { await onConfirm(requireReason ? reason.trim() : undefined); }
+              catch (e) { setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || (e as Error)?.message || 'Failed. Try again.'); }
+              finally { setBusy(false); }
+            }}
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs disabled:opacity-50 ${toneCls}`}
+          >
+            {(busy || busyProp) ? 'Working…' : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export interface MenuItem {
   label: string;
   danger?: boolean;
