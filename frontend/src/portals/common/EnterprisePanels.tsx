@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { apiClient } from '../../shared/api-client';
 import { Candidate360Drawer } from '../superadmin/SuperAdmin360';
 import { ExportButton, useQueryState, useDebounced } from './CrudKit';
@@ -2227,7 +2227,7 @@ export function NotificationsPanel() {
   );
 }
 
-/* ---------------- SuperAdmin: candidate directory (§6.3) ---------------- */
+/* ---------------- SuperAdmin: candidate directory (§6.3, full) ---------------- */
 export function CandidatesPanel() {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -2235,37 +2235,74 @@ export function CandidatesPanel() {
   const [ok, setOk] = useState('');
   const [q, setQ] = useQueryState('cand_q');
   const [status, setStatus] = useQueryState('cand_status');
+  const [fSkills, setFSkills] = useQueryState('cand_skills');
+  const [fExpMin, setFExpMin] = useQueryState('cand_expmin');
+  const [fExpMax, setFExpMax] = useQueryState('cand_expmax');
+  const [fLocation, setFLocation] = useQueryState('cand_loc');
+  const [fComp, setFComp] = useQueryState('cand_comp');
+  const [fStage, setFStage] = useQueryState('cand_stage');
+  const [fFrom, setFFrom] = useQueryState('cand_from');
+  const [fTo, setFTo] = useQueryState('cand_to');
+  const [fSource, setFSource] = useQueryState('cand_src');
+  const [fRecruiter, setFRecruiter] = useQueryState('cand_rec');
+  const dq = useDebounced(q);
+  const dSkills = useDebounced(fSkills);
+  const dLocation = useDebounced(fLocation);
+  const dSource = useDebounced(fSource);
+  const dRecruiter = useDebounced(fRecruiter);
+  const advActive = [fSkills, fExpMin, fExpMax, fLocation, fComp, fStage, fFrom, fTo, fSource, fRecruiter].some((v) => String(v || '').trim() !== '');
+  const [showAdv, setShowAdv] = useState(advActive);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [detail, setDetail] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ name: '', phone: '', roleTitle: '', experienceYears: '', location: '', currentCtc: '', expectedCtc: '', noticePeriod: '', skills: '', visibility: 'standard' });
+  const [editForm, setEditForm] = useState({ name: '', phone: '', roleTitle: '', experienceYears: '', location: '', preferredLocation: '', currentCtc: '', expectedCtc: '', noticePeriod: '', skills: '', visibility: 'standard', assignedRecruiter: '', source: '' });
   const [statusFor, setStatusFor] = useState<any>(null);
-  const [statusForm, setStatusForm] = useState({ status: 'Suspended', reason: '' });
+  const [statusForm, setStatusForm] = useState({ status: 'Suspended', reason: '', reviewDate: '' });
   const [busy, setBusy] = useState(false);
+  const [infoFor, setInfoFor] = useState<any>(null);
+  const [infoMsg, setInfoMsg] = useState('');
+  const [delFor, setDelFor] = useState<any>(null);
+  const [delReason, setDelReason] = useState('');
+  const [purgeFor, setPurgeFor] = useState<any>(null);
+  const [delReqFor, setDelReqFor] = useState<any>(null);
+  const [delReqReason, setDelReqReason] = useState('');
   const pageSize = 10;
-  const debouncedQ = useDebouncedValue(q, 400);
-  const load = async (p = page) => {
+  const params = useMemo(() => {
+    const sp = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (status) sp.set('status', status);
+    if (dq.trim()) sp.set('q', dq.trim());
+    if (dSkills.trim()) sp.set('skills', dSkills.trim());
+    if (fExpMin !== '') sp.set('expMin', fExpMin);
+    if (fExpMax !== '') sp.set('expMax', fExpMax);
+    if (dLocation.trim()) sp.set('location', dLocation.trim());
+    if (fComp) sp.set('completeness', fComp);
+    if (fStage) sp.set('stage', fStage);
+    if (fFrom) sp.set('registeredFrom', fFrom);
+    if (fTo) sp.set('registeredTo', fTo);
+    if (dSource.trim()) sp.set('source', dSource.trim());
+    if (dRecruiter.trim()) sp.set('recruiter', dRecruiter.trim());
+    return sp.toString();
+  }, [page, status, dq, dSkills, fExpMin, fExpMax, dLocation, fComp, fStage, fFrom, fTo, dSource, dRecruiter]);
+  const load = async (qs: string) => {
     setLoading(true); setError('');
     try {
       const { directoryApi } = await import('../../shared/enterprise/phaseApi');
-      const res: any = await directoryApi.candidatesDirectory(`?page=${p}&pageSize=${pageSize}`);
+      const res: any = await directoryApi.candidatesDirectory(`?${qs}`);
       setRows(unwrapList(res));
-      setTotal(Number(res?.pagination?.total || res?.pagination?.totalPages ? Number(res?.pagination?.total || unwrapList(res).length) : unwrapList(res).length));
+      setTotal(Number((res as { pagination?: { total?: number } })?.pagination?.total ?? unwrapList(res).length));
     } catch (e) { setError(errMsg(e)); }
     finally { setLoading(false); }
   };
-  useEffect(() => { load(page); }, [page ]);
-  useEffect(() => { setPage(1); }, [debouncedQ]);
-  const filtered = rows.filter((c) => {
-    if (status && String(c.status || 'Active') !== status) return false;
-    if (!debouncedQ.trim()) return true;
-    const s = debouncedQ.toLowerCase();
-    return `${c.name} ${c.email} ${c.roleTitle} ${c.location} ${c.id}`.toLowerCase().includes(s);
-  });
+  useEffect(() => { load(params); }, [params]);
+  const resetPage = () => setPage(1);
+  const clearAdv = () => {
+    setFSkills(''); setFExpMin(''); setFExpMax(''); setFLocation(''); setFComp('');
+    setFStage(''); setFFrom(''); setFTo(''); setFSource(''); setFRecruiter(''); resetPage();
+  };
   const openEdit = (c: any) => {
     setEditing(c);
-    setEditForm({ name: c.name || '', phone: c.phone || '', roleTitle: c.roleTitle || '', experienceYears: String(c.experienceYears ?? ''), location: c.location || '', currentCtc: String(c.currentCtc ?? ''), expectedCtc: String(c.expectedCtc ?? ''), noticePeriod: c.noticePeriod || '', skills: Array.isArray(c.skills) ? c.skills.join(', ') : (c.skills || ''), visibility: c.visibility || 'standard' });
+    setEditForm({ name: c.name || '', phone: c.phone || '', roleTitle: c.roleTitle || '', experienceYears: String(c.experienceYears ?? ''), location: c.location || '', preferredLocation: c.preferredLocation || '', currentCtc: String(c.currentCtc ?? ''), expectedCtc: String(c.expectedCtc ?? ''), noticePeriod: c.noticePeriod || '', skills: Array.isArray(c.skills) ? c.skills.join(', ') : (c.skills || ''), visibility: c.visibility || 'standard', assignedRecruiter: c.assignedRecruiter || '', source: c.source || c.sourceType || '' });
   };
   const saveEdit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!editing) return;
@@ -2283,67 +2320,163 @@ export function CandidatesPanel() {
     setBusy(true); setError('');
     try {
       const { directoryApi } = await import('../../shared/enterprise/phaseApi');
-      const res: any = await directoryApi.setCandidateStatus(statusFor.id, statusForm.status, statusForm.reason.trim());
+      const res: any = await directoryApi.setCandidateStatus(statusFor.id, statusForm.status, statusForm.reason.trim(), statusForm.reviewDate || undefined);
       const updated = (res as { data?: any })?.data;
+      const revoked = (res as { sessionsRevoked?: number })?.sessionsRevoked || 0;
       setRows((r) => r.map((x) => (x.id === statusFor.id ? { ...x, ...(updated || { status: statusForm.status }) } : x)));
-      setStatusFor(null); setOk(`Candidate ${statusFor.id} → ${statusForm.status}.`); syncAll();
+      setStatusFor(null); setOk(`Candidate ${statusFor.id} → ${statusForm.status}${revoked ? ` (${revoked} session(s) revoked)` : ''}.`); syncAll();
     } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
   };
-  const candidateColumns = ['id', 'name', 'email', 'phone', 'roleTitle', 'experienceYears', 'location', 'skills', 'completeness', 'applicationCount', 'visibility', 'status'];
+  const doDelete = async () => {
+    if (!delFor || !delReason.trim()) { setError('Deletion reason is required.'); return; }
+    setBusy(true); setError('');
+    try {
+      const { directoryApi } = await import('../../shared/enterprise/phaseApi');
+      await directoryApi.deleteCandidate(delFor.id, delReason.trim());
+      setRows((r) => r.map((x) => (x.id === delFor.id ? { ...x, status: 'Deleted' } : x)));
+      setDelFor(null); setDelReason(''); setOk(`Candidate ${delFor.id} soft-deleted (recoverable via purge or restore).`); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const doPurge = async () => {
+    if (!purgeFor) return;
+    setBusy(true); setError('');
+    try {
+      const { directoryApi } = await import('../../shared/enterprise/phaseApi');
+      await directoryApi.purgeCandidate(purgeFor.id, 'purged after soft-delete review');
+      setRows((r) => r.filter((x) => x.id !== purgeFor.id));
+      setPurgeFor(null); setOk(`Candidate ${purgeFor.id} permanently purged. Consents + audit preserved.`); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const doInfoRequest = async () => {
+    if (!infoFor || !infoMsg.trim()) { setError('A message is required.'); return; }
+    setBusy(true); setError('');
+    try {
+      const { directoryApi } = await import('../../shared/enterprise/phaseApi');
+      await directoryApi.requestInfo(infoFor.id, infoMsg.trim());
+      setInfoFor(null); setInfoMsg(''); setOk(`Information requested from ${infoFor.id} (candidate notified).`); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const doDeletionRequest = async () => {
+    if (!delReqFor || !delReqReason.trim()) { setError('A reason is required.'); return; }
+    setBusy(true); setError('');
+    try {
+      const { directoryApi } = await import('../../shared/enterprise/phaseApi');
+      await directoryApi.requestDeletion(delReqFor.id, delReqReason.trim());
+      setDelReqFor(null); setDelReqReason(''); setOk(`Deletion request opened for ${delReqFor.id} — decide it in the 360° Admin tab.`); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const candidateColumns = ['id', 'name', 'email', 'phone', 'roleTitle', 'experienceYears', 'preferredLocation', 'recruiter', 'source', 'latestStage', 'completeness', 'applicationCount', 'lastActivity', 'registrationDate', 'visibility', 'status'];
   const pill = (s: string) => {
     const tone = s === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : s === 'Suspended' || s === 'Blocked' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-slate-100 text-slate-700 border-slate-200';
     return <span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${tone}`}>{s || 'Active'}</span>;
   };
+  const menuFor = (c: any) => (
+    <RowMenu items={[
+      { label: 'View 360°', onSelect: () => setDetail(c) },
+      { label: 'Edit profile', onSelect: () => openEdit(c) },
+      { label: 'Suspend / Block / Restore…', onSelect: () => { setStatusFor(c); setStatusForm({ status: 'Suspended', reason: '', reviewDate: '' }); } },
+      { label: 'Request information…', onSelect: () => { setInfoFor(c); setInfoMsg(''); } },
+      { label: 'Deletion request…', onSelect: () => { setDelReqFor(c); setDelReqReason(''); } },
+      ...(c.status === 'Deleted'
+        ? [{ label: 'Purge permanently…', danger: true, onSelect: () => setPurgeFor(c) }]
+        : [{ label: 'Delete (soft)…', danger: true, onSelect: () => { setDelFor(c); setDelReason(''); } }]),
+    ]} />
+  );
   return (
     <div className={cardCls}>
       <div className="flex flex-col gap-1">
-        <h3 className="text-base font-extrabold text-slate-900">Candidate Directory — View / Edit / Suspend / Export</h3>
-        <p className="text-xs text-slate-500 font-medium">Phone/CTC masked unless your role grants sensitive-field access. All edits and status changes are audited.</p>
+        <h3 className="text-base font-extrabold text-slate-900">Candidate Directory — View / Edit / Suspend / Request / Export</h3>
+        <p className="text-xs text-slate-500 font-medium">Phone/CTC masked unless your role grants sensitive-field access. {total} record(s) match. All changes are audited.</p>
       </div>
-      {error && <PanelError message={error} onRetry={load} />}
+      {error && <PanelError message={error} onRetry={() => load(params)} />}
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
       <div className="flex flex-col lg:flex-row gap-2">
-        <div className="relative flex-1"><input className={inputCls} placeholder="Search name, email, title, location, ID…" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} /></div>
+        <div className="relative flex-1"><input className={inputCls} placeholder="Search ID, name, email, title…" value={q} onChange={(e) => { setQ(e.target.value); resetPage(); }} /></div>
         <div className="flex gap-2">
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none">
-            <option value="">All statuses</option>{['Active', 'Suspended', 'Blocked'].map((s) => <option key={s} value={s}>{s}</option>)}
+          <select value={status} aria-label="Account status" onChange={(e) => { setStatus(e.target.value); resetPage(); }} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none">
+            <option value="">All statuses</option>{['Active', 'Suspended', 'Blocked', 'Deleted'].map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
-          <ExportButton filename="candidates.csv" rows={filtered} columns={candidateColumns} />
+          <button type="button" onClick={() => setShowAdv((v) => !v)} aria-expanded={showAdv} className={`px-4 py-2 rounded-xl border font-bold text-xs whitespace-nowrap ${showAdv || advActive ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-slate-200 text-slate-700'}`}>
+            Filters{advActive ? ' •' : ''} {showAdv ? '▴' : '▾'}
+          </button>
+          <ExportButton filename="candidates.csv" rows={rows} columns={candidateColumns} />
         </div>
       </div>
-      {loading ? <InlineLoading message="Loading candidates…" /> : filtered.length === 0 ? (
-        <EmptyState title="No candidates" message="Registered candidate profiles appear here." />
-      ) : (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200">
-          <table className="w-full text-left text-xs min-w-[1120px]">
+      {showAdv && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200">
+          <input className={kitInput} placeholder="Skills…" value={fSkills} aria-label="Skills filter" onChange={(e) => { setFSkills(e.target.value); resetPage(); }} />
+          <input className={kitInput} placeholder="Location…" value={fLocation} aria-label="Location filter" onChange={(e) => { setFLocation(e.target.value); resetPage(); }} />
+          <div className="flex gap-2">
+            <input className={kitInput} type="number" min={0} placeholder="Min yrs" value={fExpMin} aria-label="Minimum experience" onChange={(e) => { setFExpMin(e.target.value); resetPage(); }} />
+            <input className={kitInput} type="number" min={0} placeholder="Max yrs" value={fExpMax} aria-label="Maximum experience" onChange={(e) => { setFExpMax(e.target.value); resetPage(); }} />
+          </div>
+          <select value={fComp} aria-label="Profile completeness" onChange={(e) => { setFComp(e.target.value); resetPage(); }} className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none">
+            <option value="">Any completeness</option>
+            <option value="lt50">Under 50%</option>
+            <option value="btw50_80">50–80%</option>
+            <option value="gt80">Over 80%</option>
+          </select>
+          <select value={fStage} aria-label="Application stage" onChange={(e) => { setFStage(e.target.value); resetPage(); }} className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none">
+            <option value="">Any stage</option>{APP_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <input className={kitInput} placeholder="Source…" value={fSource} aria-label="Source filter" onChange={(e) => { setFSource(e.target.value); resetPage(); }} />
+          <input className={kitInput} placeholder="Recruiter…" value={fRecruiter} aria-label="Recruiter filter" onChange={(e) => { setFRecruiter(e.target.value); resetPage(); }} />
+          <div className="flex gap-2">
+            <input className={kitInput} type="date" value={fFrom} aria-label="Registered from" onChange={(e) => { setFFrom(e.target.value); resetPage(); }} />
+            <input className={kitInput} type="date" value={fTo} aria-label="Registered to" onChange={(e) => { setFTo(e.target.value); resetPage(); }} />
+          </div>
+          <div className="col-span-2 lg:col-span-4 flex justify-end">
+            <button type="button" onClick={clearAdv} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">Clear all filters</button>
+          </div>
+        </div>
+      )}
+      {loading ? <InlineLoading message="Loading candidates…" /> : rows.length === 0 ? (
+        <EmptyState title="No candidates match" message="Adjust search or filters." />
+      ) : (<>
+        <div className="space-y-2 md:hidden">
+          {rows.map((c) => (
+            <div key={c.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-extrabold text-slate-900 text-sm truncate">{c.name || '—'}</div>
+                  <div className="font-mono text-[11px] text-slate-500">{c.id}</div>
+                </div>
+                {menuFor(c)}
+              </div>
+              <div className="text-slate-600 font-medium truncate">{c.roleTitle || '—'} • {c.experienceYears ?? '—'}y • {c.completeness ?? '—'}%</div>
+              <div className="flex flex-wrap items-center gap-1.5">{pill(c.status || 'Active')}<span className="text-slate-500 font-bold">{c.applicationCount ?? 0} apps</span></div>
+            </div>
+          ))}
+        </div>
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
+          <table className="w-full text-left text-xs min-w-[1500px]">
             <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
-              <th className="px-4 py-3">Candidate</th><th className="px-4 py-3">Contact</th><th className="px-4 py-3">Designation</th><th className="px-4 py-3">Skills</th><th className="px-4 py-3">Profile</th><th className="px-4 py-3">Apps</th><th className="px-4 py-3">Location</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-4 py-3">Candidate</th><th className="px-4 py-3">Contact</th><th className="px-4 py-3">Designation</th><th className="px-4 py-3">Skills</th><th className="px-4 py-3">Profile</th><th className="px-4 py-3">Apps</th><th className="px-4 py-3">Preferred location</th><th className="px-4 py-3">Recruiter</th><th className="px-4 py-3">Last activity</th><th className="px-4 py-3">Registered</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
             </tr></thead>
             <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-              {filtered.map((c) => (
+              {rows.map((c) => (
                 <tr key={c.id} className="hover:bg-slate-50/70">
                   <td className="px-4 py-3"><div className="font-bold text-slate-900">{c.name || '—'}</div><div className="font-mono text-[11px] text-slate-500">{c.id}</div></td>
                   <td className="px-4 py-3"><div>{c.email || '—'}</div><div className="text-slate-500">{c.phone || '—'}</div></td>
                   <td className="px-4 py-3">{c.roleTitle || '—'} • {c.experienceYears ?? '—'}y</td>
-                  <td className="px-4 py-3 max-w-[220px]"><div className="truncate" title={Array.isArray(c.skills) ? c.skills.join(', ') : (c.skills || '')}>{Array.isArray(c.skills) ? c.skills.join(', ') : (c.skills || '—')}</div></td>
+                  <td className="px-4 py-3 max-w-[200px]"><div className="truncate" title={Array.isArray(c.skills) ? c.skills.join(', ') : (c.skills || '')}>{Array.isArray(c.skills) ? c.skills.join(', ') : (c.skills || '—')}</div></td>
                   <td className="px-4 py-3 font-bold text-emerald-700">{c.completeness ?? '—'}{c.completeness !== undefined ? '%' : ''}</td>
                   <td className="px-4 py-3 font-bold text-blue-700">{c.applicationCount ?? '—'}</td>
-                  <td className="px-4 py-3">{c.location || '—'}</td>
+                  <td className="px-4 py-3">{c.preferredLocation || c.location || '—'}</td>
+                  <td className="px-4 py-3">{c.recruiter || '—'}</td>
+                  <td className="px-4 py-3 text-slate-500">{c.lastActivity ? String(c.lastActivity).slice(0, 10) : '—'}</td>
+                  <td className="px-4 py-3 text-slate-500">{c.registrationDate || '—'}</td>
                   <td className="px-4 py-3">{pill(c.status || 'Active')}</td>
-                  <td className="px-4 py-3"><div className="flex justify-end"><RowMenu items={[
-                    { label: 'View profile', onSelect: () => setDetail(c) },
-                    { label: 'Edit profile', onSelect: () => openEdit(c) },
-                    { label: 'Suspend / Block / Restore…', onSelect: () => { setStatusFor(c); setStatusForm({ status: 'Suspended', reason: '' }); } },
-                  ]} /></div></td>
+                  <td className="px-4 py-3"><div className="flex justify-end">{menuFor(c)}</div></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      )}
-      <Pager page={page} total={total || filtered.length} pageSize={pageSize} onPage={setPage} />
+      </>)}
+      <Pager page={page} total={total} pageSize={pageSize} onPage={setPage} />
       {detail && (
-        <Candidate360Drawer candidateId={detail.id} onClose={() => setDetail(null)} />
+        <Candidate360Drawer candidateId={detail.id} onClose={() => { setDetail(null); load(params); }} />
       )}
       <Modal open={editing !== null} onClose={() => setEditing(null)} title={`Edit candidate — ${editing?.id || ''}`} subtitle="Audited edit">
         <form onSubmit={saveEdit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2352,6 +2485,9 @@ export function CandidatesPanel() {
           <Field label="Designation"><input className={kitInput} value={editForm.roleTitle} onChange={(e) => setEditForm({ ...editForm, roleTitle: e.target.value })} /></Field>
           <Field label="Experience (yrs)"><input className={kitInput} type="number" value={editForm.experienceYears} onChange={(e) => setEditForm({ ...editForm, experienceYears: e.target.value })} /></Field>
           <Field label="Location"><input className={kitInput} value={editForm.location} onChange={(e) => setEditForm({ ...editForm, location: e.target.value })} /></Field>
+          <Field label="Preferred location"><input className={kitInput} value={editForm.preferredLocation} onChange={(e) => setEditForm({ ...editForm, preferredLocation: e.target.value })} placeholder="Preferred work location" /></Field>
+          <Field label="Assigned recruiter"><input className={kitInput} value={editForm.assignedRecruiter} onChange={(e) => setEditForm({ ...editForm, assignedRecruiter: e.target.value })} placeholder="Name or email" /></Field>
+          <Field label="Source"><input className={kitInput} value={editForm.source} onChange={(e) => setEditForm({ ...editForm, source: e.target.value })} placeholder="e.g. Referral, Portal, Agency" /></Field>
           <Field label="Visibility"><Select value={editForm.visibility} onChange={(v) => setEditForm({ ...editForm, visibility: v })} options={['standard', 'open', 'private', 'anonymous'].map((v) => ({ value: v, label: v }))} /></Field>
           <Field label="Current CTC"><input className={kitInput} value={editForm.currentCtc} onChange={(e) => setEditForm({ ...editForm, currentCtc: e.target.value })} /></Field>
           <Field label="Expected CTC"><input className={kitInput} value={editForm.expectedCtc} onChange={(e) => setEditForm({ ...editForm, expectedCtc: e.target.value })} /></Field>
@@ -2362,13 +2498,42 @@ export function CandidatesPanel() {
           </div>
         </form>
       </Modal>
-      <Modal open={statusFor !== null} onClose={() => setStatusFor(null)} title={`Account status — ${statusFor?.id || ''}`} subtitle="Reason is mandatory and audited">
+      <Modal open={statusFor !== null} onClose={() => setStatusFor(null)} title={`Account status — ${statusFor?.id || ''}`} subtitle="Reason is mandatory and audited; suspend/block revokes sessions">
         <div className="space-y-3">
           <Field label="Status"><Select value={statusForm.status} onChange={(v) => setStatusForm({ ...statusForm, status: v })} options={['Active', 'Suspended', 'Blocked'].map((s) => ({ value: s, label: s }))} /></Field>
           <Field label="Reason *"><textarea rows={3} className={kitInput} value={statusForm.reason} onChange={(e) => setStatusForm({ ...statusForm, reason: e.target.value })} placeholder="e.g. Fake profile — support ticket SUP-88" /></Field>
+          <Field label="Review / expiry date (optional)" hint="When this suspension must be reviewed"><input type="date" className={kitInput} value={statusForm.reviewDate} onChange={(e) => setStatusForm({ ...statusForm, reviewDate: e.target.value })} /></Field>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setStatusFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
             <button type="button" disabled={busy || !statusForm.reason.trim()} onClick={doStatus} className={btnDark}>{busy ? 'Working…' : 'Confirm'}</button>
+          </div>
+        </div>
+      </Modal>
+      <Modal open={infoFor !== null} onClose={() => setInfoFor(null)} title={`Request information — ${infoFor?.name || infoFor?.id || ''}`} subtitle="The candidate is notified in-app; the request is tracked">
+        <div className="space-y-3">
+          <Field label="What do you need? *"><textarea rows={3} className={kitInput} value={infoMsg} onChange={(e) => setInfoMsg(e.target.value)} placeholder="e.g. Please upload your latest payslip for BGV" /></Field>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setInfoFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button type="button" disabled={busy || !infoMsg.trim()} onClick={doInfoRequest} className={btnPrimary}>{busy ? 'Sending…' : 'Send request'}</button>
+          </div>
+        </div>
+      </Modal>
+      <Modal open={delFor !== null} onClose={() => setDelFor(null)} title={`Soft-delete ${delFor?.name || delFor?.id || ''}?`} subtitle="Recoverable: status → Deleted, profile hidden. Purge or restore afterwards.">
+        <div className="space-y-3">
+          <Field label="Deletion reason *"><textarea rows={3} className={kitInput} value={delReason} onChange={(e) => setDelReason(e.target.value)} placeholder="e.g. Duplicate test profile" /></Field>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setDelFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button type="button" disabled={busy || !delReason.trim()} onClick={doDelete} className="px-4 py-2.5 rounded-xl bg-red-600 text-white font-bold text-xs disabled:opacity-50">{busy ? 'Working…' : 'Soft-delete'}</button>
+          </div>
+        </div>
+      </Modal>
+      <ConfirmDialog open={purgeFor !== null} onCancel={() => setPurgeFor(null)} title={`Permanently purge ${purgeFor?.id || ''}?`} body="Allowed only with zero applications, interviews, placements and commissions. Consents + audit trail are preserved. This cannot be undone." confirmLabel="Purge permanently" onConfirm={doPurge} />
+      <Modal open={delReqFor !== null} onClose={() => setDelReqFor(null)} title={`Deletion request — ${delReqFor?.name || delReqFor?.id || ''}`} subtitle="Approval anonymizes PII but preserves financial + audit records">
+        <div className="space-y-3">
+          <Field label="Reason *"><textarea rows={3} className={kitInput} value={delReqReason} onChange={(e) => setDelReqReason(e.target.value)} placeholder="e.g. Candidate invoked right-to-erasure via support" /></Field>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setDelReqFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button type="button" disabled={busy || !delReqReason.trim()} onClick={doDeletionRequest} className={btnPrimary}>{busy ? 'Opening…' : 'Open request'}</button>
           </div>
         </div>
       </Modal>
