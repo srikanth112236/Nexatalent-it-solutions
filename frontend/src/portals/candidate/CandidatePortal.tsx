@@ -12,17 +12,17 @@ import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
 
 const navItems = [
   { label: 'Career Dashboard', path: '/candidate' },
-  { label: 'My Profile & CV', path: '/candidate/profile' },
-  { label: 'Curated Jobs', path: '/candidate/jobs' },
-  { label: 'Active Applications', path: '/candidate/applications' },
-  { label: 'Upcoming Interviews', path: '/candidate/interviews' },
-  { label: 'Saved Jobs', path: '/candidate/saved' },
-  { label: 'Messages', path: '/candidate/messages' },
-  { label: 'Documents', path: '/candidate/docs' },
-  { label: 'Privacy', path: '/candidate/privacy' },
-  { label: 'Security', path: '/candidate/security' },
-  { label: 'Documents & Offers', path: '/candidate/documents' },
-  { label: 'Notifications', path: '/candidate/notifications' },
+  { label: 'My Profile & CV', path: '/candidate/profile', group: 'Career' },
+  { label: 'Curated Jobs', path: '/candidate/jobs', group: 'Career' },
+  { label: 'Active Applications', path: '/candidate/applications', group: 'Career' },
+  { label: 'Upcoming Interviews', path: '/candidate/interviews', group: 'Career' },
+  { label: 'Saved Jobs', path: '/candidate/saved', group: 'Career' },
+  { label: 'Messages', path: '/candidate/messages', group: 'Workspace' },
+  { label: 'Documents', path: '/candidate/docs', group: 'Workspace' },
+  { label: 'Privacy', path: '/candidate/privacy', group: 'Workspace' },
+  { label: 'Documents & Offers', path: '/candidate/documents', group: 'Workspace' },
+  { label: 'Security', path: '/candidate/security', group: 'Workspace' },
+  { label: 'Notifications', path: '/candidate/notifications', group: 'Workspace' },
 ];
 
 export function CandidatePortal() {

@@ -9,14 +9,14 @@ import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
 
 const navItems = [
   { label: 'Overview', path: '/employee' },
-  { label: 'CRM & Accounts', path: '/employee/crm' },
-  { label: 'Recruitment Tasks', path: '/employee/tasks' },
-  { label: 'Quarterly Targets', path: '/employee/targets' },
-  { label: 'Sales Leads Pipeline', path: '/employee/leads' },
-  { label: 'Sales Performance', path: '/employee/performance' },
-  { label: 'Delivery Reports', path: '/employee/reports' },
-  { label: 'Security', path: '/employee/security' },
-  { label: 'Notifications', path: '/employee/notifications' },
+  { label: 'CRM & Accounts', path: '/employee/crm', group: 'Delivery' },
+  { label: 'Recruitment Tasks', path: '/employee/tasks', group: 'Delivery' },
+  { label: 'Quarterly Targets', path: '/employee/targets', group: 'Delivery' },
+  { label: 'Sales Leads Pipeline', path: '/employee/leads', group: 'Sales' },
+  { label: 'Sales Performance', path: '/employee/performance', group: 'Sales' },
+  { label: 'Delivery Reports', path: '/employee/reports', group: 'Workspace' },
+  { label: 'Security', path: '/employee/security', group: 'Workspace' },
+  { label: 'Notifications', path: '/employee/notifications', group: 'Workspace' },
 ];
 
 export function EmployeePortal() {

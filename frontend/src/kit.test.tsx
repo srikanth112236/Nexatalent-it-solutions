@@ -8,6 +8,9 @@ import { Modal, ConfirmDialog, RowMenu, Select, DatePicker } from './shared/ui/E
 import { Pager } from './portals/common/EnterprisePanels.js';
 import { toCsv, StatusPill, useQueryState } from './portals/common/CrudKit.js';
 import { useState } from 'react';
+import { MemoryRouter } from 'react-router-dom';
+import { PortalShell } from './portals/common/PortalShell.js';
+import { PortalStateProvider } from './portals/common/PortalStateContext.js';
 
 let dom: any;
 let container: HTMLDivElement;
@@ -17,6 +20,8 @@ beforeEach(() => {
   dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost/' });
   (globalThis as any).window = dom.window;
   (globalThis as any).document = dom.window.document;
+  (globalThis as any).localStorage = dom.window.localStorage;
+  (globalThis as any).sessionStorage = dom.window.sessionStorage;
   Object.defineProperty(globalThis, 'navigator', { value: dom.window.navigator, configurable: true, writable: true });
   (globalThis as any).HTMLElement = dom.window.HTMLElement;
   (globalThis as any).MouseEvent = dom.window.MouseEvent;
@@ -147,6 +152,44 @@ describe('StatusPill', () => {
     assert.match(container.innerHTML, /bg-red-50/);
     render(<StatusPill value={undefined} />);
     assert.ok(container.textContent?.includes('—'));
+  });
+});
+
+describe('PortalShell sidebar', () => {
+  const items = [
+    { label: 'Overview', path: '/superadmin' },
+    { label: 'Users', path: '/superadmin/users', group: 'Directory' },
+    { label: 'Tenants', path: '/superadmin/organizations', group: 'Directory' },
+    { label: 'Jobs', path: '/superadmin/jobs', group: 'Recruitment' },
+  ];
+  function shell(path: string) {
+    return (
+      <MemoryRouter initialEntries={[path]}>
+        <PortalStateProvider>
+          <PortalShell portalTitle="Super Admin Console" portalRole="superadmin" navItems={items}>
+            <div>body</div>
+          </PortalShell>
+        </PortalStateProvider>
+      </MemoryRouter>
+    );
+  }
+  it('renders group headers and marks the active link', () => {
+    render(shell('/superadmin/users'));
+    assert.ok(container.textContent?.includes('Directory'));
+    assert.ok(container.textContent?.includes('Recruitment'));
+    const active = container.querySelector('a[aria-current="page"]');
+    assert.ok(active?.textContent?.includes('Users'));
+  });
+  it('collapses a group and hides its links', () => {
+    render(shell('/superadmin'));
+    const toggle = Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.includes('Directory')) as HTMLButtonElement;
+    assert.ok(toggle, 'group toggle exists');
+    assert.equal(toggle.getAttribute('aria-expanded'), 'true');
+    act(() => { toggle.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+    assert.equal(toggle.getAttribute('aria-expanded'), 'false');
+    const collapsed = toggle.closest('section')?.querySelector('.grid-rows-\\[0fr\\]');
+    assert.ok(collapsed, 'collapsed group clips its links');
+    assert.ok(container.textContent?.includes('Overview'));
   });
 });
 

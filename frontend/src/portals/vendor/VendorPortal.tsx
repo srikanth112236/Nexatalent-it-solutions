@@ -9,15 +9,15 @@ import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
 
 const navItems = [
   { label: 'Overview', path: '/vendor' },
-  { label: 'Requisitions', path: '/vendor/requisitions' },
-  { label: 'Contractor Roster', path: '/vendor/contractors' },
-  { label: 'Timesheets', path: '/vendor/timesheets' },
-  { label: 'Invoices & SOWs', path: '/vendor/invoices' },
-  { label: 'Compliance & NDAs', path: '/vendor/compliance' },
-  { label: 'Candidate Submissions', path: '/vendor/submissions' },
-  { label: 'Commissions & Payouts', path: '/vendor/commissions' },
-  { label: 'Security', path: '/vendor/security' },
-  { label: 'Notifications', path: '/vendor/notifications' },
+  { label: 'Requisitions', path: '/vendor/requisitions', group: 'Staffing' },
+  { label: 'Contractor Roster', path: '/vendor/contractors', group: 'Staffing' },
+  { label: 'Timesheets', path: '/vendor/timesheets', group: 'Staffing' },
+  { label: 'Invoices & SOWs', path: '/vendor/invoices', group: 'Staffing' },
+  { label: 'Compliance & NDAs', path: '/vendor/compliance', group: 'Staffing' },
+  { label: 'Candidate Submissions', path: '/vendor/submissions', group: 'Business' },
+  { label: 'Commissions & Payouts', path: '/vendor/commissions', group: 'Business' },
+  { label: 'Security', path: '/vendor/security', group: 'Workspace' },
+  { label: 'Notifications', path: '/vendor/notifications', group: 'Workspace' },
 ];
 
 export function VendorPortal() {

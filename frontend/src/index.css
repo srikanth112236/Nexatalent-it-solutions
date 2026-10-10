@@ -307,6 +307,24 @@ footer {
 div:has(> table) {
   overflow-x: auto;
 }
+/* Slim sidebar scrollbar — light, unobtrusive */
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #c7d7ee transparent;
+}
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: #c7d7ee;
+  border-radius: 999px;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: #087BFF;
+}
 /* Visible keyboard focus everywhere */
 :focus-visible {
   outline: 2px solid var(--nt-brand-600, #0B63E5);

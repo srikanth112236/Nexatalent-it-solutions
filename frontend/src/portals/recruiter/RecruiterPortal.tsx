@@ -27,17 +27,17 @@ function formatINR(n: number): string {
 
 const navItems = [
   { label: 'Pipeline Overview', path: '/recruiter' },
-  { label: 'Jobs & Mandates', path: '/recruiter/jobs' },
-  { label: 'Talent Pool Search', path: '/recruiter/talent-pool' },
-  { label: 'ATS Stages', path: '/recruiter/ats' },
-  { label: 'Interviews & Fee Ledger', path: '/recruiter/interviews' },
-  { label: 'Candidate Submissions', path: '/recruiter/submissions' },
-  { label: 'Talent Pools', path: '/recruiter/pools' },
-  { label: 'Schedule Interview', path: '/recruiter/schedule' },
-  { label: 'Offers & Placements', path: '/recruiter/offers' },
-  { label: 'Commissions', path: '/recruiter/commissions' },
-  { label: 'Security', path: '/recruiter/security' },
-  { label: 'Notifications', path: '/recruiter/notifications' },
+  { label: 'Jobs & Mandates', path: '/recruiter/jobs', group: 'Delivery' },
+  { label: 'Talent Pool Search', path: '/recruiter/talent-pool', group: 'Delivery' },
+  { label: 'ATS Stages', path: '/recruiter/ats', group: 'Delivery' },
+  { label: 'Candidate Submissions', path: '/recruiter/submissions', group: 'Delivery' },
+  { label: 'Talent Pools', path: '/recruiter/pools', group: 'Delivery' },
+  { label: 'Schedule Interview', path: '/recruiter/schedule', group: 'Delivery' },
+  { label: 'Interviews & Fee Ledger', path: '/recruiter/interviews', group: 'Commercial' },
+  { label: 'Offers & Placements', path: '/recruiter/offers', group: 'Commercial' },
+  { label: 'Commissions', path: '/recruiter/commissions', group: 'Commercial' },
+  { label: 'Security', path: '/recruiter/security', group: 'Workspace' },
+  { label: 'Notifications', path: '/recruiter/notifications', group: 'Workspace' },
 ];
 
 export function RecruiterPortal() {
