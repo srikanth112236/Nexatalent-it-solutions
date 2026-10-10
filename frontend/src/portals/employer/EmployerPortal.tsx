@@ -19,7 +19,7 @@ const navItems = [
   { label: 'Active Requirements', path: '/employer/requirements', group: 'Hiring' },
   { label: 'ATS Candidate Pipeline', path: '/employer/candidates', group: 'Hiring' },
   { label: 'Interviews & Feedback', path: '/employer/interviews', group: 'Hiring' },
-  { label: 'Requisition Pipeline', path: '/employer/requisitions', group: 'Hiring' },
+  { label: 'Requirement Pipeline', path: '/employer/requisitions', group: 'Hiring' },
   { label: 'Application Pipeline', path: '/employer/pipeline', group: 'Hiring' },
   { label: 'Schedule Interview', path: '/employer/schedule', group: 'Hiring' },
   { label: 'Talent Search', path: '/employer/talent', group: 'Talent' },
@@ -213,10 +213,10 @@ export function EmployerPortal() {
               <Building2 size={14} /> {companyProfile.legalName || getTenantId() || 'Employer Workspace'}
             </div>
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-              Employer Hiring Requisitions & Intelligence
+              Employer Hiring Requirements & Intelligence
             </h1>
             <p className="text-xs text-slate-600 font-medium mt-1">
-              Publish technical requisitions, evaluate vetted candidate shortlists, and manage ATS pipelines.
+              Publish technical requirements, evaluate vetted candidate shortlists, and manage ATS pipelines.
             </p>
           </div>
 
@@ -224,7 +224,7 @@ export function EmployerPortal() {
             onClick={() => setShowJobModal(true)}
             className="px-5 py-3.5 rounded-xl bg-[#087BFF] hover:bg-blue-600 text-white font-bold text-xs shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0"
           >
-            <Plus size={16} /> Post New Requisition
+            <Plus size={16} /> Post New Requirement
           </button>
         </div>
         )}
@@ -254,7 +254,7 @@ export function EmployerPortal() {
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-6 bg-white rounded-3xl border border-slate-200/90 shadow-sm space-y-1">
-                <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Open Requisitions</div>
+                <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Open Requirements</div>
                 <div className="text-3xl font-extrabold text-slate-900">{jobs.length} Active</div>
                 <div className="text-xs font-bold text-[#087BFF]">{interviews.length} interviews scheduled</div>
               </div>
@@ -291,11 +291,11 @@ export function EmployerPortal() {
             )}
 
             <div className="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-sm space-y-4">
-              <h3 className="text-base font-extrabold text-slate-900">Active Job Requisitions & Assigned Delivery Partners</h3>
+              <h3 className="text-base font-extrabold text-slate-900">Active Job Requirements & Assigned Delivery Partners</h3>
               {isLoading ? (
-                <InlineLoading message="Loading requisitions…" />
+                <InlineLoading message="Loading requirements…" />
               ) : jobs.length === 0 ? (
-                <EmptyState title="No requisitions yet" message="Post your first requisition to start receiving vetted candidates." />
+                <EmptyState title="No requirements yet" message="Post your first requirement to start receiving vetted candidates." />
               ) : (
               <div className="space-y-3">
                 {jobs.map((job, idx) => (
@@ -568,11 +568,11 @@ export function EmployerPortal() {
           </div>
         )}
 
-        {/* TAB 3: ACTIVE REQUISITIONS */}
+        {/* TAB 3: ACTIVE REQUIREMENTS */}
         {currentTab === 'requirements' && (
           <div className="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <h3 className="text-base font-extrabold text-slate-900">Active Technical Job Requisitions</h3>
+              <h3 className="text-base font-extrabold text-slate-900">Active Technical Job Requirements</h3>
               <div className="flex items-center gap-2">
                 <div className="relative">
                   <Search size={14} className="absolute left-3 top-3 text-slate-400" />
@@ -596,7 +596,7 @@ export function EmployerPortal() {
             {isLoading ? (
               <InlineLoading message="Loading requisitions…" />
             ) : jobs.length === 0 ? (
-              <EmptyState title="No requisitions yet" message="Create your first job requisition to start hiring." />
+                <EmptyState title="No requirements yet" message="Create your first hiring requirement to start hiring." />
             ) : (
             <div className="grid grid-cols-1 gap-4">
               {jobs
@@ -631,6 +631,32 @@ export function EmployerPortal() {
                           </span>
                         ))}
                       </div>
+                      {job.counts && (
+                        <div className="pt-2 mt-1 border-t border-slate-200/70">
+                          <div className="flex items-center justify-between text-[11px] font-bold mb-1.5">
+                            <span className="text-slate-500 uppercase tracking-wider">Hiring funnel</span>
+                            <span className="text-slate-700">{job.counts.applications ?? 0} apps → <span className="text-emerald-700">{job.counts.hired ?? 0} hired</span></span>
+                          </div>
+                          <div className="flex items-stretch gap-1" role="img" aria-label={`Funnel: applied ${job.counts.applied ?? 0}, screening ${job.counts.screening ?? 0}, interview ${job.counts.interview ?? 0}, offer ${job.counts.offer ?? 0}, hired ${job.counts.hired ?? 0}`}>
+                            {([
+                              ['Applied', job.counts.applied ?? 0],
+                              ['Screening', job.counts.screening ?? 0],
+                              ['Interview', job.counts.interview ?? 0],
+                              ['Offer', job.counts.offer ?? 0],
+                              ['Hired', job.counts.hired ?? 0],
+                            ] as Array<[string, number]>).map(([label, n]) => (
+                              <div key={label} className="flex-1 min-w-0 text-center">
+                                <div className="font-extrabold text-slate-900 text-sm">{n}</div>
+                                <div className={`h-1.5 rounded-full ${n > 0 ? 'bg-[#087BFF]' : 'bg-slate-200'}`} />
+                                <div className="text-[9px] font-bold text-slate-500 mt-0.5 truncate">{label}</div>
+                              </div>
+                            ))}
+                          </div>
+                          {job.acceptingApplications === false && (
+                            <div className="mt-1.5 text-[11px] font-bold text-amber-700">Not accepting applications — reopen or extend expiry from the Job Board.</div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -696,7 +722,7 @@ export function EmployerPortal() {
             ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                <div className="text-xs font-bold text-slate-500 uppercase">Open Requisitions</div>
+                <div className="text-xs font-bold text-slate-500 uppercase">Open Requirements</div>
                 <div className="text-3xl font-extrabold text-slate-900">{jobs.length}</div>
                 <div className="text-xs font-bold text-emerald-600">Live mandates in market</div>
               </div>
@@ -717,7 +743,7 @@ export function EmployerPortal() {
           </div>
         )}
 
-        {/* RICH MULTI-STEP REQUISITION WIZARD MODAL */}
+        {/* RICH MULTI-STEP REQUIREMENT WIZARD MODAL */}
         {showJobModal && (
           <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
             <div className="w-full max-w-2xl bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden p-6 sm:p-8 relative space-y-6">
@@ -731,7 +757,7 @@ export function EmployerPortal() {
 
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>
-                  <h3 className="text-xl font-extrabold text-slate-900">Create Technical Requisition</h3>
+                  <h3 className="text-xl font-extrabold text-slate-900">Create Hiring Requirement</h3>
                   <p className="text-xs text-slate-500 font-medium">Define technical specs, CTC budget, and partner allocation.</p>
                 </div>
                 <span className="px-3 py-1 rounded-full bg-blue-50 text-[#087BFF] border border-blue-200 font-extrabold text-xs">
@@ -744,7 +770,7 @@ export function EmployerPortal() {
                   <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
                     <CheckCircle2 size={36} />
                   </div>
-                  <h4 className="text-xl font-extrabold text-slate-900">Requisition Published & Dispatched!</h4>
+                  <h4 className="text-xl font-extrabold text-slate-900">Requirement Published & Dispatched!</h4>
                   <p className="text-xs text-slate-600">Broadcasted to assigned Agency and Vendor partner networks via HTTP API.</p>
                 </div>
               ) : (
@@ -755,7 +781,7 @@ export function EmployerPortal() {
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block font-bold text-slate-700 mb-1">Requisition Job Title *</label>
+                          <label className="block font-bold text-slate-700 mb-1">Requirement Job Title *</label>
                           <input
                             type="text"
                             required
@@ -840,7 +866,7 @@ export function EmployerPortal() {
                       </div>
 
                       <div>
-                        <label className="block font-bold text-slate-700 mb-1">Requisition Summary & Scope *</label>
+                        <label className="block font-bold text-slate-700 mb-1">Requirement Summary & Scope *</label>
                         <textarea
                           rows={2}
                           required
@@ -910,7 +936,7 @@ export function EmployerPortal() {
                         disabled={isSubmitting}
                         className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-md cursor-pointer flex items-center gap-2"
                       >
-                        <span>{isSubmitting ? 'Publishing...' : 'Publish & Broadcast Requisition'}</span>
+                        <span>{isSubmitting ? 'Publishing...' : 'Publish & Broadcast Requirement'}</span>
                         <CheckCircle2 size={16} />
                       </button>
                     )}

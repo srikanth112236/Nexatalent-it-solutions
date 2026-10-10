@@ -12,7 +12,8 @@ export const requisitionsApi = {
   create: (body: unknown) => apiClient.post('/api/v1/requisitions', body),
   update: (id: string, body: unknown) => apiClient.put(`/api/v1/requisitions/${id}`, body),
   remove: (id: string) => apiClient.delete(`/api/v1/requisitions/${id}`),
-  setStatus: (id: string, status: string) => apiClient.patch(`/api/v1/requisitions/${id}/status`, { status }),
+  setStatus: (id: string, status: string, reason?: string) => apiClient.patch(`/api/v1/requisitions/${id}/status`, { status, reason }),
+  requestChanges: (id: string, note: string) => apiClient.post(`/api/v1/requisitions/${id}/request-changes`, { note }),
 };
 export const jobsApi = {
   list: (params = '') => apiClient.get<unknown[]>(`/api/v1/jobs${params}`),
@@ -20,7 +21,7 @@ export const jobsApi = {
   detail: (id: string) => apiClient.get(`/api/v1/jobs/${id}`),
   create: (body: unknown) => apiClient.post('/api/v1/jobs', body),
   update: (id: string, body: unknown) => apiClient.put(`/api/v1/jobs/${id}`, body),
-  setStatus: (id: string, status: string) => apiClient.patch(`/api/v1/jobs/${id}/status`, { status }),
+  setStatus: (id: string, status: string, reason?: string, expiryDate?: string) => apiClient.patch(`/api/v1/jobs/${id}/status`, { status, reason, expiryDate }),
 };
 export const mfaApi = {
   status: () => apiClient.get('/api/v1/auth/mfa/status'),
@@ -80,7 +81,7 @@ export const applicationsApi = {
   withdraw: (id: string, reason?: string) => apiClient.post(`/api/v1/applications/${id}/withdraw`, { reason }),
 };
 export const interviewsApi = {
-  list: () => apiClient.get('/api/v1/interviews'),
+  list: (params = '') => apiClient.get(`/api/v1/interviews${params}`),
   schedule: (body: unknown) => apiClient.post('/api/v1/interviews', body),
   reschedule: (id: string, body: unknown) => apiClient.patch(`/api/v1/interviews/${id}`, body),
   feedback: (id: string, body: unknown) => apiClient.post(`/api/v1/interviews/${id}/feedback`, body),

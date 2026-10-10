@@ -21,7 +21,7 @@ const navItems = [
   { label: 'Agencies & Vendors', path: '/superadmin/agencies', group: 'Directory' },
   { label: 'Candidate Directory', path: '/superadmin/candidates', group: 'Directory' },
   { label: 'Branches', path: '/superadmin/branches', group: 'Directory' },
-  { label: 'Requisitions & Jobs', path: '/superadmin/requisitions', group: 'Recruitment' },
+  { label: 'Requirements & Jobs', path: '/superadmin/requisitions', group: 'Recruitment' },
   { label: 'Job Board (Admin)', path: '/superadmin/jobs', group: 'Recruitment' },
   { label: 'Applications', path: '/superadmin/applications', group: 'Recruitment' },
   { label: 'Interviews', path: '/superadmin/interviews', group: 'Recruitment' },

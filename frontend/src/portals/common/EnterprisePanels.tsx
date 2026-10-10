@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import { apiClient } from '../../shared/api-client';
 import { Candidate360Drawer, AgencyDrawer } from '../superadmin/SuperAdmin360';
 import { ExportButton, useQueryState, useDebounced } from './CrudKit';
@@ -120,64 +120,148 @@ export const REQ_TRANSITIONS: Record<string, string[]> = {
 export const APP_STAGES = ['New', 'Applied', 'Under Review', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interview Completed', 'Selected', 'Offer', 'Hired', 'Rejected', 'Withdrawn', 'On Hold', 'Job Closed'];
 export const LEAD_STAGES = ['New', 'Contacted', 'Qualified', 'Discovery Scheduled', 'Proposal Sent', 'Negotiation', 'Won', 'Lost', 'Nurture'];
 
-/* ---------------- Phase 1: Requisitions — full CRUD ---------------- */
+/* ---------------- Requirements workspace (§6.7) ----------------
+   Internal hiring demand. Candidates never see this screen or its data —
+   only Published, unexpired *jobs* leave the building. */
+const REQ_ALL_COLUMNS = [
+  { key: 'req', label: 'Requirement' },
+  { key: 'company', label: 'Company' },
+  { key: 'location', label: 'Location' },
+  { key: 'openings', label: 'Openings' },
+  { key: 'status', label: 'Status' },
+  { key: 'pipeline', label: 'Pipeline' },
+  { key: 'ageing', label: 'Ageing' },
+  { key: 'branch', label: 'Branch' },
+  { key: 'manager', label: 'Hiring manager' },
+  { key: 'recruiter', label: 'Recruiter' },
+  { key: 'employment', label: 'Employment' },
+  { key: 'experience', label: 'Experience' },
+  { key: 'interviews', label: 'Interviews' },
+  { key: 'filled', label: 'Filled' },
+  { key: 'created', label: 'Created' },
+] as const;
+const REQ_DEFAULT_COLUMNS = ['req', 'company', 'location', 'openings', 'status', 'pipeline', 'ageing'];
+const REQ_COLS_KEY = 'nexa:req-columns';
+
+function loadVisibleCols(): string[] {
+  try {
+    const raw = localStorage.getItem(REQ_COLS_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed.filter((k) => REQ_ALL_COLUMNS.some((c) => c.key === k));
+    }
+  } catch { /* fall through to defaults */ }
+  return [...REQ_DEFAULT_COLUMNS];
+}
+
 export function RequisitionsPanel() {
   const [rows, setRows] = useState<any[]>([]);
+  const [orgs, setOrgs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
-  const [form, setForm] = useState({ title: '', department: '', category: '', location: '', openings: 1, employmentType: 'Full-time', priority: 'Medium', description: '' });
+  const [form, setForm] = useState({ title: '', department: '', category: '', location: '', branch: '', openings: 1, employmentType: 'Full-time', priority: 'Medium', description: '', recruiter: '', experienceMin: '', experienceMax: '', deadline: '' });
   const [busy, setBusy] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const [showCols, setShowCols] = useState(false);
+  const [visibleCols, setVisibleCols] = useState<string[]>(loadVisibleCols);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loadError, setLoadError] = useState(0);
   const [q, setQ] = useQueryState('req_q');
   const [statusF, setStatusF] = useQueryState('req_status');
+  const [orgF, setOrgF] = useQueryState('req_org');
   const dq = useDebounced(q);
-  const [detail, setDetail] = useState<any>(null);
+  const [pipelineFor, setPipelineFor] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
   const [deleteFor, setDeleteFor] = useState<any>(null);
-  const emptyForm = { title: '', department: '', category: '', location: '', openings: 1, employmentType: 'Full-time', priority: 'Medium', description: '' };
+  const [decideFor, setDecideFor] = useState<{ row: any; action: 'approve' | 'reject' | 'changes' } | null>(null);
+  const [decideReason, setDecideReason] = useState('');
+  const [assignFor, setAssignFor] = useState<any[]>([]);
+  const [assignEmail, setAssignEmail] = useState('');
+  const [recruiters, setRecruiters] = useState<any[]>([]);
+  const [expanded, setExpanded] = useState<Record<string, any[] | null>>({});
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const emptyForm = { title: '', department: '', category: '', location: '', branch: '', openings: 1, employmentType: 'Full-time', priority: 'Medium', description: '', recruiter: '', experienceMin: '', experienceMax: '', deadline: '' };
   const pageSize = 10;
 
+  const buildParams = (p: number) => {
+    const sp = new URLSearchParams({ page: String(p), pageSize: String(pageSize) });
+    if (statusF) sp.set('status', statusF);
+    if (orgF) sp.set('orgId', orgF);
+    if (dq.trim()) sp.set('q', dq.trim());
+    return sp.toString();
+  };
   const load = async (p = page) => {
     setLoading(true); setError('');
     try {
-      const res: any = await requisitionsApi.list(`?page=${p}&pageSize=${pageSize}`);
+      const res: any = await requisitionsApi.list(`?${buildParams(p)}`);
       setRows(unwrapList(res));
-      setTotal(Number(res?.pagination?.total || unwrapList(res).length));
+      setTotal(Number(res?.pagination?.total ?? unwrapList(res).length));
+      const { directoryApi } = await import('../../shared/enterprise/phaseApi');
+      directoryApi.tenants().then((t: any) => setOrgs(unwrapList(t))).catch(() => { /* company filter is best-effort */ });
     } catch (e) { setError(errMsg(e)); setLoadError(errStatus(e)); }
     finally { setLoading(false); }
   };
-  useEffect(() => { load(page); }, [page ]);
+  useEffect(() => { load(page); }, [page, statusF, orgF, dq ]);
+  useEffect(() => { try { localStorage.setItem(REQ_COLS_KEY, JSON.stringify(visibleCols)); } catch { /* noop */ } }, [visibleCols]);
 
+  const refreshRow = (updated: any) => {
+    setRows((r) => r.map((x) => (x.id === updated.id ? updated : x)));
+    setPipelineFor((d: any) => (d && d.id === updated.id ? updated : d));
+  };
   const create = async (e: React.FormEvent) => {
     e.preventDefault(); if (!form.title.trim()) return;
     setBusy(true);
     try {
-      const created = unwrapObj(await requisitionsApi.create({ ...form, openings: Number(form.openings) || 1 }));
-      if (created?.id) setRows((r) => [created, ...r]);
+      const created = unwrapObj(await requisitionsApi.create({
+        ...form,
+        openings: Number(form.openings) || 1,
+        experienceMin: form.experienceMin === '' ? undefined : Number(form.experienceMin),
+        experienceMax: form.experienceMax === '' ? undefined : Number(form.experienceMax),
+        deadline: form.deadline || undefined,
+        recruiter: form.recruiter.trim() || undefined,
+        branch: form.branch.trim() || undefined,
+      }));
+      if (created?.id) { setRows((r) => [created, ...r]); setTotal((t) => t + 1); }
       setForm(emptyForm);
       setShowCreate(false);
-      setOk('Requisition created as Draft.');
+      setOk('Requirement created as Draft.');
       syncAll();
     } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
   };
-  const transition = async (id: string, status: string) => {
+  const transition = async (id: string, status: string, reason?: string) => {
     try {
-      const updated = unwrapObj(await requisitionsApi.setStatus(id, status));
-      setRows((r) => r.map((x) => (x.id === id ? (updated?.id ? updated : { ...x, status }) : x)));
+      const updated = unwrapObj(await requisitionsApi.setStatus(id, status, reason));
+      if (updated?.id) refreshRow(updated);
       setOk(`${id} → ${status}.`); syncAll();
     } catch (e) { setError(errMsg(e)); }
+  };
+  const doDecide = async () => {
+    if (!decideFor) return;
+    const { row, action } = decideFor;
+    if (action !== 'approve' && !decideReason.trim()) { setError('A reason is required — it is recorded and sent onward.'); return; }
+    setBusy(true); setError('');
+    try {
+      if (action === 'approve') {
+        await transition(row.id, 'Approved');
+      } else if (action === 'reject') {
+        await transition(row.id, 'Cancelled', decideReason.trim());
+      } else {
+        const updated = unwrapObj(await requisitionsApi.requestChanges(row.id, decideReason.trim()));
+        if (updated?.id) refreshRow(updated);
+        setOk(`${row.id} sent back to Draft with change note.`); syncAll();
+      }
+      setDecideFor(null); setDecideReason('');
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
   };
   const saveEdit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!editing) return;
     setBusy(true); setError('');
     try {
       const updated = unwrapObj(await requisitionsApi.update(editing.id, { ...editing, openings: Number(editing.openings) || 1 }));
-      setRows((r) => r.map((x) => (x.id === editing.id ? { ...x, ...(updated?.id ? updated : editing) } : x)));
-      setEditing(null); setOk('Requisition updated.'); syncAll();
+      if (updated?.id) refreshRow(updated);
+      setEditing(null); setOk('Requirement updated.'); syncAll();
     } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
   };
   const doDelete = async () => {
@@ -186,117 +270,263 @@ export function RequisitionsPanel() {
     try {
       await requisitionsApi.remove(deleteFor.id);
       setRows((r) => r.filter((x) => x.id !== deleteFor.id));
-      setDeleteFor(null); setOk('Requisition deleted.'); syncAll();
+      setDeleteFor(null); setOk('Requirement deleted.'); syncAll();
     } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
   };
+  const toggleExpand = async (r: any) => {
+    if (expanded[r.id] !== undefined) {
+      setExpanded((m) => { const n = { ...m }; delete n[r.id]; return n; });
+      return;
+    }
+    setExpanded((m) => ({ ...m, [r.id]: null }));
+    try {
+      const res: any = await jobsApi.list(`?requisitionId=${r.id}&page=1&pageSize=50`);
+      setExpanded((m) => ({ ...m, [r.id]: unwrapList(res) }));
+    } catch (e) { setError(errMsg(e)); setExpanded((m) => { const n = { ...m }; delete n[r.id]; return n; }); }
+  };
+  const openAssign = async (targets: any[]) => {
+    setAssignFor(targets); setAssignEmail('');
+    try {
+      const { directoryApi } = await import('../../shared/enterprise/phaseApi');
+      const res: any = await directoryApi.users();
+      const all = unwrapList(res);
+      setRecruiters(all.filter((u: any) => ['internal_recruiter', 'company_recruiter', 'employee', 'operations_admin'].includes(u.role) && u.status === 'Active'));
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const doAssign = async () => {
+    if (assignFor.length === 0 || !assignEmail.trim()) return;
+    setBusy(true); setError('');
+    try {
+      for (const r of assignFor) {
+        const updated = unwrapObj(await requisitionsApi.update(r.id, { recruiter: assignEmail.trim() }));
+        if (updated?.id) refreshRow(updated);
+      }
+      setAssignFor([]); setOk(`Recruiter assigned to ${assignFor.length} requirement(s).`); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const doBulkApprove = async () => {
+    const eligible = rows.filter((r) => selected.has(r.id) && r.status === 'Pending Approval');
+    if (eligible.length === 0) { setError('Bulk approve applies to Pending Approval rows only.'); return; }
+    setBusy(true); setError('');
+    try {
+      for (const r of eligible) {
+        const updated = unwrapObj(await requisitionsApi.setStatus(r.id, 'Approved'));
+        if (updated?.id) refreshRow(updated);
+      }
+      setSelected(new Set()); setOk(`${eligible.length} requirement(s) approved.`); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const toggleSelect = (id: string) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const toggleSelectPage = () => {
+    const ids = rows.map((r) => r.id);
+    const all = ids.every((id) => selected.has(id));
+    setSelected((s) => { const n = new Set(s); if (all) ids.forEach((id) => n.delete(id)); else ids.forEach((id) => n.add(id)); return n; });
+  };
 
-  const filtered = rows.filter((r) => {
-    if (statusF && r.status !== statusF) return false;
-    if (!dq.trim()) return true;
-    return `${r.id} ${r.title} ${r.department}`.toLowerCase().includes(dq.toLowerCase());
-  });
+  const funnel = (r: any) => r.rollup || { applied: 0, screening: 0, interview: 0, offer: 0, hired: 0, applications: 0, interviews: 0, placements: 0, openingsFilled: 0, ageingDays: 0, linkedJobs: [] };
+  const ageingTone = (r: any) => {
+    const d = funnel(r).ageingDays;
+    const open = !['Filled', 'Cancelled'].includes(r.status);
+    if (!open) return null;
+    if (d > 30) return { label: `${d}d — breaching`, cls: 'bg-red-50 text-red-700 border-red-200' };
+    if (d > 14) return { label: `${d}d — watch`, cls: 'bg-amber-50 text-amber-800 border-amber-200' };
+    return { label: `${d}d`, cls: 'bg-slate-100 text-slate-600 border-slate-200' };
+  };
+  const cellFor = (r: any, key: string): React.ReactNode => {
+    const f = funnel(r);
+    switch (key) {
+      case 'req': return (<><div className="font-bold text-slate-900">{r.title}</div><div className="font-mono text-[11px] text-slate-500">{r.id}</div></>);
+      case 'company': return <span className="font-mono font-bold text-amber-700">{r.orgId}</span>;
+      case 'location': return r.location || r.city || '—';
+      case 'openings': return <span className="font-bold">{r.openings || 1} <span className="text-slate-400 font-medium">({f.openingsFilled} filled)</span></span>;
+      case 'status': return <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">{r.status}</span>;
+      case 'pipeline': return (
+        <span className="inline-flex items-center gap-1 font-bold" title={`Applied ${f.applied} → Screening ${f.screening} → Interview ${f.interview} → Offer ${f.offer} → Hired ${f.hired}`}>
+          <span className="text-slate-700">{f.applications} apps</span>
+          <span className="text-slate-300">→</span>
+          <span className="text-emerald-700">{f.hired} hired</span>
+        </span>
+      );
+      case 'ageing': { const a = ageingTone(r); return a ? <span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${a.cls}`}>{a.label}</span> : <span className="text-slate-400">—</span>; }
+      case 'branch': return r.branch || '—';
+      case 'manager': return r.hiringManager || '—';
+      case 'recruiter': return r.recruiter || <span className="text-amber-600 font-bold">Unassigned</span>;
+      case 'employment': return r.employmentType || '—';
+      case 'experience': return (r.experienceMin !== undefined || r.experienceMax !== undefined) ? `${r.experienceMin ?? '—'}–${r.experienceMax ?? '—'}y` : '—';
+      case 'interviews': return <span className="font-bold">{f.interviews}</span>;
+      case 'filled': return <span className="font-bold">{f.openingsFilled}/{r.openings || 1}</span>;
+      case 'created': return <span className="text-slate-500">{String(r.createdAt || '').slice(0, 10) || '—'}</span>;
+      default: return '—';
+    }
+  };
   const reqMenuFor = (r: any) => (
     <RowMenu items={[
-      { label: 'View details', onSelect: () => setDetail(r) },
+      { label: 'Open pipeline', onSelect: () => setPipelineFor(r) },
       { label: 'Edit…', onSelect: () => setEditing({ ...r }) },
-      ...(REQ_TRANSITIONS[r.status] || []).map((s) => ({ label: `Move to ${s}`, onSelect: () => transition(r.id, s) })),
+      ...(r.status === 'Pending Approval' ? [
+        { label: 'Approve', onSelect: () => { setDecideFor({ row: r, action: 'approve' }); setDecideReason(''); } },
+        { label: 'Reject…', danger: true, onSelect: () => { setDecideFor({ row: r, action: 'reject' }); setDecideReason(''); } },
+        { label: 'Request changes…', onSelect: () => { setDecideFor({ row: r, action: 'changes' }); setDecideReason(''); } },
+      ] : []),
+      ...(REQ_TRANSITIONS[r.status] || []).filter((s) => !(['Approved', 'Cancelled', 'Draft'].includes(s) && r.status === 'Pending Approval')).map((s) => ({ label: `Move to ${s}`, onSelect: () => transition(r.id, s) })),
+      { label: 'Assign recruiter…', onSelect: () => openAssign([r]) },
       { label: 'Delete…', danger: true, onSelect: () => setDeleteFor(r) },
     ]} />
   );
+  const cols = REQ_ALL_COLUMNS.filter((c) => visibleCols.includes(c.key));
 
   return (
     <div className={cardCls}>
       <div className="flex flex-col gap-1">
-        <h3 className="text-base font-extrabold text-slate-900">Job Requisitions — View / Edit / Approve / Delete</h3>
-        <p className="text-xs text-slate-500 font-medium">Draft → Pending Approval → Approved → Sourcing → Filled. Edit allowed in Draft/Pending; delete in Draft/Cancelled.</p>
+        <h3 className="text-base font-extrabold text-slate-900">Requirements — internal hiring demand</h3>
+        <p className="text-xs text-slate-500 font-medium">One requirement → many job postings. Candidates never see this screen; only Published, unexpired jobs leave the building.</p>
       </div>
       {error && <PanelError message={error} status={loadError} onRetry={() => load(page)} />}
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
       <div className="flex flex-col lg:flex-row gap-2">
-        <div className="relative flex-1"><input className={inputCls} placeholder="Search ID, title, department…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+        <div className="relative flex-1"><input className={inputCls} placeholder="Search ID, title, department, manager…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         <div className="flex gap-2">
           <div className="w-44 shrink-0">
-            <Select value={statusF} onChange={setStatusF} ariaLabel="Requisition status filter" placeholder="All statuses"
+            <Select value={statusF} onChange={setStatusF} ariaLabel="Requirement status filter" placeholder="All statuses"
               options={[{ value: '', label: 'All statuses' }, ...['Draft', 'Pending Approval', 'Approved', 'Sourcing', 'On Hold', 'Filled', 'Cancelled'].map((s) => ({ value: s, label: s }))]} />
           </div>
-          <ExportButton filename="requisitions.csv" rows={filtered} columns={['id', 'title', 'department', 'openings', 'status']} />
-          <button type="button" onClick={() => setShowCreate(true)} className={btnPrimary}>+ New requisition</button>
+          {orgs.length > 0 && (
+            <div className="w-48 shrink-0">
+              <Select value={orgF} onChange={setOrgF} ariaLabel="Company filter" placeholder="All companies"
+                options={[{ value: '', label: 'All companies' }, ...orgs.map((o: any) => ({ value: o.id, label: `${o.displayName || o.legalName || o.id}` }))]} />
+            </div>
+          )}
+          <div className="relative shrink-0">
+            <button type="button" onClick={() => setShowCols((v) => !v)} aria-expanded={showCols} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs h-full">Columns ▾</button>
+            {showCols && (
+              <div className="absolute right-0 top-full mt-1 z-50 w-52 bg-white rounded-2xl border border-slate-200 shadow-xl p-2 space-y-0.5 max-h-72 overflow-y-auto" data-lenis-prevent>
+                {REQ_ALL_COLUMNS.map((c) => (
+                  <label key={c.key} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-slate-50 text-xs font-semibold cursor-pointer">
+                    <input type="checkbox" checked={visibleCols.includes(c.key)} onChange={() => setVisibleCols((v) => v.includes(c.key) ? v.filter((k) => k !== c.key) : [...v, c.key])} className="w-3.5 h-3.5 accent-[#087BFF]" />
+                    {c.label}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+          <ExportButton filename="requirements.csv" rows={rows} columns={['id', 'title', 'orgId', 'department', 'location', 'branch', 'hiringManager', 'recruiter', 'employmentType', 'experienceMin', 'experienceMax', 'openings', 'status', 'createdAt']} />
+          <button type="button" onClick={() => setShowCreate(true)} className={btnPrimary}>+ New requirement</button>
         </div>
       </div>
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New requisition" subtitle="Draft → Pending Approval → Approved → Sourcing">
+      {selected.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 p-3 rounded-2xl bg-blue-50 border border-blue-200 text-xs font-bold" role="toolbar" aria-label="Bulk actions">
+          <span className="text-blue-900">{selected.size} selected</span>
+          <button type="button" disabled={busy} onClick={doBulkApprove} className="px-3 py-1.5 rounded-lg bg-[#087BFF] text-white disabled:opacity-50">Approve eligible</button>
+          <button type="button" onClick={() => openAssign(rows.filter((r) => selected.has(r.id)))} className="px-3 py-1.5 rounded-lg bg-white border border-blue-300 text-blue-800">Assign recruiter…</button>
+          <ExportButton filename="requirements-selected.csv" rows={rows.filter((r) => selected.has(r.id))} columns={['id', 'title', 'orgId', 'openings', 'status']} label="Export selected" />
+          <button type="button" onClick={() => setSelected(new Set())} className="px-3 py-1.5 rounded-lg text-slate-500">Clear</button>
+        </div>
+      )}
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New requirement" subtitle="Internal demand — Draft → Pending Approval → Approved → Sourcing" wide>
         <form onSubmit={create} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="sm:col-span-2"><Field label="Requisition title *"><input className={kitInput} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Senior QA Automation Engineer" /></Field></div>
+          <div className="sm:col-span-2"><Field label="Requirement title *"><input className={kitInput} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Senior QA Automation Engineer" /></Field></div>
           <Field label="Department"><input className={kitInput} value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} /></Field>
           <Field label="Category"><input className={kitInput} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></Field>
           <Field label="Location"><input className={kitInput} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></Field>
+          <Field label="Branch"><input className={kitInput} value={form.branch} onChange={(e) => setForm({ ...form, branch: e.target.value })} placeholder="e.g. Bengaluru HQ" /></Field>
           <Field label="Employment type"><input className={kitInput} value={form.employmentType} onChange={(e) => setForm({ ...form, employmentType: e.target.value })} /></Field>
           <Field label="Openings"><input className={kitInput} type="number" min={1} value={form.openings} onChange={(e) => setForm({ ...form, openings: Number(e.target.value) })} /></Field>
           <Field label="Priority"><Select value={form.priority} onChange={(v) => setForm({ ...form, priority: v })} options={['Low', 'Medium', 'High', 'Critical'].map((p) => ({ value: p, label: p }))} /></Field>
+          <Field label="Min experience (yrs)"><input className={kitInput} type="number" min={0} value={form.experienceMin} onChange={(e) => setForm({ ...form, experienceMin: e.target.value })} /></Field>
+          <Field label="Max experience (yrs)"><input className={kitInput} type="number" min={0} value={form.experienceMax} onChange={(e) => setForm({ ...form, experienceMax: e.target.value })} /></Field>
+          <Field label="Target deadline"><DatePicker value={form.deadline} onChange={(v) => setForm({ ...form, deadline: v })} ariaLabel="Target deadline" /></Field>
+          <Field label="Recruiter (email)"><input className={kitInput} value={form.recruiter} onChange={(e) => setForm({ ...form, recruiter: e.target.value })} placeholder="recruiter@company.com" /></Field>
           <div className="sm:col-span-2"><Field label="Role description"><input className={kitInput} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Responsibilities, must-haves…" /></Field></div>
           <div className="sm:col-span-2 flex justify-end gap-2 pt-1">
             <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
-            <button className={btnPrimary} disabled={busy || !form.title.trim()}>{busy ? 'Creating…' : 'Create requisition'}</button>
+            <button className={btnPrimary} disabled={busy || !form.title.trim()}>{busy ? 'Creating…' : 'Create requirement'}</button>
           </div>
         </form>
       </Modal>
-      {loading ? <InlineLoading message="Loading requisitions…" /> : filtered.length === 0 ? (
-        <EmptyState title="No requisitions" message="Create the first hiring requisition to start the approval flow." />
+      {loading ? <InlineLoading message="Loading requirements…" /> : rows.length === 0 ? (
+        <EmptyState title="No requirements" message="Create the first hiring requirement to start the approval flow." />
       ) : (<>
         <div className="space-y-2 md:hidden">
-          {filtered.map((r) => (
+          {rows.map((r) => {
+            const f = funnel(r);
+            return (
             <div key={r.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="font-extrabold text-slate-900 text-sm truncate">{r.title}</div>
-                  <div className="font-mono text-[11px] text-slate-500">{r.id} • {r.openings || 1} opening(s)</div>
+                  <div className="font-mono text-[11px] text-slate-500">{r.id} • {r.openings || 1} opening(s) • {f.openingsFilled} filled</div>
                 </div>
                 {reqMenuFor(r)}
               </div>
               <div><span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">{r.status}</span></div>
+              <div className="font-bold text-slate-700">{f.applications} apps → {f.hired} hired</div>
               <div className="text-slate-600 font-medium">{r.department || '—'} • {r.location || '—'}</div>
             </div>
-          ))}
+            );
+          })}
         </div>
         <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
           <table className="w-full text-left text-xs min-w-[980px]">
             <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
-              <th className="px-4 py-3">Requisition</th><th className="px-4 py-3">Department</th><th className="px-4 py-3">Location</th><th className="px-4 py-3">Openings</th><th className="px-4 py-3">Hiring manager</th><th className="px-4 py-3">Created</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-2 py-3 w-8"><input type="checkbox" aria-label="Select page" checked={rows.length > 0 && rows.every((r) => selected.has(r.id))} onChange={toggleSelectPage} className="w-3.5 h-3.5 accent-[#087BFF]" /></th>
+              <th className="px-2 py-3 w-8" aria-label="Expand" />
+              {cols.map((c) => <th key={c.key} className="px-4 py-3">{c.label}</th>)}
+              <th className="px-4 py-3 text-right">Actions</th>
             </tr></thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map((r) => (
-                <tr key={r.id} className="hover:bg-slate-50/70">
-                  <td className="px-4 py-3"><div className="font-bold text-slate-900">{r.title}</div><div className="font-mono text-[11px] text-slate-500">{r.id}</div></td>
-                  <td className="px-4 py-3">{r.department || '—'}</td>
-                  <td className="px-4 py-3">{r.location || r.city || '—'}</td>
-                  <td className="px-4 py-3 font-bold">{r.openings || 1}</td>
-                  <td className="px-4 py-3">{r.hiringManager || '—'}</td>
-                  <td className="px-4 py-3 text-slate-500">{String(r.createdAt || '').slice(0, 10) || '—'}</td>
-                  <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">{r.status}</span></td>
+              {rows.map((r) => (
+                <Fragment key={r.id}>
+                <tr className="hover:bg-slate-50/70">
+                  <td className="px-2 py-3"><input type="checkbox" aria-label={`Select ${r.id}`} checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="w-3.5 h-3.5 accent-[#087BFF]" /></td>
+                  <td className="px-2 py-3">
+                    <button type="button" onClick={() => toggleExpand(r)} aria-expanded={expanded[r.id] !== undefined} aria-label={expanded[r.id] !== undefined ? 'Collapse linked jobs' : 'Expand linked jobs'} className="p-1 rounded-lg hover:bg-slate-200 text-slate-500 font-bold">
+                      {expanded[r.id] !== undefined ? '▾' : '▸'}
+                    </button>
+                  </td>
+                  {cols.map((c) => <td key={c.key} className="px-4 py-3">{cellFor(r, c.key)}</td>)}
                   <td className="px-4 py-3"><div className="flex justify-end">{reqMenuFor(r)}</div></td>
                 </tr>
+                {(() => { const linked = expanded[r.id]; return linked !== undefined && (
+                  <tr key={`${r.id}-jobs`} className="bg-blue-50/40">
+                    <td colSpan={cols.length + 3} className="px-8 py-2">
+                      {linked === null ? <InlineLoading message="Loading linked jobs…" /> : linked.length === 0 ? (
+                        <span className="text-[11px] text-slate-500 font-medium">No job postings yet under this requirement.</span>
+                      ) : (
+                        <div className="space-y-1 py-1">
+                          {linked.map((j: any) => (
+                            <div key={j.id} className="flex items-center justify-between gap-2 text-[11px] font-semibold">
+                              <span className="truncate"><span className="font-mono text-slate-500">{j.id}</span> • <strong>{j.title}</strong></span>
+                              <span className="flex items-center gap-2 shrink-0">
+                                <span className="text-slate-500">{j.applicantsCount ?? 0} apps</span>
+                                <span className="px-2 py-0.5 rounded-full bg-white border border-slate-200 font-bold">{j.status}</span>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ); })()}
+                </Fragment>
               ))}
             </tbody>
           </table>
         </div>
       </>)}
-      <Pager page={page} total={total || filtered.length} pageSize={pageSize} onPage={setPage} />
-      {detail && (
-        <Modal open onClose={() => setDetail(null)} title={detail.title} subtitle={`${detail.id} • ${detail.status}`}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-            {[['Department', detail.department], ['Category', detail.category], ['Location', detail.location], ['Employment', detail.employmentType], ['Openings', detail.openings], ['Priority', detail.priority], ['Hiring manager', detail.hiringManager], ['Recruiter', detail.recruiter]].map(([k, v]) => (
-              <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1">{String(v ?? '—')}</div></div>
-            ))}
-            <div className="sm:col-span-2 p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">Description</div><div className="font-medium mt-1 whitespace-pre-wrap">{detail.description || '—'}</div></div>
-          </div>
-        </Modal>
-      )}
-      <Modal open={editing !== null} onClose={() => setEditing(null)} title={`Edit — ${editing?.id || ''}`} subtitle="Only Draft / Pending Approval can be edited">
+      <Pager page={page} total={total} pageSize={pageSize} onPage={setPage} />
+      {pipelineFor && <RequirementPipeline reqId={pipelineFor.id} onClose={() => { setPipelineFor(null); load(page); }} />}
+      <Modal open={editing !== null} onClose={() => setEditing(null)} title={`Edit requirement — ${editing?.id || ''}`} subtitle="Only Draft / Pending Approval can be edited" wide>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="sm:col-span-2"><Field label="Title"><input className={kitInput} value={editing?.title || ''} onChange={(e) => setEditing({ ...editing, title: e.target.value })} /></Field></div>
           <Field label="Department"><input className={kitInput} value={editing?.department || ''} onChange={(e) => setEditing({ ...editing, department: e.target.value })} /></Field>
           <Field label="Location"><input className={kitInput} value={editing?.location || ''} onChange={(e) => setEditing({ ...editing, location: e.target.value })} /></Field>
+          <Field label="Branch"><input className={kitInput} value={editing?.branch || ''} onChange={(e) => setEditing({ ...editing, branch: e.target.value })} /></Field>
+          <Field label="Recruiter (email)"><input className={kitInput} value={editing?.recruiter || ''} onChange={(e) => setEditing({ ...editing, recruiter: e.target.value })} /></Field>
           <Field label="Openings"><input className={kitInput} type="number" min={1} value={editing?.openings || 1} onChange={(e) => setEditing({ ...editing, openings: Number(e.target.value) })} /></Field>
           <Field label="Priority"><Select value={editing?.priority || 'Medium'} onChange={(v) => setEditing({ ...editing, priority: v })} options={['Low', 'Medium', 'High', 'Critical'].map((p) => ({ value: p, label: p }))} /></Field>
+          <Field label="Min experience"><input className={kitInput} type="number" min={0} value={editing?.experienceMin ?? ''} onChange={(e) => setEditing({ ...editing, experienceMin: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
+          <Field label="Max experience"><input className={kitInput} type="number" min={0} value={editing?.experienceMax ?? ''} onChange={(e) => setEditing({ ...editing, experienceMax: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
+          <Field label="Deadline"><DatePicker value={String(editing?.deadline || '').slice(0, 10)} onChange={(v) => setEditing({ ...editing, deadline: v })} ariaLabel="Target deadline" /></Field>
           <div className="sm:col-span-2"><Field label="Description"><input className={kitInput} value={editing?.description || ''} onChange={(e) => setEditing({ ...editing, description: e.target.value })} /></Field></div>
           <div className="sm:col-span-2 flex justify-end gap-2">
             <button type="button" onClick={() => setEditing(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
@@ -304,8 +534,140 @@ export function RequisitionsPanel() {
           </div>
         </div>
       </Modal>
-      <ConfirmDialog open={deleteFor !== null} onCancel={() => setDeleteFor(null)} title={`Delete ${deleteFor?.id || ''}?`} body="Only Draft/Cancelled requisitions can be deleted. Linked jobs block deletion." confirmLabel="Delete" onConfirm={doDelete} />
+      <Modal open={decideFor !== null} onClose={() => setDecideFor(null)}
+        title={decideFor?.action === 'approve' ? `Approve ${decideFor?.row.id || ''}?` : decideFor?.action === 'reject' ? `Reject ${decideFor?.row.id || ''}?` : `Request changes — ${decideFor?.row.id || ''}?`}
+        subtitle={decideFor?.action === 'approve' ? 'Moves to Approved. Hiring can begin.' : decideFor?.action === 'reject' ? 'Moves to Cancelled with a recorded reason.' : 'Sends back to Draft with a note to the hiring manager.'}>
+        <div className="space-y-3">
+          {decideFor?.action !== 'approve' && (
+            <Field label={decideFor?.action === 'reject' ? 'Rejection reason *' : 'Change note *'}>
+              <textarea rows={3} className={kitInput} value={decideReason} onChange={(e) => setDecideReason(e.target.value)}
+                placeholder={decideFor?.action === 'reject' ? 'e.g. Headcount frozen for Q3' : 'e.g. Add salary band and must-have skills'} />
+            </Field>
+          )}
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setDecideFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button type="button" disabled={busy || (decideFor?.action !== 'approve' && !decideReason.trim())} onClick={doDecide}
+              className={decideFor?.action === 'reject' ? 'px-4 py-2.5 rounded-xl bg-red-600 text-white font-bold text-xs disabled:opacity-50' : btnPrimary}>
+              {busy ? 'Working…' : decideFor?.action === 'approve' ? 'Approve' : decideFor?.action === 'reject' ? 'Reject' : 'Send for rework'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+      <Modal open={assignFor.length > 0} onClose={() => setAssignFor([])} title={`Assign recruiter — ${assignFor.length} requirement(s)`} subtitle="Workload shows open requirements already owned">
+        <div className="space-y-2 max-h-64 overflow-y-auto" data-lenis-prevent>
+          {recruiters.length === 0 && <div className="text-[11px] text-slate-500 font-medium">No active recruiters found.</div>}
+          {recruiters.map((u) => {
+            const load = rows.filter((r) => r.recruiter === u.email && !['Filled', 'Cancelled'].includes(r.status)).length;
+            return (
+              <button key={u.id} type="button" onClick={() => setAssignEmail(u.email)}
+                className={`w-full text-left p-3 rounded-xl border text-xs font-bold flex items-center justify-between gap-2 ${assignEmail === u.email ? 'bg-blue-50 border-blue-400' : 'bg-slate-50 border-slate-200'}`}>
+                <span className="truncate">{u.name} • <span className="text-slate-500">{u.email}</span></span>
+                <span className={`shrink-0 ${load > 5 ? 'text-red-600' : 'text-emerald-600'}`}>{load} open</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex justify-end gap-2 pt-3">
+          <button type="button" onClick={() => setAssignFor([])} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+          <button type="button" disabled={busy || !assignEmail.trim()} onClick={doAssign} className={btnPrimary}>{busy ? 'Assigning…' : 'Assign'}</button>
+        </div>
+      </Modal>
+      <ConfirmDialog open={deleteFor !== null} onCancel={() => setDeleteFor(null)} title={`Delete ${deleteFor?.id || ''}?`} body="Only Draft/Cancelled requirements can be deleted. Linked jobs block deletion." confirmLabel="Delete" onConfirm={doDelete} />
     </div>
+  );
+}
+
+/* ---------------- Requirement pipeline drawer ---------------- */
+const FUNNEL_STEPS = ['applied', 'screening', 'interview', 'offer', 'hired'] as const;
+const FUNNEL_LABELS: Record<string, string> = { applied: 'Applied', screening: 'Screening', interview: 'Interview', offer: 'Offer', hired: 'Hired' };
+
+export function RequirementPipeline({ reqId, onClose }: { reqId: string; onClose: () => void }) {
+  const [data, setData] = useState<any>(null);
+  const [interviews, setInterviews] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    (async () => {
+      setLoading(true); setError('');
+      try {
+        const [rRes, iRes] = await Promise.all([
+          requisitionsApi.list(`?page=1&pageSize=100`),
+          interviewsApi.list(`?requisitionId=${reqId}`),
+        ]);
+        const row = unwrapList(rRes).find((r: any) => r.id === reqId);
+        if (!row) throw new Error('Requirement no longer exists.');
+        setData(row);
+        setInterviews(unwrapList(iRes).filter((i: any) => ['Scheduled', 'Rescheduled'].includes(i.status)).slice(0, 10));
+      } catch (e) { setError(errMsg(e)); }
+      finally { setLoading(false); }
+    })();
+  }, [reqId]);
+  const f = data?.rollup || { applied: 0, screening: 0, interview: 0, offer: 0, hired: 0, applications: 0, interviews: 0, openingsFilled: 0, ageingDays: 0, linkedJobs: [] };
+  const max = Math.max(1, f.applied);
+  return (
+    <Modal open onClose={onClose} title={data?.title || reqId} subtitle={`${reqId} • ${data?.status || ''} • ${f.openingsFilled}/${data?.openings || 1} filled`} wide>
+      {loading ? <InlineLoading message="Loading pipeline…" /> : error ? (
+        <PanelError message={error} onRetry={() => window.location.reload()} />
+      ) : (
+        <div className="space-y-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {[['Owner', data?.hiringManager || '—'], ['Recruiter', data?.recruiter || 'Unassigned'], ['Deadline', String(data?.deadline || '').slice(0, 10) || '—']].map(([k, v]) => (
+              <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 truncate">{String(v ?? '—')}</div></div>
+            ))}
+          </div>
+          <div>
+            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Hiring funnel — live counts</div>
+            <div className="flex items-stretch gap-1" role="img" aria-label={`Funnel: ${FUNNEL_STEPS.map((s) => `${FUNNEL_LABELS[s]} ${f[s]}`).join(', ')}`}>
+              {FUNNEL_STEPS.map((s, i) => (
+                <div key={s} className="flex-1 min-w-0">
+                  <div className="text-center font-extrabold text-sm">{f[s]}</div>
+                  <div className={`h-2 rounded-full ${f[s] > 0 ? 'bg-[#087BFF]' : 'bg-slate-200'}`} style={{ opacity: 0.45 + (0.55 * f[s]) / max }} />
+                  <div className="text-center text-[10px] font-bold text-slate-500 mt-1 truncate">{FUNNEL_LABELS[s]}</div>
+                  {i < FUNNEL_STEPS.length - 1 && <div className="hidden" />}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Linked jobs ({(f.linkedJobs || []).length})</div>
+            {(f.linkedJobs || []).length === 0 ? <div className="text-[11px] text-slate-500">No postings yet.</div> : (
+              <div className="space-y-1.5">
+                {f.linkedJobs.map((j: any) => (
+                  <div key={j.id} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
+                    <div className="min-w-0"><div className="font-bold truncate">{j.title}</div><div className="font-mono text-[10px] text-slate-500">{j.id}</div></div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="font-bold">{j.counts.applications} apps → {j.counts.hired} hired</span>
+                      <span className="px-2 py-0.5 rounded-full bg-white border border-slate-200 font-bold text-[10px]">{j.status}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
+            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Upcoming interviews ({interviews.length})</div>
+            {interviews.length === 0 ? <div className="text-[11px] text-slate-500">None scheduled.</div> : (
+              <div className="space-y-1.5">
+                {interviews.map((iv: any) => (
+                  <div key={iv.id} className="p-3 rounded-xl bg-slate-50 border border-slate-200 font-semibold">
+                    {iv.candidateName || iv.candidateEmail} • {iv.round || ''} • {String(iv.scheduledAt || '').slice(0, 16).replace('T', ' ')}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
+            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Activity</div>
+            <div className="space-y-1.5">
+              {[...(data?.changeRequests || []).map((c: any) => ({ at: c.at, text: `Changes requested by ${c.by}: ${c.note}` })), ...(data?.history || []).map((h: any) => ({ at: h.at, text: `${h.from} → ${h.to} by ${h.by}${h.reason ? `: ${h.reason}` : ''}` }))].reverse().slice(0, 20).map((e: any, i: number) => (
+                <div key={i} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 font-medium">{e.text} <span className="text-slate-400">• {String(e.at || '').slice(0, 16).replace('T', ' ')}</span></div>
+              ))}
+              {((data?.changeRequests || []).length === 0 && (data?.history || []).length === 0) && <div className="text-[11px] text-slate-500">No recorded transitions yet.</div>}
+            </div>
+          </div>
+        </div>
+      )}
+    </Modal>
   );
 }
 
@@ -3210,41 +3572,59 @@ export const JOB_TRANSITIONS: Record<string, string[]> = {
 /* ---------------- Admin Jobs (§6.7) — list + detail + pipeline + assign ---------------- */
 export function JobsPanel() {
   const [rows, setRows] = useState<any[]>([]);
+  const [orgs, setOrgs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
   const [q, setQ] = useQueryState('job_q');
   const [statusF, setStatusF] = useQueryState('job_status');
+  const [orgF, setOrgF] = useQueryState('job_org');
   const dqJob = useDebounced(q);
   const [detail, setDetail] = useState<any>(null);
   const [pipeline, setPipeline] = useState<{ apps: any[]; interviews: any[] }>({ apps: [], interviews: [] });
   const [editing, setEditing] = useState<any>(null);
+  const [pubFor, setPubFor] = useState<{ job: any; to: string } | null>(null);
+  const [pubReason, setPubReason] = useState('');
+  const [pubExpiry, setPubExpiry] = useState('');
   const [busy, setBusy] = useState(false);
   const load = async () => {
     setLoading(true); setError('');
-    try { setRows(unwrapList(await jobsApi.list('?page=1&pageSize=100'))); }
+    try {
+      const params = new URLSearchParams({ page: '1', pageSize: '100' });
+      if (orgF) params.set('orgId', orgF);
+      setRows(unwrapList(await jobsApi.list(`?${params.toString()}`)));
+      const { directoryApi } = await import('../../shared/enterprise/phaseApi');
+      directoryApi.tenants().then((t: any) => setOrgs(unwrapList(t))).catch(() => { /* company filter best-effort */ });
+    }
     catch (e) { setError(errMsg(e)); } finally { setLoading(false); }
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [orgF]);
   const openDetail = async (j: any) => {
     setDetail(j); setPipeline({ apps: [], interviews: [] });
     try {
       const [aRes, iRes] = await Promise.all([
-        applicationsApi.list(`?page=1&pageSize=100`).catch(() => null),
-        interviewsApi.list().catch(() => null),
+        applicationsApi.list(`?jobId=${j.id}&page=1&pageSize=100`).catch(() => null),
+        interviewsApi.list(`?jobId=${j.id}`).catch(() => null),
       ]);
-      const apps = unwrapList(aRes).filter((a: any) => a.jobId === j.id);
-      const ivs = unwrapList(iRes).filter((i: any) => i.jobId === j.id);
-      setPipeline({ apps, interviews: ivs });
+      setPipeline({ apps: unwrapList(aRes), interviews: unwrapList(iRes) });
     } catch { /* pipeline is best-effort */ }
   };
-  const transition = async (id: string, status: string) => {
+  const transition = async (id: string, status: string, reason?: string, expiryDate?: string) => {
     try {
-      const updated = unwrapObj(await jobsApi.setStatus(id, status));
+      const updated = unwrapObj(await jobsApi.setStatus(id, status, reason, expiryDate));
       setRows((r) => r.map((x) => (x.id === id ? { ...x, ...(updated?.id ? updated : { status }) } : x)));
-      if (detail?.id === id) setDetail((d: any) => ({ ...d, status }));
+      if (detail?.id === id) setDetail((d: any) => ({ ...d, ...(updated?.id ? updated : { status }) }));
       setOk(`${id} → ${status}.`); syncAll();
     } catch (e) { setError(errMsg(e)); }
+  };
+  const doPublishAction = async () => {
+    if (!pubFor) return;
+    if (pubFor.to !== 'Published' && !pubReason.trim()) { setError('A reason is required for unpublish / reopen — it is audited.'); return; }
+    setBusy(true); setError('');
+    try {
+      await transition(pubFor.job.id, pubFor.to, pubReason.trim() || undefined, pubExpiry || undefined);
+      setPubFor(null); setPubReason(''); setPubExpiry('');
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
   };
   const saveEdit = async () => {
     if (!editing) return;
@@ -3261,18 +3641,37 @@ export function JobsPanel() {
     if (!dqJob.trim()) return true;
     return `${j.id} ${j.title} ${j.orgId} ${j.location}`.toLowerCase().includes(dqJob.toLowerCase());
   });
+  const pubNeedsForm = (j: any, to: string) => to === 'Published' || (j.status === 'Published' && to === 'Approved') || (j.status === 'Closed' && (to === 'Published' || to === 'Paused'));
   const jobMenuFor = (j: any) => (
     <RowMenu items={[
       { label: 'View + pipeline', onSelect: () => openDetail(j) },
       { label: 'Edit…', onSelect: () => setEditing({ ...j, assignedAgencies: (j.assignedAgencies || []).join(', '), assignedVendors: (j.assignedVendors || []).join(', ') }) },
-      ...(JOB_TRANSITIONS[j.status] || []).map((s) => ({ label: `Move to ${s}`, onSelect: () => transition(j.id, s) })),
+      ...(JOB_TRANSITIONS[j.status] || []).map((s) => (
+        pubNeedsForm(j, s)
+          ? { label: `${s === 'Published' ? 'Publish' : s}…`, onSelect: () => { setPubFor({ job: j, to: s }); setPubReason(''); setPubExpiry(String(j.expiryDate || '').slice(0, 10)); } }
+          : { label: `Move to ${s}`, onSelect: () => transition(j.id, s) }
+      )),
+      ...(j.status === 'Published' ? [{ label: 'Unpublish…', danger: true, onSelect: () => { setPubFor({ job: j, to: 'Approved' }); setPubReason(''); setPubExpiry(''); } }] : []),
+      ...(j.status === 'Closed' ? [
+        { label: 'Reopen as Published…', onSelect: () => { setPubFor({ job: j, to: 'Published' }); setPubReason(''); setPubExpiry(String(j.expiryDate || '').slice(0, 10)); } },
+        { label: 'Reopen as Paused…', onSelect: () => { setPubFor({ job: j, to: 'Paused' }); setPubReason(''); setPubExpiry(String(j.expiryDate || '').slice(0, 10)); } },
+      ] : []),
     ]} />
   );
+  const pubCopy: Record<string, { title: string; rules: string[] }> = {
+    Published: { title: 'Publish job', rules: ['Parent requirement must be Approved or Sourcing', 'Requirement must have openings left', 'Expiry must be a future date (set below if empty)'] },
+    Approved: { title: 'Unpublish job', rules: ['Removes the posting from candidate results immediately', 'Requires the approve permission + a recorded reason'] },
+    Paused: { title: 'Reopen as Paused', rules: ['Requires the approve permission + a recorded reason', 'A future expiry date is mandatory'] },
+  };
   return (
     <div className={cardCls}>
+      <div className="flex flex-col gap-1">
+        <h3 className="text-base font-extrabold text-slate-900">Job Board — public postings</h3>
+        <p className="text-xs text-slate-500 font-medium">Only Published, unexpired postings reach candidates. Unpublish removes them instantly; reopening needs a future expiry.</p>
+      </div>
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-base font-extrabold text-slate-900">Jobs — View / Edit / Publish / Pause / Assign / Export</h3>
+          <div className="text-xs font-bold text-slate-500">{filtered.length} posting(s) shown</div>
           <ExportButton filename="jobs.csv" rows={filtered} columns={['id', 'requisitionId', 'title', 'orgId', 'location', 'employmentType', 'status', 'expiryDate']} />
         </div>
         <div className="flex flex-col lg:flex-row gap-2">
@@ -3281,6 +3680,12 @@ export function JobsPanel() {
             <Select value={statusF} onChange={setStatusF} ariaLabel="Job status filter" placeholder="All statuses"
               options={[{ value: '', label: 'All statuses' }, ...['Draft', 'Pending Review', 'Approved', 'Published', 'Paused', 'Closed', 'Archived'].map((s) => ({ value: s, label: s }))]} />
           </div>
+          {orgs.length > 0 && (
+            <div className="w-full lg:w-48 shrink-0">
+              <Select value={orgF} onChange={setOrgF} ariaLabel="Company filter" placeholder="All companies"
+                options={[{ value: '', label: 'All companies' }, ...orgs.map((o: any) => ({ value: o.id, label: `${o.displayName || o.legalName || o.id}` }))]} />
+            </div>
+          )}
         </div>
       </div>
       {error && <PanelError message={error} onRetry={load} />}
@@ -3326,9 +3731,9 @@ export function JobsPanel() {
         </div>
       </>)}
       {detail && (
-        <Modal open onClose={() => setDetail(null)} title={detail.title} subtitle={`${detail.id} • req ${detail.requisitionId || '—'} • ${detail.status}`}>
+        <Modal open onClose={() => setDetail(null)} title={detail.title} subtitle={`${detail.id} • req ${detail.requisitionId || '—'} • ${detail.status}`} wide>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-            {[['Organization', detail.orgId], ['Location', detail.location], ['Employment', detail.employmentType], ['Arrangement', detail.workArrangement], ['Salary', detail.salaryMin ? `₹${detail.salaryMin}–₹${detail.salaryMax}` : (detail.budgetRange || '—')], ['Visibility', detail.visibility], ['Applicants', detail.applicantsCount], ['Expiry', String(detail.expiryDate || '').slice(0, 10)], ['Agencies', (detail.assignedAgencies || []).join(', ')], ['Vendors', (detail.assignedVendors || []).join(', ')]].map(([k, v]) => (
+            {[['Organization', detail.orgId], ['Location', detail.location], ['Employment', detail.employmentType], ['Arrangement', detail.workArrangement], ['Salary', detail.salaryMin ? `₹${detail.salaryMin}–₹${detail.salaryMax}` : (detail.budgetRange || '—')], ['Visibility', detail.visibility], ['Applicants', detail.counts?.applications ?? detail.applicantsCount], ['Hired', detail.counts?.hired ?? '—'], ['Expiry', String(detail.expiryDate || '').slice(0, 10)], ['Status reason', detail.statusReason || '—'], ['Agencies', (detail.assignedAgencies || []).join(', ')], ['Vendors', (detail.assignedVendors || []).join(', ')]].map(([k, v]) => (
               <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—') || '—'}</div></div>
             ))}
             <div className="sm:col-span-2 p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">Description</div><div className="font-medium mt-1 whitespace-pre-wrap">{detail.description || '—'}</div></div>
@@ -3351,6 +3756,25 @@ export function JobsPanel() {
           <div className="sm:col-span-2 flex justify-end gap-2">
             <button type="button" onClick={() => setEditing(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
             <button type="button" disabled={busy} onClick={saveEdit} className={btnPrimary}>{busy ? 'Saving…' : 'Save changes'}</button>
+          </div>
+        </div>
+      </Modal>
+      <Modal open={pubFor !== null} onClose={() => setPubFor(null)}
+        title={`${pubCopy[pubFor?.to || 'Published']?.title || 'Change publication'} — ${pubFor?.job.id || ''}`}
+        subtitle="Server-enforced guards apply; violations return a plain-language reason.">
+        <div className="space-y-3">
+          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-medium space-y-1">
+            {(pubCopy[pubFor?.to || 'Published']?.rules || []).map((r) => <div key={r}>• {r}</div>)}
+          </div>
+          {(pubFor?.to === 'Published') && (
+            <Field label="Expiry date (must be future)"><DatePicker value={pubExpiry} onChange={setPubExpiry} ariaLabel="Expiry date" /></Field>
+          )}
+          {pubFor?.to !== 'Published' && (
+            <Field label="Reason *"><textarea rows={3} className={kitInput} value={pubReason} onChange={(e) => setPubReason(e.target.value)} placeholder="e.g. Role frozen for Q1 — hiring-manager request" /></Field>
+          )}
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setPubFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button type="button" disabled={busy || (pubFor?.to !== 'Published' && !pubReason.trim())} onClick={doPublishAction} className={btnPrimary}>{busy ? 'Working…' : 'Confirm'}</button>
           </div>
         </div>
       </Modal>

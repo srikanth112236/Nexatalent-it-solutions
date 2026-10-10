@@ -634,15 +634,34 @@ export function CandidatePortal() {
                 .map((job, idx) => {
                   const isApplied = appliedJobIds.includes(job.id);
                   const isSaved = savedIds.includes(job.id);
+                  const jobSkills = `${job.requiredSkills || ''},${job.preferredSkills || ''}`.split(',').map((s: string) => s.trim()).filter(Boolean).slice(0, 4);
+                  const mySkills = String(profile.skills || '').toLowerCase().split(',').map((s: string) => s.trim()).filter(Boolean);
+                  const overlap = jobSkills.filter((s: string) => mySkills.some((m: string) => m.includes(s.toLowerCase()) || s.toLowerCase().includes(m))).length;
+                  const match = mySkills.length > 0 && jobSkills.length > 0 ? Math.round((overlap / jobSkills.length) * 100) : null;
                   return (
                     <div key={job.id || idx} className="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
+                      <div className="space-y-1.5 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-extrabold text-slate-900 text-sm">{job.title}</span>
+                          {match !== null && (
+                            <span className={`px-2 py-0.5 rounded-full font-extrabold text-[10px] ${match >= 60 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
+                              {match}% match
+                            </span>
+                          )}
+                          {job.workArrangement && (
+                            <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[10px] capitalize">{job.workArrangement}</span>
+                          )}
                         </div>
                         <div className="text-xs text-slate-600 font-medium">
-                          Company: <strong>{job.companyName}</strong> • Budget: {job.budgetRange || (job.salaryMin ? `₹${job.salaryMin}–₹${job.salaryMax}` : '—')} • Location: {job.location} • {job.employmentType || ''}
+                          <strong>{job.companyName || '—'}</strong> • {job.salaryMin ? `₹${Number(job.salaryMin).toLocaleString('en-IN')}–₹${Number(job.salaryMax || job.salaryMin).toLocaleString('en-IN')}` : (job.budgetRange || 'Salary undisclosed')} • {job.location || '—'} • {job.employmentType || ''}
                         </div>
+                        {jobSkills.length > 0 && (
+                          <div className="flex flex-wrap gap-1 pt-0.5">
+                            {jobSkills.map((s: string) => (
+                              <span key={s} className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 font-bold text-[10px]">{s}</span>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
