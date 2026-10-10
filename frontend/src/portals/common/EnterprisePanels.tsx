@@ -4417,6 +4417,20 @@ export function PerformancePanel() {
     const base = window.location.pathname.startsWith('/employee') ? '/employee' : '/superadmin';
     navigate(`${base}/leads?lead_q=${encodeURIComponent(leadId)}`);
   };
+  const [leadDrawer, setLeadDrawer] = useState<any>(null);
+  const [leadActs, setLeadActs] = useState<any[]>([]);
+  const openLeadDrawer = async (leadId: string) => {
+    setLeadDrawer({ id: leadId }); setLeadActs([]);
+    try {
+      const [lRes, aRes] = await Promise.all([
+        salesApi.leads(`?page=1&pageSize=5&q=${encodeURIComponent(leadId)}`).catch(() => null),
+        salesApi.activities(leadId).catch(() => null),
+      ]);
+      const found = unwrapList(lRes).find((l: any) => l.id === leadId) || unwrapList(lRes)[0] || { id: leadId };
+      setLeadDrawer(found);
+      setLeadActs(unwrapList(aRes));
+    } catch { /* header-only fallback */ }
+  };
   const [kpi, setKpi] = useState<any>(null);
   const [targets, setTargets] = useState<any[]>([]);
   const [opps, setOpps] = useState<any[]>([]);
@@ -4512,25 +4526,25 @@ export function PerformancePanel() {
         <div className="flex items-end"><button type="button" onClick={() => { setFFrom(''); setFTo(''); setFOwner(''); setFSource(''); setFService(''); setFStage(''); setFBranch(''); }} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">Clear filters</button></div>
       </div>
       {kpi ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
           {([
             ['Assigned', kpi.leadsAssigned, () => drillLeads('Assigned leads')],
             ['Contacted', kpi.contacted, () => drillLeads('Contacted leads', 'Contacted')],
             ['Qualified', kpi.qualified, () => drillLeads('Qualified leads', 'Qualified')],
-            ['Meetings booked', kpi.meetingsBooked, () => drillMeetings()],
-            ['Proposals sent', kpi.proposals, () => drillProposals()],
+            ['Meetings', kpi.meetingsBooked, () => drillMeetings()],
+            ['Proposals', kpi.proposals, () => drillProposals()],
             ['Won', kpi.won, () => drillLeads('Won leads', 'Won')],
             ['Lost', kpi.lost, () => drillLeads('Lost leads', 'Lost')],
             ['Conversion', `${(Number(kpi.conversionRate || 0) * 100).toFixed(1)}%`, () => drillLeads('Converted (Won) leads', 'Won')],
             ['Pipeline ₹', Number(kpi.pipelineValue || 0).toLocaleString('en-IN'), () => drillLeads('Pipeline leads by value')],
-            ['Revenue booked ₹', Number(kpi.revenueBooked || 0).toLocaleString('en-IN'), () => drillRevenue()],
-            ['Avg response', `${kpi.avgResponseHrs ?? '—'}h`, () => drillLeads('Responded leads')],
-            ['Overdue follow-ups', kpi.overdueFollowups, () => drillLeads('Overdue follow-ups', undefined, (l) => !!(l.nextFollowUp && new Date(l.nextFollowUp) < new Date()))],
+            ['Revenue ₹', Number(kpi.revenueBooked || 0).toLocaleString('en-IN'), () => drillRevenue()],
+            ['Avg resp.', `${kpi.avgResponseHrs ?? '—'}h`, () => drillLeads('Responded leads')],
+            ['Overdue', kpi.overdueFollowups, () => drillLeads('Overdue follow-ups', undefined, (l) => !!(l.nextFollowUp && new Date(l.nextFollowUp) < new Date()))],
           ] as Array<[string, unknown, () => void]>).map(([k, v, go]) => (
             <button key={k as string} type="button" onClick={go} title={`Drill into ${k}`}
-              className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left hover:border-[#087BFF] hover:shadow-sm transition cursor-pointer">
-              <div className="text-[11px] font-bold text-slate-500">{k} <span className="text-[#087BFF]">→</span></div>
-              <div className="text-xl font-extrabold">{String(v)}</div>
+              className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-left hover:border-[#087BFF] hover:shadow-sm transition cursor-pointer">
+              <div className="text-[10px] font-bold text-slate-500 truncate">{k} <span className="text-[#087BFF]">→</span></div>
+              <div className="text-base font-extrabold truncate">{String(v)}</div>
             </button>
           ))}
         </div>
@@ -4573,19 +4587,60 @@ export function PerformancePanel() {
         </div>
       ))}
       <div className="text-xs font-extrabold text-slate-700 pt-1">Opportunities ({opps.length})</div>
-      {opps.length === 0 && <div className="text-[11px] text-slate-500 font-medium">No opportunities yet — create one from a lead.</div>}
-      {opps.map((o) => (
-        <div key={o.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
-          <span className="truncate">{o.title} • ₹{o.value} • <strong className="text-blue-600">{o.stage}</strong>{o.leadId ? <span className="text-slate-500"> • {o.leadId}</span> : null}</span>
-          <div className="flex items-center gap-1 shrink-0">
-            {o.leadId ? <button type="button" className="text-[11px] font-bold text-blue-600 underline" onClick={() => drillToLead(o.leadId)}>View lead →</button> : null}
-          <RowMenu label="Opportunity actions" items={['Qualified', 'Proposal Sent', 'Negotiation', 'Won', 'Lost'].filter((s) => s !== o.stage).map((s) => ({ label: `Move to ${s}`, danger: s === 'Lost', onSelect: async () => {
-            try { const u = unwrapObj(await salesApi.setOpportunityStage(o.id, s)); setOpps((x) => x.map((y) => (y.id === o.id ? u : y))); syncAll(); }
-            catch (e) { setError(errMsg(e)); }
-          } }))} />
-          </div>
+      {opps.length === 0 ? <div className="text-[11px] text-slate-500 font-medium">No opportunities yet — create one from a lead.</div> : (<>
+        <div className="space-y-2 md:hidden">
+          {opps.map((o) => (
+            <div key={o.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-extrabold text-slate-900 text-sm truncate">{o.title}</div>
+                  <div className="font-mono text-[11px] text-slate-500">{o.id}{o.leadId ? ` • ${o.leadId}` : ''}</div>
+                </div>
+                <button type="button" className="text-[11px] font-bold text-blue-600 underline shrink-0" onClick={() => o.leadId && openLeadDrawer(o.leadId)}>View lead</button>
+              </div>
+              <div className="font-bold">₹{Number(o.value || 0).toLocaleString('en-IN')} • <strong className="text-blue-600">{o.stage}</strong></div>
+            </div>
+          ))}
         </div>
-      ))}
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
+          <table className="w-full text-left text-xs min-w-[720px]">
+            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
+              <th className="px-4 py-3">Opportunity</th><th className="px-4 py-3 text-right">Value</th><th className="px-4 py-3">Stage</th><th className="px-4 py-3">Lead</th><th className="px-4 py-3 text-right">Actions</th>
+            </tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {opps.map((o) => (
+                <tr key={o.id} className="hover:bg-slate-50/70">
+                  <td className="px-4 py-3"><div className="font-bold text-slate-900">{o.title}</div><div className="font-mono text-[11px] text-slate-500">{o.id}</div></td>
+                  <td className="px-4 py-3 text-right font-extrabold">₹{Number(o.value || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-4 py-3"><strong className="text-blue-600">{o.stage}</strong></td>
+                  <td className="px-4 py-3 font-mono">{o.leadId || '—'}</td>
+                  <td className="px-4 py-3"><div className="flex justify-end items-center gap-1">
+                    {o.leadId ? <button type="button" className="text-[11px] font-bold text-blue-600 underline" onClick={() => openLeadDrawer(o.leadId)}>View lead</button> : null}
+                    <RowMenu label="Opportunity actions" items={['Qualified', 'Proposal Sent', 'Negotiation', 'Won', 'Lost'].filter((s) => s !== o.stage).map((s) => ({ label: `Move to ${s}`, danger: s === 'Lost', onSelect: async () => {
+                      try { const u = unwrapObj(await salesApi.setOpportunityStage(o.id, s)); setOpps((x) => x.map((y) => (y.id === o.id ? u : y))); syncAll(); }
+                      catch (e) { setError(errMsg(e)); }
+                    } }))} />
+                  </div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </>)}
+      {leadDrawer !== null && (
+        <DetailDrawer title={`${leadDrawer.contactName || leadDrawer.id || ''}`} subtitle={`${leadDrawer.id || ''} • ${leadDrawer.companyName || ''} • ${leadDrawer.stage || ''}`} onClose={() => setLeadDrawer(null)}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            {[['Contact', leadDrawer.contactName], ['Company', leadDrawer.companyName], ['Email', leadDrawer.email], ['Phone', leadDrawer.phone], ['Stage', leadDrawer.stage], ['Value', leadDrawer.value !== undefined ? `₹${Number(leadDrawer.value || 0).toLocaleString('en-IN')}` : undefined], ['Owner', leadDrawer.owner], ['Next follow-up', leadDrawer.nextFollowUp], ['Source', leadDrawer.source], ['Industry', leadDrawer.industry], ['Notes', leadDrawer.notes]].map(([k, v]) => (
+              <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—')}</div></div>
+            ))}
+          </div>
+          <div className="text-xs font-extrabold pt-1">Activity timeline ({leadActs.length})</div>
+          {leadActs.length === 0 ? <div className="text-[11px] text-slate-500">No activities logged.</div> : leadActs.slice(0, 10).map((a: any) => (
+            <div key={a.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs"><strong>{a.type}</strong> • {a.outcome || '—'} • <span className="text-slate-500">{String(a.createdAt || '').slice(0, 10)}</span><div className="text-slate-600">{a.notes || ''}</div></div>
+          ))}
+          <button type="button" onClick={() => { setLeadDrawer(null); drillToLead(leadDrawer.id); }} className="text-[11px] font-bold text-blue-600 underline w-fit">Open full lead workspace →</button>
+        </DetailDrawer>
+      )}
     </div>
   );
 }
