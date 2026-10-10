@@ -1,5 +1,34 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+
+/** Debounced value (§5.5): filter on this, render the raw input immediately. */
+export function useDebounced<T>(value: T, delay = 300): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
+/** URL-persisted filter state (§5.5): survives reload, back-nav and drawer open/close. */
+export function useQueryState(key: string, initial = ''): [string, (v: string) => void] {
+  const [val, setVal] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get(key) || initial; }
+    catch { return initial; }
+  });
+  const set = (v: string) => {
+    setVal(v);
+    try {
+      const url = new URL(window.location.href);
+      if (v) url.searchParams.set(key, v); else url.searchParams.delete(key);
+      window.history.replaceState(null, '', url.toString());
+    } catch { /* non-browser (tests) */ }
+  };
+  return [val, set];
+}
 import { Search, Download, X } from 'lucide-react';
+import { useCan } from '../../shared/auth/AuthContext';
+import { permissionsApi } from '../../shared/enterprise/phaseApi';
 
 /** Shared enterprise CRUD primitives — Indeed/Naukri-grade table UX. */
 
@@ -46,10 +75,11 @@ export function StatusPill({ value }: { value: unknown }) {
   return <span className={`inline-block px-2.5 py-0.5 rounded-full border font-bold text-[11px] whitespace-nowrap ${tone}`}>{s}</span>;
 }
 
-export function CrudToolbar({ search, onSearch, searchPh, status, onStatus, statuses, onExport, onCreate, createLabel }: {
+export function CrudToolbar({ search, onSearch, searchPh, status, onStatus, statuses, exportProps, onCreate, createLabel }: {
   search: string; onSearch: (v: string) => void; searchPh: string;
   status?: string; onStatus?: (v: string) => void; statuses?: string[];
-  onExport?: () => void; onCreate?: () => void; createLabel?: string;
+  exportProps?: { filename: string; rows: Record<string, unknown>[]; columns: string[] };
+  onCreate?: () => void; createLabel?: string;
 }) {
   return (
     <div className="flex flex-col lg:flex-row lg:items-center gap-2">
@@ -68,11 +98,8 @@ export function CrudToolbar({ search, onSearch, searchPh, status, onStatus, stat
         </select>
       )}
       <div className="flex items-center gap-2 shrink-0">
-        {onExport && (
-          <button type="button" onClick={onExport} title="Export filtered rows to CSV"
-            className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50 flex items-center gap-1.5">
-            <Download size={14} /> Export
-          </button>
+        {exportProps && (
+          <ExportButton filename={exportProps.filename} rows={exportProps.rows} columns={exportProps.columns} />
         )}
         {onCreate && (
           <button type="button" onClick={onCreate}
@@ -88,6 +115,11 @@ export function CrudToolbar({ search, onSearch, searchPh, status, onStatus, stat
 export function DetailDrawer({ title, subtitle, onClose, children, width = 'max-w-2xl' }: {
   title: string; subtitle?: string; onClose: () => void; children: React.ReactNode; width?: string;
 }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/50" onClick={onClose} role="dialog" aria-modal="true" aria-label={title}>
       <div className={`w-full ${width} h-full bg-white shadow-2xl overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
@@ -115,6 +147,26 @@ export function KeyValues({ data }: { data: [string, React.ReactNode][] }) {
         </div>
       ))}
     </dl>
+  );
+}
+
+/** Permission-gated CSV export (§4.3): hidden without `export`, every download audit-logged. */
+export function ExportButton({ filename, rows, columns, label = 'Export' }: {
+  filename: string; rows: Record<string, unknown>[]; columns: string[]; label?: string;
+}) {
+  const canExport = useCan('export');
+  if (!canExport) return null;
+  return (
+    <button
+      type="button" title="Export filtered rows to CSV"
+      onClick={() => {
+        downloadCsv(filename, rows, columns);
+        permissionsApi.logExport(filename.replace(/\.csv$/, ''), rows.length).catch(() => { /* audit best-effort */ });
+      }}
+      className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50 flex items-center gap-1.5 whitespace-nowrap"
+    >
+      <Download size={14} /> {label}
+    </button>
   );
 }
 

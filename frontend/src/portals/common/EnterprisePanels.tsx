@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../../shared/api-client';
 import { Candidate360Drawer } from '../superadmin/SuperAdmin360';
+import { ExportButton, useQueryState, useDebounced } from './CrudKit';
 import {
   applicationsApi, interviewsApi, chatApi, talentApi, requisitionsApi, jobsApi,
   offersPlacementsApi, billingApi, salesApi, platformApi, documentsApi, workforceApi,
@@ -131,8 +132,9 @@ export function RequisitionsPanel() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loadError, setLoadError] = useState(0);
-  const [q, setQ] = useState('');
-  const [statusF, setStatusF] = useState('');
+  const [q, setQ] = useQueryState('req_q');
+  const [statusF, setStatusF] = useQueryState('req_status');
+  const dq = useDebounced(q);
   const [detail, setDetail] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
   const [deleteFor, setDeleteFor] = useState<any>(null);
@@ -190,9 +192,17 @@ export function RequisitionsPanel() {
 
   const filtered = rows.filter((r) => {
     if (statusF && r.status !== statusF) return false;
-    if (!q.trim()) return true;
-    return `${r.id} ${r.title} ${r.department}`.toLowerCase().includes(q.toLowerCase());
+    if (!dq.trim()) return true;
+    return `${r.id} ${r.title} ${r.department}`.toLowerCase().includes(dq.toLowerCase());
   });
+  const reqMenuFor = (r: any) => (
+    <RowMenu items={[
+      { label: 'View details', onSelect: () => setDetail(r) },
+      { label: 'Edit…', onSelect: () => setEditing({ ...r }) },
+      ...(REQ_TRANSITIONS[r.status] || []).map((s) => ({ label: `Move to ${s}`, onSelect: () => transition(r.id, s) })),
+      { label: 'Delete…', danger: true, onSelect: () => setDeleteFor(r) },
+    ]} />
+  );
 
   return (
     <div className={cardCls}>
@@ -208,7 +218,7 @@ export function RequisitionsPanel() {
           <select value={statusF} onChange={(e) => setStatusF(e.target.value)} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none">
             <option value="">All statuses</option>{['Draft', 'Pending Approval', 'Approved', 'Sourcing', 'On Hold', 'Filled', 'Cancelled'].map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
-          <button type="button" onClick={async () => { const { downloadCsv } = await import('./CrudKit'); downloadCsv('requisitions.csv', filtered, ['id', 'title', 'department', 'openings', 'status']); }} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">Export</button>
+          <ExportButton filename="requisitions.csv" rows={filtered} columns={['id', 'title', 'department', 'openings', 'status']} />
           <button type="button" onClick={() => setShowCreate(true)} className={btnPrimary}>+ New requisition</button>
         </div>
       </div>
@@ -230,8 +240,23 @@ export function RequisitionsPanel() {
       </Modal>
       {loading ? <InlineLoading message="Loading requisitions…" /> : filtered.length === 0 ? (
         <EmptyState title="No requisitions" message="Create the first hiring requisition to start the approval flow." />
-      ) : (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200">
+      ) : (<>
+        <div className="space-y-2 md:hidden">
+          {filtered.map((r) => (
+            <div key={r.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-extrabold text-slate-900 text-sm truncate">{r.title}</div>
+                  <div className="font-mono text-[11px] text-slate-500">{r.id} • {r.openings || 1} opening(s)</div>
+                </div>
+                {reqMenuFor(r)}
+              </div>
+              <div><span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">{r.status}</span></div>
+              <div className="text-slate-600 font-medium">{r.department || '—'} • {r.location || '—'}</div>
+            </div>
+          ))}
+        </div>
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
           <table className="w-full text-left text-xs min-w-[980px]">
             <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
               <th className="px-4 py-3">Requisition</th><th className="px-4 py-3">Department</th><th className="px-4 py-3">Location</th><th className="px-4 py-3">Openings</th><th className="px-4 py-3">Hiring manager</th><th className="px-4 py-3">Created</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
@@ -246,18 +271,13 @@ export function RequisitionsPanel() {
                   <td className="px-4 py-3">{r.hiringManager || '—'}</td>
                   <td className="px-4 py-3 text-slate-500">{String(r.createdAt || '').slice(0, 10) || '—'}</td>
                   <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">{r.status}</span></td>
-                  <td className="px-4 py-3"><div className="flex justify-end"><RowMenu items={[
-                    { label: 'View details', onSelect: () => setDetail(r) },
-                    { label: 'Edit…', onSelect: () => setEditing({ ...r }) },
-                    ...(REQ_TRANSITIONS[r.status] || []).map((s) => ({ label: `Move to ${s}`, onSelect: () => transition(r.id, s) })),
-                    { label: 'Delete…', danger: true, onSelect: () => setDeleteFor(r) },
-                  ]} /></div></td>
+                  <td className="px-4 py-3"><div className="flex justify-end">{reqMenuFor(r)}</div></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      )}
+      </>)}
       <Pager page={page} total={total || filtered.length} pageSize={pageSize} onPage={setPage} />
       {detail && (
         <Modal open onClose={() => setDetail(null)} title={detail.title} subtitle={`${detail.id} • ${detail.status}`}>
@@ -293,14 +313,15 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState('');
-  const [appliedFilter, setAppliedFilter] = useState('');
+  const [appliedFilter, setAppliedFilter] = useQueryState('app_stage');
+  const [filter, setFilter] = useState(appliedFilter);
   const [reason, setReason] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [withdrawId, setWithdrawId] = useState('');
   const [loadError, setLoadError] = useState(0);
-  const [q, setQ] = useState('');
+  const [q, setQ] = useQueryState('app_q');
+  const dqApp = useDebounced(q);
   const [detail, setDetail] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const pageSize = 10;
@@ -331,7 +352,7 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
     } catch (e) { setError(errMsg(e)); }
   };
 
-  const filteredApps = rows.filter((a) => !q.trim() || `${a.id} ${a.jobTitle} ${a.candidateEmail}`.toLowerCase().includes(q.toLowerCase()));
+  const filteredApps = rows.filter((a) => !dqApp.trim() || `${a.id} ${a.jobTitle} ${a.candidateEmail}`.toLowerCase().includes(dqApp.toLowerCase()));
   const openDetail = async (a: any) => {
     setDetail(a); setHistory([]);
     try {
@@ -350,7 +371,7 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
               <Select value={filter} onChange={setFilter} ariaLabel="Filter by stage" placeholder="All stages" options={[{ value: '', label: 'All stages' }, ...APP_STAGES.map((s) => ({ value: s, label: s }))]} />
             </div>
             <button type="button" className={btnDark} onClick={() => { setPage(1); setAppliedFilter(filter); }}>Filter</button>
-            <button type="button" onClick={async () => { const { downloadCsv } = await import('./CrudKit'); downloadCsv('applications.csv', filteredApps, ['id', 'jobTitle', 'jobId', 'candidateEmail', 'stage']); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Export</button>
+            <ExportButton filename="applications.csv" rows={filteredApps} columns={['id', 'jobTitle', 'jobId', 'candidateEmail', 'stage']} />
           </div>
         </div>
         <input className={inputCls} placeholder="Search job title, candidate email, application ID…" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -749,7 +770,7 @@ export function TalentPoolsPanel() {
 
 /* ---------------- Phase 2: Candidate search (tiered) ---------------- */
 export function CandidateSearchPanel() {
-  const [q, setQ] = useState('');
+  const [q, setQ] = useQueryState('talent_q');
   const [tier, setTier] = useState('preview');
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -949,8 +970,11 @@ export function BillingPanel() {
   const [showRefund, setShowRefund] = useState(false);
   const [refundConfirm, setRefundConfirm] = useState(false);
   const [showInvoice, setShowInvoice] = useState(false);
-  const [invForm, setInvForm] = useState({ orgId: '', label: 'Subscription — monthly', qty: '1', unit: '', dueDate: '' });
-  const [q, setQ] = useState('');
+  const [invForm, setInvForm] = useState({ orgId: '', label: 'Subscription — monthly', qty: '1', unit: '', discount: '', taxRate: '18', dueDate: '', draft: false });
+  const [recon, setRecon] = useState<any>(null);
+  const [docFor, setDocFor] = useState<any>(null);
+  const [doc, setDoc] = useState<any>(null);
+  const [q, setQ] = useQueryState('bill_q');
   const [voidFor, setVoidFor] = useState<any>(null);
   const [voidReason, setVoidReason] = useState('');
   const [creditFor, setCreditFor] = useState<any>(null);
@@ -958,10 +982,11 @@ export function BillingPanel() {
   const load = async () => {
     setError('');
     try {
-      const [u, i, p, r] = await Promise.all([
-        billingApi.usage().catch(() => null), billingApi.invoices().catch(() => null), billingApi.payments().catch(() => null), billingApi.refunds().catch(() => null),
+      const [u, i, p, r, rec] = await Promise.all([
+        billingApi.usage().catch(() => null), billingApi.invoices().catch(() => null), billingApi.payments().catch(() => null), billingApi.refunds().catch(() => null), billingApi.reconciliation().catch(() => null),
       ]);
       if (u) setUsage(unwrapObj(u)); if (i) setInvoices(unwrapList(i)); if (p) setPayments(unwrapList(p)); if (r) setRefunds(unwrapList(r));
+      if (rec) setRecon(unwrapObj(rec));
     } catch (e) { setError(errMsg(e)); }
   };
   useEffect(() => { load(); }, []);
@@ -987,11 +1012,23 @@ export function BillingPanel() {
     e.preventDefault(); setError(''); setOk('');
     if (!invForm.orgId.trim() || !invForm.unit || !invForm.dueDate) { setError('Organization + unit price + due date are required.'); return; }
     try {
-      const created = unwrapObj(await billingApi.createInvoice({ orgId: invForm.orgId.trim(), dueDate: invForm.dueDate, lines: [{ label: invForm.label, qty: Number(invForm.qty) || 1, unit: Number(invForm.unit) }] }));
+      const created = unwrapObj(await billingApi.createInvoice({ orgId: invForm.orgId.trim(), dueDate: invForm.dueDate, discount: Number(invForm.discount) || 0, taxRate: Number(invForm.taxRate) || 0, draft: invForm.draft, lines: [{ label: invForm.label, qty: Number(invForm.qty) || 1, unit: Number(invForm.unit) }] }));
       if (created?.id) setInvoices((x) => [created, ...x]);
-      setInvForm({ orgId: '', label: 'Subscription — monthly', qty: '1', unit: '', dueDate: '' }); setShowInvoice(false);
-      setOk('Invoice issued (immutable — amend via credit note).'); syncAll();
+      setInvForm({ orgId: '', label: 'Subscription — monthly', qty: '1', unit: '', discount: '', taxRate: '18', dueDate: '', draft: false }); setShowInvoice(false);
+      setOk(invForm.draft ? 'Draft invoice saved — issue it when ready.' : 'Invoice issued (immutable — amend via credit note).'); syncAll();
     } catch (e) { setError(errMsg(e)); }
+  };
+  const issueInvoice = async (id: string) => {
+    try {
+      const u = unwrapObj(await billingApi.issueInvoice(id));
+      setInvoices((x) => x.map((i) => (i.id === id ? { ...i, ...(u?.id ? u : { status: 'Issued' }) } : i)));
+      setOk('Invoice issued.'); syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const openDocument = async (inv: any) => {
+    setDocFor(inv); setDoc(null);
+    try { setDoc(unwrapObj(await billingApi.invoiceDocument(inv.id))); }
+    catch (e) { setError(errMsg(e)); }
   };
   const doVoid = async () => {
     if (!voidFor || !voidReason.trim()) { setError('Void reason is required.'); return; }
@@ -1015,7 +1052,7 @@ export function BillingPanel() {
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-base font-extrabold text-slate-900">Billing — Invoices / Payments / Refunds / Credits</h3>
           <div className="flex gap-2">
-            <button type="button" onClick={async () => { const { downloadCsv } = await import('./CrudKit'); downloadCsv('invoices.csv', filteredInv, ['id', 'number', 'orgId', 'total', 'balance', 'status']); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Export</button>
+            <ExportButton filename="invoices.csv" rows={filteredInv} columns={['id', 'number', 'orgId', 'total', 'balance', 'status']} />
             <button type="button" onClick={() => setShowInvoice(true)} className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">+ Invoice</button>
             <button type="button" onClick={() => setShowRefund(true)} className={btnDark}>Refund</button>
             <button type="button" onClick={() => setShowPay(true)} className={btnPrimary}>Record payment</button>
@@ -1025,18 +1062,65 @@ export function BillingPanel() {
       </div>
       {error && <PanelError message={error} onRetry={load} />}
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
-      <Modal open={showInvoice} onClose={() => setShowInvoice(false)} title="Issue invoice" subtitle="Immutable once issued — corrections via void or credit note">
+      {recon && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+          {[['Invoiced', `₹${Number(recon.totalInvoiced || 0).toLocaleString('en-IN')}`], ['Paid', `₹${Number(recon.totalPaid || 0).toLocaleString('en-IN')}`], ['Outstanding', `₹${Number(recon.outstanding || 0).toLocaleString('en-IN')}`], ['Docs', `${recon.invoices || 0} inv / ${recon.payments || 0} pay`]].map(([k, v]) => (
+            <div key={k as string} className="p-3 rounded-2xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="text-base font-extrabold mt-0.5">{v}</div></div>
+          ))}
+        </div>
+      )}
+      <Modal open={showInvoice} onClose={() => setShowInvoice(false)} title="New invoice" subtitle="Drafts are editable; issued invoices are immutable (void/credit only)">
         <form onSubmit={createInvoice} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Organization ID *"><input className={kitInput} value={invForm.orgId} onChange={(e) => setInvForm({ ...invForm, orgId: e.target.value })} placeholder="TNT-9011" /></Field>
           <Field label="Due date *"><DatePicker value={invForm.dueDate} onChange={(v) => setInvForm({ ...invForm, dueDate: v })} /></Field>
           <div className="sm:col-span-2"><Field label="Line label"><input className={kitInput} value={invForm.label} onChange={(e) => setInvForm({ ...invForm, label: e.target.value })} /></Field></div>
           <Field label="Qty"><input className={kitInput} type="number" min={1} value={invForm.qty} onChange={(e) => setInvForm({ ...invForm, qty: e.target.value })} /></Field>
           <Field label="Unit price (₹) *"><input className={kitInput} type="number" value={invForm.unit} onChange={(e) => setInvForm({ ...invForm, unit: e.target.value })} /></Field>
+          <Field label="Discount (₹)"><input className={kitInput} type="number" min={0} value={invForm.discount} onChange={(e) => setInvForm({ ...invForm, discount: e.target.value })} /></Field>
+          <Field label="Tax rate %"><input className={kitInput} type="number" min={0} max={100} value={invForm.taxRate} onChange={(e) => setInvForm({ ...invForm, taxRate: e.target.value })} /></Field>
+          <div className="sm:col-span-2 flex items-center gap-2 text-xs font-bold text-slate-700">
+            <input id="inv-draft" type="checkbox" checked={invForm.draft} onChange={(e) => setInvForm({ ...invForm, draft: e.target.checked })} className="w-4 h-4" />
+            <label htmlFor="inv-draft">Save as Draft (editable, issue later)</label>
+          </div>
           <div className="sm:col-span-2 flex justify-end gap-2">
             <button type="button" onClick={() => setShowInvoice(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
-            <button className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">Issue invoice</button>
+            <button className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">{invForm.draft ? 'Save draft' : 'Issue invoice'}</button>
           </div>
         </form>
+      </Modal>
+      <Modal open={docFor !== null} onClose={() => { setDocFor(null); setDoc(null); }} title={`Invoice ${doc?.number || docFor?.number || docFor?.id || ''}`} subtitle="Printable document — totals, payments, credits">
+        {!doc ? <InlineLoading message="Loading document…" /> : (
+          <div className="space-y-3 text-xs">
+            <div className="p-4 rounded-2xl bg-slate-900 text-white space-y-1">
+              <div className="font-extrabold text-sm">{doc.organization?.legalName || doc.orgId}</div>
+              <div className="text-slate-300">{doc.organization?.gstin ? `GSTIN ${doc.organization.gstin} • ` : ''}{doc.billingPeriod || ''}</div>
+              <div className="text-slate-300">Due {String(doc.dueDate || '').slice(0, 10)} • <strong className="text-white">{doc.status}</strong>{doc.overdue ? ` • ${doc.daysOverdue}d overdue` : ''}</div>
+            </div>
+            <div className="rounded-2xl border border-slate-200 overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase text-[10px]"><th className="px-3 py-2">Item</th><th className="px-3 py-2">Qty</th><th className="px-3 py-2 text-right">Unit</th><th className="px-3 py-2 text-right">Amount</th></tr></thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {(doc.lines || []).map((l: any) => (
+                    <tr key={l.id}><td className="px-3 py-2">{l.label}</td><td className="px-3 py-2">{l.qty}</td><td className="px-3 py-2 text-right">₹{l.unit}</td><td className="px-3 py-2 text-right">₹{(l.qty * l.unit).toLocaleString('en-IN')}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 font-bold space-y-1">
+              <div className="flex justify-between"><span>Subtotal</span><span>₹{doc.subtotal}</span></div>
+              <div className="flex justify-between"><span>Discount</span><span>− ₹{doc.discount}</span></div>
+              <div className="flex justify-between"><span>Tax</span><span>₹{doc.tax}</span></div>
+              <div className="flex justify-between text-sm"><span>Total</span><span>₹{doc.total}</span></div>
+              <div className="flex justify-between text-emerald-700"><span>Paid</span><span>₹{doc.amountPaid}</span></div>
+              <div className="flex justify-between"><span>Balance</span><span>₹{doc.balance}</span></div>
+            </div>
+            {(doc.payments || []).length > 0 && <div className="text-slate-600 font-medium">Payments: {(doc.payments || []).map((p: any) => `${p.id} ₹${p.amount}`).join(' • ')}</div>}
+            {(doc.creditNotes || []).length > 0 && <div className="text-slate-600 font-medium">Credits: {(doc.creditNotes || []).map((c: any) => `${c.id} ₹${c.amount}`).join(' • ')}</div>}
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => window.print()} className="px-4 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs">Print / Save PDF</button>
+            </div>
+          </div>
+        )}
       </Modal>
       <Modal open={voidFor !== null} onClose={() => setVoidFor(null)} title={`Void ${voidFor?.number || voidFor?.id || ''}?`} subtitle="Paid/Credited/Void invoices cannot be voided — use a credit note.">
         <div className="space-y-3">
@@ -1106,6 +1190,8 @@ export function BillingPanel() {
               <div className="font-bold flex items-center justify-between gap-2">
                 <span className="truncate">{i.number || i.id} • ₹{i.total} • bal ₹{i.balance} • {i.status}{overdue ? ' • OVERDUE' : ''}</span>
                 <RowMenu items={[
+                  { label: 'View document', onSelect: () => openDocument(i) },
+                  ...(i.status === 'Draft' ? [{ label: 'Issue now', onSelect: () => issueInvoice(i.id) }] : []),
                   { label: 'Void…', danger: true, onSelect: () => { setVoidFor(i); setVoidReason(''); } },
                   { label: 'Credit note…', onSelect: () => { setCreditFor(i); setCreditForm({ amount: '', reason: '' }); } },
                 ]} />
@@ -1153,7 +1239,16 @@ export function SubscriptionsPanel() {
   const [showPlan, setShowPlan] = useState(false);
   const [planForm, setPlanForm] = useState({ name: '', price: '', interval: 'monthly', target: 'company' });
   const [detail, setDetail] = useState<any>(null);
-  const [q, setQ] = useState('');
+  const [detailHistory, setDetailHistory] = useState<any[]>([]);
+  const [q, setQ] = useQueryState('sub_q');
+  const [versionsFor, setVersionsFor] = useState<any>(null);
+  const [versions, setVersions] = useState<any[]>([]);
+  const [versionForm, setVersionForm] = useState({ price: '', interval: 'monthly', entitlements: '' });
+  const [changeFor, setChangeFor] = useState<any>(null);
+  const [changePlanId, setChangePlanId] = useState('');
+  const [changeReason, setChangeReason] = useState('');
+  const [renewalFor, setRenewalFor] = useState<any>(null);
+  const [renewalForm, setRenewalForm] = useState({ autoRenew: 'true', discount: '' });
   const load = async () => {
     setError('');
     try { setPlans(unwrapList(await billingApi.plans())); setSubs(unwrapList(await billingApi.subscriptions())); }
@@ -1177,6 +1272,54 @@ export function SubscriptionsPanel() {
     try { const u = unwrapObj(await billingApi.setSubscription(id, status, status === 'Cancelled' ? 'admin-console' : undefined)); setSubs((x) => x.map((s) => (s.id === id ? u : s))); setOk(`${id} → ${status}.`); syncAll(); }
     catch (e) { setError(errMsg(e)); }
   };
+  const openVersions = async (p: any) => {
+    setVersionsFor(p); setVersions([]); setVersionForm({ price: String(p.price ?? ''), interval: p.interval || 'monthly', entitlements: JSON.stringify(p.entitlements || {}, null, 2) });
+    try { setVersions(unwrapList(await billingApi.planVersions(p.id))); }
+    catch (e) { setError(errMsg(e)); }
+  };
+  const saveVersion = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!versionsFor) return;
+    let ent: Record<string, unknown> | undefined;
+    if (versionForm.entitlements.trim()) {
+      try { ent = JSON.parse(versionForm.entitlements); }
+      catch { setError('Entitlements must be valid JSON (object).'); return; }
+    }
+    try {
+      const u = unwrapObj(await billingApi.newPlanVersion(versionsFor.id, { price: Number(versionForm.price), interval: versionForm.interval, entitlements: ent }));
+      setPlans((x) => x.map((pl) => (pl.id === versionsFor.id ? { ...pl, ...(u?.id ? u : {}) } : x)));
+      setVersionsFor(null); load(); setOk(`Plan ${versionsFor.id} → v${(u as any)?.version || 'next'} (old terms snapshotted).`); syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const archivePlan = async (p: any) => {
+    try {
+      await billingApi.archivePlan(p.id);
+      setPlans((x) => x.map((pl) => (pl.id === p.id ? { ...pl, status: 'Archived' } : pl))); setOk(`Plan ${p.id} archived.`); syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const doChangePlan = async () => {
+    if (!changeFor || !changePlanId) return;
+    try {
+      const u = unwrapObj(await billingApi.changePlan(changeFor.id, changePlanId, changeReason || undefined));
+      setSubs((x) => x.map((s) => (s.id === changeFor.id ? { ...s, ...(u?.id ? u : {}) } : x)));
+      setChangeFor(null); setChangePlanId(''); setChangeReason(''); setOk('Plan changed — history recorded.'); syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const saveRenewal = async () => {
+    if (!renewalFor) return;
+    try {
+      const u = unwrapObj(await billingApi.renewalSettings(renewalFor.id, { autoRenew: renewalForm.autoRenew === 'true', discount: Number(renewalForm.discount) || 0 }));
+      setSubs((x) => x.map((s) => (s.id === renewalFor.id ? { ...s, ...(u?.id ? u : {}) } : x)));
+      setRenewalFor(null); setOk('Renewal settings saved.'); syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const openDetail = async (s: any) => {
+    setDetail(s); setDetailHistory([]);
+    try {
+      const res: any = await apiClient.get('/api/v1/subscription-changes');
+      const all = unwrapList(res).filter((c: any) => c.subscriptionId === s.id);
+      setDetailHistory(all);
+    } catch { /* history best-effort */ }
+  };
   const filteredSubs = subs.filter((s) => !q.trim() || `${s.id} ${s.orgId} ${s.planId} ${s.status}`.toLowerCase().includes(q.toLowerCase()));
   return (
     <div className={cardCls}>
@@ -1184,7 +1327,7 @@ export function SubscriptionsPanel() {
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-base font-extrabold text-slate-900">Plans & Subscriptions — Create / View / Suspend / Cancel / Export</h3>
           <div className="flex gap-2">
-            <button type="button" onClick={async () => { const { downloadCsv } = await import('./CrudKit'); downloadCsv('subscriptions.csv', filteredSubs, ['id', 'orgId', 'planId', 'status', 'renewalDate']); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Export</button>
+            <ExportButton filename="subscriptions.csv" rows={filteredSubs} columns={['id', 'orgId', 'planId', 'status', 'renewalDate']} />
             <button type="button" onClick={() => setShowPlan(true)} className={btnDark}>+ New plan</button>
             <button type="button" onClick={() => setShowSubscribe(true)} className={btnPrimary}>+ Subscribe org</button>
           </div>
@@ -1193,10 +1336,17 @@ export function SubscriptionsPanel() {
       </div>
       {error && <PanelError message={error} onRetry={load} />}
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
+      <div className="text-xs font-extrabold text-slate-700">Plans ({plans.length}) — versions are immutable snapshots</div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         {plans.map((p) => (
           <div key={p.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
-            <div className="font-bold">{p.name} • ₹{p.price}/{p.interval} • v{p.version} • {p.status}</div>
+            <div className="font-bold flex items-center justify-between gap-2">
+              <span className="truncate">{p.name} • ₹{p.price}/{p.interval} • v{p.version} • {p.status}</span>
+              <RowMenu items={[
+                { label: 'Versions + new version…', onSelect: () => openVersions(p) },
+                ...(p.status !== 'Archived' ? [{ label: 'Archive plan…', danger: true, onSelect: () => archivePlan(p) }] : []),
+              ]} />
+            </div>
             <div className="text-slate-500 font-medium">{p.id} • target: {p.target || 'company'}</div>
             {p.entitlements && (
               <div className="flex flex-wrap gap-1 pt-1">
@@ -1233,19 +1383,61 @@ export function SubscriptionsPanel() {
       </Modal>
       <div className="space-y-2">{filteredSubs.map((s) => (
         <div key={s.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
-          <div className="text-xs font-bold min-w-0 truncate">{s.id} • {s.orgId} • {s.planId} • <strong className="text-blue-600">{s.status}</strong> • renews {String(s.renewalDate || '').slice(0, 10)}</div>
+          <div className="text-xs font-bold min-w-0 truncate">{s.id} • {s.orgId} • {s.planId} v{s.planVersion} • <strong className="text-blue-600">{s.status}</strong> • ₹{s.price}{s.discount ? ` − ₹${s.discount}` : ''} • {s.autoRenew ? 'auto' : 'manual'} • renews {String(s.renewalDate || '').slice(0, 10)}</div>
           <RowMenu items={[
-            { label: 'View terms', onSelect: () => setDetail(s) },
+            { label: 'View terms + history', onSelect: () => openDetail(s) },
+            { label: 'Change plan…', onSelect: () => { setChangeFor(s); setChangePlanId(''); setChangeReason(''); } },
+            { label: 'Renewal settings…', onSelect: () => { setRenewalFor(s); setRenewalForm({ autoRenew: s.autoRenew === false ? 'false' : 'true', discount: String(s.discount || '') }); } },
             ...['Trial', 'Active', 'Renewal Due', 'Past Due', 'Grace Period', 'Suspended', 'Cancelled', 'Expired'].filter((x) => x !== s.status).slice(0, 6).map((x) => ({ label: `Set ${x}`, danger: x === 'Cancelled', onSelect: () => setStatus(s.id, x) })),
           ]} />
         </div>
       ))}</div>
+      <Modal open={versionsFor !== null} onClose={() => setVersionsFor(null)} title={`Plan versions — ${versionsFor?.name || ''}`} subtitle="Edits mint a new version; active subscriptions keep their snapshot">
+        <div className="space-y-3">
+          {versions.length === 0 ? <div className="text-[11px] text-slate-500 font-medium">No prior versions — this is v{versionsFor?.version || 1}.</div> : versions.map((v: any) => (
+            <div key={v.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold">v{v.version} • ₹{v.snapshot?.price} • by {v.by} • {String(v.createdAt || '').slice(0, 10)}</div>
+          ))}
+          <form onSubmit={saveVersion} className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-blue-50/50 border border-blue-200">
+            <Field label="New price (₹)"><input className={kitInput} type="number" value={versionForm.price} onChange={(e) => setVersionForm({ ...versionForm, price: e.target.value })} /></Field>
+            <Field label="Interval"><Select value={versionForm.interval} onChange={(v) => setVersionForm({ ...versionForm, interval: v })} options={[{ value: 'monthly', label: 'Monthly' }, { value: 'quarterly', label: 'Quarterly' }, { value: 'annual', label: 'Annual' }]} /></Field>
+            <div className="sm:col-span-2"><Field label="Entitlements JSON (object)"><textarea rows={4} className={`${kitInput} font-mono`} value={versionForm.entitlements} onChange={(e) => setVersionForm({ ...versionForm, entitlements: e.target.value })} /></Field></div>
+            <div className="sm:col-span-2 flex justify-end gap-2">
+              <button type="button" onClick={() => setVersionsFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Close</button>
+              <button className={btnDark}>Mint new version</button>
+            </div>
+          </form>
+        </div>
+      </Modal>
+      <Modal open={changeFor !== null} onClose={() => setChangeFor(null)} title={`Change plan — ${changeFor?.id || ''}`} subtitle="Old terms stay snapshotted in history">
+        <div className="space-y-3">
+          <Field label="New plan"><Select value={changePlanId} onChange={setChangePlanId} placeholder="Choose plan" options={plans.filter((p) => p.status !== 'Archived').map((p) => ({ value: p.id, label: `${p.name} v${p.version} — ₹${p.price}/${p.interval}` }))} /></Field>
+          <Field label="Reason"><input className={kitInput} value={changeReason} onChange={(e) => setChangeReason(e.target.value)} placeholder="e.g. Upgrade at renewal" /></Field>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setChangeFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button type="button" disabled={!changePlanId} onClick={doChangePlan} className={btnPrimary}>Change plan</button>
+          </div>
+        </div>
+      </Modal>
+      <Modal open={renewalFor !== null} onClose={() => setRenewalFor(null)} title={`Renewal settings — ${renewalFor?.id || ''}`}>
+        <div className="space-y-3">
+          <Field label="Auto-renew"><Select value={renewalForm.autoRenew} onChange={(v) => setRenewalForm({ ...renewalForm, autoRenew: v })} options={[{ value: 'true', label: 'On' }, { value: 'false', label: 'Off' }]} /></Field>
+          <Field label="Discount (₹)"><input className={kitInput} type="number" min={0} value={renewalForm.discount} onChange={(e) => setRenewalForm({ ...renewalForm, discount: e.target.value })} /></Field>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setRenewalFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button type="button" onClick={saveRenewal} className={btnDark}>Save</button>
+          </div>
+        </div>
+      </Modal>
       <Modal open={detail !== null} onClose={() => setDetail(null)} title={`${detail?.id || ''}`} subtitle={`${detail?.orgId || ''} • ${detail?.planId || ''}`}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-          {[['Status', detail?.status], ['Plan version', detail?.planVersion], ['Price', detail?.price], ['Currency', detail?.currency], ['Start', String(detail?.startDate || '').slice(0, 10)], ['Renewal', String(detail?.renewalDate || '').slice(0, 10)], ['Auto-renew', String(detail?.autoRenew)], ['Trial end', String(detail?.trialEnd || '').slice(0, 10)]].map(([k, v]) => (
+          {[['Status', detail?.status], ['Plan version', detail?.planVersion], ['Price', detail?.price], ['Discount', detail?.discount || 0], ['Currency', detail?.currency], ['Start', String(detail?.startDate || '').slice(0, 10)], ['Renewal', String(detail?.renewalDate || '').slice(0, 10)], ['Auto-renew', String(detail?.autoRenew)], ['Trial end', String(detail?.trialEnd || '').slice(0, 10)]].map(([k, v]) => (
             <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1">{String(v ?? '—')}</div></div>
           ))}
         </div>
+        <div className="text-xs font-extrabold pt-2">Upgrade / downgrade history ({detailHistory.length})</div>
+        {detailHistory.length === 0 ? <div className="text-[11px] text-slate-500">No changes recorded.</div> : detailHistory.map((h: any) => (
+          <div key={h.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs"><strong>{h.change}</strong> • {h.by || ''} • <span className="text-slate-500">{String(h.createdAt || '').slice(0, 16).replace('T', ' ')}</span>{h.reason ? <div>{h.reason}</div> : null}</div>
+        ))}
       </Modal>
     </div>
   );
@@ -1291,21 +1483,57 @@ export function CommissionsPanel() {
     try { const p = unwrapObj(await billingApi.payout(id)); if (p?.id) { setPayouts((x) => [p, ...x]); load(); } syncAll(); }
     catch (e) { setError(errMsg(e)); }
   };
-  const [cq, setCq] = useState('');
-  const filteredComms = commissions.filter((c) => !cq.trim() || `${c.id} ${c.orgId} ${c.agencyId} ${c.approvalStatus}`.toLowerCase().includes(cq.toLowerCase()));
+  const [cq, setCq] = useQueryState('com_q');
+  const [leg, setLeg] = useQueryState('com_leg');
+  const [dupMsg, setDupMsg] = useState('');
+  const checkDup = async (c: any) => {
+    setDupMsg('');
+    try {
+      const key = c.placementId || c.applicationId;
+      const res: any = await billingApi.checkDuplicate(`?trigger=${encodeURIComponent(c.trigger || '')}&${c.applicationId ? `applicationId=${c.applicationId}` : `placementId=${key}`}${c.agreementId ? `&agreementId=${c.agreementId}` : ''}`);
+      const d = (res as { data?: any })?.data;
+      setDupMsg(d?.duplicate ? `Duplicate guard: ${d.count} record(s) share placement+trigger (e.g. ${d.rows.map((r: any) => r.id).join(', ')}). New payouts are blocked by idempotency.` : 'No duplicate for this placement + trigger.');
+    } catch (e) { setDupMsg(errMsg(e)); }
+  };
+  const legOf = (c: any) => (c.agencyId ? 'payable' : 'receivable');
+  const filteredComms = commissions.filter((c) => {
+    if (leg && legOf(c) !== leg) return false;
+    return !cq.trim() || `${c.id} ${c.orgId} ${c.agencyId} ${c.approvalStatus}`.toLowerCase().includes(cq.toLowerCase());
+  });
+  const recvTotal = commissions.filter((c) => legOf(c) === 'receivable').reduce((a: number, c: any) => a + Number(c.total || c.net || 0), 0);
+  const payTotal = commissions.filter((c) => legOf(c) === 'payable').reduce((a: number, c: any) => a + Number(c.total || c.net || 0), 0);
+  const stageOf = (c: any): number => {
+    if (c.paymentStatus === 'Paid') return 5;
+    if (c.approvalStatus === 'Approved') return 4;
+    if (Number(c.adjustments || 0) !== 0) return 3;
+    if (c.triggerDate || c.placementId) return 2;
+    if (c.agreementId) return 1;
+    return 0;
+  };
+  const STAGES = ['Agreement', 'Triggered', 'Adjusted', 'Approved', 'Invoiced', 'Reconciled'];
   return (
     <div className={cardCls}>
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-base font-extrabold text-slate-900">Commissions — Agreements → Approve → Adjust → Payout / Export</h3>
           <div className="flex gap-2">
-            <button type="button" onClick={async () => { const { downloadCsv } = await import('./CrudKit'); downloadCsv('commissions.csv', filteredComms, ['id', 'orgId', 'agencyId', 'gross', 'total', 'approvalStatus', 'paymentStatus']); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Export</button>
+            <ExportButton filename="commissions.csv" rows={filteredComms} columns={['id', 'orgId', 'agencyId', 'gross', 'total', 'approvalStatus', 'paymentStatus']} />
             <button type="button" onClick={() => setShowAgreement(true)} className={btnPrimary}>+ New agreement</button>
           </div>
         </div>
-        <input className={inputCls} placeholder="Search commission ID, org, agency, status…" value={cq} onChange={(e) => setCq(e.target.value)} />
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="p-3 rounded-2xl bg-blue-50 border border-blue-200"><div className="text-[10px] font-bold text-blue-700 uppercase">Company receivable</div><div className="text-base font-extrabold">₹{recvTotal.toLocaleString('en-IN')}</div></div>
+          <div className="p-3 rounded-2xl bg-purple-50 border border-purple-200"><div className="text-[10px] font-bold text-purple-700 uppercase">Agency payable</div><div className="text-base font-extrabold">₹{payTotal.toLocaleString('en-IN')}</div></div>
+        </div>
+        <div className="flex flex-col lg:flex-row gap-2">
+          <input className={`${inputCls} flex-1`} placeholder="Search commission ID, org, agency, status…" value={cq} onChange={(e) => setCq(e.target.value)} />
+          <select value={leg} onChange={(e) => setLeg(e.target.value)} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none">
+            <option value="">Both ledgers</option><option value="receivable">Receivable only</option><option value="payable">Payable only</option>
+          </select>
+        </div>
       </div>
       {error && <PanelError message={error} status={loadError} onRetry={load} />}
+      {dupMsg && <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs font-bold">{dupMsg}</div>}
       <Modal open={showAgreement} onClose={() => setShowAgreement(false)} title="New commission agreement" subtitle="Trigger is evaluated automatically on placement">
         <form onSubmit={create} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Organization ID *"><input className={kitInput} value={form.orgId} onChange={(e) => setForm({ ...form, orgId: e.target.value })} /></Field>
@@ -1324,20 +1552,34 @@ export function CommissionsPanel() {
       ))}
       <div className="text-xs font-extrabold text-slate-700">Commissions ({filteredComms.length}/{commissions.length})</div>
       {filteredComms.length === 0 && <EmptyState title="No commissions yet" message="Placement triggers auto-create commission records from approved agreements." />}
-      {filteredComms.map((c) => (
-        <div key={c.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
-          <span className="min-w-0 truncate">{c.id} • {c.agencyId || c.orgId} • trig {c.trigger || '—'} • gross ₹{c.gross} • total ₹{c.total || c.net} • {c.approvalStatus}/{c.paymentStatus}</span>
-          <RowMenu items={[
-            ...(c.approvalStatus !== 'Approved' ? [{ label: 'Approve commission', onSelect: () => approve(c.id) }] : []),
-            ...(c.approvalStatus === 'Approved' && c.paymentStatus !== 'Paid' ? [{ label: 'Process payout', onSelect: () => setPayoutId(c.id) }] : []),
-            { label: 'Adjustments', onSelect: async () => {
-              setAdjustFor(c); setAdjustForm({ amount: '', reason: '' });
-              try { setAdjustments(unwrapList(await workforceApi.adjustments(c.id))); }
-              catch (e) { setError(errMsg(e)); }
-            } },
-          ]} />
+      {filteredComms.map((c) => {
+        const stage = stageOf(c);
+        return (
+        <div key={c.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="min-w-0 truncate">{c.id} • {c.agencyId || c.orgId} • trig {c.trigger || '—'} • gross ₹{c.gross} • total ₹{c.total || c.net} • {c.approvalStatus}/{c.paymentStatus}</span>
+            <RowMenu items={[
+              ...(c.approvalStatus !== 'Approved' ? [{ label: 'Approve commission', onSelect: () => approve(c.id) }] : []),
+              ...(c.approvalStatus === 'Approved' && c.paymentStatus !== 'Paid' ? [{ label: 'Process payout', onSelect: () => setPayoutId(c.id) }] : []),
+              { label: 'Verify uniqueness…', onSelect: () => checkDup(c) },
+              { label: 'Adjustments', onSelect: async () => {
+                setAdjustFor(c); setAdjustForm({ amount: '', reason: '' });
+                try { setAdjustments(unwrapList(await workforceApi.adjustments(c.id))); }
+                catch (e) { setError(errMsg(e)); }
+              } },
+            ]} />
+          </div>
+          <div className="flex items-center gap-1" aria-label={`Lifecycle: ${STAGES[stage]}`}>
+            {STAGES.map((s, i) => (
+              <span key={s} className="flex items-center gap-1 flex-1">
+                <span className={`h-1.5 rounded-full flex-1 ${i <= stage ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+              </span>
+            ))}
+            <span className="text-[10px] text-slate-500 ml-1">{STAGES[stage]}</span>
+          </div>
         </div>
-      ))}
+        );
+      })}
       <div className="text-xs font-extrabold text-slate-700">Payouts ({payouts.length})</div>
       {payouts.map((p) => (
         <div key={p.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold">{p.id} • ₹{p.amount} • {p.status}</div>
@@ -1387,7 +1629,11 @@ export function LeadsPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [loadError, setLoadError] = useState(0);
-  const [form, setForm] = useState({ contactName: '', companyName: '', email: '', phone: '', industry: '', source: '', priority: 'Medium', nextFollowUp: '', value: '', notes: '' });
+  const [form, setForm] = useState({ contactName: '', companyName: '', email: '', phone: '', industry: '', source: '', priority: 'Medium', nextFollowUp: '', value: '', notes: '', consent: '' });
+  const [mergeFor, setMergeFor] = useState<any>(null);
+  const [mergeTarget, setMergeTarget] = useState('');
+  const [mergeReason, setMergeReason] = useState('');
+  const [mergeQ, setMergeQ] = useState('');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -1401,7 +1647,8 @@ export function LeadsPanel() {
   const [proposalForm, setProposalForm] = useState({ title: '', amount: '', validUntil: '' });
   const [oppLead, setOppLead] = useState<any>(null);
   const [oppValue, setOppValue] = useState('');
-  const [q, setQ] = useState('');
+  const [q, setQ] = useQueryState('lead_q');
+  const dqLead = useDebounced(q);
   const [editing, setEditing] = useState<any>(null);
   const [detail, setDetail] = useState<any>(null);
   const [deleteFor, setDeleteFor] = useState<any>(null);
@@ -1423,7 +1670,7 @@ export function LeadsPanel() {
     try {
       const l = unwrapObj(await salesApi.createLead({ ...form, value: Number(form.value) || undefined }));
       if (l?.id) setRows((x) => [l, ...x]);
-      setForm({ contactName: '', companyName: '', email: '', phone: '', industry: '', source: '', priority: 'Medium', nextFollowUp: '', value: '', notes: '' });
+      setForm({ contactName: '', companyName: '', email: '', phone: '', industry: '', source: '', priority: 'Medium', nextFollowUp: '', value: '', notes: '', consent: '' });
       setShowCreate(false);
       syncAll();
     } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
@@ -1437,7 +1684,7 @@ export function LeadsPanel() {
     try { await salesApi.convert(id); load(); syncAll(); }
     catch (e) { setError(errMsg(e)); }
   };
-  const filteredLeads = rows.filter((l) => !q.trim() || `${l.id} ${l.contactName} ${l.companyName} ${l.email}`.toLowerCase().includes(q.toLowerCase()));
+  const filteredLeads = rows.filter((l) => !dqLead.trim() || `${l.id} ${l.contactName} ${l.companyName} ${l.email}`.toLowerCase().includes(dqLead.toLowerCase()));
   const saveLeadEdit = async () => {
     if (!editing) return;
     setBusy(true);
@@ -1453,19 +1700,31 @@ export function LeadsPanel() {
     try { await salesApi.deleteLead(deleteFor.id); setRows((x) => x.filter((r) => r.id !== deleteFor.id)); setDeleteFor(null); syncAll(); }
     catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
   };
+  const doMerge = async () => {
+    if (!mergeFor || !mergeTarget || !mergeReason.trim()) { setError('Target lead + merge reason are required.'); return; }
+    setBusy(true);
+    try {
+      const res = unwrapObj(await salesApi.merge(mergeFor.id, mergeTarget, mergeReason.trim()));
+      setRows((x) => x.map((r) => (r.id === mergeFor.id ? { ...r, mergedInto: mergeTarget, stage: 'Lost' } : r)));
+      setMergeFor(null); setOkMerge(`Merged into ${mergeTarget} — ${(res as any)?.moved ? Object.values((res as any).moved).reduce((a: number, n: unknown) => a + Number(n || 0), 0) : 0} linked records moved.`);
+      load(); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const [okMerge, setOkMerge] = useState('');
   return (
     <div className={cardCls}>
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-base font-extrabold text-slate-900">Lead Pipeline — View / Edit / Convert / Delete</h3>
           <div className="flex gap-2">
-            <button type="button" onClick={async () => { const { downloadCsv } = await import('./CrudKit'); downloadCsv('leads.csv', filteredLeads, ['id', 'contactName', 'companyName', 'email', 'stage', 'value', 'owner']); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Export</button>
+            <ExportButton filename="leads.csv" rows={filteredLeads} columns={['id', 'contactName', 'companyName', 'email', 'stage', 'value', 'owner']} />
             <button type="button" onClick={() => setShowCreate(true)} className={btnPrimary}>+ New lead</button>
           </div>
         </div>
         <input className={inputCls} placeholder="Search contact, company, email, ID…" value={q} onChange={(e) => setQ(e.target.value)} />
       </div>
       {error && <PanelError message={error} status={loadError} onRetry={() => load(page)} />}
+      {okMerge && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{okMerge}</div>}
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New lead" subtitle="New → Contacted → Qualified → … → Won / Lost">
         <form onSubmit={create} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Contact name *"><input className={kitInput} value={form.contactName} onChange={(e) => setForm({ ...form, contactName: e.target.value })} /></Field>
@@ -1478,6 +1737,7 @@ export function LeadsPanel() {
           <Field label="Next follow-up"><DatePicker value={form.nextFollowUp} onChange={(v) => setForm({ ...form, nextFollowUp: v })} /></Field>
           <Field label="Deal value"><input className={kitInput} type="number" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} /></Field>
           <div><Field label="Notes"><input className={kitInput} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field></div>
+          <div className="sm:col-span-2"><Field label="Communication consent / lawful basis" hint="Required for outreach — e.g. 'opt-in via website form, 2026-10-01'"><input className={kitInput} value={form.consent} onChange={(e) => setForm({ ...form, consent: e.target.value })} placeholder="How did this contact consent to outreach?" /></Field></div>
           <div className="sm:col-span-2 flex justify-end gap-2 pt-1">
             <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
             <button className={btnPrimary} disabled={busy}>Add lead</button>
@@ -1491,7 +1751,7 @@ export function LeadsPanel() {
         <div className="space-y-2">{filteredLeads.map((l) => (
           <div key={l.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <div className="font-extrabold text-slate-900 text-sm">{l.contactName} — {l.companyName}</div>
+              <div className="font-extrabold text-slate-900 text-sm">{l.contactName} — {l.companyName}{l.mergedInto ? <span className="ml-2 px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 text-[10px]">merged → {l.mergedInto}</span> : null}</div>
               <div className="text-xs text-slate-500 font-medium">{l.id} • <strong className="text-blue-600">{l.stage}</strong> • ₹{l.value || 0} • owner {l.owner}</div>
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -1503,6 +1763,7 @@ export function LeadsPanel() {
                 { label: 'Proposals', onSelect: async () => { setProposalLead(l); setProposalForm({ title: '', amount: '', validUntil: '' }); try { setProposals(unwrapList(await salesApi.proposals(l.id))); } catch (e) { setError(errMsg(e)); } } },
                 { label: 'New opportunity', onSelect: () => { setOppLead(l); setOppValue(String(l.value || '')); } },
                 { label: 'Convert to company', onSelect: () => setConvertId(l.id) },
+                ...(l.stage !== 'Won' && !l.mergedInto ? [{ label: 'Merge duplicates…', onSelect: () => { setMergeFor(l); setMergeTarget(''); setMergeReason(''); setMergeQ(''); } }] : []),
                 { label: 'Delete…', danger: true, onSelect: () => setDeleteFor(l) },
               ]} />
             </div>
@@ -1518,6 +1779,24 @@ export function LeadsPanel() {
         onConfirm={async () => { await convert(convertId); setConvertId(''); }}
         onCancel={() => setConvertId('')}
       />
+      <Modal open={mergeFor !== null} onClose={() => setMergeFor(null)} title={`Merge duplicates — ${mergeFor?.id || ''}`} subtitle="Activities, meetings, proposals and opportunities move to the surviving lead. The duplicate is marked Lost with a merge trail.">
+        <div className="space-y-3">
+          <Field label="Search surviving lead"><input className={kitInput} value={mergeQ} onChange={(e) => setMergeQ(e.target.value)} placeholder="Type contact or company…" /></Field>
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {rows.filter((r) => r.id !== mergeFor?.id && !r.mergedInto && (!mergeQ.trim() || `${r.contactName} ${r.companyName}`.toLowerCase().includes(mergeQ.toLowerCase()))).slice(0, 8).map((r) => (
+              <button key={r.id} type="button" onClick={() => setMergeTarget(r.id)}
+                className={`w-full text-left p-3 rounded-xl border text-xs font-bold ${mergeTarget === r.id ? 'bg-blue-50 border-blue-400' : 'bg-slate-50 border-slate-200'}`}>
+                {r.contactName} — {r.companyName} • {r.id} • {r.stage}
+              </button>
+            ))}
+          </div>
+          <Field label="Merge reason *"><input className={kitInput} value={mergeReason} onChange={(e) => setMergeReason(e.target.value)} placeholder="e.g. Same company, duplicate import" /></Field>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setMergeFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button type="button" disabled={busy || !mergeTarget || !mergeReason.trim()} onClick={doMerge} className={btnPrimary}>{busy ? 'Merging…' : 'Merge leads'}</button>
+          </div>
+        </div>
+      </Modal>
       <Modal open={meetingLead !== null} onClose={() => setMeetingLead(null)} title={`Log meeting — ${meetingLead?.companyName || ''}`} subtitle="Writes a meeting + activity row with outcome and follow-up">
         <form
           onSubmit={async (e) => {
@@ -1612,7 +1891,7 @@ export function LeadsPanel() {
       </Modal>
       <Modal open={detail !== null} onClose={() => setDetail(null)} title={`${detail?.contactName || ''} — ${detail?.companyName || ''}`} subtitle={`${detail?.id || ''} • ${detail?.stage || ''}`}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-          {[['Email', detail?.email], ['Phone', detail?.phone], ['Industry', detail?.industry], ['Source', detail?.source], ['Value', detail?.value], ['Owner', detail?.owner], ['Next follow-up', detail?.nextFollowUp], ['Notes', detail?.notes]].map(([k, v]) => (
+          {[['Email', detail?.email], ['Phone', detail?.phone], ['Industry', detail?.industry], ['Source', detail?.source], ['Value', detail?.value], ['Owner', detail?.owner], ['Next follow-up', detail?.nextFollowUp], ['Consent basis', detail?.consent], ['Notes', detail?.notes]].map(([k, v]) => (
             <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—')}</div></div>
           ))}
         </div>
@@ -1954,8 +2233,8 @@ export function CandidatesPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
-  const [q, setQ] = useState('');
-  const [status, setStatus] = useState('');
+  const [q, setQ] = useQueryState('cand_q');
+  const [status, setStatus] = useQueryState('cand_status');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [detail, setDetail] = useState<any>(null);
@@ -1980,8 +2259,8 @@ export function CandidatesPanel() {
   useEffect(() => { setPage(1); }, [debouncedQ]);
   const filtered = rows.filter((c) => {
     if (status && String(c.status || 'Active') !== status) return false;
-    if (!q.trim()) return true;
-    const s = q.toLowerCase();
+    if (!debouncedQ.trim()) return true;
+    const s = debouncedQ.toLowerCase();
     return `${c.name} ${c.email} ${c.roleTitle} ${c.location} ${c.id}`.toLowerCase().includes(s);
   });
   const openEdit = (c: any) => {
@@ -2010,10 +2289,7 @@ export function CandidatesPanel() {
       setStatusFor(null); setOk(`Candidate ${statusFor.id} → ${statusForm.status}.`); syncAll();
     } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
   };
-  const exportCsv = async () => {
-    const { downloadCsv } = await import('./CrudKit');
-    downloadCsv('candidates.csv', filtered, ['id', 'name', 'email', 'phone', 'roleTitle', 'experienceYears', 'location', 'skills', 'completeness', 'applicationCount', 'visibility', 'status']);
-  };
+  const candidateColumns = ['id', 'name', 'email', 'phone', 'roleTitle', 'experienceYears', 'location', 'skills', 'completeness', 'applicationCount', 'visibility', 'status'];
   const pill = (s: string) => {
     const tone = s === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : s === 'Suspended' || s === 'Blocked' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-slate-100 text-slate-700 border-slate-200';
     return <span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${tone}`}>{s || 'Active'}</span>;
@@ -2032,7 +2308,7 @@ export function CandidatesPanel() {
           <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none">
             <option value="">All statuses</option>{['Active', 'Suspended', 'Blocked'].map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
-          <button type="button" onClick={exportCsv} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs hover:bg-slate-50">Export</button>
+          <ExportButton filename="candidates.csv" rows={filtered} columns={candidateColumns} />
         </div>
       </div>
       {loading ? <InlineLoading message="Loading candidates…" /> : filtered.length === 0 ? (
@@ -2317,18 +2593,23 @@ export function AgencyPanel() {
   );
 }
 
+const ALL_PERMISSIONS = ['view','create','edit','archive','delete','approve','reject','suspend','restore','assign','export','manage_billing','manage_permissions','view_sensitive_fields','reconcile','refund','adjust_commission'];
+
 /* ---------------- Phase 5: Admin controls ---------------- */export function AdminControlsPanel() {
   const [users, setUsers] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
   const [error, setError] = useState('');
   const [reason, setReason] = useState('');
   const [pending, setPending] = useState<{ title: string; body: string; confirm: string; run: () => unknown } | null>(null);
+  const [exceptions, setExceptions] = useState<any[]>([]);
+  const [excForm, setExcForm] = useState({ email: '', permission: 'export', effect: 'grant' });
   const load = async () => {
     setError('');
     try {
-      const { directoryApi } = await import('../../shared/enterprise/phaseApi');
+      const { directoryApi, permissionsApi } = await import('../../shared/enterprise/phaseApi');
       setUsers(unwrapList(await directoryApi.users()));
       setTenants(unwrapList(await directoryApi.tenants()));
+      setExceptions(unwrapList(await permissionsApi.all()));
     } catch (e) { setError(errMsg(e)); }
   };
   useEffect(() => { load(); }, []);
@@ -2336,6 +2617,23 @@ export function AgencyPanel() {
     try { await fn; load(); } catch (e) { setError(errMsg(e)); }
   };
   const confirm = (title: string, body: string, confirmLabel: string, run: () => unknown) => setPending({ title, body, confirm: confirmLabel, run });
+  const saveException = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!excForm.email.trim()) return;
+    try {
+      const { permissionsApi } = await import('../../shared/enterprise/phaseApi');
+      const created = unwrapObj(await permissionsApi.grant(excForm.email.trim(), excForm.permission, excForm.effect as 'grant' | 'revoke'));
+      if (created?.id) setExceptions((x) => [created, ...x.filter((o) => !(o.email === created.email && o.permission === created.permission))]);
+      setExcForm({ email: '', permission: 'export', effect: 'grant' }); syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const clearException = async (o: any) => {
+    try {
+      const { permissionsApi } = await import('../../shared/enterprise/phaseApi');
+      await permissionsApi.clear(o.email, o.permission);
+      setExceptions((x) => x.filter((y) => y.id !== o.id)); syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
   return (
     <div className={cardCls}>
       <h3 className="text-base font-extrabold text-slate-900">Verification, Suspension & Access Control</h3>
@@ -2349,6 +2647,21 @@ export function AgencyPanel() {
       <div className="space-y-2">{users.map((u) => (
         <UserRow key={u.id} u={u} reason={reason} act={act} confirm={confirm} />
       ))}</div>
+      <div className="text-xs font-extrabold text-slate-700">Permission exceptions — explicit grant/revoke over role templates (§4.2)</div>
+      <form onSubmit={saveException} className="grid grid-cols-1 sm:grid-cols-4 gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200">
+        <input className={kitInput} placeholder="user@company.com *" value={excForm.email} onChange={(e) => setExcForm({ ...excForm, email: e.target.value })} />
+        <Select value={excForm.permission} onChange={(v) => setExcForm({ ...excForm, permission: v })} options={ALL_PERMISSIONS.map((p) => ({ value: p, label: p }))} />
+        <Select value={excForm.effect} onChange={(v) => setExcForm({ ...excForm, effect: v })} options={[{ value: 'grant', label: 'Grant' }, { value: 'revoke', label: 'Revoke' }]} />
+        <button className={btnDark}>Save exception</button>
+      </form>
+      {exceptions.length === 0 ? <div className="text-[11px] text-slate-500 font-medium">No exceptions — every account runs on its role template.</div> : (
+        <div className="space-y-2">{exceptions.map((o) => (
+          <div key={o.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
+            <span className="truncate">{o.email} • <strong className={o.effect === 'grant' ? 'text-emerald-600' : 'text-red-600'}>{o.effect}</strong> • {o.permission} • by {o.by}</span>
+            <button type="button" onClick={() => clearException(o)} className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] shrink-0">Clear</button>
+          </div>
+        ))}</div>
+      )}
       <ConfirmDialog
         open={pending !== null}
         title={pending?.title || 'Confirm'}
@@ -2398,7 +2711,7 @@ export function BranchesPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
-  const [q, setQ] = useState('');
+  const [q, setQ] = useQueryState('br_q');
   const [form, setForm] = useState({ name: '', city: '', orgId: '' });
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<any>(null);
@@ -2448,7 +2761,7 @@ export function BranchesPanel() {
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-base font-extrabold text-slate-900">Branches — Create / Edit / Delete / Export</h3>
           <div className="flex gap-2">
-            <button type="button" onClick={async () => { const { downloadCsv } = await import('./CrudKit'); downloadCsv('branches.csv', filtered, ['id', 'orgId', 'name', 'city', 'status']); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Export</button>
+            <ExportButton filename="branches.csv" rows={filtered} columns={['id', 'orgId', 'name', 'city', 'status']} />
             <button type="button" onClick={() => setShowCreate(true)} className={btnPrimary}>+ New branch</button>
           </div>
         </div>
@@ -2519,8 +2832,9 @@ export function JobsPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
-  const [q, setQ] = useState('');
-  const [statusF, setStatusF] = useState('');
+  const [q, setQ] = useQueryState('job_q');
+  const [statusF, setStatusF] = useQueryState('job_status');
+  const dqJob = useDebounced(q);
   const [detail, setDetail] = useState<any>(null);
   const [pipeline, setPipeline] = useState<{ apps: any[]; interviews: any[] }>({ apps: [], interviews: [] });
   const [editing, setEditing] = useState<any>(null);
@@ -2563,15 +2877,22 @@ export function JobsPanel() {
   };
   const filtered = rows.filter((j) => {
     if (statusF && j.status !== statusF) return false;
-    if (!q.trim()) return true;
-    return `${j.id} ${j.title} ${j.orgId} ${j.location}`.toLowerCase().includes(q.toLowerCase());
+    if (!dqJob.trim()) return true;
+    return `${j.id} ${j.title} ${j.orgId} ${j.location}`.toLowerCase().includes(dqJob.toLowerCase());
   });
+  const jobMenuFor = (j: any) => (
+    <RowMenu items={[
+      { label: 'View + pipeline', onSelect: () => openDetail(j) },
+      { label: 'Edit…', onSelect: () => setEditing({ ...j, assignedAgencies: (j.assignedAgencies || []).join(', '), assignedVendors: (j.assignedVendors || []).join(', ') }) },
+      ...(JOB_TRANSITIONS[j.status] || []).map((s) => ({ label: `Move to ${s}`, onSelect: () => transition(j.id, s) })),
+    ]} />
+  );
   return (
     <div className={cardCls}>
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-base font-extrabold text-slate-900">Jobs — View / Edit / Publish / Pause / Assign / Export</h3>
-          <button type="button" onClick={async () => { const { downloadCsv } = await import('./CrudKit'); downloadCsv('jobs.csv', filtered, ['id', 'requisitionId', 'title', 'orgId', 'location', 'employmentType', 'status', 'expiryDate']); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Export</button>
+          <ExportButton filename="jobs.csv" rows={filtered} columns={['id', 'requisitionId', 'title', 'orgId', 'location', 'employmentType', 'status', 'expiryDate']} />
         </div>
         <div className="flex flex-col lg:flex-row gap-2">
           <input className={`${inputCls} flex-1`} placeholder="Search ID, title, org, location…" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -2584,8 +2905,23 @@ export function JobsPanel() {
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
       {loading ? <InlineLoading message="Loading jobs…" /> : filtered.length === 0 ? (
         <EmptyState title="No jobs" message="Published requisitions become jobs here." />
-      ) : (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200">
+      ) : (<>
+        <div className="space-y-2 md:hidden">
+          {filtered.map((j) => (
+            <div key={j.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-extrabold text-slate-900 text-sm truncate">{j.title}</div>
+                  <div className="font-mono text-[11px] text-slate-500">{j.id} • {j.applicantsCount ?? 0} applicants</div>
+                </div>
+                {jobMenuFor(j)}
+              </div>
+              <div><span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">{j.status}</span></div>
+              <div className="text-slate-600 font-medium">{j.orgId} • {j.location || '—'}</div>
+            </div>
+          ))}
+        </div>
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
           <table className="w-full text-left text-xs min-w-[980px]">
             <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
               <th className="px-4 py-3">Job</th><th className="px-4 py-3">Requisition</th><th className="px-4 py-3">Org / Location</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Applicants</th><th className="px-4 py-3">Expiry</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
@@ -2600,17 +2936,13 @@ export function JobsPanel() {
                   <td className="px-4 py-3 font-bold">{j.applicantsCount ?? '—'}</td>
                   <td className="px-4 py-3 text-slate-500">{String(j.expiryDate || '').slice(0, 10) || '—'}</td>
                   <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">{j.status}</span></td>
-                  <td className="px-4 py-3"><div className="flex justify-end"><RowMenu items={[
-                    { label: 'View + pipeline', onSelect: () => openDetail(j) },
-                    { label: 'Edit…', onSelect: () => setEditing({ ...j, assignedAgencies: (j.assignedAgencies || []).join(', '), assignedVendors: (j.assignedVendors || []).join(', ') }) },
-                    ...(JOB_TRANSITIONS[j.status] || []).map((s) => ({ label: `Move to ${s}`, onSelect: () => transition(j.id, s) })),
-                  ]} /></div></td>
+                  <td className="px-4 py-3"><div className="flex justify-end">{jobMenuFor(j)}</div></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      )}
+      </>)}
       {detail && (
         <Modal open onClose={() => setDetail(null)} title={detail.title} subtitle={`${detail.id} • req ${detail.requisitionId || '—'} • ${detail.status}`}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
@@ -2651,8 +2983,8 @@ export function SupportPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
-  const [q, setQ] = useState('');
-  const [statusF, setStatusF] = useState('');
+  const [q, setQ] = useQueryState('sup_q');
+  const [statusF, setStatusF] = useQueryState('sup_status');
   const [form, setForm] = useState({ subject: '', category: 'Account', priority: 'Medium', body: '' });
   const [showOpen, setShowOpen] = useState(false);
   const [detail, setDetail] = useState<any>(null);
@@ -2696,7 +3028,7 @@ export function SupportPanel() {
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-base font-extrabold text-slate-900">Support & Account Issues — Open / Triage / Resolve</h3>
           <div className="flex gap-2">
-            <button type="button" onClick={async () => { const { downloadCsv } = await import('./CrudKit'); downloadCsv('support.csv', filtered, ['id', 'subject', 'requester', 'orgId', 'priority', 'status']); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Export</button>
+            <ExportButton filename="support.csv" rows={filtered} columns={['id', 'subject', 'requester', 'orgId', 'priority', 'status']} />
             <button type="button" onClick={() => setShowOpen(true)} className={btnPrimary}>+ Open ticket</button>
           </div>
         </div>

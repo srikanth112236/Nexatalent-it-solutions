@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { directoryApi } from '../../shared/enterprise/phaseApi';
 import { syncAll } from '../common/EnterprisePanels';
 import { Modal, Select, Field, ConfirmDialog, RowMenu } from '../../shared/ui/EnterpriseKit';
-import { CrudToolbar, DetailDrawer, KeyValues, StatusPill, downloadCsv } from '../common/CrudKit';
+import { CrudToolbar, DetailDrawer, KeyValues, StatusPill, useQueryState, useDebounced } from '../common/CrudKit';
 import { Company360Drawer } from './SuperAdmin360';
 import { EmptyState } from '../../shared/ui/DataState';
 
@@ -22,9 +22,10 @@ function errMsg(err: unknown): string {
 export function OrganizationsManager({ tenants, setTenants, onAudit }: {
   tenants: any[]; setTenants: (t: any[]) => void; onAudit?: () => void;
 }) {
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('');
+  const [search, setSearch] = useQueryState('org_q');
+  const [status, setStatus] = useQueryState('org_status');
   const [page, setPage] = useState(1);
+  const dq = useDebounced(search);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
@@ -37,15 +38,27 @@ export function OrganizationsManager({ tenants, setTenants, onAudit }: {
   const pageSize = 10;
 
   const filtered = useMemo(() => {
-    const q = search.toLowerCase();
+    const q = dq.toLowerCase();
     return tenants.filter((t) => {
       if (status && String(t.accountStatus || t.status) !== status) return false;
       if (!q) return true;
       return `${t.id} ${t.name || t.legalName} ${t.displayName} ${t.plan}`.toLowerCase().includes(q);
     });
-  }, [tenants, search, status]);
+  }, [tenants, dq, status]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const pageRows = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const menuFor = (t: any) => (
+    <RowMenu items={[
+      { label: 'View 360°', onSelect: () => setDetail(t) },
+      { label: 'Edit details', onSelect: () => openEdit(t) },
+      ...((t.verificationStatus === 'Pending') ? [
+        { label: 'Verify — Approve', onSelect: () => doVerify(t, 'approve') },
+        { label: 'Verify — Reject', onSelect: () => doVerify(t, 'reject') },
+      ] : []),
+      { label: (t.accountStatus === 'Suspended' || t.status === 'Suspended') ? 'Reactivate' : 'Suspend…', onSelect: () => { setSuspendFor(t); setSuspendForm({ reason: '', action: (t.accountStatus === 'Suspended') ? 'reactivate' : 'suspend' }); } },
+      { label: 'Close / Delete…', onSelect: () => setDeleteFor(t) },
+    ]} />
+  );
 
   const refreshAudit = onAudit;
 
@@ -116,9 +129,27 @@ export function OrganizationsManager({ tenants, setTenants, onAudit }: {
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
       <CrudToolbar search={search} onSearch={(v) => { setSearch(v); setPage(1); }} searchPh="Search ID, legal name, brand, plan…"
         status={status} onStatus={(v) => { setStatus(v); setPage(1); }} statuses={['Active', 'Invited', 'Suspended', 'Closed']}
-        onExport={() => downloadCsv('organizations.csv', filtered, ['id', 'legalName', 'displayName', 'entityType', 'industry', 'companySize', 'website', 'plan', 'seats', 'businessEmail', 'businessPhone', 'accountManager', 'salesOwner', 'verificationStatus', 'accountStatus', 'createdDate'])} />
-      {pageRows.length === 0 ? <EmptyState title="No organizations match" message="Adjust filters or provision a new tenant." /> : (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200">
+        exportProps={{ filename: 'organizations.csv', rows: filtered, columns: ['id', 'legalName', 'displayName', 'entityType', 'industry', 'companySize', 'website', 'plan', 'seats', 'businessEmail', 'businessPhone', 'accountManager', 'salesOwner', 'verificationStatus', 'accountStatus', 'createdDate'] }} />
+      {pageRows.length === 0 ? <EmptyState title="No organizations match" message="Adjust filters or provision a new tenant." /> : (<>
+        <div className="space-y-2 md:hidden">
+          {pageRows.map((t) => (
+            <div key={t.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-extrabold text-slate-900 text-sm truncate">{t.displayName || t.name || t.legalName}</div>
+                  <div className="font-mono text-[11px] text-amber-700">{t.id} • {t.plan}</div>
+                </div>
+                {menuFor(t)}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <StatusPill value={t.verificationStatus || 'Pending'} />
+                <StatusPill value={t.accountStatus || t.status} />
+              </div>
+              <div className="text-slate-600 font-medium">{t.industry || '—'} • {t.businessEmail || '—'}</div>
+            </div>
+          ))}
+        </div>
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
           <table className="w-full text-left text-xs min-w-[1060px]">
             <thead className="bg-slate-50">
               <tr className="text-slate-500 font-bold uppercase tracking-wider">
@@ -138,24 +169,13 @@ export function OrganizationsManager({ tenants, setTenants, onAudit }: {
                     <div className="text-slate-500 text-[11px] mt-1">{t.seats} seats</div></td>
                   <td className="px-4 py-3"><StatusPill value={t.verificationStatus || 'Pending'} /></td>
                   <td className="px-4 py-3"><StatusPill value={t.accountStatus || t.status} /></td>
-                  <td className="px-4 py-3"><div className="flex justify-end">
-                    <RowMenu items={[
-                      { label: 'View 360°', onSelect: () => setDetail(t) },
-                      { label: 'Edit details', onSelect: () => openEdit(t) },
-                      ...((t.verificationStatus === 'Pending') ? [
-                        { label: 'Verify — Approve', onSelect: () => doVerify(t, 'approve') },
-                        { label: 'Verify — Reject', onSelect: () => doVerify(t, 'reject') },
-                      ] : []),
-                      { label: (t.accountStatus === 'Suspended' || t.status === 'Suspended') ? 'Reactivate' : 'Suspend…', onSelect: () => { setSuspendFor(t); setSuspendForm({ reason: '', action: (t.accountStatus === 'Suspended') ? 'reactivate' : 'suspend' }); } },
-                      { label: 'Close / Delete…', onSelect: () => setDeleteFor(t) },
-                    ]} />
-                  </div></td>
+                  <td className="px-4 py-3"><div className="flex justify-end">{menuFor(t)}</div></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      )}
+      </>)}
       <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
         <span>Page {page} of {totalPages} • {filtered.length} records</span>
         <span className="flex gap-1.5">
@@ -207,10 +227,11 @@ export function OrganizationsManager({ tenants, setTenants, onAudit }: {
 const ALL_ROLES = ['superadmin', 'operations_admin', 'finance_admin', 'sales_admin', 'support_admin', 'company_admin', 'hiring_manager', 'company_recruiter', 'internal_recruiter', 'bda', 'sales_manager', 'candidate', 'agency_admin', 'agency_recruiter', 'finance_staff', 'employee', 'employer', 'recruiter', 'vendor'];
 
 export function UsersManager({ users, setUsers }: { users: any[]; setUsers: (u: any[]) => void }) {
-  const [search, setSearch] = useState('');
-  const [role, setRole] = useState('');
-  const [status, setStatus] = useState('');
+  const [search, setSearch] = useQueryState('usr_q');
+  const [role, setRole] = useQueryState('usr_role');
+  const [status, setStatus] = useQueryState('usr_status');
   const [page, setPage] = useState(1);
+  const dq = useDebounced(search);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
@@ -223,14 +244,22 @@ export function UsersManager({ users, setUsers }: { users: any[]; setUsers: (u: 
   const pageSize = 10;
 
   const filtered = useMemo(() => {
-    const q = search.toLowerCase();
+    const q = dq.toLowerCase();
     return users.filter((u) => {
       if (role && u.role !== role) return false;
       if (status && u.status !== status) return false;
       if (!q) return true;
       return `${u.id} ${u.name} ${u.email} ${u.tenantId}`.toLowerCase().includes(q);
     });
-  }, [users, search, role, status]);
+  }, [users, dq, role, status]);
+  const userMenuFor = (u: any) => (
+    <RowMenu items={[
+      { label: 'View profile', onSelect: () => setDetail(u) },
+      { label: 'Edit details', onSelect: () => openEdit(u) },
+      { label: u.status === 'Active' ? 'Suspend…' : 'Reactivate…', onSelect: () => { setStatusFor(u); setStatusForm({ status: u.status === 'Active' ? 'Suspended' : 'Active', reason: '', reassignTo: '' }); } },
+      { label: 'Delete…', onSelect: () => setDeleteFor(u) },
+    ]} />
+  );
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const pageRows = filtered.slice((page - 1) * pageSize, page * pageSize);
 
@@ -279,7 +308,7 @@ export function UsersManager({ users, setUsers }: { users: any[]; setUsers: (u: 
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
       <div className="flex flex-col lg:flex-row gap-2">
         <div className="flex-1"><CrudToolbar search={search} onSearch={(v) => { setSearch(v); setPage(1); }} searchPh="Search name, email, tenant…"
-          onExport={() => downloadCsv('users.csv', filtered, ['id', 'name', 'email', 'role', 'tenantId', 'status', 'lastLogin'])} /></div>
+          exportProps={{ filename: 'users.csv', rows: filtered, columns: ['id', 'name', 'email', 'role', 'tenantId', 'status', 'lastLogin'] }} /></div>
         <div className="flex gap-2">
           <select value={role} onChange={(e) => { setRole(e.target.value); setPage(1); }} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none">
             <option value="">All roles</option>{ALL_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
@@ -289,8 +318,26 @@ export function UsersManager({ users, setUsers }: { users: any[]; setUsers: (u: 
           </select>
         </div>
       </div>
-      {pageRows.length === 0 ? <EmptyState title="No users match" message="Adjust search or role filters." /> : (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200">
+      {pageRows.length === 0 ? <EmptyState title="No users match" message="Adjust search or role filters." /> : (<>
+        <div className="space-y-2 md:hidden">
+          {pageRows.map((u) => (
+            <div key={u.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-extrabold text-slate-900 text-sm truncate">{u.name}</div>
+                  <div className="text-slate-500 truncate">{u.email}</div>
+                </div>
+                {userMenuFor(u)}
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 font-bold text-[11px] capitalize">{u.role}</span>
+                <StatusPill value={u.status} />
+              </div>
+              <div className="text-slate-600 font-medium font-mono">{u.tenantId}</div>
+            </div>
+          ))}
+        </div>
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
           <table className="w-full text-left text-xs min-w-[920px]">
             <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
               <th className="px-4 py-3">User</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Tenant</th>
@@ -304,18 +351,13 @@ export function UsersManager({ users, setUsers }: { users: any[]; setUsers: (u: 
                   <td className="px-4 py-3 font-mono font-bold text-amber-700">{u.tenantId}</td>
                   <td className="px-4 py-3 text-slate-500">{u.lastLogin || 'Never'}</td>
                   <td className="px-4 py-3"><StatusPill value={u.status} /></td>
-                  <td className="px-4 py-3"><div className="flex justify-end"><RowMenu items={[
-                    { label: 'View profile', onSelect: () => setDetail(u) },
-                    { label: 'Edit details', onSelect: () => openEdit(u) },
-                    { label: u.status === 'Active' ? 'Suspend…' : 'Reactivate…', onSelect: () => { setStatusFor(u); setStatusForm({ status: u.status === 'Active' ? 'Suspended' : 'Active', reason: '', reassignTo: '' }); } },
-                    { label: 'Delete…', onSelect: () => setDeleteFor(u) },
-                  ]} /></div></td>
+                  <td className="px-4 py-3"><div className="flex justify-end">{userMenuFor(u)}</div></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      )}
+      </>)}
       <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
         <span>Page {page} of {totalPages} • {filtered.length} records</span>
         <span className="flex gap-1.5">

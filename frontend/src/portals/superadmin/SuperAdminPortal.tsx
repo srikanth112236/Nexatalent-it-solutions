@@ -11,6 +11,7 @@ import {
   InterviewsPanel, OffersPlacementsPanel,
 } from '../common/EnterprisePanels';
 import { Modal, Select, Field } from '../../shared/ui/EnterpriseKit';
+import { MfaPanel } from '../../auth/components/MfaPanel';
 import { OrganizationsManager, UsersManager } from './SuperAdminDirectory';
 
 const navItems = [
@@ -488,7 +489,7 @@ export function SuperAdminPortal() {
         {currentTab === 'performance' && <PerformancePanel />}
         {currentTab === 'reports' && <ReportsPanel />}
         {currentTab === 'support' && <SupportPanel />}
-        {currentTab === 'controls' && <AdminControlsPanel />}
+        {currentTab === 'controls' && (<div className="space-y-4"><AdminControlsPanel /><MfaPanel admin /></div>)}
         {currentTab === 'notifications' && <NotificationsPanel />}
 
       </div>

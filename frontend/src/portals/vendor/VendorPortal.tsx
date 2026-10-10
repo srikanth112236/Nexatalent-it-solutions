@@ -4,6 +4,7 @@ import { PortalShell } from '../common/PortalShell';
 import { Building2, Plus, CheckCircle2, X, Search, FileCheck } from 'lucide-react';
 import { apiClient } from '../../shared/api-client';
 import { SubmissionsPanel, CommissionsPanel, NotificationsPanel, TimesheetsPanel } from '../common/EnterprisePanels';
+import { MfaPanel } from '../../auth/components/MfaPanel';
 import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
 
 const navItems = [
@@ -15,6 +16,7 @@ const navItems = [
   { label: 'Compliance & NDAs', path: '/vendor/compliance' },
   { label: 'Candidate Submissions', path: '/vendor/submissions' },
   { label: 'Commissions & Payouts', path: '/vendor/commissions' },
+  { label: 'Security', path: '/vendor/security' },
   { label: 'Notifications', path: '/vendor/notifications' },
 ];
 
@@ -30,6 +32,7 @@ export function VendorPortal() {
     if (p.includes('/compliance')) return 'compliance';
     if (p.includes('/submissions')) return 'submissions';
     if (p.includes('/commissions') || p.includes('/payouts')) return 'commissions';
+    if (p.includes('/security')) return 'security';
     if (p.includes('/notifications')) return 'notifications';
     return 'overview';
   })();
@@ -435,6 +438,7 @@ export function VendorPortal() {
         {/* ENTERPRISE: new phase modules */}
         {currentTab === 'submissions' && <SubmissionsPanel />}
         {currentTab === 'commissions' && <CommissionsPanel />}
+        {currentTab === 'security' && <MfaPanel />}
         {currentTab === 'notifications' && <NotificationsPanel />}
 
       </div>

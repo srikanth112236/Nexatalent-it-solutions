@@ -6,6 +6,8 @@ import { createRoot } from 'react-dom/client';
 import { act, Simulate } from 'react-dom/test-utils';
 import { Modal, ConfirmDialog, RowMenu, Select, DatePicker } from './shared/ui/EnterpriseKit.js';
 import { Pager } from './portals/common/EnterprisePanels.js';
+import { toCsv, StatusPill, useQueryState } from './portals/common/CrudKit.js';
+import { useState } from 'react';
 
 let dom: any;
 let container: HTMLDivElement;
@@ -122,5 +124,51 @@ describe('Pager', () => {
       Array.from(container.querySelectorAll('button')).find((b) => /Next/.test(b.textContent || ''))!.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
     });
     assert.equal(got, 2);
+  });
+});
+
+describe('toCsv', () => {
+  it('escapes commas, quotes and nulls', () => {
+    const csv = toCsv(
+      [{ a: 'x,y', b: 'q"q', c: null as unknown as string, d: undefined as unknown as string, e: 5 }],
+      ['a', 'b', 'c', 'd', 'e'],
+    );
+    assert.equal(csv, 'a,b,c,d,e\n"x,y","q""q",,,5');
+  });
+  it('emits header-only for empty rows', () => {
+    assert.equal(toCsv([], ['id', 'name']), 'id,name');
+  });
+});
+
+describe('StatusPill', () => {
+  it('renders value with a tone and never blanks', () => {
+    render(<StatusPill value="Suspended" />);
+    assert.ok(container.textContent?.includes('Suspended'));
+    assert.match(container.innerHTML, /bg-red-50/);
+    render(<StatusPill value={undefined} />);
+    assert.ok(container.textContent?.includes('—'));
+  });
+});
+
+describe('useQueryState', () => {
+  function Probe({ storageKey }: { storageKey: string }) {
+    const [v, setV] = useQueryState(storageKey);
+    const [seen, setSeen] = useState('');
+    return (
+      <div>
+        <span data-testid="val">{v}</span>
+        <button type="button" onClick={() => setV('hello')}>set</button>
+        <button type="button" onClick={() => setSeen(window.location.search)}>read</button>
+        <span data-testid="url">{seen}</span>
+      </div>
+    );
+  }
+  it('initializes empty and persists writes to the URL', () => {
+    render(<Probe storageKey="probe_q" />);
+    assert.equal(container.querySelector('[data-testid="val"]')?.textContent, '');
+    act(() => { container.querySelectorAll('button')[0]!.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+    assert.equal(container.querySelector('[data-testid="val"]')?.textContent, 'hello');
+    act(() => { container.querySelectorAll('button')[1]!.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+    assert.ok(container.querySelector('[data-testid="url"]')?.textContent?.includes('probe_q=hello'));
   });
 });

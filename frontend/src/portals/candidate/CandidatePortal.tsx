@@ -5,6 +5,7 @@ import { CheckCircle2, Search, Video, Save, Calendar, FileCheck, Award } from 'l
 import { apiClient } from '../../shared/api-client';
 import { applicationsApi, talentApi, jobsApi, interviewsApi, platformApi } from '../../shared/enterprise/phaseApi';
 import { ChatPanel, SavedJobsPanel, NotificationsPanel, syncAll, ConfirmButton, DocumentsPanel, ConsentPanel } from '../common/EnterprisePanels';
+import { MfaPanel } from '../../auth/components/MfaPanel';
 import { Modal, Select, Field } from '../../shared/ui/EnterpriseKit';
 import { getUserEmail } from '../../shared/auth/session';
 import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
@@ -19,6 +20,7 @@ const navItems = [
   { label: 'Messages', path: '/candidate/messages' },
   { label: 'Documents', path: '/candidate/docs' },
   { label: 'Privacy', path: '/candidate/privacy' },
+  { label: 'Security', path: '/candidate/security' },
   { label: 'Documents & Offers', path: '/candidate/documents' },
   { label: 'Notifications', path: '/candidate/notifications' },
 ];
@@ -37,6 +39,7 @@ export function CandidatePortal() {
     if (p.includes('/messages') || p.includes('/chat')) return 'messages';
     if (p.includes('/docs') || p.includes('/documents')) return 'docs';
     if (p.includes('/privacy') || p.includes('/settings')) return 'privacy';
+    if (p.includes('/security')) return 'security';
     if (p.includes('/notifications')) return 'notifications';
     if (p.includes('/documents')) return 'documents';
     return 'dashboard';
@@ -844,6 +847,7 @@ export function CandidatePortal() {
         {currentTab === 'privacy' && <ConsentPanel />}
 
         {/* TAB: NOTIFICATIONS */}
+        {currentTab === 'security' && <MfaPanel />}
         {currentTab === 'notifications' && <NotificationsPanel />}
 
         {/* Reschedule request modal */}

@@ -10,6 +10,7 @@ import {
   SubmissionsPanel, NotificationsPanel, TimesheetsPanel,
 } from '../common/EnterprisePanels';
 import { getTenantId } from '../../shared/auth/session';
+import { MfaPanel } from '../../auth/components/MfaPanel';
 import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
 
 const navItems = [
@@ -30,6 +31,7 @@ const navItems = [
   { label: 'Billing & Usage', path: '/employer/billing' },
   { label: 'Messages', path: '/employer/messages' },
   { label: 'Hiring Reports', path: '/employer/reports' },
+  { label: 'Security', path: '/employer/security' },
   { label: 'Notifications', path: '/employer/notifications' },
 ];
 
@@ -54,6 +56,7 @@ export function EmployerPortal() {
     if (p.includes('/timesheets')) return 'timesheets';
     if (p.includes('/billing')) return 'billing';
     if (p.includes('/messages') || p.includes('/chat')) return 'messages';
+    if (p.includes('/security')) return 'security';
     if (p.includes('/notifications')) return 'notifications';
     if (p.includes('/reports')) return 'reports';
     return 'overview';
@@ -243,6 +246,7 @@ export function EmployerPortal() {
         {currentTab === 'timesheets' && <TimesheetsPanel canApprove />}
         {currentTab === 'billing' && <BillingPanel />}
         {currentTab === 'messages' && <ChatPanel />}
+        {currentTab === 'security' && <MfaPanel />}
         {currentTab === 'notifications' && <NotificationsPanel />}
 
         {/* TAB 1: OVERVIEW */}

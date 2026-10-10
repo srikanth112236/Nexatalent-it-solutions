@@ -7,6 +7,7 @@ import { apiClient } from '../../shared/api-client';
 import { Select } from '../../shared/ui/EnterpriseKit';
 import { SubmissionsPanel, TalentPoolsPanel, InterviewsPanel, NotificationsPanel, OffersPlacementsPanel, CommissionsPanel } from '../common/EnterprisePanels';
 import { getUserEmail } from '../../shared/auth/session';
+import { MfaPanel } from '../../auth/components/MfaPanel';
 import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
 
 const FEE_RATE = 0.0833;
@@ -35,6 +36,7 @@ const navItems = [
   { label: 'Schedule Interview', path: '/recruiter/schedule' },
   { label: 'Offers & Placements', path: '/recruiter/offers' },
   { label: 'Commissions', path: '/recruiter/commissions' },
+  { label: 'Security', path: '/recruiter/security' },
   { label: 'Notifications', path: '/recruiter/notifications' },
 ];
 
@@ -52,6 +54,7 @@ export function RecruiterPortal() {
     if (p.includes('/schedule')) return 'schedule';
     if (p.includes('/offers')) return 'offers';
     if (p.includes('/commissions')) return 'commissions';
+    if (p.includes('/security')) return 'security';
     if (p.includes('/notifications')) return 'notifications';
     return 'overview';
   })();
@@ -199,6 +202,7 @@ export function RecruiterPortal() {
         {currentTab === 'schedule' && <InterviewsPanel />}
         {currentTab === 'offers' && <OffersPlacementsPanel />}
         {currentTab === 'commissions' && <CommissionsPanel />}
+        {currentTab === 'security' && <MfaPanel />}
         {currentTab === 'notifications' && <NotificationsPanel />}
 
         {/* TAB 1: OVERVIEW */}

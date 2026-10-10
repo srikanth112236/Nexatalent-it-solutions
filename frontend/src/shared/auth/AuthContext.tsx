@@ -100,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       tenantId: parsed.user.tenantId,
       email: parsed.user.email || email,
     });
+    clearPermissionsCache();
     setUser({ ...parsed.user, email: parsed.user.email || email, role: (parsed.user.role || role) as UserRole });
   }, []);
 
@@ -114,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Server logout best-effort; local session is always cleared below.
     } finally {
       clearSession();
+      clearPermissionsCache();
       setUser(null);
       try {
         await apiClient.logout(reason || 'sign_out');
@@ -135,4 +137,40 @@ export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within <AuthProvider>');
   return ctx;
+}
+
+let permsCache: { email: string; permissions: string[] } | null = null;
+
+/** Effective server-resolved permissions (§4.2 template ± exceptions). Null while loading. */
+export function usePermissions(): string[] | null {
+  const { isAuthenticated } = useAuth();
+  const [perms, setPerms] = useState<string[] | null>(permsCache?.permissions || null);
+  useEffect(() => {
+    if (!isAuthenticated) { setPerms(null); return; }
+    let live = true;
+    (async () => {
+      try {
+        const res: any = await apiClient.get<any>('/api/v1/permissions');
+        const body = (res as { data?: any })?.data ?? res;
+        const list: string[] = Array.isArray(body?.permissions) ? body.permissions : [];
+        permsCache = { email: body?.email || '', permissions: list };
+        if (live) setPerms(list);
+      } catch {
+        if (live) setPerms([]);
+      }
+    })();
+    return () => { live = false; };
+  }, [isAuthenticated]);
+  return perms;
+}
+
+/** Gate UI affordances on an explicit permission. Hides (never disables-ambiguously) when lacking. */
+export function useCan(permission: string): boolean {
+  const perms = usePermissions();
+  if (perms === null) return false;
+  return perms.includes(permission);
+}
+
+export function clearPermissionsCache() {
+  permsCache = null;
 }

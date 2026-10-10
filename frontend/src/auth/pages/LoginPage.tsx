@@ -35,6 +35,12 @@ export function LoginPage() {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSent, setForgotSent] = useState(false);
   const [forgotError, setForgotError] = useState('');
+  const [mfaTicket, setMfaTicket] = useState('');
+  const [mfaOtp, setMfaOtp] = useState('');
+  const [mfaBackup, setMfaBackup] = useState('');
+  const [mfaUseBackup, setMfaUseBackup] = useState(false);
+  const [mfaError, setMfaError] = useState('');
+  const [mfaBusy, setMfaBusy] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +61,13 @@ export function LoginPage() {
       });
 
       // Accept both ApiResponse-wrapped and legacy top-level shapes. Never fabricate.
-      const body = res?.data && (res.data.accessToken || res.data.user) ? res.data : res;
+      const body = res?.data && (res.data.accessToken || res.data.user || res.data.mfaRequired) ? res.data : res;
+      if (body?.mfaRequired && body?.ticket) {
+        setMfaTicket(body.ticket);
+        setMfaOtp(''); setMfaBackup(''); setMfaUseBackup(false); setMfaError('');
+        setIsSubmitting(false);
+        return;
+      }
       const accessToken: string | undefined = body?.accessToken || body?.token;
       const serverRole = body?.user?.role as UserRole | undefined;
       if (!accessToken || !serverRole || !ROLE_DEFAULT_REDIRECTS[serverRole]) {
@@ -86,6 +98,37 @@ export function LoginPage() {
       }
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleMfaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMfaBusy(true);
+    setMfaError('');
+    try {
+      const res = await apiClient.post<any>('/api/v1/auth/mfa/challenge', {
+        ticket: mfaTicket,
+        ...(mfaUseBackup ? { backupCode: mfaBackup.trim() } : { otp: mfaOtp.trim() }),
+      });
+      const body = res?.data && (res.data.accessToken || res.data.user) ? res.data : res;
+      const accessToken: string | undefined = body?.accessToken || body?.token;
+      const serverRole = body?.user?.role as UserRole | undefined;
+      if (!accessToken || !serverRole || !ROLE_DEFAULT_REDIRECTS[serverRole]) {
+        throw new Error('Second-factor verification failed. Please try again.');
+      }
+      const user = body?.user;
+      persistSession({
+        accessToken,
+        refreshToken: body?.refreshToken,
+        role: serverRole,
+        tenantId: user.tenantId,
+        email: user.email || email.trim(),
+      });
+      navigate(ROLE_DEFAULT_REDIRECTS[serverRole], { replace: true });
+    } catch (err: any) {
+      setMfaError(err?.response?.data?.message || err?.message || 'Invalid code. Try again.');
+    } finally {
+      setMfaBusy(false);
     }
   };
 
@@ -186,7 +229,45 @@ export function LoginPage() {
               </div>
             )}
 
-            {/* Login Form */}
+            {mfaTicket ? (
+              <form onSubmit={handleMfaSubmit} className="space-y-4" aria-label="Second factor verification">
+                <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 text-blue-900 text-xs font-semibold flex items-center gap-2.5">
+                  <ShieldCheck className="w-4 h-4 text-[#087BFF] shrink-0" />
+                  <span>Password accepted for {email}. Enter the 6-digit code from your authenticator app to finish signing in.</span>
+                </div>
+                {!mfaUseBackup ? (
+                  <div>
+                    <label htmlFor="mfa-otp" className="block text-xs font-bold text-slate-900 uppercase tracking-wider mb-1.5">Authenticator code *</label>
+                    <input id="mfa-otp" type="text" inputMode="numeric" autoComplete="one-time-code" required maxLength={6}
+                      value={mfaOtp} onChange={(e) => setMfaOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="123456"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-3 text-slate-900 font-mono font-bold text-lg tracking-[0.5em] text-center focus:bg-white focus:border-[#087BFF] outline-none" />
+                  </div>
+                ) : (
+                  <div>
+                    <label htmlFor="mfa-backup" className="block text-xs font-bold text-slate-900 uppercase tracking-wider mb-1.5">Backup code *</label>
+                    <input id="mfa-backup" type="text" required value={mfaBackup} onChange={(e) => setMfaBackup(e.target.value)}
+                      placeholder="XXXX-XXXX" className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-3 text-slate-900 font-mono font-semibold text-xs focus:bg-white focus:border-[#087BFF] outline-none" />
+                  </div>
+                )}
+                {mfaError && (
+                  <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-bold flex items-center gap-2">
+                    <AlertCircle size={15} /> {mfaError}
+                  </div>
+                )}
+                <button type="submit" disabled={mfaBusy || (!mfaUseBackup && mfaOtp.length !== 6) || (mfaUseBackup && !mfaBackup.trim())}
+                  className="w-full py-3.5 px-5 rounded-xl bg-[#087BFF] hover:bg-blue-600 text-white font-bold text-xs shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50">
+                  <span>{mfaBusy ? 'Verifying…' : 'Verify & Sign In'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <button type="button" onClick={() => { setMfaUseBackup(!mfaUseBackup); setMfaError(''); }} className="text-[#087BFF] hover:underline cursor-pointer">
+                    {mfaUseBackup ? 'Use authenticator code instead' : 'Use a backup code instead'}
+                  </button>
+                  <button type="button" onClick={() => { setMfaTicket(''); setLoginError(''); }} className="text-slate-500 hover:underline cursor-pointer">Back to password</button>
+                </div>
+              </form>
+            ) : (
+            /* Login Form */
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-900 uppercase tracking-wider mb-1.5">
@@ -247,6 +328,7 @@ export function LoginPage() {
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
+            )}
           </div>
 
           {/* Registration Links for All Roles */}

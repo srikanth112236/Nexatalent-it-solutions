@@ -4,6 +4,7 @@ import { PortalShell } from '../common/PortalShell';
 import { ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { apiClient } from '../../shared/api-client';
 import { LeadsPanel, PerformancePanel, NotificationsPanel } from '../common/EnterprisePanels';
+import { MfaPanel } from '../../auth/components/MfaPanel';
 import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
 
 const navItems = [
@@ -14,6 +15,7 @@ const navItems = [
   { label: 'Sales Leads Pipeline', path: '/employee/leads' },
   { label: 'Sales Performance', path: '/employee/performance' },
   { label: 'Delivery Reports', path: '/employee/reports' },
+  { label: 'Security', path: '/employee/security' },
   { label: 'Notifications', path: '/employee/notifications' },
 ];
 
@@ -27,6 +29,7 @@ export function EmployeePortal() {
     if (p.includes('/targets')) return 'targets';
     if (p.includes('/leads') || p.includes('/pipeline')) return 'leads';
     if (p.includes('/performance')) return 'performance';
+    if (p.includes('/security')) return 'security';
     if (p.includes('/notifications')) return 'notifications';
     if (p.includes('/reports')) return 'reports';
     return 'overview';
@@ -306,6 +309,7 @@ export function EmployeePortal() {
         {/* ENTERPRISE: new phase modules */}
         {currentTab === 'leads' && <LeadsPanel />}
         {currentTab === 'performance' && <PerformancePanel />}
+        {currentTab === 'security' && <MfaPanel />}
         {currentTab === 'notifications' && <NotificationsPanel />}
 
       </div>

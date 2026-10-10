@@ -19,19 +19,22 @@ export function Modal({ open, onClose, title, subtitle, children, wide }: {
   open: boolean; onClose: () => void; title: string; subtitle?: string; children: React.ReactNode; wide?: boolean;
 }) {
   const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
+    // Move keyboard focus into the dialog on open (§5.5 accessibility)
+    const t = setTimeout(() => dialogRef.current?.focus(), 30);
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev; clearTimeout(t); };
   }, [open, onClose]);
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <div className="absolute inset-0 bg-spec-navy/60 backdrop-blur-[2px]" onClick={onClose} aria-hidden="true" />
-      <div className={`relative bg-white rounded-3xl shadow-2xl w-full ${wide ? 'max-w-2xl' : 'max-w-lg'} max-h-[88vh] flex flex-col border border-spec-border`}>
+      <div ref={dialogRef} tabIndex={-1} className={`relative bg-white rounded-3xl shadow-2xl w-full ${wide ? 'max-w-2xl' : 'max-w-lg'} max-h-[88vh] flex flex-col border border-spec-border outline-none`}>
         <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3 border-b border-slate-100">
           <div>
             <h3 id={titleId} className="text-base font-extrabold text-spec-charcoal">{title}</h3>

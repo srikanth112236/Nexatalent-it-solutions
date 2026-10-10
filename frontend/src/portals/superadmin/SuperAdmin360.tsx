@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { directoryApi } from '../../shared/enterprise/phaseApi';
-import { DetailDrawer, KeyValues, StatusPill, downloadCsv } from '../common/CrudKit';
+import { DetailDrawer, KeyValues, StatusPill, ExportButton } from '../common/CrudKit';
 import { InlineLoading } from '../../shared/ui/DataState';
 
 function errMsg(err: unknown): string {
@@ -65,8 +65,8 @@ export function Company360Drawer({ tenantId, onClose, onChanged }: { tenantId: s
                 ['Commissions due', String(data.computed?.commissionsDue ?? '—')],
               ]} />
               <div className="flex gap-2">
-                <button type="button" onClick={() => downloadCsv(`company-${tenantId}-users.csv`, data.users || [], ['id', 'name', 'email', 'role', 'status'])} className="px-3 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">Export users</button>
-                <button type="button" onClick={() => downloadCsv(`company-${tenantId}-invoices.csv`, data.invoices || [], ['id', 'number', 'total', 'balance', 'status'])} className="px-3 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">Export invoices</button>
+                <ExportButton filename={`company-${tenantId}-users.csv`} rows={data.users || []} columns={['id', 'name', 'email', 'role', 'status']} label="Export users" />
+                <ExportButton filename={`company-${tenantId}-invoices.csv`} rows={data.invoices || []} columns={['id', 'number', 'total', 'balance', 'status']} label="Export invoices" />
               </div>
             </div>
           )}
