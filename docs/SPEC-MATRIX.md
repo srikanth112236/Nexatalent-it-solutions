@@ -62,6 +62,6 @@ Evidence = file + symbol; line numbers intentionally omitted (they drift).
 
 ## Verification
 
-- Backend: `npm run typecheck` clean; `npm test` — 73 tests across `enterprise`, `extended`, `platform` suites (serialized workers, shared file store).
+- Backend: `npm run typecheck` clean; `npm test` — 77 tests across `enterprise`, `extended`, `platform` suites (serialized workers, shared file store).
 - Frontend: `npm run typecheck` clean; `npm test` — 26 tests.
 - Ops: `docs/RUNBOOK.md` (boot, bootstrap, secrets, daily ops, backups, retention, troubleshooting).
