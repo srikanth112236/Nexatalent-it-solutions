@@ -255,6 +255,7 @@ describe('DetailDrawer scroll', () => {
     const scroller = container.querySelector('[data-testid="drawer-scroll"]');
     assert.ok(scroller, 'internal scroll region exists');
     assert.ok(scroller!.className.includes('drawer-scroll'), 'bar-free guaranteed scroller is used');
+    assert.ok(scroller!.hasAttribute('data-lenis-prevent'), 'smooth-scroll hijack is disabled inside the drawer');
   });
   it('closes on Escape', () => {
     let closed = 0;

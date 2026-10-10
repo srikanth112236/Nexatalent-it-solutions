@@ -243,7 +243,7 @@ export function PortalShell({ portalTitle, portalRole, navItems, children }: Por
           </div>
 
           {/* Navigation — the only scrolling region in the sidebar (min-h-0 keeps it scrolling when collapsed too) */}
-          <nav className={`sidebar-scroll flex-1 min-h-0 overflow-y-auto overscroll-contain px-2.5 py-3 ${collapsed ? 'lg:px-1.5' : ''}`} aria-label="Workspace sections">
+          <nav data-lenis-prevent className={`sidebar-scroll flex-1 min-h-0 overflow-y-auto overscroll-contain px-2.5 py-3 ${collapsed ? 'lg:px-1.5' : ''}`} aria-label="Workspace sections">
             {renderGroups(collapsed)}
           </nav>
 

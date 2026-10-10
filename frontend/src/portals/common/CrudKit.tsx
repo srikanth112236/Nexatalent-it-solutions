@@ -135,7 +135,8 @@ export function DetailDrawer({ title, subtitle, onClose, children, width = 'max-
           <button type="button" onClick={onClose} aria-label="Close details"
             className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 shrink-0"><X size={16} /></button>
         </div>
-        <div data-testid="drawer-scroll" className="drawer-scroll">
+        {/* data-lenis-prevent: global smooth-scroll must not steal wheel gestures here */}
+        <div data-testid="drawer-scroll" data-lenis-prevent className="drawer-scroll">
           <div className="px-6 py-5 space-y-5">{children}</div>
         </div>
       </div>

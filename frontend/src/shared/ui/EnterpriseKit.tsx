@@ -54,7 +54,7 @@ export function Modal({ open, onClose, title, subtitle, children, wide }: {
             <X size={16} />
           </button>
         </div>
-        <div className="px-5 py-4 overflow-y-auto">{children}</div>
+        <div className="px-5 py-4 overflow-y-auto" data-lenis-prevent>{children}</div>
       </div>
     </div>
   );
