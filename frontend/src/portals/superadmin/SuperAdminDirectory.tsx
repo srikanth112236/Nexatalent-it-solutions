@@ -31,11 +31,18 @@ export function OrganizationsManager({ tenants, setTenants, onAudit }: {
   const [ok, setOk] = useState('');
   const [detail, setDetail] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ displayName: '', industry: '', companySize: '', website: '', plan: '', seats: '', accountManager: '', businessEmail: '', businessPhone: '' });
+  const blankOrg: Record<string, string> = { legalName: '', displayName: '', entityType: '', industry: '', subIndustry: '', companySize: '', website: '', description: '', countryOfIncorporation: '', registrationNumber: '', gstin: '', taxIds: '', registeredAddress: '', headquarters: '', operatingLocations: '', logoUrl: '', primaryContact: '', primaryContactDesignation: '', businessEmail: '', businessPhone: '', billingContact: '', financeEmail: '', plan: '', seats: '', accountManager: '', salesOwner: '' };
+  const [editForm, setEditForm] = useState<Record<string, string>>({ ...blankOrg });
   const [suspendFor, setSuspendFor] = useState<any>(null);
   const [suspendForm, setSuspendForm] = useState({ reason: '', action: 'suspend' });
   const [deleteFor, setDeleteFor] = useState<any>(null);
+  const [inviteFor, setInviteFor] = useState<any>(null);
+  const [inviteForm, setInviteForm] = useState({ name: '', email: '', role: 'company_admin' });
+  const [inviteCreds, setInviteCreds] = useState<{ email: string; password: string } | null>(null);
+  const [mgrFor, setMgrFor] = useState<any>(null);
+  const [mgrForm, setMgrForm] = useState({ accountManager: '', salesOwner: '' });
   const pageSize = 10;
+  const setF = (k: string, v: string) => setEditForm((f) => ({ ...f, [k]: v }));
 
   const filtered = useMemo(() => {
     const q = dq.toLowerCase();
@@ -51,6 +58,8 @@ export function OrganizationsManager({ tenants, setTenants, onAudit }: {
     <RowMenu items={[
       { label: 'View 360°', onSelect: () => setDetail(t) },
       { label: 'Edit details', onSelect: () => openEdit(t) },
+      { label: 'Invite administrator…', onSelect: () => { setInviteFor(t); setInviteForm({ name: '', email: '', role: 'company_admin' }); setInviteCreds(null); } },
+      { label: 'Assign managers…', onSelect: () => { setMgrFor(t); setMgrForm({ accountManager: t.accountManager || '', salesOwner: t.salesOwner || '' }); } },
       ...((t.verificationStatus === 'Pending') ? [
         { label: 'Verify — Approve', onSelect: () => doVerify(t, 'approve') },
         { label: 'Verify — Reject', onSelect: () => doVerify(t, 'reject') },
@@ -64,11 +73,48 @@ export function OrganizationsManager({ tenants, setTenants, onAudit }: {
 
   const openEdit = (t: any) => {
     setEditing(t);
-    setEditForm({
-      displayName: t.displayName || t.name || '', industry: t.industry || '', companySize: t.companySize || '',
-      website: t.website || '', plan: t.plan || '', seats: String(t.seats || '').split('/')[0].trim() || String(t.seats || ''),
-      accountManager: t.accountManager || '', businessEmail: t.businessEmail || '', businessPhone: t.businessPhone || '',
-    });
+    const next: Record<string, string> = { ...blankOrg };
+    for (const k of Object.keys(blankOrg)) {
+      if (k === 'seats') next[k] = String(t.seats || '').split('/')[0].trim() || String(t.seats || '');
+      else if (k === 'displayName') next[k] = t.displayName || t.name || '';
+      else next[k] = t[k] === undefined || t[k] === null ? '' : String(t[k]);
+    }
+    setEditForm(next);
+  };
+  const genPassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#';
+    let out = '';
+    const buf = new Uint32Array(14);
+    try {
+      crypto.getRandomValues(buf);
+      for (let i = 0; i < 14; i++) out += chars[buf[i] % chars.length];
+    } catch {
+      for (let i = 0; i < 14; i++) out += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return out;
+  };
+  const doInvite = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!inviteFor || !inviteForm.email.trim()) return;
+    setBusy(true); setError('');
+    try {
+      const password = genPassword();
+      const res: any = await directoryApi.createUser({ name: inviteForm.name.trim() || inviteForm.email.split('@')[0], email: inviteForm.email.trim(), role: inviteForm.role, tenantId: inviteFor.id, password });
+      if ((res as { data?: any })?.data || (res as any)?.id) {
+        setInviteCreds({ email: inviteForm.email.trim(), password });
+        setOk(`Administrator invited to ${inviteFor.id}. Share the one-time password securely.`);
+        syncAll(); refreshAudit?.();
+      }
+    } catch (err) { setError(errMsg(err)); } finally { setBusy(false); }
+  };
+  const doAssignMgr = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!mgrFor) return;
+    setBusy(true); setError('');
+    try {
+      const res: any = await directoryApi.updateTenant(mgrFor.id, mgrForm);
+      const updated = res?.data || res;
+      setTenants(tenants.map((x) => (x.id === mgrFor.id ? { ...x, ...updated } : x)));
+      setMgrFor(null); setOk(`Account team assigned for ${mgrFor.id}.`); syncAll();
+    } catch (err) { setError(errMsg(err)); } finally { setBusy(false); }
   };
   const saveEdit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!editing) return;
@@ -129,7 +175,7 @@ export function OrganizationsManager({ tenants, setTenants, onAudit }: {
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
       <CrudToolbar search={search} onSearch={(v) => { setSearch(v); setPage(1); }} searchPh="Search ID, legal name, brand, plan…"
         status={status} onStatus={(v) => { setStatus(v); setPage(1); }} statuses={['Active', 'Invited', 'Suspended', 'Closed']}
-        exportProps={{ filename: 'organizations.csv', rows: filtered, columns: ['id', 'legalName', 'displayName', 'entityType', 'industry', 'companySize', 'website', 'plan', 'seats', 'businessEmail', 'businessPhone', 'accountManager', 'salesOwner', 'verificationStatus', 'accountStatus', 'createdDate'] }} />
+        exportProps={{ filename: 'organizations.csv', rows: filtered, columns: ['id', 'legalName', 'displayName', 'entityType', 'industry', 'subIndustry', 'companySize', 'website', 'description', 'countryOfIncorporation', 'registrationNumber', 'gstin', 'taxIds', 'registeredAddress', 'headquarters', 'operatingLocations', 'primaryContact', 'primaryContactDesignation', 'businessEmail', 'businessPhone', 'billingContact', 'financeEmail', 'plan', 'seats', 'accountManager', 'salesOwner', 'verificationStatus', 'accountStatus', 'createdDate'] }} />
       {pageRows.length === 0 ? <EmptyState title="No organizations match" message="Adjust filters or provision a new tenant." /> : (<>
         <div className="space-y-2 md:hidden">
           {pageRows.map((t) => (
@@ -188,19 +234,96 @@ export function OrganizationsManager({ tenants, setTenants, onAudit }: {
         <Company360Drawer tenantId={detail.id} onClose={() => setDetail(null)} />
       )}
 
-      <Modal open={editing !== null} onClose={() => setEditing(null)} title={`Edit — ${editing?.id || ''}`} subtitle="Changes are audited with actor + timestamp">
-        <form onSubmit={saveEdit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="sm:col-span-2"><Field label="Brand / display name"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.displayName} onChange={(e) => setEditForm({ ...editForm, displayName: e.target.value })} /></Field></div>
-          <Field label="Industry"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.industry} onChange={(e) => setEditForm({ ...editForm, industry: e.target.value })} /></Field>
-          <Field label="Company size"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.companySize} onChange={(e) => setEditForm({ ...editForm, companySize: e.target.value })} placeholder="e.g. 51–200" /></Field>
-          <Field label="Website"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.website} onChange={(e) => setEditForm({ ...editForm, website: e.target.value })} /></Field>
-          <Field label="Plan"><Select value={editForm.plan} onChange={(v) => setEditForm({ ...editForm, plan: v })} options={['Enterprise Custom', 'Growth Tier', 'Starter SaaS', 'Platform'].map((p) => ({ value: p, label: p }))} /></Field>
-          <Field label="Seats"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.seats} onChange={(e) => setEditForm({ ...editForm, seats: e.target.value })} /></Field>
-          <Field label="Account manager"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.accountManager} onChange={(e) => setEditForm({ ...editForm, accountManager: e.target.value })} /></Field>
-          <Field label="Business email"><input type="email" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.businessEmail} onChange={(e) => setEditForm({ ...editForm, businessEmail: e.target.value })} /></Field>
-          <div className="sm:col-span-2 flex justify-end gap-2 pt-1">
+      <Modal open={editing !== null} onClose={() => setEditing(null)} title={`Edit — ${editing?.id || ''}`} subtitle="All company fields (§6.4). Changes are audited with actor + timestamp" wide>
+        <form onSubmit={saveEdit} className="space-y-4">
+          <div>
+            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Identity</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Legal entity name *"><input required className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.legalName} onChange={(e) => setF('legalName', e.target.value)} /></Field>
+              <Field label="Display / brand name"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.displayName} onChange={(e) => setF('displayName', e.target.value)} /></Field>
+              <Field label="Entity type"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.entityType} onChange={(e) => setF('entityType', e.target.value)} placeholder="Pvt Ltd / LLP / …" /></Field>
+              <Field label="Logo URL"><input type="url" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.logoUrl} onChange={(e) => setF('logoUrl', e.target.value)} placeholder="https://…" /></Field>
+              <div className="sm:col-span-2"><Field label="Company description"><textarea rows={2} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium outline-none" value={editForm.description} onChange={(e) => setF('description', e.target.value)} /></Field></div>
+              <Field label="Industry"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.industry} onChange={(e) => setF('industry', e.target.value)} /></Field>
+              <Field label="Sub-industry"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.subIndustry} onChange={(e) => setF('subIndustry', e.target.value)} /></Field>
+              <Field label="Company size"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.companySize} onChange={(e) => setF('companySize', e.target.value)} placeholder="e.g. 51–200" /></Field>
+              <Field label="Website"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.website} onChange={(e) => setF('website', e.target.value)} /></Field>
+            </div>
+          </div>
+          <div>
+            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Registration & tax</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Country of incorporation"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.countryOfIncorporation} onChange={(e) => setF('countryOfIncorporation', e.target.value)} /></Field>
+              <Field label="Registration number"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none font-mono" value={editForm.registrationNumber} onChange={(e) => setF('registrationNumber', e.target.value)} /></Field>
+              <Field label="GSTIN"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none font-mono" value={editForm.gstin} onChange={(e) => setF('gstin', e.target.value)} /></Field>
+              <Field label="Other tax IDs"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.taxIds} onChange={(e) => setF('taxIds', e.target.value)} /></Field>
+              <Field label="Registered address"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.registeredAddress} onChange={(e) => setF('registeredAddress', e.target.value)} /></Field>
+              <Field label="Headquarters"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.headquarters} onChange={(e) => setF('headquarters', e.target.value)} /></Field>
+              <div className="sm:col-span-2"><Field label="Operating & hiring locations"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.operatingLocations} onChange={(e) => setF('operatingLocations', e.target.value)} /></Field></div>
+            </div>
+          </div>
+          <div>
+            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Contacts</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Primary contact name"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.primaryContact} onChange={(e) => setF('primaryContact', e.target.value)} /></Field>
+              <Field label="Primary contact designation"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.primaryContactDesignation} onChange={(e) => setF('primaryContactDesignation', e.target.value)} /></Field>
+              <Field label="Business email"><input type="email" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.businessEmail} onChange={(e) => setF('businessEmail', e.target.value)} /></Field>
+              <Field label="Business phone"><input type="tel" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.businessPhone} onChange={(e) => setF('businessPhone', e.target.value)} /></Field>
+              <Field label="Billing contact"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.billingContact} onChange={(e) => setF('billingContact', e.target.value)} /></Field>
+              <Field label="Finance email"><input type="email" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.financeEmail} onChange={(e) => setF('financeEmail', e.target.value)} /></Field>
+            </div>
+          </div>
+          <div>
+            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Commercial assignment</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Plan"><Select value={editForm.plan} onChange={(v) => setF('plan', v)} options={['Enterprise Custom', 'Growth Tier', 'Starter SaaS', 'Platform'].map((p) => ({ value: p, label: p }))} /></Field>
+              <Field label="Seats"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.seats} onChange={(e) => setF('seats', e.target.value)} /></Field>
+              <Field label="Account manager"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.accountManager} onChange={(e) => setF('accountManager', e.target.value)} /></Field>
+              <Field label="Sales owner"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.salesOwner} onChange={(e) => setF('salesOwner', e.target.value)} /></Field>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
             <button type="button" onClick={() => setEditing(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
-            <button disabled={busy} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50">{busy ? 'Saving…' : 'Save changes'}</button>
+            <button disabled={busy || !editForm.legalName.trim()} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50">{busy ? 'Saving…' : 'Save changes'}</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={inviteFor !== null} onClose={() => { setInviteFor(null); setInviteCreds(null); }} title={`Invite administrator — ${inviteFor?.displayName || inviteFor?.legalName || inviteFor?.id || ''}`} subtitle="Creates a company admin scoped to this tenant. One-time password shown once.">
+        {inviteCreds ? (
+          <div className="space-y-3">
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs space-y-2">
+              <div className="font-extrabold text-emerald-900">Administrator created. Share these credentials securely — the password will not be shown again.</div>
+              <div className="flex items-center gap-2"><span className="font-bold text-slate-600 w-16">Email</span><code className="flex-1 p-2 rounded-lg bg-white border border-emerald-200 font-mono font-bold break-all">{inviteCreds.email}</code></div>
+              <div className="flex items-center gap-2"><span className="font-bold text-slate-600 w-16">Password</span><code className="flex-1 p-2 rounded-lg bg-white border border-emerald-200 font-mono font-bold break-all">{inviteCreds.password}</code>
+                <button type="button" onClick={() => { try { navigator.clipboard.writeText(inviteCreds.password); } catch { /* noop */ } }} className="px-3 py-2 rounded-lg bg-white border border-emerald-300 font-bold text-[11px] shrink-0">Copy</button>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button type="button" onClick={() => { setInviteFor(null); setInviteCreds(null); }} className="px-4 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs">Done</button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={doInvite} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Full name"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={inviteForm.name} onChange={(e) => setInviteForm({ ...inviteForm, name: e.target.value })} placeholder="e.g. Priya Sharma" /></Field>
+            <Field label="Work email *"><input type="email" required className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} placeholder="admin@company.com" /></Field>
+            <Field label="Role"><Select value={inviteForm.role} onChange={(v) => setInviteForm({ ...inviteForm, role: v })} options={[{ value: 'company_admin', label: 'Company Admin' }, { value: 'hiring_manager', label: 'Hiring Manager' }, { value: 'company_recruiter', label: 'Company Recruiter' }]} /></Field>
+            <div className="flex items-end"><span className="text-[11px] text-slate-500 font-medium pb-2">Tenant: <strong className="font-mono">{inviteFor?.id}</strong></span></div>
+            <div className="sm:col-span-2 flex justify-end gap-2">
+              <button type="button" onClick={() => setInviteFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+              <button disabled={busy || !inviteForm.email.trim()} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50">{busy ? 'Inviting…' : 'Invite administrator'}</button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      <Modal open={mgrFor !== null} onClose={() => setMgrFor(null)} title={`Assign account team — ${mgrFor?.id || ''}`} subtitle="Sales owner + account manager own this relationship">
+        <form onSubmit={doAssignMgr} className="space-y-3">
+          <Field label="Account manager"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={mgrForm.accountManager} onChange={(e) => setMgrForm({ ...mgrForm, accountManager: e.target.value })} placeholder="Name or email" /></Field>
+          <Field label="Sales owner"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={mgrForm.salesOwner} onChange={(e) => setMgrForm({ ...mgrForm, salesOwner: e.target.value })} placeholder="Name or email" /></Field>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setMgrFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button disabled={busy} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50">{busy ? 'Saving…' : 'Assign'}</button>
           </div>
         </form>
       </Modal>
@@ -310,12 +433,14 @@ export function UsersManager({ users, setUsers }: { users: any[]; setUsers: (u: 
         <div className="flex-1"><CrudToolbar search={search} onSearch={(v) => { setSearch(v); setPage(1); }} searchPh="Search name, email, tenant…"
           exportProps={{ filename: 'users.csv', rows: filtered, columns: ['id', 'name', 'email', 'role', 'tenantId', 'status', 'lastLogin'] }} /></div>
         <div className="flex gap-2">
-          <select value={role} onChange={(e) => { setRole(e.target.value); setPage(1); }} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none">
-            <option value="">All roles</option>{ALL_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-          </select>
-          <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none">
-            <option value="">All statuses</option>{['Active', 'Suspended', 'Deleted'].map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
+          <div className="w-40 shrink-0">
+            <Select value={role} onChange={(v) => { setRole(v); setPage(1); }} ariaLabel="Role filter" placeholder="All roles"
+              options={[{ value: '', label: 'All roles' }, ...ALL_ROLES.map((r) => ({ value: r, label: r }))]} />
+          </div>
+          <div className="w-40 shrink-0">
+            <Select value={status} onChange={(v) => { setStatus(v); setPage(1); }} ariaLabel="Status filter" placeholder="All statuses"
+              options={[{ value: '', label: 'All statuses' }, ...['Active', 'Suspended', 'Deleted'].map((s) => ({ value: s, label: s }))]} />
+          </div>
         </div>
       </div>
       {pageRows.length === 0 ? <EmptyState title="No users match" message="Adjust search or role filters." /> : (<>

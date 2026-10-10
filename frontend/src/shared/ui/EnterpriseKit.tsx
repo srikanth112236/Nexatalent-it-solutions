@@ -20,16 +20,26 @@ export function Modal({ open, onClose, title, subtitle, children, wide }: {
 }) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
+  // Stable callback ref: inline onClose props must NOT re-trigger this effect
+  // on every keystroke (that re-stole focus into the dialog mid-typing).
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; });
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCloseRef.current(); };
     document.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    // Move keyboard focus into the dialog on open (§5.5 accessibility)
-    const t = setTimeout(() => dialogRef.current?.focus(), 30);
-    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev; clearTimeout(t); };
-  }, [open, onClose]);
+    // Move keyboard focus into the dialog ONCE on open only (§5.5) — and only
+    // when focus isn't already inside (never rip it away mid-typing).
+    let t: ReturnType<typeof setTimeout> | undefined;
+    if (dialogRef.current && !dialogRef.current.contains(document.activeElement)) {
+      t = setTimeout(() => {
+        if (dialogRef.current && !dialogRef.current.contains(document.activeElement)) dialogRef.current.focus();
+      }, 30);
+    }
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev; if (t) clearTimeout(t); };
+  }, [open ]);
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby={titleId}>

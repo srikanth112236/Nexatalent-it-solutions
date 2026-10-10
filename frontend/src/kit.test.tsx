@@ -60,6 +60,32 @@ describe('Modal', () => {
   });
 });
 
+describe('Modal focus', () => {
+  it('never steals focus from an input while typing', async () => {
+    function Form() {
+      const [v, setV] = useState('');
+      return (
+        <Modal open onClose={() => {}} title="Edit">
+          <input aria-label="name" value={v} onChange={(e) => setV(e.target.value)} />
+        </Modal>
+      );
+    }
+    render(<Form />);
+    const input = container.querySelector('input') as HTMLInputElement;
+    act(() => { input.focus(); });
+    assert.equal(document.activeElement, input);
+    for (const ch of ['a', 'b']) {
+      act(() => {
+        input.value = input.value + ch;
+        input.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+      });
+    }
+    await new Promise((r) => setTimeout(r, 80));
+    assert.equal(input.value, 'ab');
+    assert.equal(document.activeElement, input, 'focus must stay in the input across keystrokes');
+  });
+});
+
 describe('ConfirmDialog', () => {
   it('requires reason before confirming', async () => {
     let got: string | undefined;
@@ -200,6 +226,17 @@ describe('PortalShell sidebar', () => {
     const collapsed = toggle.closest('section')?.querySelector('.grid-rows-\\[0fr\\]');
     assert.ok(collapsed, 'collapsed group clips its links');
     assert.ok(container.textContent?.includes('Overview'));
+  });
+});
+
+describe('CandidatesPanel controls', () => {
+  it('uses custom dropdowns and pickers — no native selects or date inputs', async () => {
+    const { CandidatesPanel } = await import('./portals/common/EnterprisePanels.js');
+    const { AuthProvider } = await import('./shared/auth/AuthContext.js');
+    render(<AuthProvider><CandidatesPanel /></AuthProvider>);
+    assert.equal(container.querySelector('select'), null, 'native select found');
+    assert.equal(container.querySelector('input[type="date"]'), null, 'native date input found');
+    assert.ok(container.textContent?.includes('Advanced') || container.textContent?.includes('Filters'));
   });
 });
 

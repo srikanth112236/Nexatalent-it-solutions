@@ -32,6 +32,11 @@ export function Company360Drawer({ tenantId, onClose, onChanged }: { tenantId: s
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [branchForm, setBranchForm] = useState({ name: '', city: '' });
+  const [invite, setInvite] = useState({ name: '', email: '', role: 'company_admin' });
+  const [inviteCreds, setInviteCreds] = useState<{ email: string; password: string } | null>(null);
 
   const load = async () => {
     setLoading(true); setError('');
@@ -41,7 +46,17 @@ export function Company360Drawer({ tenantId, onClose, onChanged }: { tenantId: s
     } catch (e) { setError(errMsg(e)); } finally { setLoading(false); }
   };
   useEffect(() => { load(); }, [tenantId]);
-  void onChanged;
+  const act = async (fn: () => Promise<unknown>, done: string) => {
+    setBusy(true); setError(''); setOk('');
+    try { await fn(); await load(); onChanged?.(); setOk(done); }
+    catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const genPassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#';
+    const buf = new Uint32Array(14);
+    try { crypto.getRandomValues(buf); } catch { for (let i = 0; i < 14; i++) buf[i] = Math.floor(Math.random() * 4294967296); }
+    return Array.from(buf, (n) => chars[n % chars.length]).join('');
+  };
 
   return (
     <DetailDrawer title={data?.organization?.displayName || data?.organization?.legalName || tenantId} subtitle={`${tenantId} • Company 360° • spec §6.4`} onClose={onClose} width="max-w-4xl">
@@ -54,15 +69,23 @@ export function Company360Drawer({ tenantId, onClose, onChanged }: { tenantId: s
           <TabBar tabs={COMPANY_TABS} active={tab} onPick={setTab} />
           {tab === 'Overview' && (
             <div className="space-y-3">
+              {data.organization.logoUrl && (
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center gap-3">
+                  <img src={data.organization.logoUrl} alt={`${data.organization.displayName || 'Company'} logo`} className="h-10 w-auto object-contain" />
+                  <span className="text-[11px] text-slate-500 font-medium">Company logo</span>
+                </div>
+              )}
               <KeyValues data={[
                 ['Legal name', data.organization.legalName || data.organization.name],
                 ['Brand', data.organization.displayName || '—'],
                 ['Plan / Seats', `${data.organization.plan || '—'} / ${data.organization.seats || '—'}`],
+                ['Subscription', (() => { const s = (data.subscriptions || [])[0]; return s ? `${s.planId} v${s.planVersion} — ${s.status}` : '—'; })()],
                 ['Verification', <StatusPill value={data.organization.verificationStatus || 'Pending'} />],
                 ['Account', <StatusPill value={data.organization.accountStatus || data.organization.status} />],
                 ['Active jobs', String(data.computed?.activeJobs ?? '—')],
                 ['Outstanding', `₹${Number(data.computed?.outstanding || 0).toLocaleString('en-IN')}`],
                 ['Commissions due', String(data.computed?.commissionsDue ?? '—')],
+                ['Registered', data.organization.createdDate || (data.organization.createdAt ? String(data.organization.createdAt).slice(0, 10) : '—')],
               ]} />
               <div className="flex gap-2">
                 <ExportButton filename={`company-${tenantId}-users.csv`} rows={data.users || []} columns={['id', 'name', 'email', 'role', 'status']} label="Export users" />
@@ -74,11 +97,12 @@ export function Company360Drawer({ tenantId, onClose, onChanged }: { tenantId: s
             <KeyValues data={[
               ['Entity type', data.organization.entityType], ['Industry', data.organization.industry], ['Sub-industry', data.organization.subIndustry],
               ['Company size', data.organization.companySize], ['Website', data.organization.website], ['Description', data.organization.description],
-              ['Country', data.organization.countryOfIncorporation], ['Reg. number', data.organization.registrationNumber], ['GSTIN', data.organization.gstin],
+              ['Country of incorporation', data.organization.countryOfIncorporation], ['Reg. number', data.organization.registrationNumber], ['GSTIN', data.organization.gstin],
               ['Tax IDs', data.organization.taxIds], ['Registered address', data.organization.registeredAddress], ['Headquarters', data.organization.headquarters],
-              ['Operating locations', data.organization.operatingLocations], ['Contact', `${data.organization.primaryContactName || ''} ${data.organization.primaryContactDesignation || ''}`],
+              ['Operating locations', data.organization.operatingLocations], ['Logo URL', data.organization.logoUrl],
+              ['Primary contact', `${data.organization.primaryContact || data.organization.primaryContactName || ''}${data.organization.primaryContactDesignation ? ` (${data.organization.primaryContactDesignation})` : ''}`],
               ['Business email/phone', `${data.organization.businessEmail || ''} ${data.organization.businessPhone || ''}`],
-              ['Billing / Finance', `${data.organization.billingContact || ''} ${data.organization.financeEmail || ''}`],
+              ['Billing contact', data.organization.billingContact], ['Finance email', data.organization.financeEmail],
               ['Sales owner', data.organization.salesOwner], ['Account manager', data.organization.accountManager],
             ].map(([k, v]) => [k, (v as React.ReactNode) || '—'] as [string, React.ReactNode])} />
           )}
@@ -91,12 +115,55 @@ export function Company360Drawer({ tenantId, onClose, onChanged }: { tenantId: s
               ['Closed reason', data.organization.closeReason || '—'],
             ]} />
           )}
-          {tab === 'Users' && <Rows items={data.users || []} empty="No users in this organization." render={(u) => (
-            <div key={u.id} className={rowCls}><strong>{u.name}</strong> • {u.email} • {u.role} • <StatusPill value={u.status} /></div>
-          )} />}
-          {tab === 'Branches' && <Rows items={data.branches || []} empty="No branches. Create one from the Branches page." render={(b) => (
-            <div key={b.id} className={rowCls}><strong>{b.name}</strong> • {b.city || '—'} • {b.status}</div>
-          )} />}
+          {tab === 'Users' && (
+            <div className="space-y-3">
+              {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
+              {inviteCreds ? (
+                <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs space-y-2">
+                  <div className="font-extrabold text-emerald-900">Invited. Share this one-time password securely:</div>
+                  <code className="block p-2 rounded-lg bg-white border border-emerald-200 font-mono font-bold break-all">{inviteCreds.email} / {inviteCreds.password}</code>
+                  <button type="button" onClick={() => setInviteCreds(null)} className="px-3 py-1.5 rounded-lg bg-white border border-emerald-300 font-bold text-[11px]">Done</button>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                  <input value={invite.name} onChange={(e) => setInvite({ ...invite, name: e.target.value })} placeholder="Full name"
+                    className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" />
+                  <input value={invite.email} onChange={(e) => setInvite({ ...invite, email: e.target.value })} placeholder="admin@company.com *" type="email"
+                    className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" />
+                  <button type="button" disabled={busy || !invite.email.trim()}
+                    onClick={() => act(async () => {
+                      const password = genPassword();
+                      await directoryApi.createUser({ name: invite.name.trim() || invite.email.split('@')[0], email: invite.email.trim(), role: invite.role, tenantId, password });
+                      setInviteCreds({ email: invite.email.trim(), password });
+                      setInvite({ name: '', email: '', role: 'company_admin' });
+                    }, 'Administrator invited.')}
+                    className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50 shrink-0">Invite admin</button>
+                </div>
+              )}
+              <Rows items={data.users || []} empty="No users in this organization." render={(u) => (
+                <div key={u.id} className={rowCls}><strong>{u.name}</strong> • {u.email} • {u.role} • <StatusPill value={u.status} /></div>
+              )} />
+            </div>
+          )}
+          {tab === 'Branches' && (
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                <input value={branchForm.name} onChange={(e) => setBranchForm({ ...branchForm, name: e.target.value })} placeholder="Branch name *"
+                  className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" />
+                <input value={branchForm.city} onChange={(e) => setBranchForm({ ...branchForm, city: e.target.value })} placeholder="City"
+                  className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" />
+                <button type="button" disabled={busy || !branchForm.name.trim()}
+                  onClick={() => act(async () => {
+                    await directoryApi.createBranch({ name: branchForm.name.trim(), city: branchForm.city.trim(), orgId: tenantId });
+                    setBranchForm({ name: '', city: '' });
+                  }, 'Branch added to this organization.')}
+                  className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50 shrink-0">Add branch</button>
+              </div>
+              <Rows items={data.branches || []} empty="No branches yet." render={(b) => (
+                <div key={b.id} className={rowCls}><strong>{b.name}</strong> • {b.city || '—'} • {b.status}</div>
+              )} />
+            </div>
+          )}
           {tab === 'Requisitions' && <Rows items={data.requisitions || []} empty="No requisitions." render={(r) => (
             <div key={r.id} className={rowCls}><strong>{r.title}</strong> • {r.id} • {r.openings || 1} opening(s) • <StatusPill value={r.status} /></div>
           )} />}

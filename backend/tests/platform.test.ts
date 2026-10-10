@@ -362,6 +362,29 @@ describe('candidate status, deletion and privacy workflows (§6.3)', () => {
   });
 });
 
+describe('company fields + admin invite (§6.4)', () => {
+  it('persists extended registration fields and invites a scoped admin', async () => {
+    const t = await request(app).post('/api/v1/tenants').set(auth(superToken)).send({ legalName: `FieldCo ${stamp} Ltd` });
+    expect(t.status).toBe(201);
+    const id = t.body.data.id;
+    const patch = { subIndustry: 'Fintech Infra', countryOfIncorporation: 'India', registrationNumber: 'CIN-123', gstin: '29ABCDE1234F1Z5', taxIds: 'PAN-ABCDE1234F', registeredAddress: '1 Main St', operatingLocations: 'Bengaluru, Mumbai', logoUrl: 'https://example.com/logo.png', primaryContact: 'Ops Lead', primaryContactDesignation: 'COO', billingContact: 'billing@field.co', financeEmail: 'finance@field.co', salesOwner: 'kiran@nexatalent.com' };
+    const u = await request(app).patch(`/api/v1/tenants/${id}`).set(auth(superToken)).send(patch);
+    expect(u.status).toBe(200);
+    for (const [k, v] of Object.entries(patch)) expect(u.body.data[k]).toBe(v);
+    const inv = await request(app).post('/api/v1/users').set(auth(superToken)).send({ name: 'Field Admin', email: `field-admin-${stamp}@example.com`, role: 'company_admin', tenantId: id, password: 'FieldPass123' });
+    expect(inv.status).toBe(201);
+    expect(inv.body.data.tenantId).toBe(id);
+    const dup = await request(app).post('/api/v1/users').set(auth(superToken)).send({ name: 'Dup', email: `field-admin-${stamp}@example.com`, role: 'company_admin', tenantId: id, password: 'FieldPass123' });
+    expect(dup.status).toBe(409);
+    const br = await request(app).post('/api/v1/branches').set(auth(superToken)).send({ name: 'Field Branch', city: 'Mumbai', orgId: id });
+    expect(br.body.data.orgId).toBe(id);
+    await request(app).delete(`/api/v1/branches/${br.body.data.id}`).set(auth(superToken));
+    await request(app).delete(`/api/v1/users/${inv.body.data.id}`).set(auth(superToken)).send({ reason: 'test cleanup' });
+    const del = await request(app).delete(`/api/v1/tenants/${id}`).set(auth(superToken));
+    expect(del.status).toBe(200);
+  });
+});
+
 describe('commission duplicate guard (§6.11)', () => {
   it('mints once per placement+trigger and reports via check', async () => {
     const ag = await request(app).post('/api/v1/commission-agreements').set(auth(superToken)).send({ orgId: 'TNT-9011', jobId: 'JOB-9901', rate: 8.33, trigger: 'Joined' });

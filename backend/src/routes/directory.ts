@@ -27,7 +27,7 @@ directoryRouter.patch('/tenants/:id', requireAuth(['superadmin','platform_owner'
   const db = loadDb(); const o: any = db.organizations.find((x: any) => x.id === req.params.id);
   if (!o) return res.status(404).json({ success: false, message: 'Not found.' });
   const b: any = req.body || {};
-  for (const k of ['legalName','displayName','entityType','industry','companySize','website','description','plan','seats','accountManager','salesOwner','primaryContact','businessEmail','businessPhone','billingContact','financeEmail','headquarters','operatingLocations']) {
+  for (const k of ['legalName','displayName','entityType','industry','subIndustry','companySize','website','description','countryOfIncorporation','registrationNumber','gstin','taxIds','registeredAddress','headquarters','operatingLocations','logoUrl','primaryContact','primaryContactDesignation','businessEmail','businessPhone','billingContact','financeEmail','plan','seats','accountManager','salesOwner']) {
     if (b[k] !== undefined) o[k] = b[k];
   }
   o.updatedAt = nowIso(); o.updatedBy = ctxOf(req).email;

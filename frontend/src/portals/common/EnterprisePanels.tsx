@@ -215,9 +215,10 @@ export function RequisitionsPanel() {
       <div className="flex flex-col lg:flex-row gap-2">
         <div className="relative flex-1"><input className={inputCls} placeholder="Search ID, title, department…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         <div className="flex gap-2">
-          <select value={statusF} onChange={(e) => setStatusF(e.target.value)} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none">
-            <option value="">All statuses</option>{['Draft', 'Pending Approval', 'Approved', 'Sourcing', 'On Hold', 'Filled', 'Cancelled'].map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
+          <div className="w-44 shrink-0">
+            <Select value={statusF} onChange={setStatusF} ariaLabel="Requisition status filter" placeholder="All statuses"
+              options={[{ value: '', label: 'All statuses' }, ...['Draft', 'Pending Approval', 'Approved', 'Sourcing', 'On Hold', 'Filled', 'Cancelled'].map((s) => ({ value: s, label: s }))]} />
+          </div>
           <ExportButton filename="requisitions.csv" rows={filtered} columns={['id', 'title', 'department', 'openings', 'status']} />
           <button type="button" onClick={() => setShowCreate(true)} className={btnPrimary}>+ New requisition</button>
         </div>
@@ -1527,9 +1528,10 @@ export function CommissionsPanel() {
         </div>
         <div className="flex flex-col lg:flex-row gap-2">
           <input className={`${inputCls} flex-1`} placeholder="Search commission ID, org, agency, status…" value={cq} onChange={(e) => setCq(e.target.value)} />
-          <select value={leg} onChange={(e) => setLeg(e.target.value)} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none">
-            <option value="">Both ledgers</option><option value="receivable">Receivable only</option><option value="payable">Payable only</option>
-          </select>
+          <div className="w-full lg:w-44 shrink-0">
+            <Select value={leg} onChange={setLeg} ariaLabel="Ledger filter" placeholder="Both ledgers"
+              options={[{ value: '', label: 'Both ledgers' }, { value: 'receivable', label: 'Receivable only' }, { value: 'payable', label: 'Payable only' }]} />
+          </div>
         </div>
       </div>
       {error && <PanelError message={error} status={loadError} onRetry={load} />}
@@ -2393,9 +2395,10 @@ export function CandidatesPanel() {
       <div className="flex flex-col lg:flex-row gap-2">
         <div className="relative flex-1"><input className={inputCls} placeholder="Search ID, name, email, title…" value={q} onChange={(e) => { setQ(e.target.value); resetPage(); }} /></div>
         <div className="flex gap-2">
-          <select value={status} aria-label="Account status" onChange={(e) => { setStatus(e.target.value); resetPage(); }} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none">
-            <option value="">All statuses</option>{['Active', 'Suspended', 'Blocked', 'Deleted'].map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
+          <div className="w-36 shrink-0">
+            <Select value={status} onChange={(v) => { setStatus(v); resetPage(); }} ariaLabel="Account status" placeholder="All statuses"
+              options={[{ value: '', label: 'All statuses' }, ...['Active', 'Suspended', 'Blocked', 'Deleted'].map((s) => ({ value: s, label: s }))]} />
+          </div>
           <button type="button" onClick={() => setShowAdv((v) => !v)} aria-expanded={showAdv} className={`px-4 py-2 rounded-xl border font-bold text-xs whitespace-nowrap ${showAdv || advActive ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-slate-200 text-slate-700'}`}>
             Filters{advActive ? ' •' : ''} {showAdv ? '▴' : '▾'}
           </button>
@@ -2410,20 +2413,15 @@ export function CandidatesPanel() {
             <input className={kitInput} type="number" min={0} placeholder="Min yrs" value={fExpMin} aria-label="Minimum experience" onChange={(e) => { setFExpMin(e.target.value); resetPage(); }} />
             <input className={kitInput} type="number" min={0} placeholder="Max yrs" value={fExpMax} aria-label="Maximum experience" onChange={(e) => { setFExpMax(e.target.value); resetPage(); }} />
           </div>
-          <select value={fComp} aria-label="Profile completeness" onChange={(e) => { setFComp(e.target.value); resetPage(); }} className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none">
-            <option value="">Any completeness</option>
-            <option value="lt50">Under 50%</option>
-            <option value="btw50_80">50–80%</option>
-            <option value="gt80">Over 80%</option>
-          </select>
-          <select value={fStage} aria-label="Application stage" onChange={(e) => { setFStage(e.target.value); resetPage(); }} className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none">
-            <option value="">Any stage</option>{APP_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
+          <Select value={fComp} onChange={(v) => { setFComp(v); resetPage(); }} ariaLabel="Profile completeness" placeholder="Any completeness"
+            options={[{ value: '', label: 'Any completeness' }, { value: 'lt50', label: 'Under 50%' }, { value: 'btw50_80', label: '50–80%' }, { value: 'gt80', label: 'Over 80%' }]} />
+          <Select value={fStage} onChange={(v) => { setFStage(v); resetPage(); }} ariaLabel="Application stage" placeholder="Any stage"
+            options={[{ value: '', label: 'Any stage' }, ...APP_STAGES.map((s) => ({ value: s, label: s }))]} />
           <input className={kitInput} placeholder="Source…" value={fSource} aria-label="Source filter" onChange={(e) => { setFSource(e.target.value); resetPage(); }} />
           <input className={kitInput} placeholder="Recruiter…" value={fRecruiter} aria-label="Recruiter filter" onChange={(e) => { setFRecruiter(e.target.value); resetPage(); }} />
           <div className="flex gap-2">
-            <input className={kitInput} type="date" value={fFrom} aria-label="Registered from" onChange={(e) => { setFFrom(e.target.value); resetPage(); }} />
-            <input className={kitInput} type="date" value={fTo} aria-label="Registered to" onChange={(e) => { setFTo(e.target.value); resetPage(); }} />
+            <div className="flex-1 min-w-0"><DatePicker value={fFrom} onChange={(v) => { setFFrom(v); resetPage(); }} ariaLabel="Registered from" placeholder="From date" /></div>
+            <div className="flex-1 min-w-0"><DatePicker value={fTo} onChange={(v) => { setFTo(v); resetPage(); }} ariaLabel="Registered to" placeholder="To date" /></div>
           </div>
           <div className="col-span-2 lg:col-span-4 flex justify-end">
             <button type="button" onClick={clearAdv} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">Clear all filters</button>
@@ -2502,7 +2500,7 @@ export function CandidatesPanel() {
         <div className="space-y-3">
           <Field label="Status"><Select value={statusForm.status} onChange={(v) => setStatusForm({ ...statusForm, status: v })} options={['Active', 'Suspended', 'Blocked'].map((s) => ({ value: s, label: s }))} /></Field>
           <Field label="Reason *"><textarea rows={3} className={kitInput} value={statusForm.reason} onChange={(e) => setStatusForm({ ...statusForm, reason: e.target.value })} placeholder="e.g. Fake profile — support ticket SUP-88" /></Field>
-          <Field label="Review / expiry date (optional)" hint="When this suspension must be reviewed"><input type="date" className={kitInput} value={statusForm.reviewDate} onChange={(e) => setStatusForm({ ...statusForm, reviewDate: e.target.value })} /></Field>
+          <Field label="Review / expiry date (optional)" hint="When this suspension must be reviewed"><DatePicker value={statusForm.reviewDate} onChange={(v) => setStatusForm({ ...statusForm, reviewDate: v })} ariaLabel="Review date" placeholder="No expiry" /></Field>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setStatusFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
             <button type="button" disabled={busy || !statusForm.reason.trim()} onClick={doStatus} className={btnDark}>{busy ? 'Working…' : 'Confirm'}</button>
@@ -3061,9 +3059,10 @@ export function JobsPanel() {
         </div>
         <div className="flex flex-col lg:flex-row gap-2">
           <input className={`${inputCls} flex-1`} placeholder="Search ID, title, org, location…" value={q} onChange={(e) => setQ(e.target.value)} />
-          <select value={statusF} onChange={(e) => setStatusF(e.target.value)} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none">
-            <option value="">All statuses</option>{['Draft', 'Pending Review', 'Approved', 'Published', 'Paused', 'Closed', 'Archived'].map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
+          <div className="w-full lg:w-44 shrink-0">
+            <Select value={statusF} onChange={setStatusF} ariaLabel="Job status filter" placeholder="All statuses"
+              options={[{ value: '', label: 'All statuses' }, ...['Draft', 'Pending Review', 'Approved', 'Published', 'Paused', 'Closed', 'Archived'].map((s) => ({ value: s, label: s }))]} />
+          </div>
         </div>
       </div>
       {error && <PanelError message={error} onRetry={load} />}
@@ -3199,9 +3198,10 @@ export function SupportPanel() {
         </div>
         <div className="flex flex-col lg:flex-row gap-2">
           <input className={`${inputCls} flex-1`} placeholder="Search ID, subject, requester, org…" value={q} onChange={(e) => setQ(e.target.value)} />
-          <select value={statusF} onChange={(e) => setStatusF(e.target.value)} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none">
-            <option value="">All statuses</option>{['Open', 'In Progress', 'Resolved', 'Closed'].map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
+          <div className="w-full lg:w-44 shrink-0">
+            <Select value={statusF} onChange={setStatusF} ariaLabel="Ticket status filter" placeholder="All statuses"
+              options={[{ value: '', label: 'All statuses' }, ...['Open', 'In Progress', 'Resolved', 'Closed'].map((s) => ({ value: s, label: s }))]} />
+          </div>
         </div>
       </div>
       {error && <PanelError message={error} onRetry={load} />}

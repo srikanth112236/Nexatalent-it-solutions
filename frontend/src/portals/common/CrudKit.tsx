@@ -29,6 +29,7 @@ export function useQueryState(key: string, initial = ''): [string, (v: string) =
 import { Search, Download, X } from 'lucide-react';
 import { useCan } from '../../shared/auth/AuthContext';
 import { permissionsApi } from '../../shared/enterprise/phaseApi';
+import { Select } from '../../shared/ui/EnterpriseKit';
 
 /** Shared enterprise CRUD primitives — Indeed/Naukri-grade table UX. */
 
@@ -91,11 +92,10 @@ export function CrudToolbar({ search, onSearch, searchPh, status, onStatus, stat
         />
       </div>
       {statuses && (
-        <select value={status || ''} onChange={(e) => onStatus?.(e.target.value)}
-          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none">
-          <option value="">All statuses</option>
-          {statuses.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+        <div className="w-full lg:w-44 shrink-0">
+          <Select value={status || ''} onChange={(v) => onStatus?.(v)} ariaLabel="Status filter" placeholder="All statuses"
+            options={[{ value: '', label: 'All statuses' }, ...statuses.map((s) => ({ value: s, label: s }))]} />
+        </div>
       )}
       <div className="flex items-center gap-2 shrink-0">
         {exportProps && (
