@@ -26,7 +26,7 @@ Evidence = file + symbol; line numbers intentionally omitted (they drift).
 | Clause | Status | Evidence |
 |---|---|---|
 | 20 roles (16 spec + 4 legacy aliases), 17 spec permissions | Done | `rbac.ts` (`ALL_ROLES`, `PERMISSIONS`, `ROLE_PERMISSIONS`) |
-| Per-user grant/revoke exceptions + `manage_permissions` gating | Done | `effectivePermissions` + `directory.ts` permission endpoints + `AdminControlsPanel` editor |
+| Per-user grant/revoke exceptions + `manage_permissions` gating | Done | `effectivePermissions` + `directory.ts` permission endpoints (`?view=mine` effective set; default rows for the exceptions editor) + `AdminControlsPanel` editor |
 | Tenant isolation, 404 masking, suspension revokes sessions | Done | `tenantOf`, masked 404s across routers, session revocation on suspend/delete |
 | MFA second factor (TOTP + backup codes, all roles) | Done | `backend/src/auth/totp.ts`, `auth.ts` mfa routes, `LoginPage.tsx` challenge step, `MfaPanel.tsx` mounted in all 6 portals + admin reset |
 | Export requires permission + audit trail | Done | `useCan('export')` + `ExportButton` (hidden without grant) + `POST /exports/log` |

@@ -150,7 +150,7 @@ export function usePermissions(): string[] | null {
     let live = true;
     (async () => {
       try {
-        const res: any = await apiClient.get<any>('/api/v1/permissions');
+        const res: any = await apiClient.get<any>('/api/v1/permissions?view=mine');
         const body = (res as { data?: any })?.data ?? res;
         const list: string[] = Array.isArray(body?.permissions) ? body.permissions : [];
         permsCache = { email: body?.email || '', permissions: list };

@@ -223,6 +223,10 @@ export function loadDb(): DbShape {
         if (a.replacementDays === undefined) a.replacementDays = 90;
         if (a.gstApplicable === undefined) a.gstApplicable = true;
         if (a.companyAccepted === undefined) { a.companyAccepted = false; a.acceptedAt = null; a.acceptedBy = null; }
+        if (!a.ownershipClause) a.ownershipClause = 'Candidate ownership rests with the introducing party for 90 days from submission; the client hires only introduced candidates through the platform.';
+        if (!a.duplicatePolicy) a.duplicatePolicy = 'Duplicate profiles are rejected; the earliest valid submission owns the candidate.';
+        if (!a.cancellationTerms) a.cancellationTerms = 'Either party may cancel with written notice; fees already triggered remain payable.';
+        if (!a.replacementTerms) a.replacementTerms = `Free replacement within ${a.replacementDays ?? 90} days of joining under the defined conditions.`;
       }
       // Backfill login-tenant links + new columns on seed agencies.
       for (const a of (db!.agencyProfiles as any[])) {

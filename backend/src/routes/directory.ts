@@ -214,6 +214,9 @@ directoryRouter.patch('/users/:id/status', requireAuth(['superadmin','platform_o
 // Permission exceptions (§4.2) — explicit per-user grant/revoke over the role template
 directoryRouter.get('/permissions', requireAuth(), (req, res) => {
   const ctx = ctxOf(req); const db = loadDb();
+  if (req.query.view === 'mine') {
+    return res.json({ success: true, data: { email: ctx.email, permissions: effectivePermissions(ctx.role, ctx.email) } });
+  }
   if (['superadmin','platform_owner'].includes(ctx.role)) {
     let rows = db.userRoles as any[];
     if (req.query.email) rows = rows.filter((o) => String(o.email).toLowerCase() === String(req.query.email).toLowerCase());

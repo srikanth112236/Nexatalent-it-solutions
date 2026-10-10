@@ -247,6 +247,11 @@ describe('commercial terms: slabs, templates, reminders', () => {
     expect(pl.body.code).toBe('NO_AGREEMENT');
     db.commissionAgreements.unshift(...keep);
   });
+  it('resolves effective permissions for the caller (mine view)', async () => {
+    const r = await request(app).get('/api/v1/permissions?view=mine').set(auth(superToken));
+    expect(r.status).toBe(200);
+    expect(r.body.data.permissions).toContain('manage_billing');
+  });
   it('ships a seeded active template with printable HTML body', async () => {
     const all = await request(app).get('/api/v1/agreement-templates').set(auth(superToken));
     const std = all.body.data.find((t: any) => t.id === 'AGT-STD-001');

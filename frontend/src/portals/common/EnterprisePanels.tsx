@@ -1577,7 +1577,7 @@ export function fillTemplate(t: any, companyName?: string): string {
     company_name: companyName || t?.orgId || '[Company Name]',
     date: new Date().toISOString().slice(0, 10),
     hiring_type: t?.hiringType || 'Mid-level IT roles',
-    rate_percent: t?.rateMin !== undefined && t?.rateMax !== undefined ? (t.rateMin === t.rateMax ? String(t.rateMin) : `${t.rateMin}–${t.rateMax}`) : '8.33–10',
+    rate_percent: t?.rate !== undefined ? String(t.rate) : (t?.rateMin !== undefined && t?.rateMax !== undefined ? (t.rateMin === t.rateMax ? String(t.rateMin) : `${t.rateMin}–${t.rateMax}`) : '8.33–10'),
     payment_days: String(t?.paymentTermsDays ?? 30),
     replacement_days: String(t?.replacementDays ?? 90),
     gst_note: t?.gstNote || 'GST charged extra as applicable.',
@@ -2729,23 +2729,79 @@ export function CommissionsPanel() {
         <div className="text-xs font-extrabold text-slate-700">Agreements ({agrTotal})</div>
         <InfoTip title="How agreements work" body={<><p>An agreement binds a company to commercial terms: <strong>hiring type → slab rate</strong>, <strong>annual-CTC or monthly-CTC × months</strong> basis, trigger (Joined / Offer Accepted), payment window, replacement window and GST treatment.</p><p>Every placement under an approved agreement auto-mints a commission. The company must <strong>accept</strong> the agreement (tracked with actor + timestamp) before invoicing.</p></>} />
       </div>
-      {agreements.map((a) => (
-        <div key={a.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
-          <span className="min-w-0 truncate">{a.id} • {a.orgId} • {a.hiringType || '—'} • {a.rate}% • {a.basisType === 'monthly_ctc' ? `monthly × ${a.contractMonths || 12}mo` : 'annual'} • trigger {a.trigger} • pay ≤{a.paymentTermsDays || 30}d • repl {a.replacementDays ?? 90}d • {a.status}{a.companyAccepted ? ' • ✓ company accepted' : ' • pending company acceptance'}</span>
-          <div className="flex items-center gap-1 shrink-0">
-            {!a.companyAccepted ? <button type="button" onClick={() => accept(a.id)} className="text-[11px] font-bold text-blue-600 underline">Mark accepted</button> : null}
-            <RowMenu label={`Agreement ${a.id}`} items={[{ label: 'View terms', onSelect: () => setAgDetail(a) }]} />
-          </div>
-        </div>
-      ))}
-      <Pager page={agrPage} total={agrTotal} pageSize={20} onPage={setAgrPage} />
-      <Modal open={agDetail !== null} onClose={() => setAgDetail(null)} title={`Agreement ${agDetail?.id || ''}`} subtitle={`${agDetail?.orgId || ''} • ${agDetail?.hiringType || ''} @ ${agDetail?.rate || ''}%`}>
-        <div className="space-y-2 text-xs">
-          {[['Trigger', agDetail?.trigger], ['Fee basis', agDetail?.basisType === 'monthly_ctc' ? `Monthly CTC × ${agDetail?.contractMonths || 12} months (contract / payroll)` : 'Annual CTC (direct hire)'], ['Payment window', agDetail?.paymentTermsDays ? `Within ${agDetail.paymentTermsDays} days of joining` : '—'], ['Replacement', agDetail?.replacementDays !== undefined ? `${agDetail.replacementDays} days — ${agDetail?.replacementTerms || 'standard conditions'}` : '—'], ['GST', agDetail?.gstApplicable === false ? 'Not applicable' : `Extra as applicable${agDetail?.taxTreatment ? ` — ${agDetail.taxTreatment}` : ''}`], ['Ownership', agDetail?.ownershipClause || '—'], ['Duplicates', agDetail?.duplicatePolicy || '—'], ['Cancellation', agDetail?.cancellationTerms || '—'], ['Template', agDetail?.templateId ? `${agDetail.templateId} v${agDetail.templateVersion || ''}` : 'custom'], ['Company acceptance', agDetail?.companyAccepted ? `✓ by ${agDetail.acceptedBy} @ ${String(agDetail.acceptedAt || '').slice(0, 16).replace('T', ' ')}` : 'pending']].map(([k, v]) => (
-            <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1">{String(v ?? '—')}</div></div>
+      {agreements.length > 0 && (<>
+        <div className="space-y-2 md:hidden">
+          {agreements.map((a) => (
+            <div key={a.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-extrabold text-slate-900 text-sm truncate">{a.id}</div>
+                  <div className="font-mono text-[11px] text-slate-500">{a.orgId} • {a.hiringType || '—'}</div>
+                </div>
+                <RowMenu label={`Agreement ${a.id}`} items={[{ label: 'View detail', onSelect: () => setAgDetail(a) }, ...(!a.companyAccepted ? [{ label: 'Mark accepted', onSelect: () => accept(a.id) }] : [])]} />
+              </div>
+              <div className="font-bold text-slate-700">{a.rate}% • {a.basisType === 'monthly_ctc' ? `monthly × ${a.contractMonths || 12}mo` : 'annual'} • trigger {a.trigger}</div>
+              <div><span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${a.companyAccepted ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>{a.companyAccepted ? '✓ company accepted' : 'pending company acceptance'}</span></div>
+            </div>
           ))}
         </div>
-      </Modal>
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
+          <table className="w-full text-left text-xs min-w-[1020px]">
+            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
+              <th className="px-4 py-3">Agreement</th><th className="px-4 py-3">Company</th><th className="px-4 py-3">Hiring type</th><th className="px-4 py-3 text-right">Rate</th><th className="px-4 py-3">Basis</th><th className="px-4 py-3">Trigger</th><th className="px-4 py-3">Terms</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
+            </tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {agreements.map((a) => (
+                <tr key={a.id} className="hover:bg-slate-50/70">
+                  <td className="px-4 py-3"><div className="font-bold text-slate-900">{a.id}</div><div className="font-mono text-[11px] text-slate-500">{a.templateId ? `from ${a.templateId} v${a.templateVersion || ''}` : 'custom'}</div></td>
+                  <td className="px-4 py-3 font-mono font-bold text-amber-700">{a.orgId}</td>
+                  <td className="px-4 py-3">{a.hiringType || '—'}</td>
+                  <td className="px-4 py-3 text-right font-bold">{a.rate}%</td>
+                  <td className="px-4 py-3">{a.basisType === 'monthly_ctc' ? `Monthly × ${a.contractMonths || 12}mo` : 'Annual'}</td>
+                  <td className="px-4 py-3">{a.trigger}</td>
+                  <td className="px-4 py-3">pay ≤{a.paymentTermsDays || 30}d • repl {a.replacementDays ?? 90}d</td>
+                  <td className="px-4 py-3"><span className="font-bold">{a.status}</span><div className={`text-[11px] font-bold ${a.companyAccepted ? 'text-emerald-600' : 'text-amber-600'}`}>{a.companyAccepted ? '✓ accepted' : 'pending acceptance'}</div></td>
+                  <td className="px-4 py-3"><div className="flex justify-end gap-1">
+                    {!a.companyAccepted ? <button type="button" onClick={() => accept(a.id)} className="text-[11px] font-bold text-blue-600 underline">Mark accepted</button> : null}
+                    <RowMenu label={`Agreement ${a.id}`} items={[{ label: 'View detail', onSelect: () => setAgDetail(a) }]} />
+                  </div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </>)}
+      <Pager page={agrPage} total={agrTotal} pageSize={20} onPage={setAgrPage} />
+      {agDetail !== null && (
+        <DetailDrawer title={`Agreement ${agDetail.id}`} subtitle={`${agDetail.orgId} • ${agDetail.hiringType || ''} @ ${agDetail.rate || ''}% • ${agDetail.status}`} onClose={() => setAgDetail(null)}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            {[['Trigger', agDetail?.trigger], ['Fee basis', agDetail?.basisType === 'monthly_ctc' ? `Monthly CTC × ${agDetail?.contractMonths || 12} months (contract / payroll)` : 'Annual CTC (direct hire)'], ['Payment window', agDetail?.paymentTermsDays ? `Within ${agDetail.paymentTermsDays} days of joining` : '—'], ['Replacement', agDetail?.replacementDays !== undefined ? `${agDetail.replacementDays} days — ${agDetail?.replacementTerms || 'standard conditions'}` : '—'], ['GST', agDetail?.gstApplicable === false ? 'Not applicable' : `Extra as applicable${agDetail?.taxTreatment ? ` — ${agDetail.taxTreatment}` : ''}`], ['Ownership', agDetail?.ownershipClause || '—'], ['Duplicates', agDetail?.duplicatePolicy || '—'], ['Cancellation', agDetail?.cancellationTerms || '—'], ['Template', agDetail?.templateId ? `${agDetail.templateId} v${agDetail.templateVersion || ''}` : 'custom'], ['Company acceptance', agDetail?.companyAccepted ? `✓ by ${agDetail.acceptedBy} @ ${String(agDetail.acceptedAt || '').slice(0, 16).replace('T', ' ')}` : 'pending']].map(([k, v]) => (
+              <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1">{String(v ?? '—')}</div></div>
+            ))}
+          </div>
+          <div className="text-xs font-extrabold text-slate-700 pt-1">Agreement document (filled from template)</div>
+          {(() => {
+            const tpl = templates.find((t: any) => t.id === agDetail?.templateId) || templates.find((t: any) => t.id === 'AGT-STD-001');
+            const src = tpl?.bodyHtml
+              ? { ...tpl, hiringType: agDetail?.hiringType || tpl.hiringType, rate: agDetail?.rate, paymentTermsDays: agDetail?.paymentTermsDays ?? tpl.paymentTermsDays, replacementDays: agDetail?.replacementDays ?? tpl.replacementDays, gstNote: tpl.gstNote, ownershipClause: agDetail?.ownershipClause || tpl.ownershipClause, duplicatePolicy: agDetail?.duplicatePolicy || tpl.duplicatePolicy, cancellationTerms: agDetail?.cancellationTerms || tpl.cancellationTerms, bodyHtml: tpl.bodyHtml, name: tpl.name }
+              : null;
+            const html = src ? fillTemplate(src, agDetail?.orgId)
+              : `<h2>Placement Services Agreement — ${agDetail?.id}</h2><p>Between <strong>NexaTalent IT Solutions</strong> and <strong>${agDetail?.orgId}</strong>.</p><p>Rate: <strong>${agDetail?.rate}%</strong> of ${agDetail?.basisType === 'monthly_ctc' ? `monthly CTC × ${agDetail?.contractMonths || 12} months` : 'annual CTC'} (${agDetail?.hiringType}). Payable within <strong>${agDetail?.paymentTermsDays || 30} days</strong> of joining. GST extra. Replacement within <strong>${agDetail?.replacementDays ?? 90} days</strong>.</p><p>${agDetail?.ownershipClause || ''}</p><p>${agDetail?.duplicatePolicy || ''}</p><p>${agDetail?.cancellationTerms || ''}</p>`;
+            const title = `Agreement ${agDetail?.id}`;
+            return (
+              <div className="space-y-2">
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 text-xs leading-relaxed max-h-[320px] overflow-y-auto" data-lenis-prevent
+                  dangerouslySetInnerHTML={{ __html: html }} />
+                <div className="flex flex-wrap gap-2">
+                  {!agDetail?.companyAccepted ? <button type="button" onClick={() => accept(agDetail.id)} className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-xs">Mark accepted</button> : null}
+                  <button type="button" onClick={() => downloadDocFile(title, title, html)} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">Download .doc</button>
+                  <button type="button" onClick={() => printHtmlDocument(title, html)} className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs">Print / PDF</button>
+                </div>
+              </div>
+            );
+          })()}
+        </DetailDrawer>
+      )}
       </>)}
       {(comTab || 'commissions') === 'commissions' && (<>
       <div className="text-xs font-extrabold text-slate-700">Commissions ({total})</div>
