@@ -245,6 +245,77 @@ directoryRouter.delete('/permissions', requireAuth(['superadmin','platform_owner
   audit(ctxOf(req).email, `PERMISSION_CLEARED:${email}:${permission}`, 'TNT-GLOBAL', 'permission', removed.id, req.ip); persist();
   res.json({ success: true, data: removed });
 });
+// ---- Roles: metadata CRUD + bulk import (§4). System roles cannot be deleted. ----
+directoryRouter.get('/roles', requireAuth(), (_req, res) => {
+  res.json({ success: true, data: loadDb().roles });
+});
+directoryRouter.post('/roles', requireAuth(['superadmin','platform_owner']), requirePermission('manage_permissions'), (req: Request, res: Response) => {
+  const { id, name, scope, description, permissions } = req.body || {};
+  const key = String(id || name || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+  if (!key) return res.status(400).json({ success: false, message: 'Role id/name required.' });
+  const db = loadDb();
+  if (db.roles.find((r: any) => r.id === key)) return res.status(409).json({ success: false, message: 'Role already exists.' });
+  if (permissions !== undefined && (!Array.isArray(permissions) || permissions.some((p: any) => !PERMISSIONS.includes(p)))) return res.status(400).json({ success: false, message: `permissions must be a subset of ${PERMISSIONS.join(', ')}` });
+  const row = { id: key, name: String(name || key), scope: scope || 'platform', description: description || '', permissions: permissions || undefined, system: false, createdAt: nowIso(), by: ctxOf(req).email };
+  db.roles.unshift(row);
+  audit(ctxOf(req).email, `ROLE_CREATED:${key}`, 'TNT-GLOBAL', 'role', key, req.ip); persist();
+  res.status(201).json({ success: true, data: row });
+});
+directoryRouter.put('/roles/:id', requireAuth(['superadmin','platform_owner']), requirePermission('manage_permissions'), (req, res) => {
+  const db = loadDb(); const r: any = db.roles.find((x: any) => x.id === req.params.id);
+  if (!r) return res.status(404).json({ success: false, message: 'Role not found.' });
+  const b: any = req.body || {};
+  if (b.permissions !== undefined) {
+    if (!Array.isArray(b.permissions) || b.permissions.some((p: any) => !PERMISSIONS.includes(p))) return res.status(400).json({ success: false, message: 'Invalid permissions subset.' });
+    r.permissions = b.permissions;
+  }
+  for (const k of ['name', 'scope', 'description']) if (b[k] !== undefined) r[k] = b[k];
+  r.updatedAt = nowIso();
+  audit(ctxOf(req).email, `ROLE_UPDATED:${r.id}`, 'TNT-GLOBAL', 'role', r.id, req.ip); persist();
+  res.json({ success: true, data: r });
+});
+directoryRouter.delete('/roles/:id', requireAuth(['superadmin','platform_owner']), requirePermission('manage_permissions'), (req, res) => {
+  const db = loadDb(); const i = db.roles.findIndex((x: any) => x.id === req.params.id);
+  if (i < 0) return res.status(404).json({ success: false, message: 'Role not found.' });
+  if (db.roles[i].system) return res.status(422).json({ success: false, message: 'System roles cannot be deleted.' });
+  if (db.users.some((u: any) => u.role === req.params.id)) return res.status(422).json({ success: false, message: 'Role is assigned to users.' });
+  const [removed] = (db.roles as any[]).splice(i, 1);
+  audit(ctxOf(req).email, `ROLE_DELETED:${removed.id}`, 'TNT-GLOBAL', 'role', removed.id, req.ip); persist();
+  res.json({ success: true, data: removed });
+});
+// ---- Bulk import with duplicate handling (preview then commit) ----
+directoryRouter.post('/bulk-import', requireAuth(['superadmin','platform_owner','operations_admin','employee']), (req: Request, res: Response) => {
+  const { collection, rows, mode } = req.body || {};
+  if (!['skills', 'roles'].includes(collection)) return res.status(400).json({ success: false, message: 'collection must be skills|roles.' });
+  if (!Array.isArray(rows) || rows.length === 0) return res.status(400).json({ success: false, message: 'rows[] required.' });
+  if (rows.length > 1000) return res.status(400).json({ success: false, message: 'Max 1000 rows per import.' });
+  const preview = mode !== 'commit';
+  const db = loadDb(); const out: any[] = [];
+  const seen = new Set<string>();
+  for (const [ix, raw] of (rows as any[]).entries()) {
+    if (collection === 'skills') {
+      const name = String(raw?.name || '').trim();
+      if (!name) { out.push({ row: ix + 1, status: 'error', message: 'name required' }); continue; }
+      const key = name.toLowerCase();
+      const dup = db.skills.find((s: any) => String(s.name).toLowerCase() === key) || seen.has(`skill:${key}`);
+      if (dup) { out.push({ row: ix + 1, status: 'duplicate', message: `“${name}” already exists — skipped` }); continue; }
+      seen.add(`skill:${key}`);
+      if (!preview) db.skills.unshift({ id: uid('SKL'), name, category: String(raw?.category || 'General').slice(0, 60), createdAt: nowIso(), by: ctxOf(req).email });
+      out.push({ row: ix + 1, status: preview ? 'valid' : 'created', message: name });
+    } else {
+      const key = String(raw?.id || raw?.name || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+      if (!key) { out.push({ row: ix + 1, status: 'error', message: 'id/name required' }); continue; }
+      const dup = db.roles.find((r: any) => r.id === key) || seen.has(`role:${key}`);
+      if (dup) { out.push({ row: ix + 1, status: 'duplicate', message: `“${key}” already exists — skipped` }); continue; }
+      seen.add(`role:${key}`);
+      if (!preview) db.roles.unshift({ id: key, name: String(raw?.name || key), scope: String(raw?.scope || 'platform').slice(0, 40), description: String(raw?.description || '').slice(0, 500), system: false, createdAt: nowIso(), by: ctxOf(req).email });
+      out.push({ row: ix + 1, status: preview ? 'valid' : 'created', message: key });
+    }
+  }
+  if (!preview) { audit(ctxOf(req).email, `BULK_IMPORT:${collection}:${out.filter((o) => o.status === 'created').length}`, 'TNT-GLOBAL', 'bulk', String(collection), req.ip); persist(); }
+  const summary = { total: out.length, created: out.filter((o) => o.status === 'created').length, valid: out.filter((o) => o.status === 'valid').length, duplicates: out.filter((o) => o.status === 'duplicate').length, errors: out.filter((o) => o.status === 'error').length };
+  res.json({ success: true, data: { mode: preview ? 'preview' : 'commit', summary, rows: out } });
+});
 // Export audit trail (§4.3 — every CSV export is actor-stamped)
 directoryRouter.post('/exports/log', requireAuth(), (req, res) => {
   const { resource, count } = req.body || {};
@@ -411,7 +482,7 @@ directoryRouter.put('/directory/candidates/:id', requireAuth(['superadmin','plat
   const db = loadDb(); const c: any = db.candidateProfiles.find((x: any) => x.id === req.params.id);
   if (!c) return res.status(404).json({ success: false, message: 'Not found.' });
   const b: any = req.body || {};
-  for (const k of ['name','email','phone','headline','roleTitle','experienceYears','location','preferredLocation','country','currentCtc','expectedCtc','noticePeriod','skills','summary','education','certifications','visibility','stage','assignedRecruiter','source']) {
+  for (const k of ['name','email','phone','headline','roleTitle','experienceYears','location','preferredLocation','country','currentCtc','expectedCtc','ctcType','noticePeriod','skills','summary','education','certifications','visibility','stage','assignedRecruiter','source']) {
     if (b[k] !== undefined) c[k] = b[k];
   }
   c.updatedAt = nowIso();

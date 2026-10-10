@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, Fragment } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../../shared/api-client';
 import { Candidate360Drawer, AgencyDrawer } from '../superadmin/SuperAdmin360';
@@ -138,6 +139,147 @@ export function SkillPicker({ value, onChange, placeholder = 'Type to search ski
         </div>
       )}
     </div>
+  );
+}
+
+/** Minimal CSV parser (quoted fields, CRLF) — no dependency. */
+export function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = []; let cell = ''; let q = false;
+  const push = () => { row.push(cell); cell = ''; };
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (q) {
+      if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i += 1; } else q = false; }
+      else cell += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === ',') push();
+    else if (ch === '\n') { push(); rows.push(row); row = []; }
+    else if (ch === '\r') { /* skip */ }
+    else cell += ch;
+  }
+  push(); rows.push(row);
+  return rows.filter((r) => r.some((c) => c.trim() !== ''));
+}
+
+/** Bulk import: paste/attach CSV → server preview (valid/duplicate/error) → confirm commit. */
+export function BulkImportModal({ open, onClose, title, subtitle, collection, columns, sample, onDone }: {
+  open: boolean; onClose: () => void; title: string; subtitle?: string;
+  collection: 'skills' | 'roles'; columns: string[]; sample: string; onDone?: () => void;
+}) {
+  const [text, setText] = useState('');
+  const [preview, setPreview] = useState<any>(null);
+  const [report, setReport] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => { if (open) { setText(''); setPreview(null); setReport(null); setError(''); } }, [open ]);
+  const toRows = () => {
+    const grid = parseCsv(text);
+    if (grid.length === 0) return [];
+    const head = grid[0].map((h) => h.trim().toLowerCase());
+    const idx = columns.map((c) => head.indexOf(c.toLowerCase()));
+    if (idx.some((i) => i < 0)) return [];
+    return grid.slice(1).map((r) => Object.fromEntries(columns.map((c, j) => [c, (r[idx[j]] || '').trim()])));
+  };
+  const run = async (mode: 'preview' | 'commit') => {
+    const rows = toRows();
+    if (rows.length === 0) { setError(`CSV needs a header row: ${columns.join(', ')}`); return; }
+    setBusy(true); setError('');
+    try {
+      const { bulkApi } = await import('../../shared/enterprise/phaseApi');
+      const r = unwrapObj(await bulkApi.import(collection, rows, mode));
+      if (mode === 'preview') { setPreview(r); setReport(null); }
+      else { setReport(r); setPreview(null); onDone?.(); }
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const pick = async (f: File | undefined) => {
+    if (!f) return;
+    setText(await f.text());
+  };
+  return (
+    <Modal open={open} onClose={onClose} title={title} subtitle={subtitle} wide>
+      <div className="space-y-3 text-xs">
+        <div className="flex flex-wrap gap-2 items-center">
+          <label className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold cursor-pointer">Choose CSV file
+            <input type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
+          </label>
+          <button type="button" onClick={() => setText(sample)} className="text-[11px] font-bold text-blue-600 underline">Load sample template</button>
+          <span className="text-[11px] text-slate-500 font-medium">Header: {columns.join(', ')}</span>
+        </div>
+        <Field label="Paste CSV (or attach a file above)"><textarea rows={5} className={`${kitInput} font-mono`} value={text} onChange={(e) => setText(e.target.value)} placeholder={sample} /></Field>
+        {error && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 font-bold" role="alert">{error}</div>}
+        <div className="flex justify-end gap-2">
+          <button type="button" disabled={busy || !text.trim()} onClick={() => run('preview')} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold">1. Preview & dedupe check</button>
+          <button type="button" disabled={busy || !preview} onClick={() => run('commit')} className={btnPrimary}>{busy ? 'Working…' : '2. Confirm import'}</button>
+        </div>
+        {(preview || report) && (
+          <div className="rounded-2xl border border-slate-200 overflow-hidden">
+            <div className="px-3 py-2 bg-slate-50 text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+              {report ? `Imported: ${report.summary.created} created • ${report.summary.duplicates} duplicates skipped • ${report.summary.errors} errors` : `Preview: ${preview.summary.valid} valid • ${preview.summary.duplicates} duplicates • ${preview.summary.errors} errors`}
+            </div>
+            <div className="max-h-56 overflow-y-auto divide-y divide-slate-100" data-lenis-prevent>
+              {((report || preview).rows || []).map((r: any, i: number) => (
+                <div key={i} className="px-3 py-1.5 flex items-center justify-between gap-2">
+                  <span className="font-mono text-[11px]">row {r.row}: {r.message}</span>
+                  <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${r.status === 'created' || r.status === 'valid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : r.status === 'duplicate' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-red-50 text-red-700 border-red-200'}`}>{r.status}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+/** Application picker — search applications by candidate/job/ID, pick one (body portal, never clips). */
+export function ApplicationPicker({ value, onChange, placeholder = 'Search candidate, job, application ID…' }: { value: string; onChange: (id: string) => void; placeholder?: string }) {
+  const [q, setQ] = useState(value);
+  const dq = useDebounced(q);
+  const [opts, setOpts] = useState<any[]>([]);
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!dq.trim()) { setOpts([]); return; }
+    let live = true;
+    (async () => {
+      try {
+        const res: any = await applicationsApi.list(`?page=1&pageSize=8&q=${encodeURIComponent(dq.trim())}`);
+        if (!live) return;
+        setOpts(unwrapList(res)); setOpen(true);
+        const r = inputRef.current?.getBoundingClientRect();
+        if (r) setPos({ top: Math.min(r.bottom + 4, window.innerHeight - 240), left: Math.max(8, Math.min(r.left, window.innerWidth - 340)), width: Math.max(r.width, 300) });
+      } catch { if (live) setOpts([]); }
+    })();
+    return () => { live = false; };
+  }, [dq]);
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => { window.removeEventListener('scroll', close, true); window.removeEventListener('resize', close); };
+  }, [open ]);
+  const chosen = value ? { id: value } : null;
+  return (
+    <>
+      <input ref={inputRef} className={kitInput} value={q} placeholder={placeholder} aria-label="Pick application"
+        onChange={(e) => { setQ(e.target.value); onChange(''); }} onFocus={() => { if (opts.length > 0) setOpen(true); }} />
+      {chosen && q === value ? <div className="mt-1 text-[11px] font-bold text-emerald-700">Selected: {value}</div> : null}
+      {open && opts.length > 0 && createPortal(
+        <div style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width, zIndex: 210 }} className="bg-white rounded-2xl border border-slate-200 shadow-xl py-1.5 max-h-56 overflow-y-auto" data-lenis-prevent>
+          {opts.map((a: any) => (
+            <button key={a.id} type="button" onClick={() => { onChange(a.id); setQ(a.id); setOpen(false); }}
+              className="w-full text-left px-3.5 py-2 hover:bg-slate-50">
+              <div className="text-xs font-extrabold text-slate-900">{a.jobTitle || a.jobId}</div>
+              <div className="text-[11px] text-slate-500 font-medium">{a.id} • {a.candidateEmail} • <strong className="text-blue-600">{a.stage}</strong></div>
+            </button>
+          ))}
+        </div>,
+        document.body,
+      )}
+    </>
   );
 }
 
@@ -1023,9 +1165,9 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
     setRows((r) => r.map((x) => (x.id === id ? updated : x)));
     setBoardRows((r) => r.map((x) => (x.id === id ? updated : x)));
   };
-  const move = async (id: string, stage: string) => {
+  const move = async (id: string, stage: string, reasonOverride?: string) => {
     try {
-      const updated = unwrapObj(await applicationsApi.setStage(id, stage, reason || undefined));
+      const updated = unwrapObj(await applicationsApi.setStage(id, stage, reasonOverride ?? reason ?? undefined));
       patchBoth(id, updated);
       syncAll();
     } catch (e) { setError(errMsg(e)); }
@@ -1038,12 +1180,12 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
       syncAll();
     } catch (e) { setError(errMsg(e)); }
   };
+  const [moveFor, setMoveFor] = useState<{ app: any; to: string } | null>(null);
   const dropMove = (a: any, to: string) => {
     if (to === a.stage) return;
     if (['Hired', 'Withdrawn', 'Rejected'].includes(a.stage)) { setError(`${a.stage} applications are terminal — reopen explicitly to continue.`); return; }
     if (to === 'Withdrawn') { setWithdrawId(a.id); return; }
-    if (to === 'Rejected' && !reason.trim()) { setError('Type a rejection reason in the note box first — it is recorded with the move.'); return; }
-    move(a.id, to);
+    setMoveFor({ app: a, to });
   };
   const reopen = async (app: any, target: string, reasonText?: string) => {
     const updated = unwrapObj(await applicationsApi.reopen(app.id, target, reasonText || ''));
@@ -1109,7 +1251,7 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
               </div>
               <RowMenu items={[
                 { label: 'View + history', onSelect: () => openDetail(a) },
-                ...moves.map((s) => ({ label: `Move to ${s}`, onSelect: () => move(a.id, s) })),
+                ...moves.map((s) => ({ label: `Move to ${s}…`, onSelect: () => { if (['Hired', 'Withdrawn', 'Rejected'].includes(a.stage)) { setError(`${a.stage} applications are terminal — reopen explicitly to continue.`); return; } if (s === 'Withdrawn') { setWithdrawId(a.id); return; } setMoveFor({ app: a, to: s }); } })),
                 ...(canWithdraw ? [{ label: 'Withdraw application', danger: true, onSelect: () => setWithdrawId(a.id) }] : []),
                 ...(checkRecordAction('application', a, 'reopen', {}).allowed ? [{ label: 'Reopen…', onSelect: () => { setReopenFor(a); setReopenTarget('Applied'); } }] : []),
               ]} />
@@ -1129,6 +1271,20 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
           setWithdrawId('');
         }}
         onCancel={() => setWithdrawId('')}
+      />
+      <ActionConfirm
+        open={moveFor !== null}
+        onCancel={() => setMoveFor(null)}
+        title={`Move to ${moveFor?.to || ''} — ${moveFor?.app?.id || ''}`}
+        subtitle={`${moveFor?.app?.jobTitle || ''} • ${moveFor?.app?.candidateEmail || ''} (currently ${moveFor?.app?.stage || ''})`}
+        why={[`Application is currently ${moveFor?.app?.stage || ''}`, moveFor?.to === 'Hired' ? 'Hired is terminal — it triggers placement + commission evaluation' : `Moving to ${moveFor?.to || ''} advances the pipeline`]}
+        steps={[`Stage moves to ${moveFor?.to || ''}`, 'Stage history entry with actor + timestamp', moveFor?.to === 'Hired' ? 'Placement + commission engine evaluates automatically' : 'Candidate notified in-app']}
+        consequences={moveFor?.to === 'Rejected' ? ['Candidate leaves the active pipeline', 'Reopening later needs an explicit reason'] : []}
+        requireReason={moveFor?.to === 'Rejected'}
+        reasonLabel="Rejection reason *"
+        confirmLabel={`Move to ${moveFor?.to || ''}`}
+        tone={moveFor?.to === 'Rejected' ? 'danger' : 'dark'}
+        onConfirm={async (r) => { if (moveFor) { await move(moveFor.app.id, moveFor.to, r); setMoveFor(null); } }}
       />
       <ActionConfirm
         open={reopenFor !== null}
@@ -1165,6 +1321,16 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
 }
 
 /* ---------------- Applications Kanban (drop moves stage; terminal drops route to withdraw/reopen confirms) ---------------- */
+const APP_STAGE_TONE: Record<string, string> = {
+  New: 'bg-slate-100 text-slate-600 border-slate-200', Applied: 'bg-blue-50 text-blue-700 border-blue-200',
+  'Under Review': 'bg-indigo-50 text-indigo-700 border-indigo-200', Screening: 'bg-purple-50 text-purple-700 border-purple-200',
+  Shortlisted: 'bg-cyan-50 text-cyan-700 border-cyan-200', 'Interview Scheduled': 'bg-amber-50 text-amber-700 border-amber-200',
+  'Interview Completed': 'bg-orange-50 text-orange-700 border-orange-200', Selected: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  Offer: 'bg-lime-50 text-lime-700 border-lime-200', Hired: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+  Rejected: 'bg-red-50 text-red-700 border-red-200', Withdrawn: 'bg-stone-100 text-stone-500 border-stone-200',
+  'On Hold': 'bg-yellow-50 text-yellow-700 border-yellow-200', 'Job Closed': 'bg-slate-200 text-slate-600 border-slate-300',
+};
+
 export function ApplicationsKanban({ apps, onOpen, onDropMove }: { apps: any[]; onOpen: (a: any) => void; onDropMove: (a: any, to: string) => void }) {
   const [dragId, setDragId] = useState<string | null>(null);
   const cols = APP_STAGES.map((s) => ({ stage: s, items: apps.filter((a) => a.stage === s) }));
@@ -1181,7 +1347,7 @@ export function ApplicationsKanban({ apps, onOpen, onDropMove }: { apps: any[]; 
               if (a && c.stage !== a.stage) onDropMove(a, c.stage);
             }}>
             <div className="flex items-center justify-between px-1">
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">{c.stage}</span>
+              <span className={`text-[11px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border ${APP_STAGE_TONE[c.stage] || APP_STAGE_TONE.New}`}>{c.stage}</span>
               <span className="text-[11px] font-extrabold text-slate-400">{c.items.length}</span>
             </div>
             {c.items.map((a) => (
@@ -1612,6 +1778,7 @@ export function OffersPlacementsPanel() {
   const [showPlace, setShowPlace] = useState(false);
   const [feeMatch, setFeeMatch] = useState<any>(null);
   const [feeBusy, setFeeBusy] = useState(false);
+  const [placeConfirm, setPlaceConfirm] = useState(false);
   const checkFee = async () => {
     if (!place.applicationId.trim()) { setError('Application ID is required.'); return; }
     setFeeBusy(true); setError(''); setFeeMatch(null);
@@ -1635,8 +1802,8 @@ export function OffersPlacementsPanel() {
       syncAll();
     } catch (e) { setError(errMsg(e)); }
   };
-  const mark = async (e: React.FormEvent) => {
-    e.preventDefault(); setError(''); setOk('');
+  const mark = async () => {
+    setError(''); setOk('');
     try {
       const p = unwrapObj(await offersPlacementsApi.place(place.applicationId, place.joinDate || undefined, Number(place.feeBasis) || 0));
       if (p?.id) setPlacements((x) => [p, ...x]);
@@ -1659,7 +1826,7 @@ export function OffersPlacementsPanel() {
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
       <Modal open={showOffer} onClose={() => setShowOffer(false)} title="Issue offer">
         <form onSubmit={issue} className="space-y-3">
-          <Field label="Application ID *"><input className={kitInput} value={offer.applicationId} onChange={(e) => setOffer({ ...offer, applicationId: e.target.value })} /></Field>
+          <Field label="Candidate / application *"><ApplicationPicker value={offer.applicationId} onChange={(v) => setOffer({ ...offer, applicationId: v })} /></Field>
           <Field label="CTC (annual)"><input className={kitInput} type="number" value={offer.ctc} onChange={(e) => setOffer({ ...offer, ctc: e.target.value })} /></Field>
           <Field label="Joining date"><DatePicker value={offer.joinDate} onChange={(v) => setOffer({ ...offer, joinDate: v })} /></Field>
           <div className="flex justify-end gap-2">
@@ -1670,7 +1837,7 @@ export function OffersPlacementsPanel() {
       </Modal>
       <Modal open={showPlace} onClose={() => { setShowPlace(false); setFeeMatch(null); }} title="Record joining" subtitle="Resolves the agreement, previews the fee, then mints placement + commission">
         <div className="space-y-3">
-          <Field label="Application ID *"><input className={kitInput} value={place.applicationId} onChange={(e) => { setPlace({ ...place, applicationId: e.target.value }); setFeeMatch(null); }} /></Field>
+          <Field label="Candidate / application *"><ApplicationPicker value={place.applicationId} onChange={(v) => { setPlace({ ...place, applicationId: v }); setFeeMatch(null); }} /></Field>
           <Field label="Joining date"><DatePicker value={place.joinDate} onChange={(v) => setPlace({ ...place, joinDate: v })} /></Field>
           <Field label="Fee basis (annual CTC — or monthly CTC for contract hires; auto-filled from offer)">
             <input className={kitInput} type="number" value={place.feeBasis} onChange={(e) => { setPlace({ ...place, feeBasis: e.target.value }); setFeeMatch(null); }} />
@@ -1683,12 +1850,24 @@ export function OffersPlacementsPanel() {
               <div className="font-medium text-emerald-800">Payable within {feeMatch.preview.paymentTermsDays} days of joining • {feeMatch.preview.replacementDays}-day replacement</div>
             </div>
           )}
-          <form onSubmit={mark} className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2">
             <button type="button" onClick={() => { setShowPlace(false); setFeeMatch(null); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
-            <button className={btnDark}>Record joining{feeMatch?.preview ? ` — ₹${Number(feeMatch.preview.total).toLocaleString('en-IN')}` : ''}</button>
-          </form>
+            <button type="button" disabled={!place.applicationId.trim()} onClick={() => setPlaceConfirm(true)} className={btnDark}>Review & record joining{feeMatch?.preview ? ` — ₹${Number(feeMatch.preview.total).toLocaleString('en-IN')}` : ''}</button>
+          </div>
         </div>
       </Modal>
+      <ActionConfirm
+        open={placeConfirm}
+        onCancel={() => setPlaceConfirm(false)}
+        title={`Record joining — ${place.applicationId || ''}`}
+        subtitle={feeMatch?.agreement ? `${feeMatch.agreement.hiringType} @ ${feeMatch.agreement.rate}%` : 'Fee preview not checked yet'}
+        why={feeMatch?.preview ? ['Covering agreement resolved and fee computed', 'Placement mints the commission automatically'] : ['Recording without a fee check — the server still validates the agreement and basis']}
+        steps={['Placement recorded, application → Hired', 'Commission auto-minted from the agreement', 'Company + superadmin notified in-app', feeMatch?.agreement?.autoApprove ? 'Trusted agreement: commission auto-approved and first invoice auto-generated' : 'Finance approves the commission, then generates the invoice']}
+        consequences={['Hired is terminal for the application', 'Fee becomes billable under the agreement terms']}
+        confirmLabel="Record joining"
+        tone="dark"
+        onConfirm={async () => { await mark(); setPlaceConfirm(false); }}
+      />
       {placements.length > 0 && (
         <div className="space-y-2">{placements.map((p) => (
           <div key={p.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold">{p.id} • {p.candidateEmail} • joined {String(p.joinDate).slice(0, 10)}</div>
@@ -1843,7 +2022,7 @@ export function InvoicesPanel() {
     } catch (e) { setError(errMsg(e)); }
   };
   const [showInvoice, setShowInvoice] = useState(false);
-  const [invForm, setInvForm] = useState({ orgId: '', agreementId: '', label: 'Placement fee', qty: '1', unit: '', discount: '', taxRate: '18', dueDate: '', draft: false });
+  const [invForm, setInvForm] = useState({ orgId: '', agreementId: '', subscriptionId: '', billingEntity: '', billingAddress: '', taxIds: '', billingPeriod: '', currency: 'INR', label: 'Placement fee', qty: '1', unit: '', discount: '', taxRate: '18', dueDate: '', draft: false });
   const [docFor, setDocFor] = useState<any>(null);
   const [doc, setDoc] = useState<any>(null);
   const [voidFor, setVoidFor] = useState<any>(null);
@@ -1851,10 +2030,10 @@ export function InvoicesPanel() {
   const [creditFor, setCreditFor] = useState<any>(null);
   const [creditForm, setCreditForm] = useState({ amount: '', reason: '' });
   const [editFor, setEditFor] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ orgId: '', agreementId: '', label: '', qty: '1', unit: '', discount: '', taxRate: '18', dueDate: '' });
+  const [editForm, setEditForm] = useState({ orgId: '', agreementId: '', subscriptionId: '', billingEntity: '', billingAddress: '', taxIds: '', billingPeriod: '', currency: 'INR', label: '', qty: '1', unit: '', discount: '', taxRate: '18', dueDate: '' });
   const openEdit = async (inv: any) => {
     setEditFor(inv);
-    setEditForm({ orgId: inv.orgId || '', agreementId: inv.agreementId || '', label: '', qty: '1', unit: '', discount: String(inv.discount || ''), taxRate: String(inv.taxRate ?? 18), dueDate: String(inv.dueDate || '').slice(0, 10) });
+    setEditForm({ orgId: inv.orgId || '', agreementId: inv.agreementId || '', subscriptionId: inv.subscriptionId || '', billingEntity: inv.billingEntity || '', billingAddress: inv.billingAddress || '', taxIds: inv.taxIds || '', billingPeriod: inv.billingPeriod || '', currency: inv.currency || 'INR', label: '', qty: '1', unit: '', discount: String(inv.discount || ''), taxRate: String(inv.taxRate ?? 18), dueDate: String(inv.dueDate || '').slice(0, 10) });
     try {
       const d = unwrapObj(await billingApi.invoiceDocument(inv.id)) as any;
       const l = (d?.lines || [])[0];
@@ -1865,7 +2044,7 @@ export function InvoicesPanel() {
     e.preventDefault();
     if (!editFor || !editForm.unit) return;
     try {
-      const u = unwrapObj(await billingApi.editDraftInvoice(editFor.id, { orgId: editForm.orgId.trim(), agreementId: editForm.agreementId.trim() || undefined, dueDate: editForm.dueDate, discount: Number(editForm.discount) || 0, taxRate: Number(editForm.taxRate) || 0, lines: [{ label: editForm.label || 'Placement fee', qty: Number(editForm.qty) || 1, unit: Number(editForm.unit) }] }));
+      const u = unwrapObj(await billingApi.editDraftInvoice(editFor.id, { orgId: editForm.orgId.trim(), agreementId: editForm.agreementId.trim() || undefined, subscriptionId: editForm.subscriptionId.trim() || undefined, billingEntity: editForm.billingEntity.trim() || undefined, billingAddress: editForm.billingAddress.trim() || undefined, taxIds: editForm.taxIds.trim() || undefined, billingPeriod: editForm.billingPeriod.trim() || undefined, currency: editForm.currency || undefined, dueDate: editForm.dueDate, discount: Number(editForm.discount) || 0, taxRate: Number(editForm.taxRate) || 0, lines: [{ label: editForm.label || 'Placement fee', qty: Number(editForm.qty) || 1, unit: Number(editForm.unit) }] }));
       setInvoices((x) => x.map((i) => (i.id === editFor.id ? { ...i, ...(u?.id ? u : {}) } : i)));
       setEditFor(null); setOk('Draft invoice updated.'); syncAll();
     } catch (e) { setError(errMsg(e)); }
@@ -1925,9 +2104,9 @@ export function InvoicesPanel() {
     e.preventDefault(); setError(''); setOk('');
     if (!invForm.orgId.trim() || !invForm.unit || !invForm.dueDate) { setError('Organization + unit price + due date are required.'); return; }
     try {
-      const created = unwrapObj(await billingApi.createInvoice({ orgId: invForm.orgId.trim(), agreementId: invForm.agreementId.trim() || undefined, dueDate: invForm.dueDate, discount: Number(invForm.discount) || 0, taxRate: Number(invForm.taxRate) || 0, draft: invForm.draft, lines: [{ label: invForm.label, qty: Number(invForm.qty) || 1, unit: Number(invForm.unit) }] }));
+      const created = unwrapObj(await billingApi.createInvoice({ orgId: invForm.orgId.trim(), agreementId: invForm.agreementId.trim() || undefined, subscriptionId: invForm.subscriptionId.trim() || undefined, billingEntity: invForm.billingEntity.trim() || undefined, billingAddress: invForm.billingAddress.trim() || undefined, taxIds: invForm.taxIds.trim() || undefined, billingPeriod: invForm.billingPeriod.trim() || undefined, currency: invForm.currency || undefined, dueDate: invForm.dueDate, discount: Number(invForm.discount) || 0, taxRate: Number(invForm.taxRate) || 0, draft: invForm.draft, lines: [{ label: invForm.label, qty: Number(invForm.qty) || 1, unit: Number(invForm.unit) }] }));
       if (created?.id) load(1, ips, dqInv, statusF);
-      setInvForm({ orgId: '', agreementId: '', label: 'Placement fee', qty: '1', unit: '', discount: '', taxRate: '18', dueDate: '', draft: false }); setShowInvoice(false);
+      setInvForm({ orgId: '', agreementId: '', subscriptionId: '', billingEntity: '', billingAddress: '', taxIds: '', billingPeriod: '', currency: 'INR', label: 'Placement fee', qty: '1', unit: '', discount: '', taxRate: '18', dueDate: '', draft: false }); setShowInvoice(false);
       setOk(invForm.draft ? 'Draft invoice saved — issue it when ready.' : 'Invoice issued (immutable — amend via credit note).'); syncAll();
     } catch (e) { setError(errMsg(e)); }
   };
@@ -2034,6 +2213,12 @@ export function InvoicesPanel() {
         <form onSubmit={doEdit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="sm:col-span-2"><Field label="Company *"><Select value={editForm.orgId} onChange={(v) => setEditForm({ ...editForm, orgId: v })} placeholder="Choose company" options={orgs.map((o: any) => ({ value: o.id, label: `${o.displayName || o.legalName || o.id} (${o.id})` }))} /></Field></div>
           <Field label="Agreement ID"><input className={kitInput} value={editForm.agreementId} onChange={(e) => setEditForm({ ...editForm, agreementId: e.target.value })} /></Field>
+          <Field label="Subscription / service"><input className={kitInput} value={editForm.subscriptionId} onChange={(e) => setEditForm({ ...editForm, subscriptionId: e.target.value })} /></Field>
+          <Field label="Billing entity"><input className={kitInput} value={editForm.billingEntity} onChange={(e) => setEditForm({ ...editForm, billingEntity: e.target.value })} /></Field>
+          <Field label="Billing period"><input className={kitInput} value={editForm.billingPeriod} onChange={(e) => setEditForm({ ...editForm, billingPeriod: e.target.value })} /></Field>
+          <div className="sm:col-span-2"><Field label="Billing address"><input className={kitInput} value={editForm.billingAddress} onChange={(e) => setEditForm({ ...editForm, billingAddress: e.target.value })} /></Field></div>
+          <Field label="Tax identifiers"><input className={kitInput} value={editForm.taxIds} onChange={(e) => setEditForm({ ...editForm, taxIds: e.target.value })} /></Field>
+          <Field label="Currency"><Select value={editForm.currency} onChange={(v) => setEditForm({ ...editForm, currency: v })} options={['INR', 'USD', 'EUR', 'GBP', 'AED'].map((c) => ({ value: c, label: c }))} /></Field>
           <Field label="Due date *"><DatePicker value={editForm.dueDate} onChange={(v) => setEditForm({ ...editForm, dueDate: v })} /></Field>
           <div className="sm:col-span-2"><Field label="Line label"><input className={kitInput} value={editForm.label} onChange={(e) => setEditForm({ ...editForm, label: e.target.value })} /></Field></div>
           <Field label="Qty"><input className={kitInput} type="number" min={1} value={editForm.qty} onChange={(e) => setEditForm({ ...editForm, qty: e.target.value })} /></Field>
@@ -2068,6 +2253,12 @@ export function InvoicesPanel() {
         <form onSubmit={createInvoice} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="sm:col-span-2"><Field label="Company *"><Select value={invForm.orgId} onChange={(v) => setInvForm({ ...invForm, orgId: v })} placeholder="Choose company" options={orgs.map((o: any) => ({ value: o.id, label: `${o.displayName || o.legalName || o.id} (${o.id})` }))} /></Field></div>
           <Field label="Agreement ID (links terms)"><input className={kitInput} value={invForm.agreementId} onChange={(e) => setInvForm({ ...invForm, agreementId: e.target.value })} placeholder="AGR-…" /></Field>
+          <Field label="Subscription / service"><input className={kitInput} value={invForm.subscriptionId} onChange={(e) => setInvForm({ ...invForm, subscriptionId: e.target.value })} placeholder="SUB-… (optional)" /></Field>
+          <Field label="Billing entity"><input className={kitInput} value={invForm.billingEntity} onChange={(e) => setInvForm({ ...invForm, billingEntity: e.target.value })} placeholder="Legal entity billed" /></Field>
+          <Field label="Billing period"><input className={kitInput} value={invForm.billingPeriod} onChange={(e) => setInvForm({ ...invForm, billingPeriod: e.target.value })} placeholder="e.g. 2026-11" /></Field>
+          <div className="sm:col-span-2"><Field label="Billing address"><input className={kitInput} value={invForm.billingAddress} onChange={(e) => setInvForm({ ...invForm, billingAddress: e.target.value })} /></Field></div>
+          <Field label="Tax identifiers"><input className={kitInput} value={invForm.taxIds} onChange={(e) => setInvForm({ ...invForm, taxIds: e.target.value })} placeholder="GSTIN / PAN" /></Field>
+          <Field label="Currency"><Select value={invForm.currency} onChange={(v) => setInvForm({ ...invForm, currency: v })} options={['INR', 'USD', 'EUR', 'GBP', 'AED'].map((c) => ({ value: c, label: c }))} /></Field>
           <Field label="Due date *"><DatePicker value={invForm.dueDate} onChange={(v) => setInvForm({ ...invForm, dueDate: v })} /></Field>
           <div className="sm:col-span-2"><Field label="Line label"><input className={kitInput} value={invForm.label} onChange={(e) => setInvForm({ ...invForm, label: e.target.value })} /></Field></div>
           <Field label="Qty"><input className={kitInput} type="number" min={1} value={invForm.qty} onChange={(e) => setInvForm({ ...invForm, qty: e.target.value })} /></Field>
@@ -2102,8 +2293,8 @@ export function InvoicesPanel() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-0.5">
                 <div className="text-[10px] font-bold text-slate-500 uppercase">Billed to</div>
-                <div className="font-extrabold">{doc.organization?.legalName || doc.orgId}</div>
-                {doc.organization?.gstin ? <div className="font-medium">GSTIN: {doc.organization.gstin}</div> : <div className="font-medium text-amber-700">GSTIN not on file — collect before filing</div>}
+                <div className="font-extrabold">{doc.billingEntity || doc.organization?.legalName || doc.orgId}</div>
+                {doc.organization?.gstin || doc.taxIds ? <div className="font-medium">GSTIN: {doc.taxIds || doc.organization?.gstin}</div> : <div className="font-medium text-amber-700">GSTIN not on file — collect before filing</div>}
                 {doc.billingAddress ? <div className="text-slate-600">{doc.billingAddress}</div> : null}
               </div>
               <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-0.5">
@@ -2111,6 +2302,8 @@ export function InvoicesPanel() {
                 <div className="font-medium">Issued {String(doc.issueDate || doc.createdAt || '').slice(0, 10)} • Due {String(doc.dueDate || '').slice(0, 10)}</div>
                 <div className="font-medium">Status: <strong>{doc.status}</strong>{doc.overdue ? ` • ${doc.daysOverdue}d overdue` : ''}</div>
                 {doc.billingPeriod ? <div className="font-medium">Period: {doc.billingPeriod}</div> : null}
+                {doc.subscriptionId ? <div className="font-medium">Subscription/service: {doc.subscriptionId}</div> : null}
+                <div className="font-medium">Currency: {doc.currency || 'INR'}</div>
                 {doc.agreement ? <div className="font-medium">Agreement {doc.agreement.id} • {doc.agreement.hiringType} @ {doc.agreement.rate}%{doc.agreement.companyAccepted ? ' • accepted' : ' • pending acceptance'}</div> : null}
               </div>
             </div>
@@ -2246,17 +2439,27 @@ export function BillingPanel() {
   const [refundConfirm, setRefundConfirm] = useState(false);
   const [recon, setRecon] = useState<any>(null);
   const [q, setQ] = useQueryState('bill_q');
-  const load = async () => {
+  const dqBill = useDebounced(q);
+  const [payPage, setPayPage] = useState(1);
+  const [payTotal, setPayTotal] = useState(0);
+  const [billPs, setBillPs] = useQueryState('bill_ps');
+  const bps = Number(billPs) === 50 ? 50 : Number(billPs) === 100 ? 100 : 20;
+  const load = async (p = payPage, qq = dqBill) => {
     setError('');
     try {
-      const [u, p, r, rec] = await Promise.all([
-        billingApi.usage().catch(() => null), billingApi.payments().catch(() => null), billingApi.refunds().catch(() => null), billingApi.reconciliation().catch(() => null),
+      const params = new URLSearchParams({ page: String(p), pageSize: String(bps) });
+      if (qq.trim()) params.set('q', qq.trim());
+      const [u, pay, r, rec] = await Promise.all([
+        billingApi.usage().catch(() => null), billingApi.payments(`?${params.toString()}`).catch(() => null), billingApi.refunds(`?${params.toString()}`).catch(() => null), billingApi.reconciliation().catch(() => null),
       ]);
-      if (u) setUsage(unwrapObj(u)); if (p) setPayments(unwrapList(p)); if (r) setRefunds(unwrapList(r));
+      if (u) setUsage(unwrapObj(u));
+      if (pay) { setPayments(unwrapList(pay)); setPayTotal(Number((pay as any)?.pagination?.total || unwrapList(pay).length)); }
+      if (r) setRefunds(unwrapList(r));
       if (rec) setRecon(unwrapObj(rec));
     } catch (e) { setError(errMsg(e)); }
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { setPayPage(1); }, [dqBill, bps]);
+  useEffect(() => { load(payPage, dqBill); }, [payPage, dqBill, bps]);
   const payNow = async (e: React.FormEvent) => {
     e.preventDefault(); setError(''); setOk('');
     try {
@@ -2275,19 +2478,27 @@ export function BillingPanel() {
       setOk('Refund processed — ledger updated.'); setRefund({ paymentId: '', amount: '', reason: '' }); setShowRefund(false); load(); syncAll();
     } catch (e) { setError(errMsg(e)); }
   };
-  const filteredPay = payments.filter((p) => !q.trim() || `${p.id} ${p.invoiceId} ${p.orgId} ${p.status}`.toLowerCase().includes(q.toLowerCase()));
+  const filteredPay = payments;
   return (
     <div className={cardCls}>
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-base font-extrabold text-slate-900">Billing — Payments / Refunds / Reconciliation</h3>
+          <div className="flex items-center gap-1.5">
+            <h3 className="text-base font-extrabold text-slate-900">Billing — Payments / Refunds / Reconciliation</h3>
+            <InfoTip title="How billing works" body={<><p>Payments settle invoices (idempotent — safe to retry). Refunds return money and reopen the invoice balance. Every export is permission-gated and audit-logged.</p></>} />
+          </div>
           <div className="flex gap-2">
             <ExportButton filename="payments.csv" rows={filteredPay} columns={['id', 'invoiceId', 'orgId', 'amount', 'status']} />
             <button type="button" onClick={() => setShowRefund(true)} className={btnDark}>Refund</button>
             <button type="button" onClick={() => setShowPay(true)} className={btnPrimary}>Record payment</button>
           </div>
         </div>
-        <input className={inputCls} placeholder="Search payment ID, invoice, org, status…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <div className="flex flex-col lg:flex-row gap-2">
+          <input className={`${inputCls} flex-1`} placeholder="Search payment ID, invoice, org, status…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <div className="flex items-center gap-2">
+            <PageSize value={bps} onChange={(n) => setBillPs(String(n))} />
+          </div>
+        </div>
       </div>
       {error && <PanelError message={error} onRetry={load} />}
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
@@ -2337,28 +2548,65 @@ export function BillingPanel() {
           </div>
         </div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="space-y-2">
-          <div className="text-xs font-extrabold text-slate-700">Payments ({filteredPay.length}/{payments.length})</div>
+      <div className="text-xs font-extrabold text-slate-700">Payments ({payTotal})</div>
+      {filteredPay.length === 0 ? <div className="text-xs text-slate-500">No payments match.</div> : (<>
+        <div className="space-y-2 md:hidden">
           {filteredPay.map((p) => (
-            <div key={p.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
-              <div className="font-bold">{p.id} • ₹{p.amount} • {p.status}{p.refundedAmount ? ` • refunded ₹${p.refundedAmount}` : ''}</div>
-              <div className="text-slate-500 font-medium">{p.method || ''}{p.provider ? ` via ${p.provider}` : ''}{p.reference ? ` • ref ${p.reference}` : ''} • {String(p.transactionDate || p.createdAt || '').slice(0, 10)}</div>
+            <div key={p.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+              <div className="font-extrabold text-slate-900 text-sm">{p.id} • ₹{Number(p.amount || 0).toLocaleString('en-IN')}</div>
+              <div className="text-slate-500 font-medium">{p.invoiceId} • {p.orgId} • {p.status}{p.refundedAmount ? ` • refunded ₹${p.refundedAmount}` : ''}</div>
             </div>
           ))}
-          {filteredPay.length === 0 && <div className="text-xs text-slate-500">No payments match.</div>}
         </div>
-        <div className="space-y-2">
-          {refunds.length > 0 && (
-            <>
-              <div className="text-xs font-extrabold text-slate-700">Refunds ({refunds.length})</div>
-              {refunds.map((r) => (
-                <div key={r.id} className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs font-bold">{r.id} • payment {r.paymentId} • ₹{r.amount} • {r.status}</div>
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
+          <table className="w-full text-left text-xs min-w-[860px]">
+            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
+              <th className="px-4 py-3">Payment</th><th className="px-4 py-3">Invoice</th><th className="px-4 py-3">Company</th><th className="px-4 py-3 text-right">Amount</th><th className="px-4 py-3">Method</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Date</th>
+            </tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredPay.map((p) => (
+                <tr key={p.id} className="hover:bg-slate-50/70">
+                  <td className="px-4 py-3 font-mono font-bold">{p.id}</td>
+                  <td className="px-4 py-3 font-mono">{p.invoiceId}</td>
+                  <td className="px-4 py-3 font-mono font-bold text-amber-700">{p.orgId}</td>
+                  <td className="px-4 py-3 text-right font-extrabold">₹{Number(p.amount || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-4 py-3">{p.method || ''}{p.provider ? ` via ${p.provider}` : ''}</td>
+                  <td className="px-4 py-3"><span className="font-bold">{p.status}</span>{p.refundedAmount ? <span className="text-slate-500"> • ref ₹{p.refundedAmount}</span> : ''}</td>
+                  <td className="px-4 py-3">{String(p.transactionDate || p.createdAt || '').slice(0, 10)}</td>
+                </tr>
               ))}
-            </>
-          )}
+            </tbody>
+          </table>
         </div>
-      </div>
+      </>)}
+      <Pager page={payPage} total={payTotal} pageSize={bps} onPage={setPayPage} />
+      <div className="text-xs font-extrabold text-slate-700">Refunds ({refunds.length})</div>
+      {refunds.length === 0 ? <div className="text-xs text-slate-500">No refunds.</div> : (<>
+        <div className="space-y-2 md:hidden">
+          {refunds.map((r) => (
+            <div key={r.id} className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs font-bold">{r.id} • payment {r.paymentId} • ₹{r.amount} • {r.status}</div>
+          ))}
+        </div>
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
+          <table className="w-full text-left text-xs min-w-[720px]">
+            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
+              <th className="px-4 py-3">Refund</th><th className="px-4 py-3">Payment</th><th className="px-4 py-3">Invoice</th><th className="px-4 py-3 text-right">Amount</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Reason</th>
+            </tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {refunds.map((r) => (
+                <tr key={r.id} className="hover:bg-slate-50/70">
+                  <td className="px-4 py-3 font-mono font-bold">{r.id}</td>
+                  <td className="px-4 py-3 font-mono">{r.paymentId}</td>
+                  <td className="px-4 py-3 font-mono">{r.invoiceId}</td>
+                  <td className="px-4 py-3 text-right font-extrabold">₹{Number(r.amount || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-4 py-3 font-bold">{r.status}</td>
+                  <td className="px-4 py-3 text-slate-600">{r.reason || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </>)}
     </div>
   );
 }
@@ -2785,7 +3033,7 @@ export function CommissionsPanel() {
   const [commissions, setCommissions] = useState<any[]>([]);
   const [payouts, setPayouts] = useState<any[]>([]);
   const [error, setError] = useState('');
-  const [form, setForm] = useState({ orgId: '', jobId: '', hiringType: 'Mid-level IT roles', rate: '8.33', trigger: 'Joined', basisType: 'annual_ctc', contractMonths: '12', paymentTermsDays: '30', replacementDays: '90', templateId: '' });
+  const [form, setForm] = useState({ orgId: '', jobId: '', hiringType: 'Mid-level IT roles', rate: '8.33', trigger: 'Joined', basisType: 'annual_ctc', contractMonths: '12', paymentTermsDays: '30', replacementDays: '90', templateId: '', autoApprove: false });
   const [slabs, setSlabs] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
   const [showAgreement, setShowAgreement] = useState(false);
@@ -2853,10 +3101,10 @@ export function CommissionsPanel() {
     e.preventDefault(); if (!form.orgId) return;
     try {
       const a = form.templateId
-        ? unwrapObj(await billingApi.instantiateTemplate(form.templateId, { orgId: form.orgId, jobId: form.jobId || undefined, hiringType: form.hiringType, rate: Number(form.rate) || undefined, trigger: form.trigger, basisType: form.basisType, contractMonths: Number(form.contractMonths) || 12 }))
-        : unwrapObj(await billingApi.createAgreement({ orgId: form.orgId, jobId: form.jobId || undefined, hiringType: form.hiringType, rate: Number(form.rate) || 8.33, trigger: form.trigger, basisType: form.basisType, contractMonths: Number(form.contractMonths) || 12, paymentTermsDays: Number(form.paymentTermsDays) || 30, replacementDays: Number(form.replacementDays) || 90 }));
+        ? unwrapObj(await billingApi.instantiateTemplate(form.templateId, { orgId: form.orgId, jobId: form.jobId || undefined, hiringType: form.hiringType, rate: Number(form.rate) || undefined, trigger: form.trigger, basisType: form.basisType, contractMonths: Number(form.contractMonths) || 12, autoApprove: form.autoApprove }))
+        : unwrapObj(await billingApi.createAgreement({ orgId: form.orgId, jobId: form.jobId || undefined, hiringType: form.hiringType, rate: Number(form.rate) || 8.33, trigger: form.trigger, basisType: form.basisType, contractMonths: Number(form.contractMonths) || 12, paymentTermsDays: Number(form.paymentTermsDays) || 30, replacementDays: Number(form.replacementDays) || 90, autoApprove: form.autoApprove }));
       if (a?.id) setAgreements((x) => [a, ...x]);
-      setForm({ orgId: '', jobId: '', hiringType: 'Mid-level IT roles', rate: '8.33', trigger: 'Joined', basisType: 'annual_ctc', contractMonths: '12', paymentTermsDays: '30', replacementDays: '90', templateId: '' });
+      setForm({ orgId: '', jobId: '', hiringType: 'Mid-level IT roles', rate: '8.33', trigger: 'Joined', basisType: 'annual_ctc', contractMonths: '12', paymentTermsDays: '30', replacementDays: '90', templateId: '', autoApprove: false });
       setShowAgreement(false);
       syncAll();
     } catch (e) { setError(errMsg(e)); }
@@ -2992,6 +3240,10 @@ export function CommissionsPanel() {
           <Field label="Contract months (monthly basis)"><input className={kitInput} type="number" min={1} max={36} value={form.contractMonths} onChange={(e) => setForm({ ...form, contractMonths: e.target.value })} /></Field>
           <Field label="Payment within (days of joining)"><input className={kitInput} type="number" min={1} max={60} value={form.paymentTermsDays} onChange={(e) => setForm({ ...form, paymentTermsDays: e.target.value })} /></Field>
           <Field label="Replacement window (days)"><input className={kitInput} type="number" min={0} max={365} value={form.replacementDays} onChange={(e) => setForm({ ...form, replacementDays: e.target.value })} /></Field>
+          <div className="sm:col-span-2 flex items-center gap-2 text-xs font-bold text-slate-700">
+            <input id="ag-auto" type="checkbox" checked={!!form.autoApprove} onChange={(e) => setForm({ ...form, autoApprove: e.target.checked })} className="w-4 h-4" />
+            <label htmlFor="ag-auto">Straight-through billing — auto-approve + auto-invoice on placement (trusted agreements only)</label>
+          </div>
           <div className="sm:col-span-2 text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200 rounded-xl p-2.5">
             {(() => { const s = slabOf(form.hiringType); if (!s) return 'Slab: loading…'; if (s.negotiated) return `Slab — ${s.hiringType}: ${s.note}. Any rate allowed.`; return `Slab — ${s.hiringType}: ${s.rateMin}%–${s.rateMax}% of ${form.basisType === 'monthly_ctc' ? `monthly CTC × ${form.contractMonths || 12} months` : 'annual CTC'}. GST extra. Payment 15–30 days from joining.`; })()}
           </div>
@@ -3196,7 +3448,7 @@ export function CommissionsPanel() {
       {commDetail !== null && (
         <DetailDrawer title={`Commission ${commDetail.id}`} subtitle={`${commDetail.agencyId ? `Payable → ${commDetail.agencyId}` : `Receivable ← ${commDetail.orgId}`} • ${commDetail.approvalStatus} / ${commDetail.paymentStatus}`} onClose={() => setCommDetail(null)}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-            {[['Fee basis', basisText(commDetail)], ['Billed', commDetail.basisType === 'monthly_ctc' ? `${Number(commDetail.billedMonths || 0)} of ${commDetail.contractMonths || 12} months` : (commDetail.invoiceId ? 'invoiced' : 'not billed')], ['Rate', `${commDetail.rate}%`], ['Gross', `₹${Number(commDetail.gross || 0).toLocaleString('en-IN')}`], ['Adjustments', `₹${Number(commDetail.adjustments || 0).toLocaleString('en-IN')}`], ['GST (18%)', `₹${Number(commDetail.tax || 0).toLocaleString('en-IN')}`], ['Total', `₹${Number(commDetail.total || commDetail.net || 0).toLocaleString('en-IN')}`], ['Trigger', `${commDetail.trigger || '—'} @ ${String(commDetail.triggerDate || '').slice(0, 10)}`], ['Agreement', commDetail.agreementId || '—'], ['Placement / Application', commDetail.placementId || commDetail.applicationId || '—'], ['Candidate', commDetail.candidateEmail || '—'], ['Job', commDetail.jobId || '—'], ['Invoice', commDetail.invoiceId || 'not generated']].map(([k, v]) => (
+            {[['Fee basis', basisText(commDetail)], ['Billed', commDetail.basisType === 'monthly_ctc' ? `${Number(commDetail.billedMonths || 0)} of ${commDetail.contractMonths || 12} months` : (commDetail.invoiceId ? 'invoiced' : 'not billed')], ['Agreement snapshot', commDetail.agreementSnapshot ? `${commDetail.agreementSnapshot.hiringType || ''} @ ${commDetail.agreementSnapshot.rate}% • ${commDetail.agreementSnapshot.basisType === 'monthly_ctc' ? 'monthly' : 'annual'}` : (commDetail.agreementId || '—')], ['Trigger evidence', commDetail.triggerEvidence || commDetail.placementId || commDetail.applicationId || '—'], ['Invoices', [...(commDetail.invoiceIds || []), ...(!commDetail.invoiceIds && commDetail.invoiceId ? [commDetail.invoiceId] : [])].join(', ') || 'none yet'], ['Payouts / balance', (() => { const paid = payouts.filter((x: any) => x.commissionId === commDetail.id).reduce((a: number, x: any) => a + Number(x.amount || 0), 0); return paid > 0 ? `paid ₹${paid.toLocaleString('en-IN')} • bal ₹${Math.max(0, Number(commDetail.total || commDetail.net || 0) - paid).toLocaleString('en-IN')}` : 'unpaid'; })()], ['Rate', `${commDetail.rate}%`], ['Gross', `₹${Number(commDetail.gross || 0).toLocaleString('en-IN')}`], ['Adjustments', `₹${Number(commDetail.adjustments || 0).toLocaleString('en-IN')}`], ['GST (18%)', `₹${Number(commDetail.tax || 0).toLocaleString('en-IN')}`], ['Total', `₹${Number(commDetail.total || commDetail.net || 0).toLocaleString('en-IN')}`], ['Trigger', `${commDetail.trigger || '—'} @ ${String(commDetail.triggerDate || '').slice(0, 10)}`], ['Agreement', commDetail.agreementId || '—'], ['Placement / Application', commDetail.placementId || commDetail.applicationId || '—'], ['Candidate', commDetail.candidateEmail || '—'], ['Job', commDetail.jobId || '—'], ['Invoice', commDetail.invoiceId || 'not generated']].map(([k, v]) => (
               <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—')}</div></div>
             ))}
           </div>
@@ -3259,7 +3511,8 @@ export function LeadsPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [loadError, setLoadError] = useState(0);
-  const [form, setForm] = useState({ contactName: '', companyName: '', email: '', phone: '', industry: '', source: '', priority: 'Medium', nextFollowUp: '', value: '', notes: '', consent: '' });
+  const [form, setForm] = useState({ contactName: '', designation: '', companyName: '', website: '', email: '', phone: '', industry: '', companySize: '', location: '', source: '', service: '', hiringNeed: '', openings: '', budget: '', closeDate: '', priority: 'Medium', owner: '', branch: '', nextFollowUp: '', value: '', notes: '', consent: '' });
+  const [view, setView] = useQueryState('lead_view');
   const [mergeFor, setMergeFor] = useState<any>(null);
   const [mergeTarget, setMergeTarget] = useState('');
   const [mergeReason, setMergeReason] = useState('');
@@ -3298,9 +3551,9 @@ export function LeadsPanel() {
     e.preventDefault(); if (!form.contactName.trim() || !form.companyName.trim()) return;
     setBusy(true);
     try {
-      const l = unwrapObj(await salesApi.createLead({ ...form, value: Number(form.value) || undefined }));
+      const l = unwrapObj(await salesApi.createLead({ ...form, value: Number(form.value) || undefined, budget: Number(form.budget) || undefined, openings: Number(form.openings) || undefined }));
       if (l?.id) setRows((x) => [l, ...x]);
-      setForm({ contactName: '', companyName: '', email: '', phone: '', industry: '', source: '', priority: 'Medium', nextFollowUp: '', value: '', notes: '', consent: '' });
+      setForm({ contactName: '', designation: '', companyName: '', website: '', email: '', phone: '', industry: '', companySize: '', location: '', source: '', service: '', hiringNeed: '', openings: '', budget: '', closeDate: '', priority: 'Medium', owner: '', branch: '', nextFollowUp: '', value: '', notes: '', consent: '' });
       setShowCreate(false);
       syncAll();
     } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
@@ -3313,6 +3566,16 @@ export function LeadsPanel() {
   const convert = async (id: string) => {
     try { await salesApi.convert(id); load(); syncAll(); }
     catch (e) { setError(errMsg(e)); }
+  };
+  const openLeadDetail = async (l: any) => {
+    setDetail(l);
+    try { setActivities(unwrapList(await salesApi.activities(l.id))); } catch { setActivities([]); }
+  };
+  const dropMove = (l: any, to: string) => {
+    if (to === l.stage || l.mergedInto) return;
+    if (to === 'Lost' && !reason.trim()) { setError('Type a lost reason in the note box first — it is recorded with the move.'); return; }
+    if (to === 'Won') { setConvertId(l.id); return; }
+    move(l.id, to);
   };
   const filteredLeads = rows.filter((l) => !dqLead.trim() || `${l.id} ${l.contactName} ${l.companyName} ${l.email}`.toLowerCase().includes(dqLead.toLowerCase()));
   const saveLeadEdit = async () => {
@@ -3346,7 +3609,13 @@ export function LeadsPanel() {
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-base font-extrabold text-slate-900">Lead Pipeline — View / Edit / Convert / Delete</h3>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <div className="flex rounded-xl bg-slate-100 border border-slate-200 p-0.5" role="tablist" aria-label="Leads view">
+              {(['list', 'board'] as const).map((v) => (
+                <button key={v} role="tab" aria-selected={(view || 'list') === v} type="button" onClick={() => setView(v)}
+                  className={`px-3 py-1.5 rounded-lg font-bold text-xs capitalize ${((view || 'list') === v) ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>{v}</button>
+              ))}
+            </div>
             <ExportButton filename="leads.csv" rows={filteredLeads} columns={['id', 'contactName', 'companyName', 'email', 'stage', 'value', 'owner']} />
             <button type="button" onClick={() => setShowCreate(true)} className={btnPrimary}>+ New lead</button>
           </div>
@@ -3355,17 +3624,28 @@ export function LeadsPanel() {
       </div>
       {error && <PanelError message={error} status={loadError} onRetry={() => load(page)} />}
       {okMerge && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{okMerge}</div>}
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New lead" subtitle="New → Contacted → Qualified → … → Won / Lost">
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New lead" subtitle="New → Contacted → Qualified → … → Won / Lost" wide>
         <form onSubmit={create} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Contact name *"><input className={kitInput} value={form.contactName} onChange={(e) => setForm({ ...form, contactName: e.target.value })} /></Field>
+          <Field label="Designation"><input className={kitInput} value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })} placeholder="e.g. VP Engineering" /></Field>
           <Field label="Company *"><input className={kitInput} value={form.companyName} onChange={(e) => setForm({ ...form, companyName: e.target.value })} /></Field>
-          <Field label="Email"><input className={kitInput} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
+          <Field label="Website"><input className={kitInput} value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://…" /></Field>
+          <Field label="Business email"><input className={kitInput} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
           <Field label="Phone"><input className={kitInput} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></Field>
-          <Field label="Industry"><input className={kitInput} value={form.industry} onChange={(e) => setForm({ ...form, industry: e.target.value })} /></Field>
-          <Field label="Lead source"><input className={kitInput} value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} /></Field>
+          <Field label="Industry"><input className={kitInput} value={form.industry} onChange={(e) => setForm({ ...form, industry: e.target.value })} placeholder="e.g. Fintech" /></Field>
+          <Field label="Company size"><Select value={form.companySize} onChange={(v) => setForm({ ...form, companySize: v })} placeholder="Select size" options={['1–10', '11–50', '51–200', '201–1000', '1000+'].map((s) => ({ value: s, label: s }))} /></Field>
+          <Field label="Location"><input className={kitInput} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></Field>
+          <Field label="Lead source"><Select value={form.source} onChange={(v) => setForm({ ...form, source: v })} placeholder="Select source" options={['Website', 'Referral', 'LinkedIn', 'Cold outreach', 'Event', 'Partner', 'Other'].map((s) => ({ value: s, label: s }))} /></Field>
+          <Field label="Interested service"><Select value={form.service} onChange={(v) => setForm({ ...form, service: v })} placeholder="Select service" options={['Direct hiring', 'Contract staffing', 'Payroll services', 'Executive search', 'Bulk hiring', 'Other'].map((s) => ({ value: s, label: s }))} /></Field>
+          <Field label="Estimated openings"><input className={kitInput} type="number" min={0} value={form.openings} onChange={(e) => setForm({ ...form, openings: e.target.value })} /></Field>
+          <div className="sm:col-span-2"><Field label="Hiring need"><textarea rows={2} className={kitInput} value={form.hiringNeed} onChange={(e) => setForm({ ...form, hiringNeed: e.target.value })} placeholder="Roles, stacks, timelines…" /></Field></div>
+          <Field label="Budget / deal value"><input className={kitInput} type="number" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} /></Field>
+          <Field label="Deal value (legacy)"><input className={kitInput} type="number" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} /></Field>
+          <Field label="Expected close date"><DatePicker value={form.closeDate} onChange={(v) => setForm({ ...form, closeDate: v })} ariaLabel="Expected close date" /></Field>
           <Field label="Priority"><Select value={form.priority} onChange={(v) => setForm({ ...form, priority: v })} options={['Low', 'Medium', 'High'].map((p) => ({ value: p, label: p }))} /></Field>
+          <Field label="Owner"><input className={kitInput} value={form.owner} onChange={(e) => setForm({ ...form, owner: e.target.value })} placeholder="Defaults to you" /></Field>
+          <Field label="Branch"><input className={kitInput} value={form.branch} onChange={(e) => setForm({ ...form, branch: e.target.value })} /></Field>
           <Field label="Next follow-up"><DatePicker value={form.nextFollowUp} onChange={(v) => setForm({ ...form, nextFollowUp: v })} /></Field>
-          <Field label="Deal value"><input className={kitInput} type="number" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} /></Field>
           <div><Field label="Notes"><input className={kitInput} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field></div>
           <div className="sm:col-span-2"><Field label="Communication consent / lawful basis" hint="Required for outreach — e.g. 'opt-in via website form, 2026-10-01'"><input className={kitInput} value={form.consent} onChange={(e) => setForm({ ...form, consent: e.target.value })} placeholder="How did this contact consent to outreach?" /></Field></div>
           <div className="sm:col-span-2 flex justify-end gap-2 pt-1">
@@ -3375,7 +3655,9 @@ export function LeadsPanel() {
         </form>
       </Modal>
       <input className={inputCls} placeholder="Lost reason (required when marking Lost)" value={reason} onChange={(e) => setReason(e.target.value)} />
-      {loading ? <InlineLoading message="Loading leads…" /> : filteredLeads.length === 0 ? (
+      {(view || 'list') === 'board' ? (
+        loading ? <InlineLoading message="Loading board…" /> : <LeadsKanban leads={filteredLeads} onOpen={(l) => openLeadDetail(l)} onDropMove={dropMove} />
+      ) : loading ? <InlineLoading message="Loading leads…" /> : filteredLeads.length === 0 ? (
         <EmptyState title="No leads" message="Add the first sales lead to start the pipeline." />
       ) : (
         <div className="space-y-2">{filteredLeads.map((l) => (
@@ -3386,7 +3668,7 @@ export function LeadsPanel() {
             </div>
             <div className="flex flex-wrap gap-1.5">
               <RowMenu label={`Actions for ${l.id}`} items={[
-                { label: 'View 360°', onSelect: async () => { setDetail(l); try { setActivities(unwrapList(await salesApi.activities(l.id))); } catch { setActivities([]); } } },
+                { label: 'View 360°', onSelect: () => openLeadDetail(l) },
                 { label: 'Edit lead…', onSelect: () => setEditing({ ...l }) },
                 ...LEAD_STAGES.filter((s) => s !== l.stage).map((s) => ({ label: `Move to ${s}`, onSelect: () => move(l.id, s) })),
                 { label: 'Log meeting', onSelect: () => { setMeetingLead(l); setMeetingForm({ title: 'Follow-up meeting', date: '', hour: '10', minute: '00', outcome: '', notes: '', nextAction: '', followUp: '' }); } },
@@ -3401,13 +3683,17 @@ export function LeadsPanel() {
         ))}</div>
       )}
       <Pager page={page} total={total} pageSize={pageSize} onPage={setPage} />
-      <ConfirmDialog
+      <ActionConfirm
         open={convertId !== ''}
-        title="Convert lead to company"
-        body="A new organization is provisioned from this lead and the lead is marked Won with history preserved. Continue?"
-        confirmLabel="Convert"
-        onConfirm={async () => { await convert(convertId); setConvertId(''); }}
         onCancel={() => setConvertId('')}
+        title="Convert lead to company"
+        subtitle={convertId}
+        why={['Lead reached Won — conversion provisions the client organization', 'History and linked records carry over']}
+        steps={['New organization created from lead data', 'Lead marked Won with conversion trail', 'Opportunities link to the new company']}
+        consequences={['A duplicate organization check runs first — convert, don’t re-enter']}
+        confirmLabel="Convert to company"
+        tone="dark"
+        onConfirm={async () => { await convert(convertId); setConvertId(''); }}
       />
       <Modal open={mergeFor !== null} onClose={() => setMergeFor(null)} title={`Merge duplicates — ${mergeFor?.id || ''}`} subtitle="Activities, meetings, proposals and opportunities move to the surviving lead. The duplicate is marked Lost with a merge trail.">
         <div className="space-y-3">
@@ -3531,6 +3817,50 @@ export function LeadsPanel() {
         ))}
       </Modal>
       <ConfirmDialog open={deleteFor !== null} onCancel={() => setDeleteFor(null)} title={`Delete lead ${deleteFor?.id || ''}?`} body="Won leads cannot be deleted (audit). Other leads are removed permanently." confirmLabel="Delete" onConfirm={doLeadDelete} />
+    </div>
+  );
+}
+
+/* ---------------- Leads Kanban (drop moves stage; Won routes to convert, Lost needs a reason) ---------------- */
+const LEAD_KANBAN_ORDER = ['New', 'Contacted', 'Qualified', 'Discovery Scheduled', 'Proposal Sent', 'Negotiation', 'Won', 'Lost', 'Nurture'];
+const LEAD_STAGE_TONE: Record<string, string> = {
+  New: 'bg-slate-100 text-slate-600 border-slate-200', Contacted: 'bg-blue-50 text-blue-700 border-blue-200',
+  Qualified: 'bg-indigo-50 text-indigo-700 border-indigo-200', 'Discovery Scheduled': 'bg-purple-50 text-purple-700 border-purple-200',
+  'Proposal Sent': 'bg-amber-50 text-amber-700 border-amber-200', Negotiation: 'bg-orange-50 text-orange-700 border-orange-200',
+  Won: 'bg-emerald-50 text-emerald-700 border-emerald-200', Lost: 'bg-red-50 text-red-700 border-red-200', Nurture: 'bg-teal-50 text-teal-700 border-teal-200',
+};
+
+export function LeadsKanban({ leads, onOpen, onDropMove }: { leads: any[]; onOpen: (l: any) => void; onDropMove: (l: any, to: string) => void }) {
+  const [dragId, setDragId] = useState<string | null>(null);
+  const cols = LEAD_KANBAN_ORDER.map((s) => ({ stage: s, items: leads.filter((l) => l.stage === s) }));
+  return (
+    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50/50 p-3" data-lenis-prevent>
+      <div className="flex gap-3 min-w-[1180px]">
+        {cols.map((c) => (
+          <div key={c.stage} className="flex-1 min-w-[190px] rounded-2xl bg-white border border-slate-200 p-2 space-y-2"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              const l = leads.find((x) => x.id === dragId);
+              setDragId(null);
+              if (l && c.stage !== l.stage) onDropMove(l, c.stage);
+            }}>
+            <div className="flex items-center justify-between px-1">
+              <span className={`text-[11px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border ${LEAD_STAGE_TONE[c.stage] || LEAD_STAGE_TONE.New}`}>{c.stage}</span>
+              <span className="text-[11px] font-extrabold text-slate-400">{c.items.length}</span>
+            </div>
+            {c.items.map((l) => (
+              <div key={l.id} draggable onDragStart={() => setDragId(l.id)}
+                onClick={() => onOpen(l)}
+                className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs cursor-grab active:cursor-grabbing hover:border-[#087BFF]">
+                <div className="font-extrabold text-slate-900 truncate">{l.contactName}</div>
+                <div className="text-slate-500 font-medium truncate">{l.companyName}</div>
+                <div className="font-mono text-[10px] text-slate-400">{l.id} • ₹{Number(l.value || 0).toLocaleString('en-IN')}</div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -3914,7 +4244,7 @@ export function CandidatesPanel() {
   const [total, setTotal] = useState(0);
   const [detail, setDetail] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ name: '', phone: '', roleTitle: '', experienceYears: '', location: '', preferredLocation: '', currentCtc: '', expectedCtc: '', noticePeriod: '', skills: '', visibility: 'standard', assignedRecruiter: '', source: '' });
+  const [editForm, setEditForm] = useState({ name: '', phone: '', roleTitle: '', experienceYears: '', location: '', preferredLocation: '', currentCtc: '', expectedCtc: '', noticePeriod: '', ctcType: 'annual', skills: '', visibility: 'standard', assignedRecruiter: '', source: '' });
   const [statusFor, setStatusFor] = useState<any>(null);
   const [statusForm, setStatusForm] = useState({ status: 'Suspended', reason: '', reviewDate: '' });
   const [busy, setBusy] = useState(false);
@@ -3960,7 +4290,7 @@ export function CandidatesPanel() {
   };
   const openEdit = (c: any) => {
     setEditing(c);
-    setEditForm({ name: c.name || '', phone: c.phone || '', roleTitle: c.roleTitle || '', experienceYears: String(c.experienceYears ?? ''), location: c.location || '', preferredLocation: c.preferredLocation || '', currentCtc: String(c.currentCtc ?? ''), expectedCtc: String(c.expectedCtc ?? ''), noticePeriod: c.noticePeriod || '', skills: Array.isArray(c.skills) ? c.skills.join(', ') : (c.skills || ''), visibility: c.visibility || 'standard', assignedRecruiter: c.assignedRecruiter || '', source: c.source || c.sourceType || '' });
+    setEditForm({ name: c.name || '', phone: c.phone || '', roleTitle: c.roleTitle || '', experienceYears: String(c.experienceYears ?? ''), location: c.location || '', preferredLocation: c.preferredLocation || '', currentCtc: String(c.currentCtc ?? ''), expectedCtc: String(c.expectedCtc ?? ''), noticePeriod: c.noticePeriod || '', ctcType: c.ctcType || 'annual', skills: Array.isArray(c.skills) ? c.skills.join(', ') : (c.skills || ''), visibility: c.visibility || 'standard', assignedRecruiter: c.assignedRecruiter || '', source: c.source || c.sourceType || '' });
   };
   const saveEdit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!editing) return;
@@ -4164,6 +4494,8 @@ export function CandidatesPanel() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Current CTC"><input className={kitInput} value={editForm.currentCtc} onChange={(e) => setEditForm({ ...editForm, currentCtc: e.target.value })} /></Field>
                 <Field label="Expected CTC"><input className={kitInput} value={editForm.expectedCtc} onChange={(e) => setEditForm({ ...editForm, expectedCtc: e.target.value })} /></Field>
+                <Field label="CTC basis"><Select value={editForm.ctcType} onChange={(v) => setEditForm({ ...editForm, ctcType: v })} options={[{ value: 'annual', label: 'Annual CTC' }, { value: 'monthly', label: 'Monthly CTC' }]} /></Field>
+                <Field label="Notice period"><Select value={editForm.noticePeriod} onChange={(v) => setEditForm({ ...editForm, noticePeriod: v })} placeholder="Select notice period" options={['Immediate Joiner', '15 Days', '30 Days', '45 Days', '60 Days', '90 Days', 'Serving Notice', 'Garden Leave'].map((v) => ({ value: v, label: v }))} /></Field>
                 <div className="sm:col-span-2"><Field label="Skills"><SkillPicker value={editForm.skills} onChange={(v) => setEditForm({ ...editForm, skills: v })} /></Field></div>
               </div>
             </div>
@@ -4653,6 +4985,215 @@ export function AgencyPanel() {
 }
 
 const ALL_PERMISSIONS = ['view','create','edit','archive','delete','approve','reject','suspend','restore','assign','export','manage_billing','manage_permissions','view_sensitive_fields','reconcile','refund','adjust_commission'];
+
+/* ---------------- Roles directory (§4): metadata, edit, bulk import ---------------- */
+export function RolesPanel() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [error, setError] = useState('');
+  const [q, setQ] = useState('');
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState({ id: '', scope: 'platform', description: '' });
+  const [editing, setEditing] = useState<any>(null);
+  const [editPerms, setEditPerms] = useState<string[]>([]);
+  const [showImport, setShowImport] = useState(false);
+  const load = async () => {
+    setError('');
+    try {
+      const { rolesApi } = await import('../../shared/enterprise/phaseApi');
+      setRows(unwrapList(await rolesApi.list()));
+    } catch (e) { setError(errMsg(e)); }
+  };
+  useEffect(() => { load(); }, []);
+  const create = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!form.id.trim()) return;
+    try {
+      const { rolesApi } = await import('../../shared/enterprise/phaseApi');
+      const r = unwrapObj(await rolesApi.create(form));
+      if (r?.id) setRows((x) => [r, ...x]);
+      setForm({ id: '', scope: 'platform', description: '' }); setShowCreate(false); syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const saveEdit = async () => {
+    if (!editing) return;
+    try {
+      const { rolesApi } = await import('../../shared/enterprise/phaseApi');
+      const u = unwrapObj(await rolesApi.update(editing.id, { description: editing.description, scope: editing.scope, permissions: editPerms }));
+      setRows((x) => x.map((r) => (r.id === editing.id ? { ...r, ...(u?.id ? u : {}) } : x)));
+      setEditing(null); syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const remove = async (id: string) => {
+    try {
+      const { rolesApi } = await import('../../shared/enterprise/phaseApi');
+      await rolesApi.remove(id);
+      setRows((x) => x.filter((r) => r.id !== id)); syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const filtered = rows.filter((r) => !q.trim() || `${r.id} ${r.scope} ${r.description}`.toLowerCase().includes(q.toLowerCase()));
+  return (
+    <div className={cardCls}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-base font-extrabold text-slate-900">Roles ({rows.length})</h3>
+          <InfoTip title="How roles work" body={<><p>Every account runs on a role template. System roles ship with the platform; custom roles can be added. Editing a role's <strong>permissions rewires authorization immediately</strong> (audited) — per-user exceptions still apply on top.</p></>} />
+        </div>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => setShowImport(true)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Bulk import…</button>
+          <button type="button" onClick={() => setShowCreate(true)} className={btnPrimary}>+ New role</button>
+        </div>
+      </div>
+      {error && <PanelError message={error} onRetry={load} />}
+      <input className={inputCls} placeholder="Search roles…" value={q} onChange={(e) => setQ(e.target.value)} />
+      {filtered.length === 0 ? <EmptyState title="No roles" message="Roles drive every permission check in the platform." /> : (<>
+        <div className="space-y-2 md:hidden">
+          {filtered.map((r) => (
+            <div key={r.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+              <div className="flex items-start justify-between gap-2">
+                <div className="font-extrabold text-slate-900 text-sm font-mono">{r.id}</div>
+                {r.system ? <span className="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 font-bold text-[11px]">system</span> : <RowMenu items={[{ label: 'Edit…', onSelect: () => { setEditing({ ...r }); setEditPerms(r.permissions || []); } }, { label: 'Delete…', danger: true, onSelect: () => remove(r.id) }]} />}
+              </div>
+              <div className="text-slate-600 font-medium">{r.scope} • {r.description || '—'}</div>
+              {r.permissions ? <div className="font-mono text-[11px] text-slate-500">{r.permissions.length} explicit permissions</div> : null}
+            </div>
+          ))}
+        </div>
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
+          <table className="w-full text-left text-xs min-w-[760px]">
+            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
+              <th className="px-4 py-3">Role</th><th className="px-4 py-3">Scope</th><th className="px-4 py-3">Purpose</th><th className="px-4 py-3">Permissions</th><th className="px-4 py-3 text-right">Actions</th>
+            </tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {filtered.map((r) => (
+                <tr key={r.id} className="hover:bg-slate-50/70">
+                  <td className="px-4 py-3"><span className="font-mono font-bold text-slate-900">{r.id}</span>{r.system ? <span className="ml-2 px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 font-bold text-[11px]">system</span> : null}</td>
+                  <td className="px-4 py-3">{r.scope}</td>
+                  <td className="px-4 py-3 text-slate-600 max-w-[320px]">{r.description || '—'}</td>
+                  <td className="px-4 py-3 font-mono text-[11px]">{r.permissions ? `${r.permissions.length} explicit` : 'template default'}</td>
+                  <td className="px-4 py-3"><div className="flex justify-end">{r.system ? <span className="text-[11px] text-slate-400 font-bold">locked</span> : <RowMenu label={`Role ${r.id}`} items={[{ label: 'Edit…', onSelect: () => { setEditing({ ...r }); setEditPerms(r.permissions || []); } }, { label: 'Delete…', danger: true, onSelect: () => remove(r.id) }]} />}</div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </>)}
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New custom role" subtitle="Starts with template-default permissions unless edited">
+        <form onSubmit={create} className="space-y-3">
+          <Field label="Role ID *"><input className={kitInput} value={form.id} onChange={(e) => setForm({ ...form, id: e.target.value })} placeholder="e.g. qa_lead (lowercase, underscores)" /></Field>
+          <Field label="Scope"><Select value={form.scope} onChange={(v) => setForm({ ...form, scope: v })} options={['platform', 'company', 'agency', 'candidate', 'vendor'].map((s) => ({ value: s, label: s }))} /></Field>
+          <Field label="Purpose"><textarea rows={2} className={kitInput} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button className={btnPrimary}>Create role</button>
+          </div>
+        </form>
+      </Modal>
+      <Modal open={editing !== null} onClose={() => setEditing(null)} title={`Edit role — ${editing?.id || ''}`} subtitle="Permission edits rewire authorization immediately (audited)">
+        <div className="space-y-3">
+          <Field label="Scope"><Select value={editing?.scope || 'platform'} onChange={(v) => setEditing({ ...editing, scope: v })} options={['platform', 'company', 'agency', 'candidate', 'vendor'].map((s) => ({ value: s, label: s }))} /></Field>
+          <Field label="Purpose"><textarea rows={2} className={kitInput} value={editing?.description || ''} onChange={(e) => setEditing({ ...editing, description: e.target.value })} /></Field>
+          <div>
+            <div className="text-[11px] font-extrabold text-slate-600 uppercase tracking-wider mb-1.5">Explicit permissions (empty = template default)</div>
+            <div className="flex flex-wrap gap-1.5">
+              {ALL_PERMISSIONS.map((p) => (
+                <button key={p} type="button" onClick={() => setEditPerms((x) => (x.includes(p) ? x.filter((y) => y !== p) : [...x, p]))}
+                  className={`px-2.5 py-1 rounded-full border font-bold text-[11px] ${editPerms.includes(p) ? 'bg-[#087BFF] text-white border-[#087BFF]' : 'bg-white text-slate-600 border-slate-200'}`}>{p}</button>
+              ))}
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setEditing(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button type="button" onClick={saveEdit} className={btnDark}>Save role</button>
+          </div>
+        </div>
+      </Modal>
+      <BulkImportModal open={showImport} onClose={() => setShowImport(false)} title="Bulk import roles" subtitle="Preview first — duplicates are skipped, never overwritten" collection="roles" columns={['id', 'scope', 'description']} sample={'id,scope,description\nqa_lead,platform,QA owner\npartner_manager,agency,Partner channel'} onDone={load} />
+    </div>
+  );
+}
+
+/* ---------------- Skills taxonomy admin (§14.2) ---------------- */
+export function SkillsPanel() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [cats, setCats] = useState<string[]>([]);
+  const [q, setQ] = useState('');
+  const dqSkill = useDebounced(q);
+  const [cat, setCat] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [error, setError] = useState('');
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState({ name: '', category: 'Technology' });
+  const [showImport, setShowImport] = useState(false);
+  const pageSize = 20;
+  const load = async (p = page, qq = dqSkill, cc = cat) => {
+    setError('');
+    try {
+      const { documentsApi } = await import('../../shared/enterprise/phaseApi');
+      const sp = new URLSearchParams({ page: String(p), pageSize: String(pageSize) });
+      if (qq.trim()) sp.set('q', qq.trim());
+      if (cc) sp.set('category', cc);
+      const res: any = await documentsApi.skillsPaged(`?${sp.toString()}`);
+      setRows(unwrapList(res)); setTotal(Number(res?.pagination?.total || unwrapList(res).length));
+      const c = (res as { categories?: string[] })?.categories;
+      if (Array.isArray(c)) setCats(c);
+    } catch (e) { setError(errMsg(e)); }
+  };
+  useEffect(() => { setPage(1); }, [dqSkill, cat]);
+  useEffect(() => { load(page, dqSkill, cat); }, [page, dqSkill, cat]);
+  const create = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!form.name.trim()) return;
+    try {
+      const { documentsApi } = await import('../../shared/enterprise/phaseApi');
+      const r = unwrapObj(await documentsApi.createSkill(form));
+      if (r?.id) { setRows((x) => [r, ...x]); setTotal((t) => t + 1); }
+      setForm({ name: '', category: 'Technology' }); setShowCreate(false); syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
+  return (
+    <div className={cardCls}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-base font-extrabold text-slate-900">Skills taxonomy ({total})</h3>
+          <InfoTip title="How skills work" body={<><p>One shared taxonomy across candidates, requisitions and jobs. Search by name, filter by industry, add missing skills individually or via <strong>bulk import</strong> (duplicates are detected and skipped).</p></>} />
+        </div>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => setShowImport(true)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Bulk import…</button>
+          <button type="button" onClick={() => setShowCreate(true)} className={btnPrimary}>+ New skill</button>
+        </div>
+      </div>
+      {error && <PanelError message={error} onRetry={() => load(page, q, cat)} />}
+      <div className="flex flex-col lg:flex-row gap-2">
+        <input className={`${inputCls} flex-1`} placeholder="Search skills…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <div className="w-full lg:w-52 shrink-0">
+          <Select value={cat} onChange={setCat} ariaLabel="Industry filter" placeholder="All industries"
+            options={[{ value: '', label: 'All industries' }, ...cats.map((c) => ({ value: c, label: c }))]} />
+        </div>
+      </div>
+      {rows.length === 0 ? <EmptyState title="No skills" message="Widen the search or add the skill." /> : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {rows.map((s) => (
+            <div key={s.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
+              <span className="truncate">{s.name}</span>
+              <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[11px] shrink-0">{s.category}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <Pager page={page} total={total} pageSize={pageSize} onPage={setPage} />
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New skill" subtitle="Duplicates are rejected (409)">
+        <form onSubmit={create} className="space-y-3">
+          <Field label="Skill name *"><input className={kitInput} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Pediatric Nursing" /></Field>
+          <Field label="Industry"><input className={kitInput} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder={cats.slice(0, 3).join(', ') + (cats.length > 3 ? '…' : '')} /></Field>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button className={btnPrimary}>Add skill</button>
+          </div>
+        </form>
+      </Modal>
+      <BulkImportModal open={showImport} onClose={() => setShowImport(false)} title="Bulk import skills" subtitle="Preview first — duplicates are skipped, never overwritten" collection="skills" columns={['name', 'category']} sample={'name,category\nPediatric Nursing,Healthcare\nWelding Inspection,Engineering'} onDone={() => load(1, '', '')} />
+    </div>
+  );
+}
 
 /* ---------------- Phase 5: Admin controls ---------------- */export function AdminControlsPanel() {
   const [users, setUsers] = useState<any[]>([]);
@@ -5296,16 +5837,23 @@ export function JobsKanban({ jobs, onOpen, onDropMove }: { jobs: any[]; onOpen: 
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">{c.status}</span>
               <span className="text-[11px] font-extrabold text-slate-400">{c.items.length}</span>
             </div>
-            {c.items.slice(0, 20).map((j) => (
+            {c.items.slice(0, 20).map((j) => {
+              const next = [...(JOB_TRANSITIONS[j.status] || []), ...(j.status === 'Published' ? ['Approved'] : []), ...(j.status === 'Closed' ? ['Published', 'Paused'] : [])][0];
+              return (
               <div key={j.id} draggable onDragStart={() => setDragId(j.id)}
                 onClick={() => onOpen(j)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') onOpen(j); }}
                 className="p-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-blue-300 cursor-grab active:cursor-grabbing space-y-1" title="Open details (drop onto a column to move with confirmation)">
                 <div className="font-extrabold text-xs text-slate-900 truncate">{j.title}</div>
-                <div className="font-mono text-[10px] text-slate-500">{j.id}</div>
-                <div className="text-[11px] font-bold text-slate-600">{j.counts?.applications ?? j.applicantsCount ?? 0} apps → {j.counts?.hired ?? 0} hired</div>
-                <div className="text-[10px] font-bold text-slate-400">exp {String(j.expiryDate || '').slice(0, 10) || '—'}</div>
+                <div className="font-mono text-[10px] text-slate-500">{j.id} • {j.orgId || ''}</div>
+                <div className="text-[11px] font-bold text-slate-600">{j.counts?.applications ?? j.applicantsCount ?? 0} apps → {j.counts?.hired ?? 0} hired • {j.location || '—'}</div>
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[10px] font-bold text-slate-400">exp {String(j.expiryDate || '').slice(0, 10) || '—'}</span>
+                  {next ? <button type="button" title={`Advance to ${next}`} onClick={(e) => { e.stopPropagation(); onDropMove(j, next); }}
+                    className="px-2 py-0.5 rounded-lg bg-[#087BFF] text-white text-[10px] font-extrabold hover:bg-blue-600">→ {next}</button> : null}
+                </div>
               </div>
-            ))}
+              );
+            })}
             {c.items.length > 20 && <div className="text-[10px] text-slate-400 font-bold px-1">+{c.items.length - 20} more — refine filters</div>}
           </div>
         ))}

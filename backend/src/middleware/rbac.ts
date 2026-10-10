@@ -47,9 +47,15 @@ export function ctxOf(req: Request): AuthCtx {
   return (req as any).auth as AuthCtx;
 }
 
-/** Template permissions ± per-user exceptions (§4.2 controlled exceptions). */
+/** Template permissions ± per-user exceptions (§4.2 controlled exceptions).
+ *  A stored role record overrides the static template when it carries permissions. */
 export function effectivePermissions(role: string, email: string): string[] {
-  const base = new Set(ROLE_PERMISSIONS[role] || ['view']);
+  let template: string[] = ROLE_PERMISSIONS[role] || ['view'];
+  try {
+    const rec: any = (loadDb().roles as any[]).find((r: any) => r.id === role);
+    if (rec && Array.isArray(rec.permissions) && rec.permissions.length > 0) template = rec.permissions;
+  } catch { /* fall back to static template */ }
+  const base = new Set(template);
   try {
     const db = loadDb();
     for (const o of (db.userRoles as any[]).filter((x: any) => String(x.email).toLowerCase() === String(email).toLowerCase())) {

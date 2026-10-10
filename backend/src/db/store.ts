@@ -51,7 +51,7 @@ function seed(): DbShape {
       { id: 'USR-105', name: 'Rajesh Verma', email: 'rajesh@techsolutionsvendor.com', role: 'vendor', tenantId: 'TNT-VENDOR-05', status: 'Active', employeeId: 'VN-003', department: 'Staffing', designation: 'Agency Admin', branch: 'Bengaluru', lastLogin: now },
       { id: 'USR-106', name: 'Siddharth Nair', email: 'candidate@nexatalent.com', role: 'candidate', tenantId: 'TNT-CANDIDATE', status: 'Active', employeeId: '', department: '', designation: '', branch: '', lastLogin: now },
     ],
-    roles: ['platform_owner','superadmin','operations_admin','finance_admin','sales_admin','support_admin','company_admin','hiring_manager','company_recruiter','internal_recruiter','bda','sales_manager','candidate','agency_admin','agency_recruiter','finance_staff','employee','employer','recruiter','vendor'].map((r) => ({ id: r, name: r })),
+    roles: seedRoles(now),
     permissions: ['view','create','edit','archive','delete','approve','reject','suspend','restore','assign','export','manage_billing','manage_permissions','view_sensitive_fields','reconcile','refund','adjust_commission'].map((p) => ({ id: p })),
     userRoles: [],
     organizations: [
@@ -175,7 +175,32 @@ function standardTemplate(now: string): any {
     createdBy: 'seed', createdAt: now,
   };
 }
-/** Industry-wide skills taxonomy (§14.2) — [name, category] pairs shared by candidates, requisitions and jobs. */
+/** Platform roles with scope + purpose (§4). Permissions mirror the rbac template; edits take effect via effectivePermissions. */
+function seedRoles(now: string): any[] {
+  const defs: Array<[string, string, string]> = [
+    ['platform_owner', 'platform', 'Full platform ownership. Sees and does everything.'],
+    ['superadmin', 'platform', 'Day-to-day platform administration across all tenants.'],
+    ['operations_admin', 'platform', 'Recruitment operations: requisitions, jobs, interviews, placements.'],
+    ['finance_admin', 'platform', 'Billing, invoices, refunds, commissions and payouts.'],
+    ['sales_admin', 'platform', 'Leads, opportunities and sales pipeline management.'],
+    ['support_admin', 'platform', 'Support tickets and account assistance.'],
+    ['company_admin', 'company', 'Company workspace owner: hiring, billing, users.'],
+    ['hiring_manager', 'company', 'Approves requisitions, interviews and offers.'],
+    ['company_recruiter', 'company', 'Runs sourcing, pipelines and scheduling.'],
+    ['internal_recruiter', 'platform', 'Platform-side recruiter working mandates.'],
+    ['bda', 'platform', 'Business development: prospects and lead conversion.'],
+    ['sales_manager', 'platform', 'Owns targets, pricing and deal approvals.'],
+    ['candidate', 'candidate', 'Job seeker: profile, applications, interviews.'],
+    ['agency_admin', 'agency', 'Agency owner: mandates, submissions, commissions.'],
+    ['agency_recruiter', 'agency', 'Agency recruiter: submissions and pipeline.'],
+    ['finance_staff', 'platform', 'Read-mostly finance support (no refunds/payouts).'],
+    ['employee', 'platform', 'Legacy alias of operations staff.'],
+    ['employer', 'company', 'Legacy alias of company hiring user.'],
+    ['recruiter', 'agency', 'Legacy alias of agency recruiter.'],
+    ['vendor', 'agency', 'Staffing vendor: contractors, timesheets, SOW.'],
+  ];
+  return defs.map(([id, scope, description]) => ({ id, name: id, scope, description, system: true, createdAt: now }));
+}
 function seedSkills(now: string): any[] {
   const pairs: Array<[string, string]> = [
     ['React','Technology'],['Node.js','Technology'],['TypeScript','Technology'],['Python','Technology'],['Java','Technology'],['Spring Boot','Technology'],['Go','Technology'],['Rust','Technology'],['.NET','Technology'],['C#','Technology'],['PHP','Technology'],['Laravel','Technology'],['Ruby on Rails','Technology'],['Swift','Technology'],['Kotlin','Technology'],['Flutter','Technology'],['React Native','Technology'],['Angular','Technology'],['Vue.js','Technology'],['Django','Technology'],['Flask','Technology'],
@@ -257,6 +282,12 @@ export function loadDb(): DbShape {
         if (!a.duplicatePolicy) a.duplicatePolicy = 'Duplicate profiles are rejected; the earliest valid submission owns the candidate.';
         if (!a.cancellationTerms) a.cancellationTerms = 'Either party may cancel with written notice; fees already triggered remain payable.';
         if (!a.replacementTerms) a.replacementTerms = `Free replacement within ${a.replacementDays ?? 90} days of joining under the defined conditions.`;
+      }
+      // Backfill role metadata (scope/description/system) on older role rows.
+      for (const r of (fresh.roles as any[])) {
+        const cur: any = (db!.roles as any[]).find((x: any) => x.id === r.id);
+        if (!cur) (db!.roles as any[]).push(r);
+        else for (const k of ['scope', 'description', 'system']) if (cur[k] === undefined) cur[k] = (r as any)[k];
       }
       // Backfill login-tenant links + new columns on seed agencies.
       for (const a of (db!.agencyProfiles as any[])) {

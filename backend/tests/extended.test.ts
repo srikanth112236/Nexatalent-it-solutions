@@ -105,7 +105,7 @@ describe('agency profiles', () => {
   it('onboards and verifies an agency', async () => {
     const c = await request(app).post('/api/v1/agency-profiles').set(auth(superToken)).send({ legalName: 'Test Agency Ltd' });
     expect(c.status).toBe(201);
-    const v = await request(app).patch(`/api/v1/agency-profiles/${c.body.data.id}`).set(auth(superToken)).send({ verificationStatus: 'Approved' });
+    const v = await request(app).patch(`/api/v1/agency-profiles/${c.body.data.id}`).set(auth(superToken)).send({ verificationStatus: 'Approved', reason: 'documents verified' });
     expect(v.body.data.accountStatus).toBe('Active');
   });
 });

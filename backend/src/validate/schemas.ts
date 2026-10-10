@@ -285,6 +285,7 @@ export const commissionAgreementSchema = z.object({
   fixedFee: money.optional(),
   basisType: z.enum(['annual_ctc', 'monthly_ctc']).default('annual_ctc'),
   contractMonths: z.number().int().min(1).max(36).default(12),
+  autoApprove: z.boolean().default(false),
   currency: currency.optional(),
   trigger: z.enum(['Offer Accepted', 'Joined']).default('Joined'),
   paymentTermsDays: z.number().int().min(1).max(60).default(30),

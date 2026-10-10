@@ -8,7 +8,7 @@ import {
   SubscriptionsPanel, BillingPanel, InvoicesPanel, CommissionsPanel, LeadsPanel, PerformancePanel,
   ReportsPanel, NotificationsPanel, AdminControlsPanel, RequisitionsPanel, ApplicationsPanel,
   CandidatesPanel, AgencyPanel, BranchesPanel, JobsPanel, SupportPanel,
-  InterviewsPanel, OffersPlacementsPanel, RequirementCreatePage, JobCreatePage,
+  InterviewsPanel, OffersPlacementsPanel, RequirementCreatePage, JobCreatePage, RolesPanel, SkillsPanel,
 } from '../common/EnterprisePanels';
 import { Modal, Select, Field } from '../../shared/ui/EnterpriseKit';
 import { MfaPanel } from '../../auth/components/MfaPanel';
@@ -495,7 +495,7 @@ export function SuperAdminPortal() {
         {currentTab === 'performance' && <PerformancePanel />}
         {currentTab === 'reports' && <ReportsPanel />}
         {currentTab === 'support' && <SupportPanel />}
-        {currentTab === 'controls' && (<div className="space-y-4"><AdminControlsPanel /><MfaPanel admin /></div>)}
+        {currentTab === 'controls' && (<div className="space-y-4"><AdminControlsPanel /><RolesPanel /><SkillsPanel /><MfaPanel admin /></div>)}
         {currentTab === 'notifications' && <NotificationsPanel />}
 
       </div>

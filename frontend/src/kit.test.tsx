@@ -128,10 +128,13 @@ describe('Select', () => {
     rerender(value);
     assert.ok(container.textContent?.includes('Pick…'));
     act(() => { container.querySelector('button')!.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+    const list = document.querySelector('[role="listbox"]');
+    assert.ok(list, 'options render in a body portal');
     act(() => {
-      Array.from(container.querySelectorAll('[role="option"]')).find((o) => o.textContent?.includes('Beta'))!.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+      Array.from(document.querySelectorAll('[role="option"]')).find((o) => o.textContent?.includes('Beta'))!.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
     });
     assert.equal(value, 'b');
+    document.querySelector('[role="listbox"]')?.remove();
   });
 });
 
@@ -140,9 +143,11 @@ describe('DatePicker', () => {
     let value = '';
     render(<DatePicker value={value} onChange={(v) => { value = v; }} />);
     act(() => { container.querySelector('button')!.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
-    assert.ok(container.querySelector('[role="dialog"]'));
+    const dlg = document.querySelector('[role="dialog"]') as HTMLElement | null;
+    assert.ok(dlg, 'calendar renders in a body portal');
+    assert.equal(dlg!.style.position, 'fixed');
     act(() => {
-      Array.from(container.querySelectorAll('button')).find((b) => b.textContent === '15')!.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+      Array.from(document.querySelectorAll('button')).find((b) => b.textContent === '15')!.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
     });
     assert.match(value, /^\d{4}-\d{2}-15$/);
   });
@@ -332,6 +337,30 @@ describe('RichText + SkillPicker', () => {
     render(<SkillPicker value="" onChange={() => {}} />);
     assert.ok(container.textContent?.includes('No skills selected'));
     assert.ok(container.querySelector('input[placeholder*="search"]') || container.textContent?.includes('Type to search'));
+  });
+});
+
+describe('Bulk import + roles/skills panels', () => {
+  it('parses quoted CSV correctly', async () => {
+    const { parseCsv } = await import('./portals/common/EnterprisePanels.js');
+    assert.deepEqual(parseCsv('name,category\n"React, JS",Technology\nPython,Data & AI\n'), [['name', 'category'], ['React, JS', 'Technology'], ['Python', 'Data & AI']]);
+  });
+  it('roles and skills panels render with import affordances', async () => {
+    const { RolesPanel, SkillsPanel } = await import('./portals/common/EnterprisePanels.js');
+    const { AuthProvider } = await import('./shared/auth/AuthContext.js');
+    render(<AuthProvider><RolesPanel /></AuthProvider>);
+    assert.ok(container.textContent?.includes('Bulk import'), 'roles import renders');
+    render(<AuthProvider><SkillsPanel /></AuthProvider>);
+    assert.ok(container.textContent?.includes('Skills taxonomy'), 'skills panel renders');
+  });
+});
+
+describe('LeadsKanban', () => {
+  it('renders stage columns with counts and cards', async () => {
+    const { LeadsKanban } = await import('./portals/common/EnterprisePanels.js');
+    render(<LeadsKanban leads={[{ id: 'L1', contactName: 'A', companyName: 'Acme', stage: 'New', value: 5 }, { id: 'L2', contactName: 'B', companyName: 'Beta', stage: 'Won', value: 9 }]} onOpen={() => {}} onDropMove={() => {}} />);
+    assert.ok(container.textContent?.includes('Acme'));
+    assert.ok(container.querySelector('[data-lenis-prevent]'), 'board scroll region present');
   });
 });
 

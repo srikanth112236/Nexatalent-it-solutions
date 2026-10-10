@@ -235,8 +235,9 @@ recruitmentRouter.get('/applications', requireAuth(), (req, res) => {
   let rows = loadDb().applications as any[];
   if (ctx.role === 'candidate') rows = rows.filter((a) => String(a.candidateEmail).toLowerCase() === ctx.email.toLowerCase());
   else if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role)) rows = rows.filter((a) => a.orgId === ctx.tenantId);
-  const { page, pageSize, status } = paginate.parse(req.query);
+  const { page, pageSize, status, q } = paginate.parse(req.query);
   if (status) rows = rows.filter((a) => a.stage === status);
+  if (q) { const s = String(q).toLowerCase(); rows = rows.filter((a) => `${a.id} ${a.jobTitle || ''} ${a.candidateEmail || ''}`.toLowerCase().includes(s)); }
   if (req.query.jobId) rows = rows.filter((a) => a.jobId === req.query.jobId);
   if (req.query.requisitionId) rows = rows.filter((a) => a.requisitionId === req.query.requisitionId);
   res.json({ success: true, ...paged(rows, page, pageSize) });
@@ -351,7 +352,26 @@ recruitmentRouter.post('/placements', requireAuth(['employer','superadmin','comp
   db.placements.unshift(pl); app.stage = 'Hired'; app.updatedAt = nowIso();
   audit(ctxOf(req).email, `PLACEMENT_JOINED:${pl.id}`, app.orgId, 'placement', pl.id, req.ip); persist();
   emit('placement.joined', { placementId: pl.id, applicationId, jobId: app.jobId, orgId: app.orgId, candidateEmail: app.candidateEmail, feeBasis: basis, stage: 'Hired' }, app.orgId, ctxOf(req).email);
-  res.status(201).json({ success: true, data: { ...pl, agreementId: agreement.id } });
+  // Straight-through billing for trusted agreements: approve + first invoice immediately.
+  let autoInvoice: any = null;
+  if (agreement.autoApprove) {
+    const { invoiceForCommission } = await import('./commercial.js');
+    for (const com of (db.commissions as any[]).filter((x: any) => x.applicationId === applicationId && x.approvalStatus === 'Pending')) {
+      com.approvalStatus = 'Approved'; com.approvedAt = nowIso(); com.approvedBy = 'system:auto-approve';
+      audit('system:auto-approve', `COMMISSION_APPROVED:${com.id}`, com.orgId, 'commission', com.id, req.ip);
+      emit('commission.approved', com, com.orgId, 'system:auto-approve');
+      try {
+        const out = invoiceForCommission(db, com, undefined, 'system:auto-approve');
+        autoInvoice = autoInvoice || out.invoice;
+      } catch { /* billing guard left a clear error on the commission instead */ }
+    }
+    persist();
+  }
+  db.notifications.unshift({ id: uid('NOTIF'), recipient: app.candidateEmail, kind: 'placement', body: `You joined ${app.jobId} — congratulations!`, channel: 'in-app', status: 'queued', createdAt: nowIso(), tenantId: app.orgId });
+  db.notifications.unshift({ id: uid('NOTIF'), recipient: `company:${app.orgId}`, kind: 'placement', body: `Placement ${pl.id}: ${app.candidateEmail} joined ${app.jobId} (fee basis ₹${basis.toLocaleString('en-IN')})${autoInvoice ? ` — invoice ${autoInvoice.number || autoInvoice.id} generated automatically` : ' — approve the commission to bill'}.`, channel: 'in-app', status: 'queued', createdAt: nowIso(), tenantId: app.orgId });
+  db.notifications.unshift({ id: uid('NOTIF'), recipient: 'superadmin', kind: 'placement', body: `Placement ${pl.id} (${app.orgId}): ${app.candidateEmail} → ${app.jobId}${autoInvoice ? `, auto-invoiced ${autoInvoice.number || autoInvoice.id}` : ''}.`, channel: 'in-app', status: 'queued', createdAt: nowIso(), tenantId: 'TNT-GLOBAL' });
+  persist();
+  res.status(201).json({ success: true, data: { ...pl, agreementId: agreement.id, autoInvoiced: autoInvoice ? autoInvoice.id : null } });
 });
 recruitmentRouter.get('/placements', requireAuth(), (req, res) => {
   const ctx = ctxOf(req); let rows = loadDb().placements as any[];

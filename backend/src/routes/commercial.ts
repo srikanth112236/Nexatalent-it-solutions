@@ -208,7 +208,11 @@ commercialRouter.get('/invoices/:id/pdf', requireAuth(), (req, res) => {
   pdf.pipe(res);
   pdf.fontSize(18).text('NexaTalent IT Solutions — TAX INVOICE');
   pdf.moveDown(0.5).fontSize(10).text(`${d.number || d.id} • Issued ${String(d.issueDate || d.createdAt || '').slice(0, 10)} • Due ${String(d.dueDate || '').slice(0, 10)} • ${d.status}${d.overdue ? ` • ${d.daysOverdue}d OVERDUE` : ''}`);
-  pdf.moveDown().fontSize(11).text(`Billed to: ${d.organization?.legalName || d.orgId}${d.organization?.gstin ? ` (GSTIN: ${d.organization.gstin})` : ''}`);
+  pdf.moveDown().fontSize(11).text(`Billed to: ${d.billingEntity || d.organization?.legalName || d.orgId}${d.taxIds || d.organization?.gstin ? ` (GSTIN: ${d.taxIds || d.organization?.gstin})` : ''}`);
+  if (d.billingAddress) pdf.fontSize(9).text(d.billingAddress);
+  if (d.billingPeriod) pdf.fontSize(9).text(`Billing period: ${d.billingPeriod}`);
+  if (d.subscriptionId) pdf.fontSize(9).text(`Subscription/service: ${d.subscriptionId}`);
+  pdf.fontSize(9).text(`Currency: ${d.currency || 'INR'}`);
   if (d.agreement) pdf.fontSize(10).text(`Agreement ${d.agreement.id} • ${d.agreement.hiringType} @ ${d.agreement.rate}%`);
   pdf.moveDown();
   for (const l of d.lines || []) pdf.fontSize(10).text(`${l.label} — qty ${l.qty} × ₹${l.unit} = ₹${(l.qty * l.unit).toLocaleString('en-IN')}`);
@@ -358,8 +362,12 @@ commercialRouter.patch('/invoices/:id/void', requireAuth(['superadmin','platform
   res.json({ success: true, data: inv });
 });
 // ---- Refunds (tracked separately from lifecycle, §6.8) ----
-commercialRouter.get('/refunds', requireAuth(['superadmin','platform_owner','finance_admin']), (_req, res) => {
-  res.json({ success: true, data: loadDb().refunds });
+commercialRouter.get('/refunds', requireAuth(['superadmin','platform_owner','finance_admin']), (req, res) => {
+  let rows = loadDb().refunds as any[];
+  const qq = String(req.query.q || '').toLowerCase();
+  if (qq) rows = rows.filter((r) => `${r.id} ${r.paymentId} ${r.invoiceId} ${r.status}`.toLowerCase().includes(qq));
+  const { page, pageSize } = paginate.parse(req.query);
+  res.json({ success: true, ...paged(rows, page, pageSize) });
 });
 commercialRouter.post('/refunds', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('refund'), (req: Request, res: Response) => {
   const db = loadDb();
@@ -406,7 +414,10 @@ commercialRouter.post('/credit-notes', requireAuth(['superadmin','platform_owner
 commercialRouter.get('/payments', requireAuth(), (req, res) => {
   const ctx = ctxOf(req); let rows = loadDb().payments as any[];
   if (!['superadmin','platform_owner','finance_admin','finance_staff'].includes(ctx.role)) rows = rows.filter((p) => p.orgId === ctx.tenantId);
-  res.json({ success: true, data: rows });
+  const qq = String(req.query.q || '').toLowerCase();
+  if (qq) rows = rows.filter((p) => `${p.id} ${p.invoiceId} ${p.orgId} ${p.status}`.toLowerCase().includes(qq));
+  const { page, pageSize } = paginate.parse(req.query);
+  res.json({ success: true, ...paged(rows, page, pageSize) });
 });
 commercialRouter.post('/payments', requireAuth(), (req: Request, res: Response) => {
   const parsed = paymentSchema.safeParse(req.body);
@@ -546,7 +557,7 @@ commercialRouter.post('/agreement-templates/:id/instantiate', requireAuth(['supe
   const db = loadDb(); const t: any = db.agreementTemplates.find((x: any) => x.id === req.params.id);
   if (!t) return res.status(404).json({ success: false, message: 'Template not found.' });
   if (t.status !== 'Active') return res.status(422).json({ success: false, message: `Only Active templates can be instantiated (current: ${t.status}).` });
-  const { orgId, jobId, agencyId, hiringType, feeModel, rate, fixedFee, trigger, basisType, contractMonths } = req.body || {};
+  const { orgId, jobId, agencyId, hiringType, feeModel, rate, fixedFee, trigger, basisType, contractMonths, autoApprove } = req.body || {};
   if (!orgId) return res.status(400).json({ success: false, message: 'orgId required.' });
   const ctx = ctxOf(req);
   if (!['superadmin','platform_owner','finance_admin'].includes(ctx.role) && orgId !== ctx.tenantId) return res.status(403).json({ success: false, message: 'Cannot instantiate for another organization.' });
@@ -559,6 +570,7 @@ commercialRouter.post('/agreement-templates/:id/instantiate', requireAuth(['supe
     id: uid('AGR'), status: 'Approved', companyAccepted: false, acceptedAt: null, acceptedBy: null,
     orgId, jobId, agencyId, hiringType: ht, feeModel: model, rate: r, fixedFee,
     basisType: basisType || t.basisType || 'annual_ctc', contractMonths: Number(contractMonths || t.contractMonths || 12),
+    autoApprove: autoApprove === true,
     trigger: trigger || 'Joined', paymentTermsDays: t.paymentTermsDays ?? 30, replacementDays: t.replacementDays ?? 90,
     gstApplicable: true, replacementTerms: `Free replacement within ${t.replacementDays ?? 90} days of joining under the defined conditions.`,
     ownershipClause: t.ownershipClause, duplicatePolicy: t.duplicatePolicy, cancellationTerms: t.cancellationTerms,

@@ -360,6 +360,54 @@ describe('skills taxonomy (§14.2)', () => {
   });
 });
 
+describe('roles + bulk import (§4)', () => {
+  it('serves seeded roles with scope metadata', async () => {
+    const r = await request(app).get('/api/v1/roles').set(auth(superToken));
+    expect(r.body.data.length).toBeGreaterThanOrEqual(20);
+    expect(r.body.data.find((x: any) => x.id === 'superadmin')?.scope).toBe('platform');
+  });
+  it('creates, protects and deletes custom roles', async () => {
+    const c = await request(app).post('/api/v1/roles').set(auth(superToken)).send({ id: 'qa_lead', scope: 'platform', description: 'QA owner' });
+    expect(c.status).toBe(201);
+    const sys = await request(app).delete('/api/v1/roles/superadmin').set(auth(superToken)).send({});
+    expect(sys.status).toBe(422);
+    const del = await request(app).delete('/api/v1/roles/qa_lead').set(auth(superToken)).send({});
+    expect(del.status).toBe(200);
+  });
+  it('previews then commits bulk imports with duplicate report', async () => {
+    const tag = Date.now().toString(36);
+    const rows = [{ name: `BulkSkill${tag}`, category: 'Technology' }, { name: 'React', category: 'Technology' }, { name: '' }];
+    const prev = await request(app).post('/api/v1/bulk-import').set(auth(superToken)).send({ collection: 'skills', rows, mode: 'preview' });
+    expect(prev.body.data.summary).toMatchObject({ total: 3, valid: 1, duplicates: 1, errors: 1 });
+    const commit = await request(app).post('/api/v1/bulk-import').set(auth(superToken)).send({ collection: 'skills', rows, mode: 'commit' });
+    expect(commit.body.data.summary.created).toBe(1);
+    expect(commit.body.data.summary.duplicates).toBe(1);
+    const again = await request(app).post('/api/v1/bulk-import').set(auth(superToken)).send({ collection: 'skills', rows: [{ name: `BulkSkill${tag}` }], mode: 'commit' });
+    expect(again.body.data.summary.duplicates).toBe(1);
+  });
+});
+
+describe('auto-approve straight-through billing', () => {
+  it('approves + invoices automatically on trusted agreements', async () => {
+    const ag = await request(app).post('/api/v1/commission-agreements').set(auth(superToken)).send({ orgId: 'TNT-9011', jobId: 'JOB-8890', rate: 9, autoApprove: true });
+    await request(app).patch(`/api/v1/commission-agreements/${ag.body.data.id}/accept`).set(auth(superToken)).send({});
+    const appl = await request(app).post('/api/v1/applications').set(auth(superToken)).send({ jobId: 'JOB-8890', candidateEmail: `auto-${Date.now()}@example.com` });
+    await request(app).post('/api/v1/offers').set(auth(superToken)).send({ applicationId: appl.body.data.id, ctc: 1000000 });
+    const pl = await request(app).post('/api/v1/placements').set(auth(superToken)).send({ applicationId: appl.body.data.id });
+    expect(pl.status).toBe(201);
+    expect(pl.body.data.autoInvoiced).toBeTruthy();
+    const chk = await request(app).get(`/api/v1/commissions/check?applicationId=${appl.body.data.id}&trigger=Joined`).set(auth(superToken));
+    expect(chk.body.data.rows[0].approvalStatus).toBe('Approved');
+  });
+  it('records agency verification history with reason', async () => {
+    const v = await request(app).patch('/api/v1/agency-profiles/AGC-101').set(auth(superToken)).send({ verificationStatus: 'Approved', reason: 'docs verified' });
+    expect(v.status).toBe(200);
+    expect(v.body.data.verificationHistory.length).toBeGreaterThanOrEqual(1);
+    const noReason = await request(app).patch('/api/v1/agency-profiles/AGC-101').set(auth(superToken)).send({ verificationStatus: 'Rejected' });
+    expect(noReason.status).toBe(400);
+  });
+});
+
 describe('commission math (§6.11)', () => {
   it('computes gross + 18% tax total', async () => {
     // 8.33% of 100000 basis = 8330 gross, 1499.4 tax, 9829.4 total

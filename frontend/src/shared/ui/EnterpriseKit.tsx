@@ -286,30 +286,58 @@ export function RichText({ value, onChange, label, minHeight = 120 }: { value: s
   );
 }
 
+/* Shared portal-popover positioning: floats above modals/drawers/tables, never clips. */
+function usePortalPos() {
+  const btnRef = useRef<HTMLElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
+  const place = (estH: number, width?: number) => {
+    const r = (btnRef.current as HTMLElement | null)?.getBoundingClientRect();
+    if (!r) return;
+    const w = width || r.width;
+    const openUp = r.bottom + estH + 8 > window.innerHeight && r.top - estH - 8 > 0;
+    setPos({
+      top: openUp ? Math.max(8, r.top - estH - 4) : Math.min(r.bottom + 4, window.innerHeight - estH - 8),
+      left: Math.max(8, Math.min(r.left, window.innerWidth - w - 8)),
+      width: w,
+    });
+  };
+  return { btnRef, pos, place };
+}
+
 /* Custom dropdown — replaces native <select> */
 export function Select({ value, onChange, options, placeholder = 'Select…', ariaLabel, dark }: {
   value: string; onChange: (v: string) => void; options: { value: string; label: string }[]; placeholder?: string; ariaLabel?: string; dark?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(-1);
-  const ref = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLUListElement>(null);
+  const { btnRef, pos, place } = usePortalPos();
   const current = options.find((o) => o.value === value);
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    place(Math.min(options.length * 36 + 12, 232));
+    const onDoc = (e: MouseEvent) => {
+      if ((btnRef.current as HTMLElement | null)?.contains(e.target as Node)) return;
+      if (menuRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false);
       if (e.key === 'ArrowDown') { e.preventDefault(); setHighlight((h) => Math.min(h + 1, options.length - 1)); }
       if (e.key === 'ArrowUp') { e.preventDefault(); setHighlight((h) => Math.max(h - 1, 0)); }
       if (e.key === 'Enter' && highlight >= 0) { e.preventDefault(); onChange(options[highlight].value); setOpen(false); }
     };
+    const onScroll = () => setOpen(false);
     document.addEventListener('mousedown', onDoc);
     document.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
-  }, [open, highlight, options, onChange]);
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onScroll);
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); window.removeEventListener('scroll', onScroll, true); window.removeEventListener('resize', onScroll); };
+  }, [open, highlight, options, onChange ]);
   return (
-    <div ref={ref} className="relative">
+    <>
       <button
+        ref={btnRef as React.RefObject<HTMLButtonElement>}
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -320,8 +348,9 @@ export function Select({ value, onChange, options, placeholder = 'Select…', ar
         <span className={current ? '' : 'text-slate-500'}>{current ? current.label : placeholder}</span>
         <ChevronDown size={14} className="text-slate-500" />
       </button>
-      {open && (
-        <ul role="listbox" className={`absolute left-0 right-0 top-full mt-1 z-[60] rounded-2xl border shadow-xl py-1.5 max-h-56 overflow-y-auto ${dark ? 'bg-[#111726] border-slate-700' : 'bg-white border-slate-200'}`}>
+      {open && createPortal(
+        <ul ref={menuRef} role="listbox" style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width, zIndex: 200 }}
+          className={`rounded-2xl border shadow-xl py-1.5 max-h-56 overflow-y-auto ${dark ? 'bg-[#111726] border-slate-700' : 'bg-white border-slate-200'}`}>
           {options.map((o, i) => (
             <li
               key={o.value}
@@ -335,9 +364,10 @@ export function Select({ value, onChange, options, placeholder = 'Select…', ar
               {o.value === value && <Check size={13} />}
             </li>
           ))}
-        </ul>
+        </ul>,
+        document.body,
       )}
-    </div>
+    </>
   );
 }
 
@@ -355,14 +385,23 @@ export function DatePicker({ value, onChange, placeholder = 'Pick a date', ariaL
   const [open, setOpen] = useState(false);
   const seed = value ? new Date(value + 'T00:00:00') : new Date();
   const [view, setView] = useState({ y: seed.getFullYear(), m: seed.getMonth() });
-  const ref = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const { btnRef, pos, place } = usePortalPos();
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    place(320, 256);
+    const onDoc = (e: MouseEvent) => {
+      if ((btnRef.current as HTMLElement | null)?.contains(e.target as Node)) return;
+      if (menuRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const onScroll = () => setOpen(false);
     document.addEventListener('mousedown', onDoc);
     document.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onScroll);
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); window.removeEventListener('scroll', onScroll, true); window.removeEventListener('resize', onScroll); };
   }, [open ]);
   const firstWeekday = new Date(view.y, view.m, 1).getDay();
   const daysInMonth = new Date(view.y, view.m + 1, 0).getDate();
@@ -373,8 +412,9 @@ export function DatePicker({ value, onChange, placeholder = 'Pick a date', ariaL
     setView({ y: d.getFullYear(), m: d.getMonth() });
   };
   return (
-    <div ref={ref} className="relative">
+    <>
       <button
+        ref={btnRef as React.RefObject<HTMLButtonElement>}
         type="button"
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -385,8 +425,8 @@ export function DatePicker({ value, onChange, placeholder = 'Pick a date', ariaL
         <span className={value ? '' : 'text-slate-500'}>{value || placeholder}</span>
         <ChevronDown size={14} className="text-slate-500" />
       </button>
-      {open && (
-        <div role="dialog" aria-label="Choose date" className="absolute left-0 top-full mt-1 z-[60] w-64 bg-white rounded-2xl border border-slate-200 shadow-xl p-3">
+      {open && createPortal(
+        <div ref={menuRef} role="dialog" aria-label="Choose date" style={{ position: 'fixed', top: pos.top, left: pos.left, width: 256, zIndex: 200 }} className="bg-white rounded-2xl border border-slate-200 shadow-xl p-3">
           <div className="flex items-center justify-between mb-2">
             <button type="button" aria-label="Previous month" onClick={() => shift(-1)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600"><ChevronLeft size={14} /></button>
             <span className="text-xs font-extrabold text-spec-charcoal">{MONTHS[view.m]} {view.y}</span>
@@ -417,8 +457,9 @@ export function DatePicker({ value, onChange, placeholder = 'Pick a date', ariaL
             <button type="button" onClick={() => { onChange(todayISO); setOpen(false); }} className="text-[11px] font-bold text-spec-electric">Today</button>
             {value && <button type="button" onClick={() => { onChange(''); setOpen(false); }} className="text-[11px] font-bold text-slate-500">Clear</button>}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
-    </div>
+    </>
   );
 }

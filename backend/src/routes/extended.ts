@@ -332,7 +332,9 @@ extendedRouter.patch('/agency-profiles/:id', requireAuth(['superadmin', 'platfor
     if (b[k] !== undefined) a[k] = b[k];
   }
   if (b.verificationStatus && ['Pending', 'Approved', 'Rejected'].includes(b.verificationStatus)) {
+    if (!b.reason && b.verificationStatus !== 'Pending') return res.status(400).json({ success: false, message: 'Verification decision needs a reason.' });
     a.verificationStatus = b.verificationStatus;
+    a.verificationHistory = [...(a.verificationHistory || []), { from: a.verificationStatus, to: b.verificationStatus, at: nowIso(), by: ctxOf(req).email, reason: b.reason || '' }];
     if (b.verificationStatus === 'Approved' && a.accountStatus === 'Invited') a.accountStatus = 'Active';
   }
   let sessionsRevoked = 0;

@@ -47,6 +47,8 @@ function consume(type: string, p: any, tenantId: string, actor: string): void {
     }
     case 'commission.approved': {
       // Creates receivable + payable legs separately (§6.11)
+      notifyCompany(tenantId, `Commission ${p.id || ''} approved — ₹${p.total || p.net || 0}.`);
+      notifySuper(`Commission ${p.id || ''} approved (${tenantId}) — ₹${p.total || p.net || 0}.`);
       done(type); break;
     }
     default: done(type);
@@ -63,6 +65,11 @@ function notify(recipient: string, kind: string, body: string, tenantId: string)
   trim(db.notifications, 2000);
 }
 
+function notifySuper(body: string): void {
+  const db = loadDb();
+  db.notifications.unshift({ id: uid('NOTIF'), recipient: 'superadmin', kind: 'commercial', body, channel: 'in-app', status: 'queued', createdAt: nowIso(), tenantId: 'TNT-GLOBAL' });
+  trim(db.notifications, 2000);
+}
 function notifyCompany(companyId: string, body: string): void {
   const db = loadDb();
   db.notifications.unshift({ id: uid('NOTIF'), recipient: `company:${companyId}`, kind: 'ats', body, channel: 'in-app', status: 'queued', createdAt: nowIso(), tenantId: companyId });
@@ -90,7 +97,7 @@ export function evaluateCommission(p: { placementId?: string; applicationId?: st
     const gross = a.feeModel === 'fixed' ? Number(a.fixedFee || 0) : +(basis * months * Number(a.rate || 8.33) / 100).toFixed(2);
     db.idempotency.unshift({ key, createdAt: nowIso() });
     trim(db.idempotency, 5000);
-    db.commissions.unshift({ id: uid('COM'), agreementId: a.id, placementId: p.placementId || p.applicationId, applicationId: p.applicationId || null, jobId: p.jobId, orgId: p.orgId, agencyId: (a as any).agencyId || null, candidateEmail: p.candidateEmail, trigger, triggerDate: nowIso(), feeBasis: basis, basisType, contractMonths: months, rate: a.rate, gross, adjustments: 0, tax: +(gross * 0.18).toFixed(2), total: +(gross * 1.18).toFixed(2), net: +(gross * 1.18).toFixed(2), approvalStatus: 'Pending', paymentStatus: 'Unpaid', createdAt: nowIso() });
+    db.commissions.unshift({ id: uid('COM'), agreementId: a.id, placementId: p.placementId || p.applicationId, applicationId: p.applicationId || null, jobId: p.jobId, orgId: p.orgId, agencyId: (a as any).agencyId || null, candidateEmail: p.candidateEmail, trigger, triggerDate: nowIso(), triggerEvidence: `placement:${p.placementId || p.applicationId}`, feeBasis: basis, basisType, contractMonths: months, rate: a.rate, feeModel: a.feeModel || 'percentage', agreementSnapshot: { hiringType: a.hiringType, rate: a.rate, feeModel: a.feeModel || 'percentage', basisType, contractMonths: months, trigger, paymentTermsDays: a.paymentTermsDays ?? 30, replacementDays: a.replacementDays ?? 90 }, gross, adjustments: 0, tax: +(gross * 0.18).toFixed(2), total: +(gross * 1.18).toFixed(2), net: +(gross * 1.18).toFixed(2), approvalStatus: 'Pending', paymentStatus: 'Unpaid', createdAt: nowIso() });
   }
 }
 

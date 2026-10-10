@@ -349,7 +349,24 @@ export function OrganizationsManager({ tenants, setTenants, onAudit }: {
 /* ---------------- Users — full CRUD ---------------- */
 const ALL_ROLES = ['superadmin', 'operations_admin', 'finance_admin', 'sales_admin', 'support_admin', 'company_admin', 'hiring_manager', 'company_recruiter', 'internal_recruiter', 'bda', 'sales_manager', 'candidate', 'agency_admin', 'agency_recruiter', 'finance_staff', 'employee', 'employer', 'recruiter', 'vendor'];
 
+export function useRoleOptions(): string[] {
+  const [roles, setRoles] = useState<string[]>(ALL_ROLES);
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      try {
+        const res: any = await directoryApi.roles();
+        const list = ((res as { data?: any[] })?.data || []).map((r: any) => r.id).filter(Boolean);
+        if (live && list.length > 0) setRoles(list);
+      } catch { /* static fallback */ }
+    })();
+    return () => { live = false; };
+  }, []);
+  return roles;
+}
+
 export function UsersManager({ users, setUsers }: { users: any[]; setUsers: (u: any[]) => void }) {
+  const roleOptions = useRoleOptions();
   const [search, setSearch] = useQueryState('usr_q');
   const [role, setRole] = useQueryState('usr_role');
   const [status, setStatus] = useQueryState('usr_status');
@@ -489,7 +506,7 @@ export function UsersManager({ users, setUsers }: { users: any[]; setUsers: (u: 
         <div className="flex gap-2">
           <div className="w-40 shrink-0">
             <Select value={role} onChange={(v) => { setRole(v); setPage(1); }} ariaLabel="Role filter" placeholder="All roles"
-              options={[{ value: '', label: 'All roles' }, ...ALL_ROLES.map((r) => ({ value: r, label: r }))]} />
+              options={[{ value: '', label: 'All roles' }, ...roleOptions.map((r) => ({ value: r, label: r }))]} />
           </div>
           <div className="w-40 shrink-0">
             <Select value={status} onChange={(v) => { setStatus(v); setPage(1); }} ariaLabel="Status filter" placeholder="All statuses"
@@ -627,7 +644,7 @@ export function UsersManager({ users, setUsers }: { users: any[]; setUsers: (u: 
         <form onSubmit={saveEdit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Full name"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} /></Field>
           <Field label="Work phone"><input type="tel" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} /></Field>
-          <Field label="Role"><Select value={editForm.role} onChange={(v) => setEditForm({ ...editForm, role: v })} options={ALL_ROLES.map((r) => ({ value: r, label: r }))} /></Field>
+          <Field label="Role"><Select value={editForm.role} onChange={(v) => setEditForm({ ...editForm, role: v })} options={roleOptions.map((r) => ({ value: r, label: r }))} /></Field>
           <Field label="Department"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.department} onChange={(e) => setEditForm({ ...editForm, department: e.target.value })} /></Field>
           <Field label="Designation"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.designation} onChange={(e) => setEditForm({ ...editForm, designation: e.target.value })} /></Field>
           <Field label="Branch"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={editForm.branch} onChange={(e) => setEditForm({ ...editForm, branch: e.target.value })} /></Field>

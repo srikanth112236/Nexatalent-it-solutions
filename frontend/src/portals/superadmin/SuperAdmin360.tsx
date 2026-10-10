@@ -357,7 +357,7 @@ export function Candidate360Drawer({ candidateId, onClose }: { candidateId: stri
 }
 
 /* ---------------- Agency 360° — spec §6.5 ---------------- */
-const AGENCY_TABS = ['Overview', 'Assignments & Jobs', 'Submissions', 'Agreements & Payouts', 'Audit Log'];
+const AGENCY_TABS = ['Overview', 'Verification', 'Assignments & Jobs', 'Submissions', 'Agreements & Payouts', 'Audit Log'];
 const SUBMISSION_REVIEWS = ['Under Review', 'Shortlisted', 'Selected', 'Rejected'];
 
 export function AgencyDrawer({ agencyId, onClose }: { agencyId: string; onClose: () => void }) {
@@ -370,6 +370,15 @@ export function AgencyDrawer({ agencyId, onClose }: { agencyId: string; onClose:
   const [showAssign, setShowAssign] = useState(false);
   const [jobs, setJobs] = useState<any[]>([]);
   const [assignSel, setAssignSel] = useState<Set<string>>(new Set());
+  const [verifyReason, setVerifyReason] = useState('');
+  const decideVerification = async (to: 'Approved' | 'Rejected') => {
+    if (!verifyReason.trim()) { setError('A verification reason is required.'); return; }
+    setBusy(true); setError(''); setOk('');
+    try {
+      await workforceApi.updateAgency(agencyId, { verificationStatus: to, reason: verifyReason.trim() });
+      setVerifyReason(''); await load(); setOk(`Agency verification → ${to}.`);
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
 
   const load = async () => {
     setLoading(true); setError('');
@@ -445,6 +454,38 @@ export function AgencyDrawer({ agencyId, onClose }: { agencyId: string; onClose:
               ['Active assignments', p.activeAssignments ?? '—'], ['Submissions', p.submissions ?? '—'],
               ['Placements', p.placements ?? '—'], ['Payout due', `₹${Number(p.payoutBalance || 0).toLocaleString('en-IN')}`],
             ].map(([k, v]) => [k, (v as React.ReactNode) || '—'] as [string, React.ReactNode])} />
+          )}
+          {tab === 'Verification' && (
+            <div className="space-y-3">
+              <div className="p-4 rounded-2xl bg-slate-900 text-white flex items-center justify-between gap-2">
+                <div>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase">Verification badge</div>
+                  <div className="text-lg font-extrabold">{p.verificationStatus || 'Pending'}</div>
+                </div>
+                <StatusPill value={p.verificationStatus || 'Pending'} />
+              </div>
+              <div className="text-xs font-extrabold text-slate-900">Onboarding checklist — every item must hold before approval</div>
+              <div className="space-y-1.5">
+                {[['Legal name + registration', !!(p.legalName && p.registrationNumber)], ['Tax IDs on file', !!p.taxIds], ['Contact person + email', !!(p.contactName && p.contactEmail)], ['Specialties + locations', !!(p.specialties && p.locations)], ['Commercial model', !!p.commercialModel], ['Agreement status', p.agreementStatus === 'Signed']].map(([label, met]) => (
+                  <div key={label as string} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
+                    <span>{label}</span>
+                    <span className={met ? 'text-emerald-600' : 'text-amber-600'}>{met ? '✓ met' : '○ missing'}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                <div className="text-[11px] font-extrabold text-slate-600 uppercase">Verification decision (reason required, audited)</div>
+                <input value={verifyReason} onChange={(e) => setVerifyReason(e.target.value)} placeholder="e.g. GSTIN + agreement verified against MCA records" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" />
+                <div className="flex gap-2">
+                  <button type="button" disabled={busy || !verifyReason.trim()} onClick={() => decideVerification('Approved')} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs disabled:opacity-50">{busy ? 'Working…' : 'Approve verification'}</button>
+                  <button type="button" disabled={busy || !verifyReason.trim()} onClick={() => decideVerification('Rejected')} className="px-4 py-2 rounded-xl bg-red-600 text-white font-bold text-xs disabled:opacity-50">{busy ? 'Working…' : 'Reject verification'}</button>
+                </div>
+              </div>
+              <div className="text-xs font-extrabold text-slate-900">Verification history ({(p.verificationHistory || []).length})</div>
+              <Rows items={p.verificationHistory || []} empty="No verification decisions yet." render={(h: any, i: number) => (
+                <div key={i} className={rowCls}><strong>{h.from} → {h.to}</strong> • by {h.by} • <span className="text-slate-500">{String(h.at || '').slice(0, 16).replace('T', ' ')}</span><div className="text-slate-600">{h.reason || ''}</div></div>
+              )} />
+            </div>
           )}
           {tab === 'Assignments & Jobs' && (
             <div className="space-y-3">

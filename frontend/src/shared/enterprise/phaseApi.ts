@@ -31,6 +31,15 @@ export const mfaApi = {
   challenge: (ticket: string, otp?: string, backupCode?: string) => apiClient.post('/api/v1/auth/mfa/challenge', { ticket, otp, backupCode }),
   reset: (email: string) => apiClient.post('/api/v1/auth/mfa/reset', { email }),
 };
+export const rolesApi = {
+  list: () => apiClient.get('/api/v1/roles'),
+  create: (body: unknown) => apiClient.post('/api/v1/roles', body),
+  update: (id: string, body: unknown) => apiClient.put(`/api/v1/roles/${id}`, body),
+  remove: (id: string) => apiClient.delete(`/api/v1/roles/${id}`),
+};
+export const bulkApi = {
+  import: (collection: 'skills' | 'roles', rows: unknown[], mode: 'preview' | 'commit') => apiClient.post('/api/v1/bulk-import', { collection, rows, mode }),
+};
 export const permissionsApi = {
   mine: () => apiClient.get('/api/v1/permissions'),
   all: (email?: string) => apiClient.get(`/api/v1/permissions${email ? `?email=${encodeURIComponent(email)}` : ''}`),
@@ -39,6 +48,7 @@ export const permissionsApi = {
   logExport: (resource: string, count: number) => apiClient.post('/api/v1/exports/log', { resource, count }),
 };
 export const directoryApi = {
+  roles: () => apiClient.get('/api/v1/roles'),
   tenants: () => apiClient.get('/api/v1/tenants'),
   updateTenant: (id: string, body: unknown) => apiClient.patch(`/api/v1/tenants/${id}`, body),
   deleteTenant: (id: string, reason?: string) => apiClient.delete(`/api/v1/tenants/${id}${reason ? `?reason=${encodeURIComponent(reason)}` : ''}`, { reason } as unknown as undefined),
@@ -139,9 +149,9 @@ export const billingApi = {
   mailOutbox: () => apiClient.get('/api/v1/mail-outbox'),
   voidInvoice: (id: string, reason: string) => apiClient.patch(`/api/v1/invoices/${id}/void`, { reason }),
   creditNote: (invoiceId: string, amount: number, reason: string) => apiClient.post('/api/v1/credit-notes', { invoiceId, amount, reason }),
-  payments: () => apiClient.get('/api/v1/payments'),
+  payments: (params = '') => apiClient.get(`/api/v1/payments${params}`),
   pay: (invoiceId: string, amount: number, idempotencyKey: string) => apiClient.post('/api/v1/payments', { invoiceId, amount, idempotencyKey }),
-  refunds: () => apiClient.get('/api/v1/refunds'),
+  refunds: (params = '') => apiClient.get(`/api/v1/refunds${params}`),
   refund: (paymentId: string, amount: number, reason: string) => apiClient.post('/api/v1/refunds', { paymentId, amount, reason }),
   agreements: (params = '') => apiClient.get(`/api/v1/commission-agreements${params}`),
   createAgreement: (body: unknown) => apiClient.post('/api/v1/commission-agreements', body),
@@ -202,6 +212,7 @@ export const documentsApi = {
     const qs = sp.toString();
     return apiClient.get(`/api/v1/skills${qs ? `?${qs}` : ''}`);
   },
+  skillsPaged: (params = '') => apiClient.get(`/api/v1/skills${params}`),
   createSkill: (body: unknown) => apiClient.post('/api/v1/skills', body),
   upload: (body: unknown) => apiClient.post('/api/v1/documents', body),
   list: () => apiClient.get('/api/v1/documents'),
