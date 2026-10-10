@@ -15,9 +15,13 @@ const PLATFORM = ['superadmin', 'platform_owner'];
 /* ---------------- Skills taxonomy (§14.2) ---------------- */
 extendedRouter.get('/skills', requireAuth(), (req, res) => {
   const q = String(req.query.q || '').toLowerCase();
+  const cat = String(req.query.category || '').toLowerCase();
   let rows = loadDb().skills as any[];
+  if (cat) rows = rows.filter((s) => String(s.category || '').toLowerCase() === cat);
   if (q) rows = rows.filter((s) => String(s.name).toLowerCase().includes(q));
-  res.json({ success: true, data: rows.slice(0, 100) });
+  const categories = [...new Set((loadDb().skills as any[]).map((s: any) => s.category || 'General'))].sort();
+  const { page, pageSize } = paginate.parse(req.query);
+  res.json({ success: true, categories, ...paged(rows, page, pageSize) });
 });
 extendedRouter.post('/skills', requireAuth(['superadmin', 'platform_owner', 'operations_admin', 'employee']), (req: Request, res: Response) => {
   const { name, category } = req.body || {};

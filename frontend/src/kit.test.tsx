@@ -103,16 +103,20 @@ describe('ConfirmDialog', () => {
 });
 
 describe('RowMenu', () => {
-  it('opens popover and fires item without shifting layout', () => {
+  it('opens a body-level portal and fires item without shifting layout', () => {
     let fired = 0;
     render(<RowMenu items={[{ label: 'Approve', onSelect: () => { fired += 1; } }]} />);
     const before = (container.firstChild as HTMLElement).getBoundingClientRect();
     act(() => { q('button')!.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
-    assert.ok(container.querySelector('[role="menu"]'));
+    const menu = document.querySelector('[role="menu"]');
+    assert.ok(menu, 'menu renders');
+    assert.equal(container.querySelector('[role="menu"]'), null, 'menu lives outside the row container (portal)');
+    assert.equal((menu as HTMLElement).style.position, 'fixed');
     const after = (container.firstChild as HTMLElement).getBoundingClientRect();
     assert.deepEqual([after.width, after.height], [before.width, before.height]);
-    act(() => { Array.from(container.querySelectorAll('[role="menuitem"]')).find((b) => b.textContent === 'Approve')!.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+    act(() => { Array.from(document.querySelectorAll('[role="menuitem"]')).find((b) => b.textContent === 'Approve')!.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
     assert.equal(fired, 1);
+    document.querySelector('[role="menu"]')?.remove();
   });
 });
 
@@ -309,8 +313,25 @@ describe('InfoTip + PageSize pattern', () => {
     const { PageSize } = await import('./portals/common/EnterprisePanels.js');
     let val = 20;
     render(<PageSize value={val} onChange={(n) => { val = n; }} />);
-    const opts = Array.from(container.querySelectorAll('option')).map((o) => o.textContent);
-    assert.deepEqual(opts, ['20', '50', '100']);
+    assert.ok(container.textContent?.includes('Show') && container.textContent?.includes('/ page'));
+    act(() => { container.querySelector('button')!.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+    for (const n of ['20', '50', '100']) assert.ok(document.querySelector('[role="listbox"]')?.textContent?.includes(n) || container.textContent?.includes(n), `offers ${n}`);
+  });
+});
+
+describe('RichText + SkillPicker', () => {
+  it('rich editor renders toolbar and editable region', async () => {
+    const { RichText } = await import('./shared/ui/EnterpriseKit.js');
+    let val = '<p>Hi</p>';
+    render(<RichText label="Description" value={val} onChange={(v) => { val = v; }} />);
+    assert.ok(container.textContent?.includes('Description'));
+    assert.ok(container.querySelector('[contenteditable="true"]'), 'editable region renders');
+  });
+  it('skill picker starts empty with search affordance', async () => {
+    const { SkillPicker } = await import('./portals/common/EnterprisePanels.js');
+    render(<SkillPicker value="" onChange={() => {}} />);
+    assert.ok(container.textContent?.includes('No skills selected'));
+    assert.ok(container.querySelector('input[placeholder*="search"]') || container.textContent?.includes('Type to search'));
   });
 });
 

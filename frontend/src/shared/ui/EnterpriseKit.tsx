@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useId } from 'react';
+import { createPortal } from 'react-dom';
 import { X, ChevronDown, ChevronLeft, ChevronRight, MoreHorizontal, Check } from 'lucide-react';
 
 /* Compact field wrapper for modal forms */
@@ -182,39 +183,60 @@ export interface MenuItem {
   onSelect: () => void;
 }
 
-/* ⋯ row actions in an anchored popover — never shifts table/card layout */
+/* ⋯ row actions in a body-level portal — floats above tables/cards, never shifts layout */
 export function RowMenu({ items, label = 'Row actions' }: { items: MenuItem[]; label?: string }) {
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
-  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const place = () => {
+    const r = btnRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const estH = Math.min(items.length * 37 + 12, 320);
+    const openUp = r.bottom + estH + 8 > window.innerHeight && r.top - estH - 8 > 0;
+    setPos({
+      top: openUp ? Math.max(8, r.top - estH - 4) : Math.min(r.bottom + 4, window.innerHeight - estH - 8),
+      left: Math.max(8, Math.min(r.right - 192, window.innerWidth - 200)),
+    });
+  };
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    place();
+    const onDoc = (e: MouseEvent) => {
+      if (btnRef.current?.contains(e.target as Node)) return;
+      if (menuRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false);
       if (e.key === 'ArrowDown') { e.preventDefault(); setHighlight((h) => (h + 1) % items.length); }
       if (e.key === 'ArrowUp') { e.preventDefault(); setHighlight((h) => (h - 1 + items.length) % items.length); }
       if (e.key === 'Enter') { e.preventDefault(); const it = items[highlight]; setOpen(false); it?.onSelect(); }
     };
+    const onScroll = () => setOpen(false);
     document.addEventListener('mousedown', onDoc);
     document.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onScroll);
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); window.removeEventListener('scroll', onScroll, true); window.removeEventListener('resize', onScroll); };
   }, [open, items, highlight]);
   if (items.length === 0) return null;
   return (
-    <div ref={ref} className="relative shrink-0">
+    <>
       <button
+        ref={btnRef}
         type="button"
         aria-label={label}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => { setHighlight(0); setOpen((v) => !v); }}
-        className={`p-2 rounded-lg border font-bold transition-colors ${open ? 'bg-spec-navy text-white border-spec-navy' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
+        className={`p-2 rounded-lg border font-bold transition-colors shrink-0 ${open ? 'bg-spec-navy text-white border-spec-navy' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
       >
         <MoreHorizontal size={15} />
       </button>
-      {open && (
-        <div role="menu" className="absolute right-0 top-full mt-1 z-[60] w-48 bg-white rounded-2xl border border-slate-200 shadow-xl py-1.5 animate-in fade-in">
+      {open && createPortal(
+        <div ref={menuRef} role="menu" style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 200 }} className="w-48 bg-white rounded-2xl border border-slate-200 shadow-xl py-1.5">
           {items.map((it, i) => (
             <button
               key={it.label}
@@ -227,8 +249,39 @@ export function RowMenu({ items, label = 'Row actions' }: { items: MenuItem[]; l
               {it.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
+    </>
+  );
+}
+
+/* Lightweight rich-text editor — HTML in, HTML out. Used for long-form fields. */
+export function RichText({ value, onChange, label, minHeight = 120 }: { value: string; onChange: (html: string) => void; label: string; minHeight?: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const cmd = (c: string, v?: string) => { ref.current?.focus(); document.execCommand(c, false, v); ref.current && onChange(ref.current.innerHTML); };
+  return (
+    <div>
+      <span className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider mb-1">{label}</span>
+      <div className="rounded-xl border border-slate-200 overflow-hidden">
+        <div className="flex flex-wrap gap-1 p-1.5 bg-slate-100 border-b border-slate-200">
+          {[['H2', 'formatBlock', '<h2>'], ['H3', 'formatBlock', '<h3>'], ['B', 'bold'], ['I', 'italic'], ['U', 'underline']].map(([l, c, v]) => (
+            <button key={l as string} type="button" title={l as string} onMouseDown={(e) => e.preventDefault()} onClick={() => cmd(c as string, v as string)}
+              className="px-2 py-1 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-spec-electric">{l}</button>
+          ))}
+          {[['•', 'insertUnorderedList'], ['1.', 'insertOrderedList']].map(([l, c]) => (
+            <button key={l as string} type="button" title="List" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd(c as string)}
+              className="px-2 py-1 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-spec-electric">{l}</button>
+          ))}
+          <button type="button" title="Clear formatting" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd('removeFormat')}
+            className="px-2 py-1 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-spec-electric">⌫</button>
+        </div>
+        <div ref={ref} contentEditable suppressContentEditableWarning aria-label={label}
+          className="p-3 bg-white text-xs leading-relaxed focus:outline-none min-h-[120px]"
+          style={{ minHeight }}
+          dangerouslySetInnerHTML={{ __html: value }}
+          onInput={(e) => onChange((e.target as HTMLDivElement).innerHTML)} />
+      </div>
     </div>
   );
 }

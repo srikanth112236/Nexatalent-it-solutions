@@ -10,7 +10,13 @@ import {
 } from '../../shared/enterprise/phaseApi';
 import { invalidateCollections } from '../../shared/data/store';
 import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
-import { Modal, ConfirmDialog, RowMenu, Select, DatePicker, Field, ActionConfirm, inputCls as kitInput } from '../../shared/ui/EnterpriseKit';
+import { Modal, ConfirmDialog, RowMenu, Select, DatePicker, Field, ActionConfirm, RichText, inputCls as kitInput } from '../../shared/ui/EnterpriseKit';
+
+/** Portal base from the URL (/superadmin, /employer…) — full-page creators navigate under it. */
+export function portalBase(): string {
+  const seg = window.location.pathname.split('/')[1];
+  return seg ? `/${seg}` : '';
+}
 
 /** Role-to-role sync: every successful mutation broadcasts so all portals refetch. */
 export function syncAll() {
@@ -77,6 +83,64 @@ export function useDebouncedValue<T>(value: T, delay = 400): T {
   return debounced;
 }
 
+/** Taxonomy skill picker (§14.2) — search + category, chips, custom entries. Stores comma-separated string. */
+export function SkillPicker({ value, onChange, placeholder = 'Type to search skills…' }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const [q, setQ] = useState('');
+  const dq = useDebounced(q);
+  const [sugs, setSugs] = useState<any[]>([]);
+  const [cats, setCats] = useState<string[]>([]);
+  const [cat, setCat] = useState('');
+  const selected = value.split(',').map((s) => s.trim()).filter(Boolean);
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      try {
+        const r: any = await documentsApi.skills(dq.trim(), cat);
+        if (!live) return;
+        setSugs(unwrapList(r).slice(0, 12));
+        const c = (r as { categories?: string[] })?.categories;
+        if (Array.isArray(c)) setCats(c);
+      } catch { if (live) setSugs([]); }
+    })();
+    return () => { live = false; };
+  }, [dq, cat]);
+  const toggle = (name: string) => {
+    const has = selected.some((s) => s.toLowerCase() === name.toLowerCase());
+    onChange(has ? selected.filter((s) => s.toLowerCase() !== name.toLowerCase()).join(', ') : [...selected, name].join(', '));
+  };
+  return (
+    <div className="space-y-1.5">
+      <div className="flex flex-wrap gap-1">
+        {selected.map((s) => (
+          <button key={s} type="button" onClick={() => toggle(s)} title={`Remove ${s}`}
+            className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">✕ {s}</button>
+        ))}
+        {selected.length === 0 && <span className="text-[11px] text-slate-400 font-medium">No skills selected</span>}
+      </div>
+      <div className="flex gap-1.5">
+        <input className={kitInput} value={q} onChange={(e) => setQ(e.target.value)} placeholder={placeholder} aria-label="Search skills" />
+        {cats.length > 0 && (
+          <div className="w-[130px] shrink-0">
+            <Select value={cat} onChange={setCat} ariaLabel="Skill category" placeholder="All industries"
+              options={[{ value: '', label: 'All industries' }, ...cats.map((c) => ({ value: c, label: c }))]} />
+          </div>
+        )}
+      </div>
+      {(sugs.length > 0 || dq.trim()) && (
+        <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1.5 rounded-xl bg-slate-50 border border-slate-200" data-lenis-prevent>
+          {sugs.filter((s) => !selected.some((x) => x.toLowerCase() === String(s.name).toLowerCase())).map((s: any) => (
+            <button key={s.id} type="button" onClick={() => toggle(s.name)} title={s.category}
+              className="px-2 py-0.5 rounded-full bg-white border border-slate-200 font-bold text-[11px] hover:border-[#087BFF]">+ {s.name}</button>
+          ))}
+          {dq.trim() && !sugs.some((s) => String(s.name).toLowerCase() === dq.trim().toLowerCase()) && (
+            <button type="button" onClick={() => toggle(dq.trim())} className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 font-bold text-[11px]">+ Use “{dq.trim()}”</button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Server pagination controls (§5.2/§5.5). */
 export function Pager({ page, total, pageSize, onPage }: { page: number; total: number; pageSize: number; onPage: (p: number) => void }) {
   const totalPages = Math.max(1, Math.ceil((total || 0) / pageSize));
@@ -96,14 +160,14 @@ export function Pager({ page, total, pageSize, onPage }: { page: number; total: 
 /** Records-per-page selector (20/50/100) paired with server pagination. */
 export function PageSize({ value, onChange }: { value: number; onChange: (n: number) => void }) {
   return (
-    <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
+    <span className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
       Show
-      <select aria-label="Records per page" value={String(value)} onChange={(e) => onChange(Number(e.target.value))}
-        className="px-2 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-xs text-slate-900">
-        {[20, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
-      </select>
+      <span className="w-[76px] inline-block">
+        <Select value={String(value)} onChange={(v) => onChange(Number(v))} ariaLabel="Records per page"
+          options={[20, 50, 100].map((n) => ({ value: String(n), label: String(n) }))} />
+      </span>
       / page
-    </label>
+    </span>
   );
 }
 
@@ -185,6 +249,7 @@ function loadVisibleCols(): string[] {
 }
 
 export function RequisitionsPanel() {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<any[]>([]);
   const [orgs, setOrgs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -428,6 +493,7 @@ export function RequisitionsPanel() {
             )}
           </div>
           <ExportButton filename="requirements.csv" rows={rows} columns={['id', 'title', 'orgId', 'department', 'location', 'branch', 'hiringManager', 'recruiter', 'employmentType', 'experienceMin', 'experienceMax', 'openings', 'status', 'createdAt']} />
+          <button type="button" onClick={() => navigate(`${portalBase()}/requisitions/new`)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Full-page editor →</button>
           <button type="button" onClick={() => setShowCreate(true)} className={btnPrimary}>+ New requirement</button>
         </div>
       </div>
@@ -459,8 +525,8 @@ export function RequisitionsPanel() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2"><Field label="Role description"><input className={kitInput} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Responsibilities, must-haves…" /></Field></div>
               <div className="sm:col-span-2"><Field label="Responsibilities"><textarea rows={2} className={kitInput} value={form.responsibilities} onChange={(e) => setForm({ ...form, responsibilities: e.target.value })} placeholder="Day-to-day scope…" /></Field></div>
-              <Field label="Required skills (comma separated)"><input className={kitInput} value={form.requiredSkills} onChange={(e) => setForm({ ...form, requiredSkills: e.target.value })} placeholder="React, Node.js, AWS" /></Field>
-              <Field label="Preferred skills"><input className={kitInput} value={form.preferredSkills} onChange={(e) => setForm({ ...form, preferredSkills: e.target.value })} /></Field>
+              <div className="sm:col-span-2"><Field label="Required skills"><SkillPicker value={form.requiredSkills} onChange={(v) => setForm({ ...form, requiredSkills: v })} /></Field></div>
+              <div className="sm:col-span-2"><Field label="Preferred skills"><SkillPicker value={form.preferredSkills} onChange={(v) => setForm({ ...form, preferredSkills: v })} /></Field></div>
               <div className="sm:col-span-2"><Field label="Qualifications"><input className={kitInput} value={form.qualifications} onChange={(e) => setForm({ ...form, qualifications: e.target.value })} placeholder="Degree, certifications…" /></Field></div>
               <Field label="Min experience (yrs)"><input className={kitInput} type="number" min={0} value={form.experienceMin} onChange={(e) => setForm({ ...form, experienceMin: e.target.value })} /></Field>
               <Field label="Max experience (yrs)"><input className={kitInput} type="number" min={0} value={form.experienceMax} onChange={(e) => setForm({ ...form, experienceMax: e.target.value })} /></Field>
@@ -582,8 +648,8 @@ export function RequisitionsPanel() {
           <Field label="Pay period"><Select value={editing?.payPeriod || 'annual'} onChange={(v) => setEditing({ ...editing, payPeriod: v })} options={[{ value: 'annual', label: 'Annual' }, { value: 'monthly', label: 'Monthly' }, { value: 'hourly', label: 'Hourly' }]} /></Field>
           <div className="sm:col-span-2"><Field label="Description"><input className={kitInput} value={editing?.description || ''} onChange={(e) => setEditing({ ...editing, description: e.target.value })} /></Field></div>
           <div className="sm:col-span-2"><Field label="Responsibilities"><textarea rows={2} className={kitInput} value={editing?.responsibilities || ''} onChange={(e) => setEditing({ ...editing, responsibilities: e.target.value })} /></Field></div>
-          <Field label="Required skills"><input className={kitInput} value={editing?.requiredSkills || ''} onChange={(e) => setEditing({ ...editing, requiredSkills: e.target.value })} /></Field>
-          <Field label="Preferred skills"><input className={kitInput} value={editing?.preferredSkills || ''} onChange={(e) => setEditing({ ...editing, preferredSkills: e.target.value })} /></Field>
+          <div className="sm:col-span-2"><Field label="Required skills"><SkillPicker value={editing?.requiredSkills || ''} onChange={(v) => setEditing({ ...editing, requiredSkills: v })} /></Field></div>
+          <div className="sm:col-span-2"><Field label="Preferred skills"><SkillPicker value={editing?.preferredSkills || ''} onChange={(v) => setEditing({ ...editing, preferredSkills: v })} /></Field></div>
           <div className="sm:col-span-2"><Field label="Qualifications"><input className={kitInput} value={editing?.qualifications || ''} onChange={(e) => setEditing({ ...editing, qualifications: e.target.value })} /></Field></div>
           <div className="sm:col-span-2"><Field label="Benefits"><input className={kitInput} value={editing?.benefits || ''} onChange={(e) => setEditing({ ...editing, benefits: e.target.value })} /></Field></div>
           <div className="sm:col-span-2 flex justify-end gap-2">
@@ -647,6 +713,131 @@ export function RequisitionsPanel() {
         steps={['Record is removed permanently', 'An audit entry is preserved']}
         consequences={['Linked jobs must already be cleared — the server re-checks this']}
         confirmLabel="Delete permanently" tone="danger" onConfirm={doDelete} />
+    </div>
+  );
+}
+
+/* ---------------- Full-page creators (portal layout: sidebar + header come from PortalShell) ---------------- */
+const REQ_EMPTY = { title: '', department: '', category: '', location: '', branch: '', openings: 1, employmentType: 'Full-time', priority: 'Medium', description: '', responsibilities: '', requiredSkills: '', preferredSkills: '', qualifications: '', budgetMin: '', budgetMax: '', currency: 'INR', payPeriod: 'annual', benefits: '', recruiter: '', experienceMin: '', experienceMax: '', deadline: '' };
+
+export function RequirementCreatePage({ base }: { base: string }) {
+  const navigate = useNavigate();
+  const [form, setForm] = useState({ ...REQ_EMPTY });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!form.title.trim()) { setError('Title is required.'); return; }
+    setBusy(true); setError('');
+    try {
+      await requisitionsApi.create({
+        ...form, openings: Number(form.openings) || 1,
+        experienceMin: form.experienceMin === '' ? undefined : Number(form.experienceMin),
+        experienceMax: form.experienceMax === '' ? undefined : Number(form.experienceMax),
+        budgetMin: form.budgetMin === '' ? undefined : Number(form.budgetMin),
+        budgetMax: form.budgetMax === '' ? undefined : Number(form.budgetMax),
+        deadline: form.deadline || undefined,
+        recruiter: form.recruiter.trim() || undefined, branch: form.branch.trim() || undefined,
+      });
+      syncAll(); navigate(`${base}/requisitions`);
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  return (
+    <div className={cardCls}>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-base font-extrabold text-slate-900">New job requirement</h3>
+          <p className="text-xs text-slate-500 font-medium">Created as Draft — submit for approval from the requirements table.</p>
+        </div>
+        <button type="button" onClick={() => navigate(`${base}/requisitions`)} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">← Back to requirements</button>
+      </div>
+      {error && <PanelError message={error} onRetry={() => setError('')} />}
+      <form onSubmit={submit} className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="sm:col-span-2"><Field label="Title *"><input className={kitInput} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Senior React Engineer" /></Field></div>
+          <Field label="Department"><input className={kitInput} value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} /></Field>
+          <Field label="Category"><input className={kitInput} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></Field>
+          <Field label="Location"><input className={kitInput} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></Field>
+          <Field label="Branch"><input className={kitInput} value={form.branch} onChange={(e) => setForm({ ...form, branch: e.target.value })} /></Field>
+          <Field label="Openings"><input className={kitInput} type="number" min={1} value={form.openings} onChange={(e) => setForm({ ...form, openings: Number(e.target.value) })} /></Field>
+          <Field label="Employment type"><Select value={form.employmentType} onChange={(v) => setForm({ ...form, employmentType: v })} options={['Full-time', 'Part-time', 'Contract', 'Internship'].map((v) => ({ value: v, label: v }))} /></Field>
+          <Field label="Priority"><Select value={form.priority} onChange={(v) => setForm({ ...form, priority: v })} options={['Low', 'Medium', 'High', 'Urgent'].map((v) => ({ value: v, label: v }))} /></Field>
+          <Field label="Min experience"><input className={kitInput} type="number" min={0} value={form.experienceMin} onChange={(e) => setForm({ ...form, experienceMin: e.target.value })} /></Field>
+          <Field label="Max experience"><input className={kitInput} type="number" min={0} value={form.experienceMax} onChange={(e) => setForm({ ...form, experienceMax: e.target.value })} /></Field>
+          <Field label="Min budget / CTC"><input className={kitInput} type="number" min={0} value={form.budgetMin} onChange={(e) => setForm({ ...form, budgetMin: e.target.value })} /></Field>
+          <Field label="Max budget / CTC"><input className={kitInput} type="number" min={0} value={form.budgetMax} onChange={(e) => setForm({ ...form, budgetMax: e.target.value })} /></Field>
+          <Field label="Currency"><Select value={form.currency} onChange={(v) => setForm({ ...form, currency: v })} options={['INR', 'USD', 'EUR', 'GBP', 'AED'].map((c) => ({ value: c, label: c }))} /></Field>
+          <Field label="Pay period"><Select value={form.payPeriod} onChange={(v) => setForm({ ...form, payPeriod: v })} options={[{ value: 'annual', label: 'Annual' }, { value: 'monthly', label: 'Monthly' }, { value: 'hourly', label: 'Hourly' }]} /></Field>
+          <Field label="Deadline"><DatePicker value={form.deadline} onChange={(v) => setForm({ ...form, deadline: v })} ariaLabel="Target deadline" /></Field>
+          <Field label="Recruiter (email)"><input className={kitInput} value={form.recruiter} onChange={(e) => setForm({ ...form, recruiter: e.target.value })} placeholder="recruiter@company.com" /></Field>
+          <div className="sm:col-span-2"><Field label="Required skills"><SkillPicker value={form.requiredSkills} onChange={(v) => setForm({ ...form, requiredSkills: v })} /></Field></div>
+          <div className="sm:col-span-2"><Field label="Preferred skills"><SkillPicker value={form.preferredSkills} onChange={(v) => setForm({ ...form, preferredSkills: v })} /></Field></div>
+        </div>
+        <RichText label="Description" value={form.description} onChange={(v) => setForm({ ...form, description: v })} />
+        <RichText label="Responsibilities" value={form.responsibilities} onChange={(v) => setForm({ ...form, responsibilities: v })} />
+        <RichText label="Qualifications" value={form.qualifications} onChange={(v) => setForm({ ...form, qualifications: v })} />
+        <RichText label="Benefits" value={form.benefits} onChange={(v) => setForm({ ...form, benefits: v })} />
+        <div className="flex justify-end gap-2 pt-1 border-t border-slate-100">
+          <button type="button" onClick={() => navigate(`${base}/requisitions`)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs mt-3">Cancel</button>
+          <button disabled={busy || !form.title.trim()} className={`${btnPrimary} mt-3`}>{busy ? 'Creating…' : 'Create requirement'}</button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+export function JobCreatePage({ base }: { base: string }) {
+  const navigate = useNavigate();
+  const [form, setForm] = useState({ orgId: '', title: '', requisitionId: '', location: '', employmentType: 'Full-time', salaryMin: '', salaryMax: '', expiryDate: '', visibility: 'public', description: '' });
+  const [reqs, setReqs] = useState<any[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    (async () => {
+      try { setReqs(unwrapList(await requisitionsApi.list('?page=1&pageSize=100'))); } catch { setReqs([]); }
+    })();
+  }, []);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!form.title.trim()) { setError('Title is required.'); return; }
+    setBusy(true); setError('');
+    try {
+      await jobsApi.create({
+        title: form.title.trim(), orgId: form.orgId.trim() || undefined, requisitionId: form.requisitionId.trim() || undefined,
+        location: form.location.trim() || undefined, employmentType: form.employmentType,
+        salaryMin: form.salaryMin === '' ? undefined : Number(form.salaryMin),
+        salaryMax: form.salaryMax === '' ? undefined : Number(form.salaryMax),
+        expiryDate: form.expiryDate || undefined, visibility: form.visibility, description: form.description || undefined,
+      });
+      syncAll(); navigate(`${base}/jobs`);
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  return (
+    <div className={cardCls}>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-base font-extrabold text-slate-900">New job posting</h3>
+          <p className="text-xs text-slate-500 font-medium">Created as Draft — publish it from the job board when ready.</p>
+        </div>
+        <button type="button" onClick={() => navigate(`${base}/jobs`)} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">← Back to jobs</button>
+      </div>
+      {error && <PanelError message={error} onRetry={() => setError('')} />}
+      <form onSubmit={submit} className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="sm:col-span-2"><Field label="Title *"><input className={kitInput} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Senior React Engineer" /></Field></div>
+          <Field label="Organization ID"><input className={kitInput} value={form.orgId} onChange={(e) => setForm({ ...form, orgId: e.target.value })} placeholder="Blank = own org" /></Field>
+          <Field label="Requirement"><Select value={form.requisitionId} onChange={(v) => setForm({ ...form, requisitionId: v })} placeholder="Link a requirement (optional)" options={[{ value: '', label: 'No link' }, ...reqs.map((r: any) => ({ value: r.id, label: `${r.id} — ${r.title}` }))]} /></Field>
+          <Field label="Location"><input className={kitInput} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></Field>
+          <Field label="Employment type"><Select value={form.employmentType} onChange={(v) => setForm({ ...form, employmentType: v })} options={['Full-time', 'Part-time', 'Contract', 'Internship'].map((v) => ({ value: v, label: v }))} /></Field>
+          <Field label="Salary min"><input className={kitInput} type="number" value={form.salaryMin} onChange={(e) => setForm({ ...form, salaryMin: e.target.value })} /></Field>
+          <Field label="Salary max"><input className={kitInput} type="number" value={form.salaryMax} onChange={(e) => setForm({ ...form, salaryMax: e.target.value })} /></Field>
+          <Field label="Expiry date"><DatePicker value={form.expiryDate} onChange={(v) => setForm({ ...form, expiryDate: v })} ariaLabel="Expiry date" /></Field>
+          <Field label="Visibility"><Select value={form.visibility} onChange={(v) => setForm({ ...form, visibility: v })} options={['public', 'private', 'assigned'].map((v) => ({ value: v, label: v }))} /></Field>
+        </div>
+        <RichText label="Description" value={form.description} onChange={(v) => setForm({ ...form, description: v })} minHeight={160} />
+        <div className="flex justify-end gap-2 pt-1 border-t border-slate-100">
+          <button type="button" onClick={() => navigate(`${base}/jobs`)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs mt-3">Cancel</button>
+          <button disabled={busy || !form.title.trim()} className={`${btnPrimary} mt-3`}>{busy ? 'Creating…' : 'Create job'}</button>
+        </div>
+      </form>
     </div>
   );
 }
@@ -1591,6 +1782,18 @@ export function fillTemplate(t: any, companyName?: string): string {
   return html;
 }
 
+/** Open a server-generated PDF blob in a new tab. */
+export async function openPdfBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+  const w = window.open(url, '_blank');
+  if (!w) {
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
 /** Download an HTML document as a Word-compatible .doc file. */
 export function downloadDocFile(filename: string, title: string, bodyHtml: string) {
   const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${title}</title></head><body>${bodyHtml}</body></html>`;
@@ -1681,6 +1884,16 @@ export function InvoicesPanel() {
   const [reminders, setReminders] = useState<any[]>([]);
   const [remResult, setRemResult] = useState('');
   const [remBusy, setRemBusy] = useState(false);
+  const [schedResult, setSchedResult] = useState('');
+  const [schedBusy, setSchedBusy] = useState(false);
+  const runSchedule = async () => {
+    setSchedBusy(true); setSchedResult('');
+    try {
+      const r = unwrapObj(await billingApi.scheduleRun()) as any;
+      setSchedResult(`Schedule run: ${r?.generated?.length ?? 0} monthly invoice(s) generated, ${r?.issued?.length ?? 0} series draft(s) issued.`);
+      load(invPage, ips, dqInv, statusF, typeF); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setSchedBusy(false); }
+  };
   const load = async (p = invPage, size = ips, qq = dqInv, st = statusF, ty = typeF) => {
     setLoading(true); setError('');
     try {
@@ -1795,9 +2008,13 @@ export function InvoicesPanel() {
       <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 text-xs space-y-2">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="font-extrabold text-amber-900">Payment reminders → superadmin ({invoices.filter((i) => Number(i.balance || 0) > 0 && ['Issued', 'Partially Paid'].includes(i.status) && i.dueDate && (new Date(i.dueDate).getTime() - Date.now()) / 864e5 <= 7).length} needing attention)</div>
-          {canBill ? <button type="button" disabled={remBusy} onClick={runReminders} className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs disabled:opacity-50 w-fit">{remBusy ? 'Sending…' : 'Send reminders now'}</button> : null}
+          <div className="flex gap-2">
+            {canBill ? <button type="button" disabled={schedBusy} onClick={runSchedule} className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs disabled:opacity-50 w-fit">{schedBusy ? 'Running…' : 'Run billing schedule'}</button> : null}
+            {canBill ? <button type="button" disabled={remBusy} onClick={runReminders} className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs disabled:opacity-50 w-fit">{remBusy ? 'Sending…' : 'Send reminders now'}</button> : null}
+          </div>
         </div>
         {remResult && <div className="font-bold text-emerald-700">{remResult}</div>}
+        {schedResult && <div className="font-bold text-emerald-700">{schedResult}</div>}
         {reminders.length > 0 && (
           <div className="space-y-1 max-h-32 overflow-y-auto" data-lenis-prevent>
             {reminders.slice(0, 10).map((r: any) => (
@@ -1929,6 +2146,7 @@ export function InvoicesPanel() {
             )}
             {(doc.reminders || []).length > 0 && <div className="text-slate-600 font-medium">Reminders sent: {(doc.reminders || []).map((r: any) => `${r.kind} ${String(r.sentAt || '').slice(0, 10)}`).join(' • ')}</div>}
             <div className="flex justify-end gap-2">
+              <button type="button" onClick={async () => { try { await openPdfBlob(await billingApi.invoicePdf(doc.id), `${doc.number || doc.id}.pdf`); } catch (e) { setError(errMsg(e)); } }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Download PDF (server)</button>
               <button type="button" onClick={() => printHtmlDocument(`Invoice ${doc.number || doc.id}`, docPrintHtml(doc))} className="px-4 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs">Print / Save PDF</button>
             </div>
           </div>
@@ -2853,6 +3071,7 @@ export function CommissionsPanel() {
                   dangerouslySetInnerHTML={{ __html: html }} />
                 <div className="flex flex-wrap gap-2">
                   {!agDetail?.companyAccepted ? <button type="button" onClick={() => accept(agDetail.id)} className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-xs">Mark accepted</button> : null}
+                  <button type="button" onClick={async () => { try { await openPdfBlob(await billingApi.agreementPdf(agDetail.id), `Agreement-${agDetail.id}.pdf`); } catch (e) { setError(errMsg(e)); } }} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">Download PDF (server)</button>
                   <button type="button" onClick={() => downloadDocFile(title, title, html)} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">Download .doc</button>
                   <button type="button" onClick={() => printHtmlDocument(title, html)} className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs">Print / PDF</button>
                 </div>
@@ -3611,10 +3830,16 @@ export function NotificationsPanel() {
   const [rows, setRows] = useState<any[]>([]);
   const [prefs, setPrefs] = useState<any>({ inApp: true, email: true });
   const [error, setError] = useState('');
+  const [mail, setMail] = useState<any[]>([]);
+  const [mailConfigured, setMailConfigured] = useState<boolean | null>(null);
   const load = async () => {
     setError('');
     try { setRows(unwrapList(await platformApi.notifications())); const p = unwrapList(await platformApi.prefs()); if (p[0]) setPrefs(p[0]); }
     catch (e) { setError(errMsg(e)); }
+    try {
+      const m: any = await billingApi.mailOutbox();
+      setMail(unwrapList(m)); setMailConfigured((m as any)?.configured ?? null);
+    } catch { setMail([]); }
   };
   useEffect(() => { load(); }, []);
   const save = async () => {
@@ -3641,6 +3866,20 @@ export function NotificationsPanel() {
             )}
           </div>
         ))}</div>
+      )}
+      <div className="flex items-center gap-1.5 pt-2">
+        <div className="text-xs font-extrabold text-slate-700">Email outbox ({mail.length})</div>
+        <InfoTip title="How email delivery works" body={<><p>Invoice and reminder emails send via SMTP (<span className="font-mono">SMTP_HOST/PORT/USER/PASS/FROM</span>). {mailConfigured ? 'SMTP is configured — emails send for real.' : 'SMTP is NOT configured — emails are queued here instead of failing, so nothing is lost.'}</p></>} />
+      </div>
+      {mail.length === 0 ? <div className="text-[11px] text-slate-500 font-medium">No emails yet — issuing invoices and running reminders creates entries here.</div> : (
+        <div className="space-y-1.5 max-h-56 overflow-y-auto" data-lenis-prevent>
+          {mail.slice(0, 30).map((m: any) => (
+            <div key={m.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between gap-2">
+              <span className="min-w-0 truncate"><strong>[{m.kind}]</strong> {m.subject} → {m.to}</span>
+              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border shrink-0 ${m.status === 'sent' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : m.status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>{m.status}</span>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -3893,26 +4132,48 @@ export function CandidatesPanel() {
       {detail && (
         <Candidate360Drawer candidateId={detail.id} onClose={() => { setDetail(null); load(params); }} />
       )}
-      <Modal open={editing !== null} onClose={() => setEditing(null)} title={`Edit candidate — ${editing?.id || ''}`} subtitle="Audited edit">
-        <form onSubmit={saveEdit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Full name"><input className={kitInput} value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} /></Field>
-          <Field label="Phone"><input className={kitInput} value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} /></Field>
-          <Field label="Designation"><input className={kitInput} value={editForm.roleTitle} onChange={(e) => setEditForm({ ...editForm, roleTitle: e.target.value })} /></Field>
-          <Field label="Experience (yrs)"><input className={kitInput} type="number" value={editForm.experienceYears} onChange={(e) => setEditForm({ ...editForm, experienceYears: e.target.value })} /></Field>
-          <Field label="Location"><input className={kitInput} value={editForm.location} onChange={(e) => setEditForm({ ...editForm, location: e.target.value })} /></Field>
-          <Field label="Preferred location"><input className={kitInput} value={editForm.preferredLocation} onChange={(e) => setEditForm({ ...editForm, preferredLocation: e.target.value })} placeholder="Preferred work location" /></Field>
-          <Field label="Assigned recruiter"><input className={kitInput} value={editForm.assignedRecruiter} onChange={(e) => setEditForm({ ...editForm, assignedRecruiter: e.target.value })} placeholder="Name or email" /></Field>
-          <Field label="Source"><input className={kitInput} value={editForm.source} onChange={(e) => setEditForm({ ...editForm, source: e.target.value })} placeholder="e.g. Referral, Portal, Agency" /></Field>
-          <Field label="Visibility"><Select value={editForm.visibility} onChange={(v) => setEditForm({ ...editForm, visibility: v })} options={['standard', 'open', 'private', 'anonymous'].map((v) => ({ value: v, label: v }))} /></Field>
-          <Field label="Current CTC"><input className={kitInput} value={editForm.currentCtc} onChange={(e) => setEditForm({ ...editForm, currentCtc: e.target.value })} /></Field>
-          <Field label="Expected CTC"><input className={kitInput} value={editForm.expectedCtc} onChange={(e) => setEditForm({ ...editForm, expectedCtc: e.target.value })} /></Field>
-          <div className="sm:col-span-2"><Field label="Skills (comma separated)"><input className={kitInput} value={editForm.skills} onChange={(e) => setEditForm({ ...editForm, skills: e.target.value })} /></Field></div>
-          <div className="sm:col-span-2 flex justify-end gap-2">
-            <button type="button" onClick={() => setEditing(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
-            <button disabled={busy} className={btnPrimary}>{busy ? 'Saving…' : 'Save changes'}</button>
+      {editing !== null && (
+        <DetailDrawer title={`Edit candidate — ${editing?.name || editing?.id || ''}`} subtitle={`${editing?.id || ''} • ${editing?.email || ''} • ${editing?.status || 'Active'}`} onClose={() => setEditing(null)}>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            {[['Stage', editing?.latestStage || editing?.stage || '—'], ['Completeness', `${editing?.completeness ?? '—'}${editing?.completeness !== undefined ? '%' : ''}`], ['Applications', editing?.applicationCount ?? '—'], ['Last activity', String(editing?.lastActivity || '').slice(0, 10) || '—']].map(([k, v]) => (
+              <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—')}</div></div>
+            ))}
           </div>
-        </form>
-      </Modal>
+          <form onSubmit={saveEdit} className="space-y-4">
+            <div>
+              <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Identity</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Full name"><input className={kitInput} value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} /></Field>
+                <Field label="Phone"><input className={kitInput} value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} /></Field>
+                <Field label="Designation"><input className={kitInput} value={editForm.roleTitle} onChange={(e) => setEditForm({ ...editForm, roleTitle: e.target.value })} /></Field>
+                <Field label="Experience (yrs)"><input className={kitInput} type="number" value={editForm.experienceYears} onChange={(e) => setEditForm({ ...editForm, experienceYears: e.target.value })} /></Field>
+              </div>
+            </div>
+            <div>
+              <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Location & sourcing</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Location"><input className={kitInput} value={editForm.location} onChange={(e) => setEditForm({ ...editForm, location: e.target.value })} /></Field>
+                <Field label="Preferred location"><input className={kitInput} value={editForm.preferredLocation} onChange={(e) => setEditForm({ ...editForm, preferredLocation: e.target.value })} placeholder="Preferred work location" /></Field>
+                <Field label="Assigned recruiter"><input className={kitInput} value={editForm.assignedRecruiter} onChange={(e) => setEditForm({ ...editForm, assignedRecruiter: e.target.value })} placeholder="Name or email" /></Field>
+                <Field label="Source"><input className={kitInput} value={editForm.source} onChange={(e) => setEditForm({ ...editForm, source: e.target.value })} placeholder="e.g. Referral, Portal, Agency" /></Field>
+                <Field label="Visibility"><Select value={editForm.visibility} onChange={(v) => setEditForm({ ...editForm, visibility: v })} options={['standard', 'open', 'private', 'anonymous'].map((v) => ({ value: v, label: v }))} /></Field>
+              </div>
+            </div>
+            <div>
+              <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Compensation & skills</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Current CTC"><input className={kitInput} value={editForm.currentCtc} onChange={(e) => setEditForm({ ...editForm, currentCtc: e.target.value })} /></Field>
+                <Field label="Expected CTC"><input className={kitInput} value={editForm.expectedCtc} onChange={(e) => setEditForm({ ...editForm, expectedCtc: e.target.value })} /></Field>
+                <div className="sm:col-span-2"><Field label="Skills"><SkillPicker value={editForm.skills} onChange={(v) => setEditForm({ ...editForm, skills: v })} /></Field></div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-1 border-t border-slate-100">
+              <button type="button" onClick={() => setEditing(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs mt-3">Cancel</button>
+              <button disabled={busy} className={`${btnPrimary} mt-3`}>{busy ? 'Saving…' : 'Save changes'}</button>
+            </div>
+          </form>
+        </DetailDrawer>
+      )}
       <Modal open={statusFor !== null} onClose={() => setStatusFor(null)} title={`Account status — ${statusFor?.id || ''}`} subtitle="Reason is mandatory and audited; suspend/block revokes sessions">
         <div className="space-y-3">
           <Field label="Status"><Select value={statusForm.status} onChange={(v) => setStatusForm({ ...statusForm, status: v })} options={['Active', 'Suspended', 'Blocked'].map((s) => ({ value: s, label: s }))} /></Field>
@@ -4644,6 +4905,7 @@ export const JOB_TRANSITIONS: Record<string, string[]> = {
 
 /* ---------------- Admin Jobs (§6.7) — list + detail + pipeline + assign ---------------- */
 export function JobsPanel() {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<any[]>([]);
   const [orgs, setOrgs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -4799,6 +5061,7 @@ export function JobsPanel() {
           </div>
           <div className="flex gap-2">
             <ExportButton filename="jobs.csv" rows={filtered} columns={['id', 'requisitionId', 'title', 'orgId', 'location', 'employmentType', 'status', 'expiryDate']} />
+            <button type="button" onClick={() => navigate(`${portalBase()}/jobs/new`)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Full-page editor →</button>
             <button type="button" onClick={() => setShowCreateJob(true)} className={btnPrimary}>+ New job</button>
           </div>
         </div>

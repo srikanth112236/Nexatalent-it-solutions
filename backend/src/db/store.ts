@@ -28,7 +28,7 @@ export interface DbShape {
   payouts: any[]; reconciliations: any[];
   leads: any[]; leadActivities: any[]; opportunities: any[]; targets: any[];
   tasks: any[]; proposals: any[]; meetings: any[]; timesheets: any[]; submissions: any[];
-  notifications: any[]; notificationPrefs: any[];
+  notifications: any[]; notificationPrefs: any[]; mailOutbox: any[];
   campaigns: any[]; campaignRecipients: any[]; campaignEvents: any[];
   assignments: any[]; outbox: any[]; idempotency: any[];
   supportTickets: any[];
@@ -74,7 +74,7 @@ function seed(): DbShape {
       { id: 'CND-9042', name: 'Ananya Deshpande', email: 'ananya.d@cloudsec.net', roleTitle: 'AWS Cloud Security Architect', experienceYears: 9, location: 'Hyderabad, Telangana', currentCtc: 3200000, expectedCtc: 4200000, noticePeriod: '30 Days', matchScore: 94, stage: 'Tech Round', jobId: 'REQ-8890', submittedBy: 'Global TechSolutions Vendor', sourceType: 'Vendor', status: 'Active', visibility: 'standard', createdAt: now },
     ],
     experiences: [], educations: [],
-    skills: ['React','Node.js','TypeScript','Python','AWS','GCP','Azure','Kubernetes','Docker','PostgreSQL','MongoDB','Java','Spring Boot','Go','Rust','React Native','Flutter','Swift','Kotlin','Angular','Vue.js','Django','Flask','.NET','C#','PHP','Laravel','Ruby on Rails','Salesforce','SAP','Data Engineering','Machine Learning','DevOps','Terraform','CI/CD','GraphQL','REST','Microservices','System Design','Agile','QA Automation','Selenium','Cypress'].map((name, i) => ({ id: `SKL-${100 + i}`, name, category: 'Technology', createdAt: now })),
+    skills: seedSkills(now),
     candidateSkills: [], certifications: [],
     documents: [], consents: [],
     requisitions: [
@@ -124,7 +124,7 @@ function seed(): DbShape {
       { id: 'TSK-702', title: 'Verify AWS Security certification for Ananya Deshpande', client: 'Fintech ScaleOps Technologies Ltd', priority: 'High', dueDate: 'Today, 6:30 PM', status: 'Pending', owner: 'kiran@nexatalent.com' },
     ],
     proposals: [], meetings: [], timesheets: [], submissions: [],
-    notifications: [], notificationPrefs: [],
+    notifications: [], notificationPrefs: [], mailOutbox: [],
     campaigns: [], campaignRecipients: [], campaignEvents: [],
     assignments: [], outbox: [], idempotency: [],
     supportTickets: [],
@@ -175,6 +175,29 @@ function standardTemplate(now: string): any {
     createdBy: 'seed', createdAt: now,
   };
 }
+/** Industry-wide skills taxonomy (§14.2) — [name, category] pairs shared by candidates, requisitions and jobs. */
+function seedSkills(now: string): any[] {
+  const pairs: Array<[string, string]> = [
+    ['React','Technology'],['Node.js','Technology'],['TypeScript','Technology'],['Python','Technology'],['Java','Technology'],['Spring Boot','Technology'],['Go','Technology'],['Rust','Technology'],['.NET','Technology'],['C#','Technology'],['PHP','Technology'],['Laravel','Technology'],['Ruby on Rails','Technology'],['Swift','Technology'],['Kotlin','Technology'],['Flutter','Technology'],['React Native','Technology'],['Angular','Technology'],['Vue.js','Technology'],['Django','Technology'],['Flask','Technology'],
+    ['Data Engineering','Data & AI'],['Machine Learning','Data & AI'],['Deep Learning','Data & AI'],['NLP','Data & AI'],['Computer Vision','Data & AI'],['MLOps','Data & AI'],['Data Analysis','Data & AI'],['SQL','Data & AI'],['Power BI','Data & AI'],['Tableau','Data & AI'],['Excel Modelling','Data & AI'],['Statistics','Data & AI'],['A/B Testing','Data & AI'],['Prompt Engineering','Data & AI'],['Data Warehousing','Data & AI'],['ETL','Data & AI'],
+    ['AWS','Cloud & DevOps'],['GCP','Cloud & DevOps'],['Azure','Cloud & DevOps'],['Kubernetes','Cloud & DevOps'],['Docker','Cloud & DevOps'],['Terraform','Cloud & DevOps'],['CI/CD','Cloud & DevOps'],['Linux Administration','Cloud & DevOps'],['Site Reliability Engineering','Cloud & DevOps'],['Cloud Security','Cloud & DevOps'],['Network Administration','Cloud & DevOps'],['VMware','Cloud & DevOps'],
+    ['Microservices','Technology'],['System Design','Technology'],['GraphQL','Technology'],['REST','Technology'],['PostgreSQL','Technology'],['MongoDB','Technology'],['Redis','Technology'],['Kafka','Technology'],['Elasticsearch','Technology'],['Salesforce','Technology'],['SAP','Technology'],['ServiceNow','Technology'],['Workday','Technology'],['Oracle ERP','Technology'],['DevOps','Technology'],['Agile','Technology'],['QA Automation','Technology'],['Selenium','Technology'],['Cypress','Technology'],['Playwright','Technology'],['Performance Testing','Technology'],['Cybersecurity','Technology'],['Penetration Testing','Technology'],['Blockchain','Technology'],['Embedded Systems','Technology'],['IoT','Technology'],
+    ['Nursing','Healthcare'],['Patient Care','Healthcare'],['Medical Coding','Healthcare'],['Pharmacy','Healthcare'],['Physiotherapy','Healthcare'],['Radiology','Healthcare'],['Lab Technology','Healthcare'],['Clinical Research','Healthcare'],['Healthcare Administration','Healthcare'],['Medical Transcription','Healthcare'],['Nutrition & Dietetics','Healthcare'],['Emergency Care','Healthcare'],
+    ['Financial Accounting','Finance'],['Tally','Finance'],['GST Compliance','Finance'],['Auditing','Finance'],['Investment Banking','Finance'],['Equity Research','Finance'],['Risk Management','Finance'],['Credit Analysis','Finance'],['Payroll Processing','Finance'],['Budgeting & Forecasting','Finance'],['Chartered Accountancy','Finance'],['Company Secretaryship','Finance'],['Insurance Underwriting','Finance'],['Actuarial Science','Finance'],
+    ['AutoCAD','Engineering'],['Mechanical Design','Engineering'],['Electrical Wiring','Engineering'],['Civil Estimation','Engineering'],['Structural Analysis','Engineering'],['HVAC','Engineering'],['Plumbing Design','Engineering'],['Quality Assurance','Engineering'],['Six Sigma','Engineering'],['Lean Manufacturing','Engineering'],['CNC Programming','Engineering'],['Welding','Engineering'],
+    ['B2B Sales','Sales'],['Lead Generation','Sales'],['Cold Calling','Sales'],['Negotiation','Sales'],['Account Management','Sales'],['Channel Sales','Sales'],['Enterprise Sales','Sales'],['Salesforce CRM','Sales'],['HubSpot','Sales'],['Inside Sales','Sales'],
+    ['Digital Marketing','Marketing'],['SEO','Marketing'],['SEM','Marketing'],['Social Media Marketing','Marketing'],['Content Writing','Marketing'],['Email Marketing','Marketing'],['Brand Management','Marketing'],['Market Research','Marketing'],['Public Relations','Marketing'],['Event Management','Marketing'],['Video Editing','Marketing'],['Copywriting','Marketing'],
+    ['Talent Acquisition','HR'],['Payroll Management','HR'],['Employee Relations','HR'],['Performance Management','HR'],['HR Compliance','HR'],['Compensation & Benefits','HR'],['Training & Development','HR'],['HR Analytics','HR'],
+    ['Supply Chain Management','Operations'],['Inventory Management','Operations'],['Warehouse Operations','Operations'],['Procurement','Operations'],['Vendor Management','Operations'],['Logistics Planning','Operations'],['Last-mile Delivery','Operations'],['Fleet Management','Operations'],['Customs Clearance','Operations'],
+    ['UI Design','Design'],['UX Research','Design'],['Figma','Design'],['Adobe Photoshop','Design'],['Adobe Illustrator','Design'],['Motion Graphics','Design'],['Product Design','Design'],['Design Systems','Design'],
+    ['Corporate Law','Legal'],['Contract Drafting','Legal'],['Litigation','Legal'],['Intellectual Property','Legal'],['Compliance Management','Legal'],['Paralegal Support','Legal'],
+    ['Customer Support','Support'],['Technical Support','Support'],['Chat Support','Support'],['Voice Process','Support'],['Customer Success','Support'],['Helpdesk Management','Support'],
+    ['Teaching','Education'],['Curriculum Design','Education'],['E-learning Development','Education'],['Academic Counselling','Education'],
+    ['Hotel Management','Hospitality'],['Food & Beverage Service','Hospitality'],['Housekeeping Operations','Hospitality'],['Front Office','Hospitality'],['Travel Planning','Hospitality'],
+    ['Site Supervision','Construction'],['Quantity Surveying','Construction'],['Safety Compliance','Construction'],
+  ];
+  return pairs.map(([name, category], i) => ({ id: `SKL-${100 + i}`, name, category, createdAt: now }));
+}
 let db: DbShape | null = null;
 
 /**
@@ -200,6 +223,13 @@ export function loadDb(): DbShape {
       db = { ...fresh, ...parsed };
       // Backfill reference collections for DBs created before they were seeded.
       if ((db!.skills || []).length === 0) db!.skills = fresh.skills;
+      else {
+        // Merge newer taxonomy entries by name (keeps custom-added skills).
+        const have = new Set((db!.skills as any[]).map((s: any) => String(s.name).toLowerCase()));
+        for (const s of (fresh.skills as any[])) {
+          if (!have.has(String(s.name).toLowerCase())) { (db!.skills as any[]).push(s); have.add(String(s.name).toLowerCase()); }
+        }
+      }
       if ((db!.agencyProfiles || []).length === 0) db!.agencyProfiles = fresh.agencyProfiles;
       if (!Array.isArray((db as any).candidateInfoRequests)) (db as any).candidateInfoRequests = [];
       if (!Array.isArray((db as any).privacyRequests)) (db as any).privacyRequests = [];

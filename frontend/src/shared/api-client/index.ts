@@ -175,6 +175,12 @@ class ApiClient {
     return res.data;
   }
 
+  /** Raw binary download (PDFs) with auth headers attached. */
+  async getBlob(endpoint: string): Promise<Blob> {
+    const res = await this.axiosInstance.get(endpoint, { responseType: 'blob' });
+    return res.data as Blob;
+  }
+
   async post<T>(endpoint: string, data?: unknown, config?: any): Promise<ApiResponse<T>> {
     const res = await this.axiosInstance.post<ApiResponse<T>>(endpoint, data, config);
     return res.data;

@@ -8,7 +8,7 @@ import {
   SubscriptionsPanel, BillingPanel, InvoicesPanel, CommissionsPanel, LeadsPanel, PerformancePanel,
   ReportsPanel, NotificationsPanel, AdminControlsPanel, RequisitionsPanel, ApplicationsPanel,
   CandidatesPanel, AgencyPanel, BranchesPanel, JobsPanel, SupportPanel,
-  InterviewsPanel, OffersPlacementsPanel,
+  InterviewsPanel, OffersPlacementsPanel, RequirementCreatePage, JobCreatePage,
 } from '../common/EnterprisePanels';
 import { Modal, Select, Field } from '../../shared/ui/EnterpriseKit';
 import { MfaPanel } from '../../auth/components/MfaPanel';
@@ -51,7 +51,9 @@ export function SuperAdminPortal() {
     if (p.includes('/agencies')) return 'agencies';
     if (p.includes('/candidates')) return 'candidates';
     if (p.includes('/branches')) return 'branches';
+    if (p.includes('/requisitions/new')) return 'requisitions-new';
     if (p.includes('/requisitions')) return 'requisitions';
+    if (p.includes('/jobs/new')) return 'jobs-new';
     if (p.includes('/jobs')) return 'jobs';
     if (p.includes('/applications')) return 'applications';
     if (p.includes('/interviews')) return 'interviews';
@@ -477,9 +479,11 @@ export function SuperAdminPortal() {
 
         {/* ENTERPRISE: new phase modules */}
         {currentTab === 'requisitions' && <RequisitionsPanel />}
+        {currentTab === 'requisitions-new' && <RequirementCreatePage base="/superadmin" />}
         {currentTab === 'candidates' && <CandidatesPanel />}
         {currentTab === 'branches' && <BranchesPanel />}
         {currentTab === 'jobs' && <JobsPanel />}
+        {currentTab === 'jobs-new' && <JobCreatePage base="/superadmin" />}
         {currentTab === 'applications' && <ApplicationsPanel />}
         {currentTab === 'interviews' && <InterviewsPanel />}
         {currentTab === 'placements' && <OffersPlacementsPanel />}

@@ -72,7 +72,12 @@ function notifyCompany(companyId: string, body: string): void {
 /** Placement-triggered commission creation — dedupe by placement+trigger (§6.11). */
 export function evaluateCommission(p: { placementId?: string; applicationId?: string; jobId?: string; orgId?: string; candidateEmail?: string; stage?: string }): void {
   const db = loadDb();
-  const agreements = db.commissionAgreements.filter((a: any) => a.orgId === p.orgId && a.status === 'Approved' && a.companyAccepted && (!a.jobId || !p.jobId || a.jobId === p.jobId));
+  const matching = db.commissionAgreements.filter((a: any) => a.orgId === p.orgId && a.status === 'Approved' && a.companyAccepted && (!a.jobId || !p.jobId || a.jobId === p.jobId));
+  // One receivable per hire (job-specific company agreement wins, else the org default);
+  // every matching agency agreement still mints its own payable leg.
+  const company = matching.filter((a: any) => !a.agencyId);
+  const picked = company.find((a: any) => a.jobId && p.jobId && a.jobId === p.jobId) || company.find((a: any) => !a.jobId);
+  const agreements = [...(picked ? [picked] : []), ...matching.filter((a: any) => a.agencyId)];
   for (const a of agreements) {
     const trigger: string = a.trigger || 'Joined';
     const fired = (trigger === 'Joined' && (p.stage === 'Hired' || p.stage === 'Joined')) || (trigger === 'Offer Accepted' && ['Offer','Selected'].includes(p.stage || ''));

@@ -4,6 +4,8 @@ import { loadDb, persist, uid, nowIso, audit } from '../db/store.js';
 import { requireAuth, requirePermission, ctxOf, tenantOf } from '../middleware/rbac.js';
 import { invoiceSchema, paymentSchema, commissionAgreementSchema, agreementTemplateSchema, feeSlabSchema, invoiceSeriesSchema, paginate, paged } from '../validate/schemas.js';
 import { emit, claimIdempotency } from '../events/bus.js';
+import { mailConfigured } from '../events/mailer.js';
+import PDFDocument from 'pdfkit';
 import { usageSummary, evaluate, consumeQuota } from '../domain/entitlements.js';
 
 export const commercialRouter = Router();
@@ -162,11 +164,14 @@ commercialRouter.get('/invoices/:id/document', requireAuth(), (req, res) => {
   if (!inv) return res.status(404).json({ success: false, message: 'Invoice not found.' });
   const ctx = ctxOf(req);
   if (!['superadmin','platform_owner','finance_admin','finance_staff'].includes(ctx.role) && inv.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Invoice not found.' });
+  res.json({ success: true, data: buildInvoiceDocument(db, inv) });
+});
+function buildInvoiceDocument(db: any, inv: any): any {
   const org: any = db.organizations.find((o: any) => o.id === inv.orgId);
   const agreement: any = inv.agreementId ? db.commissionAgreements.find((a: any) => a.id === inv.agreementId) : null;
   const paymentTermsDays = inv.paymentTermsDays ?? agreement?.paymentTermsDays ?? 30;
   const replacementDays = agreement?.replacementDays ?? 90;
-  res.json({ success: true, data: {
+  return {
     ...withOverdue(inv),
     lines: db.invoiceLines.filter((l: any) => l.invoiceId === inv.id),
     organization: org ? { id: org.id, legalName: org.legalName, displayName: org.displayName, gstin: org.gstin, billingContact: org.billingContact, financeEmail: org.financeEmail } : null,
@@ -182,8 +187,81 @@ commercialRouter.get('/invoices/:id/document', requireAuth(), (req, res) => {
       duplicateNote: agreement?.duplicatePolicy || 'Duplicate profiles are rejected; the earliest valid submission owns the candidate.',
     },
     reminders: (db.invoiceReminders as any[]).filter((r: any) => r.invoiceId === inv.id),
-  } });
+  };
+}
+// ---- Mail outbox (queued/sent/failed email log) ----
+commercialRouter.get('/mail-outbox', requireAuth(), (req, res) => {
+  const ctx = ctxOf(req); let rows = loadDb().mailOutbox as any[] || [];
+  if (!['superadmin','platform_owner','finance_admin'].includes(ctx.role)) rows = rows.filter((m) => m.orgId === ctx.tenantId);
+  res.json({ success: true, data: rows.slice(0, 200), configured: mailConfigured() });
 });
+// ---- Server-generated PDFs (pdfkit, no browser needed) ----
+commercialRouter.get('/invoices/:id/pdf', requireAuth(), (req, res) => {
+  const db = loadDb(); const inv: any = db.invoices.find((i: any) => i.id === req.params.id);
+  if (!inv) return res.status(404).json({ success: false, message: 'Invoice not found.' });
+  const ctx = ctxOf(req);
+  if (!['superadmin','platform_owner','finance_admin','finance_staff'].includes(ctx.role) && inv.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Invoice not found.' });
+  const d = buildInvoiceDocument(db, inv);
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="${d.number || d.id}.pdf"`);
+  const pdf = new PDFDocument({ margin: 48, info: { Title: `Tax Invoice ${d.number || d.id}` } });
+  pdf.pipe(res);
+  pdf.fontSize(18).text('NexaTalent IT Solutions — TAX INVOICE');
+  pdf.moveDown(0.5).fontSize(10).text(`${d.number || d.id} • Issued ${String(d.issueDate || d.createdAt || '').slice(0, 10)} • Due ${String(d.dueDate || '').slice(0, 10)} • ${d.status}${d.overdue ? ` • ${d.daysOverdue}d OVERDUE` : ''}`);
+  pdf.moveDown().fontSize(11).text(`Billed to: ${d.organization?.legalName || d.orgId}${d.organization?.gstin ? ` (GSTIN: ${d.organization.gstin})` : ''}`);
+  if (d.agreement) pdf.fontSize(10).text(`Agreement ${d.agreement.id} • ${d.agreement.hiringType} @ ${d.agreement.rate}%`);
+  pdf.moveDown();
+  for (const l of d.lines || []) pdf.fontSize(10).text(`${l.label} — qty ${l.qty} × ₹${l.unit} = ₹${(l.qty * l.unit).toLocaleString('en-IN')}`);
+  pdf.moveDown().fontSize(11)
+    .text(`Subtotal: ₹${d.subtotal}`).text(`Discount: ₹${d.discount}`)
+    .text(`Tax (GST @ ${d.taxRate ?? 18}%): ₹${d.tax}`).text(`Total: ₹${d.total}`)
+    .text(`Paid: ₹${d.amountPaid}`).text(`Balance: ₹${d.balance}`);
+  pdf.moveDown().fontSize(9).fillColor('#475569')
+    .text(d.terms.paymentNote).text(d.terms.replacementNote).text(d.terms.gstNote);
+  pdf.fillColor('#000000');
+  pdf.end();
+});
+commercialRouter.get('/commission-agreements/:id/pdf', requireAuth(), (req, res) => {
+  const db = loadDb(); const ag: any = db.commissionAgreements.find((a: any) => a.id === req.params.id);
+  if (!ag) return res.status(404).json({ success: false, message: 'Agreement not found.' });
+  const ctx = ctxOf(req);
+  if (!['superadmin','platform_owner','finance_admin'].includes(ctx.role) && ag.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Agreement not found.' });
+  const tpl: any = (db.agreementTemplates as any[]).find((t: any) => t.id === ag.templateId) || (db.agreementTemplates as any[]).find((t: any) => t.id === 'AGT-STD-001');
+  const org: any = db.organizations.find((o: any) => o.id === ag.orgId);
+  const filled = fillAgreementHtml(tpl, ag, org);
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="Agreement-${ag.id}.pdf"`);
+  const pdf = new PDFDocument({ margin: 48, info: { Title: `Agreement ${ag.id}` } });
+  pdf.pipe(res);
+  for (const block of filled) {
+    if (block.h) pdf.fontSize(13).text(block.t, { underline: false });
+    else pdf.fontSize(10).text(block.t);
+    pdf.moveDown(0.4);
+  }
+  pdf.end();
+});
+function fillAgreementHtml(tpl: any, ag: any, org: any): Array<{ h?: boolean; t: string }> {
+  const map: Record<string, string> = {
+    company_name: org?.displayName || org?.legalName || ag.orgId,
+    date: new Date().toISOString().slice(0, 10),
+    hiring_type: ag.hiringType || tpl?.hiringType || '',
+    rate_percent: ag.rate !== undefined ? String(ag.rate) : '',
+    payment_days: String(ag.paymentTermsDays ?? tpl?.paymentTermsDays ?? 30),
+    replacement_days: String(ag.replacementDays ?? tpl?.replacementDays ?? 90),
+    gst_note: tpl?.gstNote || 'GST charged extra as applicable.',
+    ownership: ag.ownershipClause || tpl?.ownershipClause || '',
+    duplicates: ag.duplicatePolicy || tpl?.duplicatePolicy || '',
+    cancellation: ag.cancellationTerms || tpl?.cancellationTerms || '',
+    template_name: tpl?.name || '',
+  };
+  let html = String(tpl?.bodyHtml || '');
+  for (const [k, v] of Object.entries(map)) html = html.split(`{{${k}}}`).join(String(v));
+  if (!html) {
+    html = `<h2>Placement Services Agreement — ${ag.id}</h2><p>Rate ${ag.rate}% of ${ag.hiringType}.</p><p>${map.ownership}</p><p>${map.duplicates}</p><p>${map.cancellation}</p>`;
+  }
+  return html.replace(/<\/(h[1-6]|p|li|tr)>/gi, '\n').replace(/<li>/gi, '• ').replace(/<[^>]+>/g, '').split('\n').map((s) => s.trim()).filter(Boolean)
+    .map((t) => (/^(Placement Services Agreement|Agreement|1\.|2\.|3\.|4\.|5\.|6\.|7\.)/.test(t) && t.length < 80 ? { h: true, t } : { t }));
+}
 // ---- Invoice reminders (due-soon + overdue → superadmin/finance notifications) ----
 commercialRouter.get('/invoice-reminders', requireAuth(), (req, res) => {
   const ctx = ctxOf(req); let rows = loadDb().invoiceReminders as any[];
@@ -211,6 +289,15 @@ commercialRouter.post('/invoice-reminders/run', requireAuth(['superadmin','platf
   }
   if ((db.invoiceReminders as any[]).length > 500) (db.invoiceReminders as any[]).length = 500;
   persist();
+  if (sent.length > 0) {
+    const lines = sent.map((s: any) => `<li>[${s.kind}] ${s.number || s.invoiceId} • ${s.orgId} • ₹${s.balance}</li>`).join('');
+    import('../events/mailer.js').then(({ sendMail }) => sendMail(
+      'superadmin@nexatalent.com',
+      `Payment reminders: ${sent.length} invoice(s) need attention`,
+      `<p>${sent.length} invoice(s) overdue or due within 7 days:</p><ul>${lines}</ul>`,
+      { kind: 'invoice-reminder-digest' },
+    ).catch(() => {}));
+  }
   res.json({ success: true, data: { sent: sent.length, reminders: sent } });
 });
 commercialRouter.post('/invoices', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), (req: Request, res: Response) => {
@@ -249,6 +336,16 @@ commercialRouter.post('/invoices/:id/issue', requireAuth(['superadmin','platform
   if (inv.status !== 'Draft') return res.status(422).json({ success: false, message: `Only Draft invoices can be issued (current: ${inv.status}).` });
   inv.status = 'Issued'; inv.issueDate = nowIso(); inv.issuedBy = ctxOf(req).email;
   audit(ctxOf(req).email, `INVOICE_ISSUED:${inv.id}`, inv.orgId, 'invoice', inv.id, req.ip); persist();
+  const org: any = db.organizations.find((o: any) => o.id === inv.orgId);
+  const financeTo = org?.financeEmail || org?.billingContact;
+  if (financeTo && String(financeTo).includes('@')) {
+    import('../events/mailer.js').then(({ sendMail }) => sendMail(
+      String(financeTo),
+      `Tax invoice ${inv.number || inv.id} — ₹${inv.total} due ${String(inv.dueDate).slice(0, 10)}`,
+      `<p>Dear ${org?.displayName || inv.orgId},</p><p>Invoice <strong>${inv.number || inv.id}</strong> for <strong>₹${inv.total}</strong> is due by ${String(inv.dueDate).slice(0, 10)}. Balance: ₹${inv.balance}.</p>`,
+      { kind: 'invoice-issued', orgId: inv.orgId, refId: inv.id },
+    ).catch(() => {}));
+  }
   res.json({ success: true, data: withOverdue(inv) });
 });
 commercialRouter.patch('/invoices/:id/void', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), (req, res) => {
@@ -473,7 +570,7 @@ commercialRouter.post('/agreement-templates/:id/instantiate', requireAuth(['supe
 });
 /** Agreement resolution for a hire: job-specific agreement wins, else the org-wide default. Must be Approved + company-accepted. */
 export function matchAgreement(db: any, app: { orgId?: string; jobId?: string }): any {
-  const org = (db.commissionAgreements as any[]).filter((a: any) => a.orgId === app.orgId && a.status === 'Approved' && a.companyAccepted);
+  const org = (db.commissionAgreements as any[]).filter((a: any) => a.orgId === app.orgId && a.status === 'Approved' && a.companyAccepted && !a.agencyId);
   return org.find((a: any) => a.jobId && app.jobId && a.jobId === app.jobId) || org.find((a: any) => !a.jobId) || null;
 }
 export function feePreview(agreement: any, feeBasis: number): any {
@@ -541,25 +638,25 @@ commercialRouter.patch('/commissions/:id/approve', requireAuth(['superadmin','pl
   emit('commission.approved', c, c.orgId, ctxOf(req).email);
   res.json({ success: true, data: c });
 });
-commercialRouter.post('/commissions/:id/invoice', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), (req: Request, res: Response) => {
-  const db = loadDb(); const c: any = db.commissions.find((x: any) => x.id === req.params.id);
-  if (!c) return res.status(404).json({ success: false, message: 'Commission not found.' });
-  if (c.approvalStatus !== 'Approved') return res.status(422).json({ success: false, message: `Only Approved commissions can be invoiced (current: ${c.approvalStatus}).` });
+/** Mint invoice(s) for a commission slice. Returns { commission, invoice } or throws { status, message }. */
+export function invoiceForCommission(db: any, c: any, take: number | undefined, by: string): { commission: any; invoice: any } {
+  const fail = (status: number, message: string): never => { throw { status, message }; };
+  if (c.approvalStatus !== 'Approved') fail(422, `Only Approved commissions can be invoiced (current: ${c.approvalStatus}).`);
   const monthsTotal = c.basisType === 'monthly_ctc' ? Number(c.contractMonths || 12) : 1;
   const billed = Number(c.billedMonths || 0);
-  const take = req.body?.forMonths !== undefined ? Number(req.body.forMonths) : (monthsTotal - billed);
-  if (!(take > 0) || billed >= monthsTotal) return res.status(409).json({ success: false, message: c.invoiceId && monthsTotal === 1 ? `Invoice ${c.invoiceId} already generated for this commission.` : `All ${monthsTotal} month(s) already billed for this commission.` });
-  if (monthsTotal === 1 && c.invoiceId) return res.status(409).json({ success: false, message: `Invoice ${c.invoiceId} already generated for this commission.` });
+  const n = take !== undefined ? Number(take) : (monthsTotal - billed);
+  if (!(n > 0) || billed >= monthsTotal) fail(409, c.invoiceId && monthsTotal === 1 ? `Invoice ${c.invoiceId} already generated for this commission.` : `All ${monthsTotal} month(s) already billed for this commission.`);
+  if (monthsTotal === 1 && c.invoiceId) fail(409, `Invoice ${c.invoiceId} already generated for this commission.`);
   const ag: any = c.agreementId ? db.commissionAgreements.find((a: any) => a.id === c.agreementId) : null;
   const termsDays = Number(ag?.paymentTermsDays || 30);
   const base = new Date(c.triggerDate || c.createdAt).getTime();
   const dueDate = new Date((Number.isFinite(base) ? base : Date.now()) + termsDays * 864e5).toISOString().slice(0, 10);
   const monthly = c.basisType === 'monthly_ctc';
-  const slice = monthly ? take / monthsTotal : 1;
+  const slice = monthly ? n / monthsTotal : 1;
   const unit = +(Number(c.gross || 0) * slice).toFixed(2);
   const gross = unit;
   const basisLabel = monthly
-    ? `₹${Number(c.feeBasis || 0).toLocaleString('en-IN')}/mo × ${take} mo (month ${billed + 1}${take > 1 ? `–${billed + take}` : ''} of ${monthsTotal})`
+    ? `₹${Number(c.feeBasis || 0).toLocaleString('en-IN')}/mo × ${n} mo (month ${billed + 1}${n > 1 ? `–${billed + n}` : ''} of ${monthsTotal})`
     : `₹${Number(c.feeBasis || 0).toLocaleString('en-IN')}`;
   const tax = +(gross * 18 / 100).toFixed(2);
   const total = +(gross + tax).toFixed(2);
@@ -569,16 +666,63 @@ commercialRouter.post('/commissions/:id/invoice', requireAuth(['superadmin','pla
     invoiceType: monthly ? 'monthly' : 'one_time',
     lines: [{ label: `Placement fee — ${c.candidateEmail || c.applicationId || ''} (${c.jobId || ''}) @ ${c.rate || ag?.rate || 0}% of ${basisLabel}`, qty: 1, unit }],
     discount: 0, taxRate: 18, subtotal: gross, tax, total, amountPaid: 0, balance: total,
-    status: 'Issued', issueDate: nowIso(), dueDate, currency: 'INR', createdAt: nowIso(), createdBy: ctxOf(req).email,
+    status: 'Issued', issueDate: nowIso(), dueDate, currency: 'INR', createdAt: nowIso(), createdBy: by,
     replacementNote: ag?.replacementTerms || undefined,
   };
   db.invoices.unshift(inv);
   db.invoiceLines.unshift({ id: uid('INVL'), invoiceId: inv.id, label: inv.lines[0].label, qty: 1, unit: gross });
   if (!c.invoiceId) c.invoiceId = inv.id;
   c.invoiceIds = [...(c.invoiceIds || (c.invoiceId ? [c.invoiceId] : [])), inv.id].filter((v, ix, a) => a.indexOf(v) === ix);
-  c.billedMonths = billed + take;
-  audit(ctxOf(req).email, `COMMISSION_INVOICED:${c.id}->${inv.id}`, c.orgId, 'commission', c.id, req.ip); persist();
-  res.status(201).json({ success: true, data: { commission: c, invoice: withOverdue(inv) } });
+  c.billedMonths = billed + n;
+  audit(by, `COMMISSION_INVOICED:${c.id}->${inv.id}`, c.orgId, 'commission', c.id, '127.0.0.1'); persist();
+  return { commission: c, invoice: withOverdue(inv) };
+}
+commercialRouter.post('/commissions/:id/invoice', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), (req: Request, res: Response) => {
+  const db = loadDb(); const c: any = db.commissions.find((x: any) => x.id === req.params.id);
+  if (!c) return res.status(404).json({ success: false, message: 'Commission not found.' });
+  try {
+    const out = invoiceForCommission(db, c, req.body?.forMonths, ctxOf(req).email);
+    audit(ctxOf(req).email, `COMMISSION_INVOICED_API:${c.id}`, c.orgId, 'commission', c.id, req.ip); persist();
+    res.status(201).json({ success: true, data: out });
+  } catch (e: any) {
+    res.status(e?.status || 500).json({ success: false, message: e?.message || 'Failed.' });
+  }
+});
+// ---- Monthly auto-billing scheduler: bill started-but-unbilled months + issue due series drafts ----
+commercialRouter.post('/billing/schedule/run', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), async (req, res) => {
+  const db = loadDb(); const by = ctxOf(req).email;
+  const generated: any[] = []; const issued: any[] = [];
+  for (const c of db.commissions as any[]) {
+    if (c.approvalStatus !== 'Approved' || c.basisType !== 'monthly_ctc') continue;
+    const monthsTotal = Number(c.contractMonths || 12);
+    let billed = Number(c.billedMonths || 0);
+    while (billed < monthsTotal) {
+      const base = new Date(c.triggerDate || c.createdAt).getTime();
+      const monthStart = new Date(Number.isFinite(base) ? base : Date.now());
+      monthStart.setMonth(monthStart.getMonth() + billed);
+      if (monthStart.getTime() > Date.now()) break;
+      try {
+        const out = invoiceForCommission(db, c, 1, `scheduler:${by}`);
+        generated.push({ commissionId: c.id, invoiceId: out.invoice.id, month: billed + 1, total: out.invoice.total });
+        billed = Number(c.billedMonths || 0);
+      } catch { break; }
+    }
+  }
+  const ym = nowIso().slice(0, 7);
+  for (const inv of db.invoices as any[]) {
+    if (inv.status === 'Draft' && inv.billingPeriod && inv.billingPeriod <= ym) {
+      inv.status = 'Issued'; inv.issueDate = nowIso(); inv.issuedBy = `scheduler:${by}`;
+      issued.push({ invoiceId: inv.id, number: inv.number, billingPeriod: inv.billingPeriod });
+      audit(by, `SCHEDULE_ISSUED:${inv.id}`, inv.orgId, 'invoice', inv.id, req.ip);
+    }
+  }
+  persist();
+  const { sendMail } = await import('../events/mailer.js');
+  const body = `Billing schedule run: ${generated.length} monthly invoice(s) generated, ${issued.length} series draft(s) issued.`;
+  db.notifications.unshift({ id: uid('NOTIF'), recipient: 'superadmin', kind: 'billing-schedule', body, channel: 'in-app', status: 'queued', createdAt: nowIso(), tenantId: 'TNT-GLOBAL' });
+  await sendMail('superadmin@nexatalent.com', `Billing schedule: ${generated.length} generated, ${issued.length} issued`, `<p>${body}</p>`, { kind: 'billing-schedule' });
+  audit(by, `BILLING_SCHEDULE_RUN:+${generated.length}/~${issued.length}`, 'TNT-GLOBAL', 'billing', 'schedule', req.ip); persist();
+  res.json({ success: true, data: { generated, issued } });
 });
 // ---- Recurring/monthly invoice series for companies ----
 commercialRouter.post('/invoices/series', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), (req: Request, res: Response) => {

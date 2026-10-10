@@ -6,7 +6,7 @@ import { Building2, Plus, CheckCircle2, ArrowRight, X, Search, Video, Clock } fr
 import { apiClient } from '../../shared/api-client';
 import {
   RequisitionsPanel, ApplicationsPanel, InterviewsPanel, ChatPanel, TalentPoolsPanel,
-  CandidateSearchPanel, OutreachPanel, BillingPanel, InvoicesPanel, OffersPlacementsPanel,
+  CandidateSearchPanel, OutreachPanel, BillingPanel, InvoicesPanel, OffersPlacementsPanel, RequirementCreatePage,
   SubmissionsPanel, NotificationsPanel, TimesheetsPanel,
 } from '../common/EnterprisePanels';
 import { getTenantId } from '../../shared/auth/session';
@@ -45,6 +45,7 @@ export function EmployerPortal() {
     if (p.includes('/requirements')) return 'requirements';
     if (p.includes('/candidates')) return 'candidates';
     if (p.includes('/interviews')) return 'interviews';
+    if (p.includes('/requisitions/new')) return 'requisitions-new';
     if (p.includes('/requisitions')) return 'requisitions';
     if (p.includes('/pipeline')) return 'pipeline';
     if (p.includes('/talent') && !p.includes('/pools')) return 'talent';
@@ -236,6 +237,7 @@ export function EmployerPortal() {
 
         {/* ENTERPRISE: new phase modules */}
         {currentTab === 'requisitions' && <RequisitionsPanel />}
+        {currentTab === 'requisitions-new' && <RequirementCreatePage base="/employer" />}
         {currentTab === 'pipeline' && <ApplicationsPanel />}
         {currentTab === 'talent' && <CandidateSearchPanel />}
         {currentTab === 'pools' && <TalentPoolsPanel />}

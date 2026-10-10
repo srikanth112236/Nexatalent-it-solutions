@@ -133,6 +133,10 @@ export const billingApi = {
   editDraftInvoice: (id: string, body: unknown) => apiClient.put(`/api/v1/invoices/${id}`, body),
   issueInvoice: (id: string) => apiClient.post(`/api/v1/invoices/${id}/issue`, {}),
   invoiceDocument: (id: string) => apiClient.get(`/api/v1/invoices/${id}/document`),
+  invoicePdf: (id: string) => apiClient.getBlob(`/api/v1/invoices/${id}/pdf`),
+  agreementPdf: (id: string) => apiClient.getBlob(`/api/v1/commission-agreements/${id}/pdf`),
+  scheduleRun: () => apiClient.post('/api/v1/billing/schedule/run', {}),
+  mailOutbox: () => apiClient.get('/api/v1/mail-outbox'),
   voidInvoice: (id: string, reason: string) => apiClient.patch(`/api/v1/invoices/${id}/void`, { reason }),
   creditNote: (invoiceId: string, amount: number, reason: string) => apiClient.post('/api/v1/credit-notes', { invoiceId, amount, reason }),
   payments: () => apiClient.get('/api/v1/payments'),
@@ -191,7 +195,13 @@ export const salesApi = {
 };
 
 export const documentsApi = {
-  skills: (q = '') => apiClient.get(`/api/v1/skills${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+  skills: (q = '', category = '') => {
+    const sp = new URLSearchParams();
+    if (q) sp.set('q', q);
+    if (category) sp.set('category', category);
+    const qs = sp.toString();
+    return apiClient.get(`/api/v1/skills${qs ? `?${qs}` : ''}`);
+  },
   createSkill: (body: unknown) => apiClient.post('/api/v1/skills', body),
   upload: (body: unknown) => apiClient.post('/api/v1/documents', body),
   list: () => apiClient.get('/api/v1/documents'),

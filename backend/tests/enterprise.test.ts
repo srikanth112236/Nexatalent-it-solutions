@@ -266,6 +266,31 @@ describe('commercial terms: slabs, templates, reminders', () => {
     expect(done.status).toBe(409);
     db.commissions.splice(db.commissions.findIndex((c: any) => c.id === 'COM-MO-1'), 1);
   });
+  it('auto-bills started months on schedule run (idempotent)', async () => {
+    const db = (await import('../src/db/store.js')).loadDb();
+    db.commissions.unshift({ id: 'COM-SCH-1', orgId: 'TNT-9011', candidateEmail: 'sch@test.com', jobId: 'JOB-9901', trigger: 'Joined', triggerDate: '2020-01-01T00:00:00.000Z', feeBasis: 120000, basisType: 'monthly_ctc', contractMonths: 3, rate: 10, gross: 36000, adjustments: 0, tax: 6480, total: 42480, net: 42480, approvalStatus: 'Approved', paymentStatus: 'Unpaid', createdAt: '2020-01-01T00:00:00.000Z' });
+    const r1 = await request(app).post('/api/v1/billing/schedule/run').set(auth(superToken)).send({});
+    expect(r1.status).toBe(200);
+    const mine = (r1.body.data.generated as any[]).filter((g: any) => g.commissionId === 'COM-SCH-1');
+    expect(mine.length).toBe(3);
+    const r2 = await request(app).post('/api/v1/billing/schedule/run').set(auth(superToken)).send({});
+    expect((r2.body.data.generated as any[]).filter((g: any) => g.commissionId === 'COM-SCH-1').length).toBe(0);
+    db.commissions.splice(db.commissions.findIndex((c: any) => c.id === 'COM-SCH-1'), 1);
+  });
+  it('serves server PDFs and queues mail without SMTP', async () => {
+    const inv = await request(app).post('/api/v1/invoices').set(auth(superToken)).send({ orgId: 'TNT-9011', lines: [{ label: 'PDF Test', qty: 1, unit: 1000 }], dueDate: '2027-01-01' });
+    const pdf = await request(app).get(`/api/v1/invoices/${inv.body.data.id}/pdf`).set(auth(superToken));
+    expect(pdf.status).toBe(200);
+    expect(pdf.headers['content-type']).toMatch(/application\/pdf/);
+    const { sendMail } = await import('../src/events/mailer.js');
+    const m = await sendMail('test@example.com', 'Hello', '<p>Hi</p>', { kind: 'test' });
+    expect(['queued', 'sent', 'failed']).toContain(m.status);
+    const outbox = await request(app).get('/api/v1/mail-outbox').set(auth(superToken));
+    expect(outbox.body.data.some((x: any) => x.id === m.id)).toBe(true);
+    const ag = await request(app).post('/api/v1/commission-agreements').set(auth(superToken)).send({ orgId: 'TNT-9011', rate: 9 });
+    const apdf = await request(app).get(`/api/v1/commission-agreements/${ag.body.data.id}/pdf`).set(auth(superToken)).send({});
+    expect(apdf.status).toBe(200);
+  });
   it('resolves effective permissions for the caller (mine view)', async () => {
     const r = await request(app).get('/api/v1/permissions?view=mine').set(auth(superToken));
     expect(r.status).toBe(200);
@@ -287,6 +312,51 @@ describe('commercial terms: slabs, templates, reminders', () => {
     expect(r2.body.data.sent).toBe(0);
     const log = await request(app).get('/api/v1/invoice-reminders').set(auth(superToken));
     expect(log.body.data.some((x: any) => x.invoiceId === inv.body.data.id && x.kind === 'overdue')).toBe(true);
+  });
+});
+
+describe('golden path: hire → fee → commission → invoice → reminder (D)', () => {
+  it('runs the full commercial chain without manual steps', async () => {
+    const ag = await request(app).post('/api/v1/commission-agreements').set(auth(superToken)).send({ orgId: 'TNT-9011', jobId: 'JOB-8890', hiringType: 'Senior / niche technology roles', rate: 11 });
+    expect(ag.status).toBe(201);
+    await request(app).patch(`/api/v1/commission-agreements/${ag.body.data.id}/accept`).set(auth(superToken)).send({});
+    const appl = await request(app).post('/api/v1/applications').set(auth(superToken)).send({ jobId: 'JOB-8890', candidateEmail: `gold-${Date.now()}@example.com` });
+    await request(app).post('/api/v1/offers').set(auth(superToken)).send({ applicationId: appl.body.data.id, ctc: 2000000 });
+    const match = await request(app).get(`/api/v1/commission-agreements/match?applicationId=${appl.body.data.id}`).set(auth(superToken));
+    expect(match.body.data.preview.gross).toBe(220000);
+    const pl = await request(app).post('/api/v1/placements').set(auth(superToken)).send({ applicationId: appl.body.data.id });
+    expect(pl.status).toBe(201);
+    const chkPre = await request(app).get(`/api/v1/commissions/check?applicationId=${appl.body.data.id}&trigger=Joined`).set(auth(superToken));
+    expect(chkPre.body.data.count).toBe(1);
+    const comId = chkPre.body.data.rows[0].id;
+    const appr = await request(app).patch(`/api/v1/commissions/${comId}/approve`).set(auth(superToken)).send({});
+    expect(appr.body.data.approvalStatus).toBe('Approved');
+    const inv = await request(app).post(`/api/v1/commissions/${comId}/invoice`).set(auth(superToken)).send({});
+    expect(inv.status).toBe(201);
+    expect(inv.body.data.invoice.total).toBe(259600);
+    const pdf = await request(app).get(`/api/v1/invoices/${inv.body.data.invoice.id}/pdf`).set(auth(superToken));
+    expect(pdf.headers['content-type']).toMatch(/application\/pdf/);
+    const apdf = await request(app).get(`/api/v1/commission-agreements/${ag.body.data.id}/pdf`).set(auth(superToken));
+    expect(apdf.status).toBe(200);
+    const run = await request(app).post('/api/v1/invoice-reminders/run').set(auth(superToken)).send({});
+    expect(run.status).toBe(200);
+    const outbox = await request(app).get('/api/v1/mail-outbox').set(auth(superToken));
+    expect(outbox.body.data.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('skills taxonomy (§14.2)', () => {
+  it('serves industry-wide skills with categories + search', async () => {
+    const all = await request(app).get('/api/v1/skills?pageSize=100').set(auth(superToken));
+    expect(all.status).toBe(200);
+    expect(all.body.pagination.total).toBeGreaterThan(100);
+    expect(all.body.categories).toContain('Healthcare');
+    expect(all.body.categories).toContain('Finance');
+    const q = await request(app).get('/api/v1/skills?q=nurs').set(auth(superToken));
+    expect(q.body.data.some((s: any) => s.name === 'Nursing')).toBe(true);
+    const cat = await request(app).get('/api/v1/skills?category=Legal').set(auth(superToken));
+    expect(cat.body.data.length).toBeGreaterThan(0);
+    expect(cat.body.data.every((s: any) => s.category === 'Legal')).toBe(true);
   });
 });
 
