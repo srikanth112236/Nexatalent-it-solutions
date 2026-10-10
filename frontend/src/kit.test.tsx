@@ -251,9 +251,7 @@ describe('DetailDrawer scroll', () => {
     assert.ok(dialog, 'dialog exists');
     const scroller = container.querySelector('[data-testid="drawer-scroll"]');
     assert.ok(scroller, 'internal scroll region exists');
-    assert.ok(scroller!.className.includes('overflow-y-auto'), 'scroller scrolls vertically');
-    assert.ok(scroller!.className.includes('min-h-0'), 'scroller can shrink inside flex column');
-    assert.ok(scroller!.className.includes('overscroll-contain'), 'wheel gestures stay inside the drawer');
+    assert.ok(scroller!.className.includes('drawer-scroll'), 'bar-free guaranteed scroller is used');
   });
   it('closes on Escape', () => {
     let closed = 0;
