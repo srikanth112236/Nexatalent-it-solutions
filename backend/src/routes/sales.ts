@@ -61,6 +61,30 @@ salesRouter.post('/leads/:id/activities', requireAuth(['superadmin','platform_ow
 salesRouter.get('/leads/:id/activities', requireAuth(['superadmin','platform_owner','sales_admin','sales_manager','employee','bda']), (req, res) => {
   res.json({ success: true, data: loadDb().leadActivities.filter((a: any) => a.leadId === req.params.id) });
 });
+salesRouter.post('/leads/:id/merge', requireAuth(['superadmin','platform_owner','sales_admin','sales_manager']), (req: Request, res: Response) => {
+  const db = loadDb();
+  const src: any = db.leads.find((x: any) => x.id === req.params.id);
+  const dst: any = db.leads.find((x: any) => x.id === req.body?.intoId);
+  if (!src || !dst) return res.status(404).json({ success: false, message: 'Source and target leads required.' });
+  if (src.id === dst.id) return res.status(400).json({ success: false, message: 'Cannot merge a lead into itself.' });
+  if (src.stage === 'Won' || dst.stage === 'Won') return res.status(422).json({ success: false, message: 'Won leads are audit-protected and cannot be merged.' });
+  if (src.mergedInto || dst.mergedInto) return res.status(422).json({ success: false, message: 'Already-merged leads cannot be merged again.' });
+  if (!req.body?.reason) return res.status(400).json({ success: false, message: 'Merge reason required.' });
+  const moved: Record<string, number> = {};
+  for (const [coll, key] of [['leadActivities','leadId'],['meetings','leadId'],['proposals','leadId'],['opportunities','leadId']] as const) {
+    let n = 0;
+    for (const r of (db as any)[coll] as any[]) {
+      if (r[key] === src.id) { r[key] = dst.id; n++; }
+    }
+    moved[coll] = n;
+  }
+  (dst.history ||= []).push({ stage: dst.stage, at: nowIso(), mergedFrom: src.id, reason: req.body.reason });
+  (src.history ||= []).push({ stage: src.stage, at: nowIso(), mergedInto: dst.id, reason: req.body.reason });
+  src.mergedInto = dst.id; src.stage = 'Lost'; src.mergedAt = nowIso();
+  db.leadActivities.unshift({ id: uid('LACT'), leadId: dst.id, type: 'merge', outcome: 'merged', notes: `Merged ${src.id} (${src.contactName} @ ${src.companyName}) into ${dst.id}. ${req.body.reason}`.slice(0, 4000), owner: ctxOf(req).email, createdAt: nowIso() });
+  audit(ctxOf(req).email, `LEAD_MERGED:${src.id}->${dst.id}`, 'TNT-GLOBAL', 'lead', src.id, req.ip); persist();
+  res.json({ success: true, data: { into: dst, moved } });
+});
 salesRouter.post('/leads/:id/convert', requireAuth(['superadmin','platform_owner','sales_admin','sales_manager']), (req: Request, res: Response) => {
   const db = loadDb(); const l: any = db.leads.find((x: any) => x.id === req.params.id);
   if (!l) return res.status(404).json({ success: false, message: 'Lead not found.' });

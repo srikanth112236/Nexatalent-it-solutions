@@ -47,6 +47,19 @@ export function ctxOf(req: Request): AuthCtx {
   return (req as any).auth as AuthCtx;
 }
 
+/** Template permissions ± per-user exceptions (§4.2 controlled exceptions). */
+export function effectivePermissions(role: string, email: string): string[] {
+  const base = new Set(ROLE_PERMISSIONS[role] || ['view']);
+  try {
+    const db = loadDb();
+    for (const o of (db.userRoles as any[]).filter((x: any) => String(x.email).toLowerCase() === String(email).toLowerCase())) {
+      if (o.effect === 'grant') base.add(o.permission);
+      else if (o.effect === 'revoke') base.delete(o.permission);
+    }
+  } catch { /* permissions must never fail closed on store errors beyond template */ }
+  return [...base];
+}
+
 const PLATFORM_ROLES = ['superadmin', 'platform_owner'];
 
 function suspended(email: string): boolean {
@@ -75,7 +88,7 @@ export function requireAuth(allowedRoles?: string[]) {
       if (allowedRoles && !allowedRoles.includes(sess.role)) {
         return res.status(403).json({ success: false, message: `Access denied for role '${sess.role}'.` });
       }
-      (req as any).auth = { id: sess.userId, email: sess.email, role: sess.role, tenantId: sess.tenantId, permissions: ROLE_PERMISSIONS[sess.role] || ['view'] };
+      (req as any).auth = { id: sess.userId, email: sess.email, role: sess.role, tenantId: sess.tenantId, permissions: effectivePermissions(sess.role, sess.email) };
       return next();
     }
     try {
@@ -85,7 +98,7 @@ export function requireAuth(allowedRoles?: string[]) {
       if (allowedRoles && !allowedRoles.includes(claims.role)) {
         return res.status(403).json({ success: false, message: `Access denied for role '${claims.role}'.` });
       }
-      (req as any).auth = { id: claims.sub, email: claims.email, role: claims.role, tenantId: claims.tenantId, permissions: ROLE_PERMISSIONS[claims.role] || ['view'] };
+      (req as any).auth = { id: claims.sub, email: claims.email, role: claims.role, tenantId: claims.tenantId, permissions: effectivePermissions(claims.role, claims.email) };
       return next();
     } catch {
       return res.status(401).json({ success: false, message: 'Invalid or expired token. Please sign in again.' });

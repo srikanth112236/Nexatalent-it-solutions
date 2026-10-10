@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { loadDb, persist, uid, nowIso, audit } from '../db/store.js';
-import { requireAuth, requirePermission, ctxOf, tenantOf, ALL_ROLES } from '../middleware/rbac.js';
+import { requireAuth, requirePermission, ctxOf, tenantOf, ALL_ROLES, PERMISSIONS, effectivePermissions } from '../middleware/rbac.js';
 import { paginate, paged } from '../validate/schemas.js';
 
 export const directoryRouter = Router();
@@ -149,8 +149,65 @@ directoryRouter.patch('/users/:id/status', requireAuth(['superadmin','platform_o
   u.statusReason = req.body.reason; u.statusAt = nowIso();
   // revoke sessions (JWT short-lived; refresh revoked)
   db.sessions = db.sessions.filter((s: any) => s.email !== u.email);
+  // Leaver fan-out (§6.6): reassign open work when a successor is named
+  const counts: Record<string, number> = {};
+  const to = String(req.body.reassignTo || '').trim();
+  if (to && u.status !== 'Active') {
+    const touch = (coll: any[], ownerKey = 'owner') => {
+      let n = 0;
+      for (const r of coll) {
+        if (String((r as any)[ownerKey] || '').toLowerCase() === u.email.toLowerCase()) { (r as any)[ownerKey] = to; (r as any).reassignedAt = nowIso(); n++; }
+      }
+      return n;
+    };
+    counts.leads = touch(db.leads);
+    counts.tasks = touch(db.tasks);
+    counts.targets = touch(db.targets);
+    counts.opportunities = touch(db.opportunities);
+    counts.meetings = touch(db.meetings);
+    u.reassignedTo = to;
+  }
   audit(ctxOf(req).email, `USER_${u.status.toUpperCase()}:${u.email}`, u.tenantId, 'user', u.id, req.ip); persist();
-  res.json({ success: true, data: u, reassigned: req.body.reassignTo || null });
+  res.json({ success: true, data: u, reassigned: to ? { to, counts } : null });
+});
+// Permission exceptions (§4.2) — explicit per-user grant/revoke over the role template
+directoryRouter.get('/permissions', requireAuth(), (req, res) => {
+  const ctx = ctxOf(req); const db = loadDb();
+  if (['superadmin','platform_owner'].includes(ctx.role)) {
+    let rows = db.userRoles as any[];
+    if (req.query.email) rows = rows.filter((o) => String(o.email).toLowerCase() === String(req.query.email).toLowerCase());
+    return res.json({ success: true, data: rows });
+  }
+  res.json({ success: true, data: { email: ctx.email, permissions: effectivePermissions(ctx.role, ctx.email) } });
+});
+directoryRouter.post('/permissions', requireAuth(['superadmin','platform_owner']), requirePermission('manage_permissions'), (req, res) => {
+  const { email, permission, effect } = req.body || {};
+  if (!email || !String(email).includes('@')) return res.status(400).json({ success: false, message: 'Valid email required.' });
+  if (!PERMISSIONS.includes(permission)) return res.status(400).json({ success: false, message: `permission must be one of ${PERMISSIONS.join(', ')}` });
+  if (!['grant','revoke'].includes(effect)) return res.status(400).json({ success: false, message: 'effect must be grant|revoke.' });
+  const db = loadDb();
+  db.userRoles = (db.userRoles as any[]).filter((o) => !(String(o.email).toLowerCase() === String(email).toLowerCase() && o.permission === permission));
+  const row = { id: uid('PERM'), email: String(email).toLowerCase(), permission, effect, by: ctxOf(req).email, createdAt: nowIso() };
+  db.userRoles.unshift(row);
+  audit(ctxOf(req).email, `PERMISSION_${effect.toUpperCase()}:${email}:${permission}`, 'TNT-GLOBAL', 'permission', row.id, req.ip); persist();
+  res.status(201).json({ success: true, data: row });
+});
+directoryRouter.delete('/permissions', requireAuth(['superadmin','platform_owner']), requirePermission('manage_permissions'), (req, res) => {
+  const { email, permission } = (req.body || {}) as Record<string, string>;
+  const db = loadDb();
+  const i = (db.userRoles as any[]).findIndex((o) => String(o.email).toLowerCase() === String(email || '').toLowerCase() && o.permission === permission);
+  if (i < 0) return res.status(404).json({ success: false, message: 'Exception not found.' });
+  const [removed] = (db.userRoles as any[]).splice(i, 1);
+  audit(ctxOf(req).email, `PERMISSION_CLEARED:${email}:${permission}`, 'TNT-GLOBAL', 'permission', removed.id, req.ip); persist();
+  res.json({ success: true, data: removed });
+});
+// Export audit trail (§4.3 — every CSV export is actor-stamped)
+directoryRouter.post('/exports/log', requireAuth(), (req, res) => {
+  const { resource, count } = req.body || {};
+  if (!resource) return res.status(400).json({ success: false, message: 'resource required.' });
+  const ctx = ctxOf(req);
+  audit(ctx.email, `EXPORT:${resource}x${Number(count || 0)}`, ctx.tenantId, 'export', String(resource), req.ip); persist();
+  res.status(201).json({ success: true, message: 'Logged.' });
 });
 
 // Branches

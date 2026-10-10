@@ -54,14 +54,19 @@ function consume(type: string, p: any, tenantId: string, actor: string): void {
   audit(actor, `EVENT:${type}`, tenantId, 'event', type, '127.0.0.1');
 }
 
+function trim<T>(arr: T[], cap: number): void {
+  if (arr.length > cap) arr.length = cap;
+}
 function notify(recipient: string, kind: string, body: string, tenantId: string): void {
   const db = loadDb();
   db.notifications.unshift({ id: uid('NOTIF'), recipient, kind, body, channel: 'in-app', status: 'queued', createdAt: nowIso(), tenantId });
+  trim(db.notifications, 2000);
 }
 
 function notifyCompany(companyId: string, body: string): void {
   const db = loadDb();
   db.notifications.unshift({ id: uid('NOTIF'), recipient: `company:${companyId}`, kind: 'ats', body, channel: 'in-app', status: 'queued', createdAt: nowIso(), tenantId: companyId });
+  trim(db.notifications, 2000);
 }
 
 /** Placement-triggered commission creation — dedupe by placement+trigger (§6.11). */
@@ -77,7 +82,8 @@ export function evaluateCommission(p: { placementId?: string; applicationId?: st
     const basis = Number((p as any).feeBasis || (a as any).feeBasis || (a as any).fixedFee || 100000);
     const gross = a.feeModel === 'fixed' ? Number(a.fixedFee || 0) : +(basis * Number(a.rate || 8.33) / 100).toFixed(2);
     db.idempotency.unshift({ key, createdAt: nowIso() });
-    db.commissions.unshift({ id: uid('COM'), agreementId: a.id, placementId: p.placementId || p.applicationId, jobId: p.jobId, orgId: p.orgId, agencyId: (a as any).agencyId || null, candidateEmail: p.candidateEmail, trigger, triggerDate: nowIso(), feeBasis: basis, rate: a.rate, gross, adjustments: 0, tax: +(gross * 0.18).toFixed(2), total: +(gross * 1.18).toFixed(2), net: +(gross * 1.18).toFixed(2), approvalStatus: 'Pending', paymentStatus: 'Unpaid', createdAt: nowIso() });
+    trim(db.idempotency, 5000);
+    db.commissions.unshift({ id: uid('COM'), agreementId: a.id, placementId: p.placementId || p.applicationId, applicationId: p.applicationId || null, jobId: p.jobId, orgId: p.orgId, agencyId: (a as any).agencyId || null, candidateEmail: p.candidateEmail, trigger, triggerDate: nowIso(), feeBasis: basis, rate: a.rate, gross, adjustments: 0, tax: +(gross * 0.18).toFixed(2), total: +(gross * 1.18).toFixed(2), net: +(gross * 1.18).toFixed(2), approvalStatus: 'Pending', paymentStatus: 'Unpaid', createdAt: nowIso() });
   }
 }
 
@@ -86,5 +92,6 @@ export function claimIdempotency(key: string): boolean {
   const db = loadDb();
   if (db.idempotency.find((x: any) => x.key === key)) return false;
   db.idempotency.unshift({ key, createdAt: nowIso() });
+  trim(db.idempotency, 5000);
   return true;
 }

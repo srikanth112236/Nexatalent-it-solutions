@@ -19,24 +19,80 @@ commercialRouter.post('/plans', requireAuth(['superadmin','platform_owner']), re
   loadDb().plans.unshift(p); audit(ctxOf(req).email, `PLAN_CREATED:${p.id}`, 'TNT-GLOBAL', 'plan', p.id, req.ip); persist();
   res.status(201).json({ success: true, data: p });
 });
+commercialRouter.get('/plans/:id/versions', requireAuth(['superadmin','platform_owner','finance_admin']), (req, res) => {
+  res.json({ success: true, data: loadDb().planVersions.filter((v: any) => v.planId === req.params.id) });
+});
+commercialRouter.post('/plans/:id/new-version', requireAuth(['superadmin','platform_owner']), requirePermission('manage_billing'), (req: Request, res: Response) => {
+  const db = loadDb(); const p: any = db.plans.find((x: any) => x.id === req.params.id);
+  if (!p) return res.status(404).json({ success: false, message: 'Plan not found.' });
+  if (p.status === 'Archived') return res.status(422).json({ success: false, message: 'Archived plans cannot be versioned. Clone into a new plan instead.' });
+  const b: any = req.body || {};
+  db.planVersions.unshift({ id: uid('PLV'), planId: p.id, version: p.version || 1, snapshot: { ...p }, createdAt: nowIso(), by: ctxOf(req).email });
+  if (b.price !== undefined) p.price = Number(b.price);
+  if (b.interval) p.interval = String(b.interval);
+  if (b.entitlements && typeof b.entitlements === 'object') p.entitlements = b.entitlements;
+  if (b.status && ['Active','Archived'].includes(b.status)) p.status = b.status;
+  p.version = (p.version || 1) + 1; p.updatedAt = nowIso();
+  audit(ctxOf(req).email, `PLAN_VERSIONED:${p.id}:v${p.version}`, 'TNT-GLOBAL', 'plan', p.id, req.ip); persist();
+  res.status(201).json({ success: true, data: p });
+});
+commercialRouter.patch('/plans/:id/archive', requireAuth(['superadmin','platform_owner']), requirePermission('manage_billing'), (req, res) => {
+  const db = loadDb(); const p: any = db.plans.find((x: any) => x.id === req.params.id);
+  if (!p) return res.status(404).json({ success: false, message: 'Plan not found.' });
+  if ((db.subscriptions as any[]).some((s) => s.planId === p.id && ['Trial','Active','Past Due','Grace Period'].includes(s.status)) && !req.body.force) {
+    return res.status(422).json({ success: false, message: 'Active subscriptions still reference this plan. Pass force:true to archive anyway (existing terms are snapshotted).' });
+  }
+  p.status = 'Archived'; p.updatedAt = nowIso();
+  audit(ctxOf(req).email, `PLAN_ARCHIVED:${p.id}`, 'TNT-GLOBAL', 'plan', p.id, req.ip); persist();
+  res.json({ success: true, data: p });
+});
 commercialRouter.get('/subscriptions', requireAuth(), (req, res) => {
   const ctx = ctxOf(req); let rows = loadDb().subscriptions as any[];
   if (!['superadmin','platform_owner','finance_admin'].includes(ctx.role)) rows = rows.filter((s) => s.orgId === ctx.tenantId);
   res.json({ success: true, data: rows });
 });
 commercialRouter.post('/subscriptions', requireAuth(['superadmin','platform_owner','employer','company_admin']), (req: Request, res: Response) => {
-  const { orgId, planId } = req.body || {};
+  const { orgId, planId, discount, autoRenew } = req.body || {};
   if (!orgId || !planId) return res.status(400).json({ success: false, message: 'orgId + planId required.' });
   const ctx = ctxOf(req);
   if (!['superadmin','platform_owner'].includes(ctx.role) && orgId !== ctx.tenantId) return res.status(403).json({ success: false, message: 'You can only subscribe your own organization.' });
   const db = loadDb(); const plan: any = db.plans.find((p: any) => p.id === planId);
   if (!plan) return res.status(404).json({ success: false, message: 'Plan not found.' });
-  const sub = { id: uid('SUB'), orgId, planId, planVersion: plan.version || 1, planSnapshot: { ...plan }, status: 'Trial', startDate: nowIso(), trialEnd: new Date(Date.now() + 14 * 864e5).toISOString(), renewalDate: new Date(Date.now() + 30 * 864e5).toISOString(), price: plan.price, currency: plan.currency || 'INR', autoRenew: true, createdAt: nowIso() };
+  if (plan.status === 'Archived') return res.status(422).json({ success: false, message: 'Plan is archived. Pick an active plan version.' });
+  const sub = { id: uid('SUB'), orgId, planId, planVersion: plan.version || 1, planSnapshot: { ...plan }, status: 'Trial', startDate: nowIso(), trialEnd: new Date(Date.now() + 14 * 864e5).toISOString(), renewalDate: new Date(Date.now() + 30 * 864e5).toISOString(), price: plan.price, currency: plan.currency || 'INR', discount: Number(discount || 0), autoRenew: autoRenew !== false, createdAt: nowIso() };
   db.subscriptions.unshift(sub);
   db.subscriptionChanges.unshift({ id: uid('SUBC'), subscriptionId: sub.id, change: 'created', createdAt: nowIso() });
   audit(ctxOf(req).email, `SUBSCRIPTION_CREATED:${sub.id}`, orgId, 'subscription', sub.id, req.ip); persist();
   emit('subscription.activated', sub, orgId, ctxOf(req).email);
   res.status(201).json({ success: true, data: sub });
+});
+commercialRouter.post('/subscriptions/:id/change-plan', requireAuth(['superadmin','platform_owner','finance_admin','employer','company_admin']), (req: Request, res: Response) => {
+  const db = loadDb(); const s: any = db.subscriptions.find((x: any) => x.id === req.params.id);
+  if (!s) return res.status(404).json({ success: false, message: 'Not found.' });
+  const ctx = ctxOf(req);
+  if (!['superadmin','platform_owner','finance_admin'].includes(ctx.role) && s.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Not found.' });
+  const { planId, reason } = req.body || {};
+  const plan: any = db.plans.find((p: any) => p.id === planId);
+  if (!plan) return res.status(404).json({ success: false, message: 'Plan not found.' });
+  if (plan.status === 'Archived') return res.status(422).json({ success: false, message: 'Cannot move to an archived plan.' });
+  const from = `${s.planId}:v${s.planVersion}`;
+  s.planId = plan.id; s.planVersion = plan.version || 1; s.planSnapshot = { ...plan };
+  s.price = plan.price; s.currency = plan.currency || 'INR'; s.updatedAt = nowIso();
+  db.subscriptionChanges.unshift({ id: uid('SUBC'), subscriptionId: s.id, change: `plan ${from} -> ${plan.id}:v${s.planVersion}`, reason: reason || '', by: ctx.email, createdAt: nowIso() });
+  audit(ctx.email, `SUBSCRIPTION_PLAN:${s.id} ${from}->${plan.id}`, s.orgId, 'subscription', s.id, req.ip); persist();
+  res.json({ success: true, data: s });
+});
+commercialRouter.patch('/subscriptions/:id/renewal', requireAuth(['superadmin','platform_owner','finance_admin','employer','company_admin']), (req, res) => {
+  const db = loadDb(); const s: any = db.subscriptions.find((x: any) => x.id === req.params.id);
+  if (!s) return res.status(404).json({ success: false, message: 'Not found.' });
+  const ctx = ctxOf(req);
+  if (!['superadmin','platform_owner','finance_admin'].includes(ctx.role) && s.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Not found.' });
+  if (req.body.autoRenew !== undefined) s.autoRenew = !!req.body.autoRenew;
+  if (req.body.discount !== undefined) s.discount = Math.max(0, Number(req.body.discount) || 0);
+  s.updatedAt = nowIso();
+  db.subscriptionChanges.unshift({ id: uid('SUBC'), subscriptionId: s.id, change: 'renewal-settings', reason: req.body.reason || '', by: ctx.email, createdAt: nowIso() });
+  audit(ctx.email, `SUBSCRIPTION_RENEWAL:${s.id}`, s.orgId, 'subscription', s.id, req.ip); persist();
+  res.json({ success: true, data: s });
 });
 commercialRouter.patch('/subscriptions/:id/status', requireAuth(['superadmin','platform_owner','finance_admin']), (req, res) => {
   const db = loadDb(); const s: any = db.subscriptions.find((x: any) => x.id === req.params.id);
@@ -82,25 +138,70 @@ commercialRouter.get('/outreach', requireAuth(), (req, res) => {
   res.json({ success: true, data: rows });
 });
 
-// ---- Invoices (immutable after issue §6.10) ----
+// ---- Invoices (Draft → Issued, immutable after issue §6.10) ----
+function withOverdue(inv: any): any {
+  const overdue = Number(inv.balance || 0) > 0 && inv.dueDate && new Date(inv.dueDate) < new Date() && !['Paid','Void','Credited','Draft'].includes(inv.status);
+  const daysOverdue = overdue ? Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / 864e5) : 0;
+  return { ...inv, overdue: !!overdue, daysOverdue };
+}
 commercialRouter.get('/invoices', requireAuth(), (req, res) => {
   const ctx = ctxOf(req); let rows = loadDb().invoices as any[];
   if (!['superadmin','platform_owner','finance_admin','finance_staff'].includes(ctx.role)) rows = rows.filter((i) => i.orgId === ctx.tenantId);
+  rows = rows.map(withOverdue);
   const { page, pageSize } = paginate.parse(req.query);
   res.json({ success: true, ...paged(rows, page, pageSize) });
 });
+commercialRouter.get('/invoices/:id/document', requireAuth(), (req, res) => {
+  const db = loadDb(); const inv: any = db.invoices.find((i: any) => i.id === req.params.id);
+  if (!inv) return res.status(404).json({ success: false, message: 'Invoice not found.' });
+  const ctx = ctxOf(req);
+  if (!['superadmin','platform_owner','finance_admin','finance_staff'].includes(ctx.role) && inv.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Invoice not found.' });
+  const org: any = db.organizations.find((o: any) => o.id === inv.orgId);
+  res.json({ success: true, data: {
+    ...withOverdue(inv),
+    lines: db.invoiceLines.filter((l: any) => l.invoiceId === inv.id),
+    organization: org ? { id: org.id, legalName: org.legalName, displayName: org.displayName, gstin: org.gstin, billingContact: org.billingContact, financeEmail: org.financeEmail } : null,
+    payments: db.payments.filter((p: any) => p.invoiceId === inv.id),
+    creditNotes: db.creditNotes.filter((c: any) => c.invoiceId === inv.id),
+  } });
+});
 commercialRouter.post('/invoices', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), (req: Request, res: Response) => {
-  const parsed = invoiceSchema.safeParse(req.body);
+  const { draft, ...body } = req.body || {};
+  const parsed = invoiceSchema.safeParse(body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'Validation failed.', errors: parsed.error.flatten() });
   const db = loadDb();
   const subtotal = parsed.data.lines.reduce((a, l) => a + l.qty * l.unit, 0);
   const tax = +((subtotal - parsed.data.discount) * parsed.data.taxRate / 100).toFixed(2);
   const total = +(subtotal - parsed.data.discount + tax).toFixed(2);
-  const inv = { id: uid('INV'), number: `INV-${new Date().getFullYear()}-${String(db.invoices.length + 1).padStart(4, '0')}`, ...parsed.data, subtotal, tax, total, amountPaid: 0, balance: total, status: 'Issued', issueDate: nowIso(), createdAt: nowIso(), createdBy: ctxOf(req).email };
+  const isDraft = draft === true;
+  const inv = { id: uid('INV'), number: `INV-${new Date().getFullYear()}-${String(db.invoices.length + 1).padStart(4, '0')}`, ...parsed.data, subtotal, tax, total, amountPaid: 0, balance: total, status: isDraft ? 'Draft' : 'Issued', issueDate: isDraft ? null : nowIso(), createdAt: nowIso(), createdBy: ctxOf(req).email };
   db.invoices.unshift(inv);
   parsed.data.lines.forEach((l) => db.invoiceLines.unshift({ id: uid('INVL'), invoiceId: inv.id, ...l }));
+  audit(ctxOf(req).email, isDraft ? `INVOICE_DRAFTED:${inv.id}` : `INVOICE_ISSUED:${inv.id}`, inv.orgId, 'invoice', inv.id, req.ip); persist();
+  res.status(201).json({ success: true, data: withOverdue(inv) });
+});
+commercialRouter.put('/invoices/:id', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), (req: Request, res: Response) => {
+  const db = loadDb(); const inv: any = db.invoices.find((i: any) => i.id === req.params.id);
+  if (!inv) return res.status(404).json({ success: false, message: 'Invoice not found.' });
+  if (inv.status !== 'Draft') return res.status(422).json({ success: false, message: `Only Draft invoices can be edited (current: ${inv.status}).` });
+  const parsed = invoiceSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ success: false, message: 'Validation failed.', errors: parsed.error.flatten() });
+  const subtotal = parsed.data.lines.reduce((a, l) => a + l.qty * l.unit, 0);
+  const tax = +((subtotal - parsed.data.discount) * parsed.data.taxRate / 100).toFixed(2);
+  Object.assign(inv, parsed.data, { subtotal, tax, total: +(subtotal - parsed.data.discount + tax).toFixed(2), updatedAt: nowIso() });
+  inv.balance = +(inv.total - (inv.amountPaid || 0)).toFixed(2);
+  db.invoiceLines = db.invoiceLines.filter((l: any) => l.invoiceId !== inv.id);
+  parsed.data.lines.forEach((l) => db.invoiceLines.unshift({ id: uid('INVL'), invoiceId: inv.id, ...l }));
+  audit(ctxOf(req).email, `INVOICE_DRAFT_EDITED:${inv.id}`, inv.orgId, 'invoice', inv.id, req.ip); persist();
+  res.json({ success: true, data: withOverdue(inv) });
+});
+commercialRouter.post('/invoices/:id/issue', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), (req, res) => {
+  const db = loadDb(); const inv: any = db.invoices.find((i: any) => i.id === req.params.id);
+  if (!inv) return res.status(404).json({ success: false, message: 'Invoice not found.' });
+  if (inv.status !== 'Draft') return res.status(422).json({ success: false, message: `Only Draft invoices can be issued (current: ${inv.status}).` });
+  inv.status = 'Issued'; inv.issueDate = nowIso(); inv.issuedBy = ctxOf(req).email;
   audit(ctxOf(req).email, `INVOICE_ISSUED:${inv.id}`, inv.orgId, 'invoice', inv.id, req.ip); persist();
-  res.status(201).json({ success: true, data: inv });
+  res.json({ success: true, data: withOverdue(inv) });
 });
 commercialRouter.patch('/invoices/:id/void', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), (req, res) => {
   const db = loadDb(); const inv: any = db.invoices.find((i: any) => i.id === req.params.id);
@@ -225,6 +326,16 @@ commercialRouter.get('/commissions', requireAuth(), (req, res) => {
   const ctx = ctxOf(req); let rows = loadDb().commissions as any[];
   if (!['superadmin','platform_owner','finance_admin'].includes(ctx.role)) rows = rows.filter((c) => c.orgId === ctx.tenantId || c.agencyId === ctx.tenantId);
   res.json({ success: true, data: rows });
+});
+// Duplicate-trigger diagnostic (§6.11): would this placement+trigger mint a duplicate?
+commercialRouter.get('/commissions/check', requireAuth(), (req, res) => {
+  const { applicationId, placementId, trigger, agreementId } = req.query as Record<string, string>;
+  if (!trigger || (!applicationId && !placementId)) return res.status(400).json({ success: false, message: 'trigger + applicationId|placementId required.' });
+  const db = loadDb();
+  const rows = (db.commissions as any[]).filter((c) =>
+    (applicationId ? (c.placementId === applicationId || c.applicationId === applicationId) : c.placementId === placementId) &&
+    c.trigger === trigger && (!agreementId || c.agreementId === agreementId));
+  res.json({ success: true, data: { duplicate: rows.length > 0, count: rows.length, rows: rows.map((c) => ({ id: c.id, agreementId: c.agreementId, approvalStatus: c.approvalStatus, paymentStatus: c.paymentStatus })) } });
 });
 commercialRouter.patch('/commissions/:id/approve', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('approve'), (req, res) => {
   const db = loadDb(); const c: any = db.commissions.find((x: any) => x.id === req.params.id);

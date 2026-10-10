@@ -2,7 +2,9 @@ import { Router, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { randomBytes } from 'crypto';
 import { loadDb, persist, uid, nowIso, audit } from '../db/store.js';
-import { hashPassword, verifyPassword, signAccess, signRefresh, verifyRefresh } from '../auth/password.js';
+import { hashPassword, verifyPassword, signAccess, signRefresh, verifyRefresh, verifyAccess } from '../auth/password.js';
+import { newSecret, verifyTotp, otpauthUrl, newBackupCodes, hashBackup, signMfaTicket, verifyMfaTicket } from '../auth/totp.js';
+import { requireAuth, requirePermission, ctxOf } from '../middleware/rbac.js';
 import { registerSchema } from '../validate/schemas.js';
 
 export const authRouter = Router();
@@ -53,6 +55,12 @@ authRouter.post('/login', limiter, async (req: Request, res: Response) => {
   const ok = await verifyPassword(String(password), cred.passwordHash);
   if (!ok) { audit(String(email), 'AUTH_LOGIN_FAILED', user.tenantId, 'auth', user.id, req.ip); persist(); return res.status(401).json({ success: false, message: 'Invalid email, password, or workspace. Please try again.' }); }
   if (role && role !== user.role) { audit(String(email), `AUTH_ROLE_MISMATCH_BLOCKED:${role}`, user.tenantId, 'auth', user.id, req.ip); persist(); return res.status(403).json({ success: false, message: `This account is registered as '${user.role}'. Please use the ${user.role} workspace.` }); }
+  // MFA gate: password passed but account requires a second factor — issue a 5-min ticket, not tokens.
+  if ((cred as any).mfaEnabled && (cred as any).mfaSecret) {
+    const ticket = signMfaTicket({ id: user.id, email: user.email });
+    audit(user.email, 'AUTH_MFA_CHALLENGE_ISSUED', user.tenantId, 'auth', user.id, req.ip); persist();
+    return res.json({ success: true, data: { mfaRequired: true, ticket, email: user.email }, message: 'Second factor required.' });
+  }
   const accessToken = signAccess({ id: user.id, email: user.email, role: user.role, tenantId: user.tenantId });
   const jti = randomBytes(8).toString('hex');
   const refreshToken = signRefresh({ id: user.id, email: user.email }, jti);
@@ -158,6 +166,93 @@ authRouter.post('/register/:type', limiter, async (req: Request, res: Response) 
   audit(user.email, `USER_REGISTERED:[${type}]`, user.tenantId, 'user', user.id, req.ip);
   persist();
   res.status(201).json({ success: true, data: user, message: 'Registered. Please sign in.' });
+});
+
+// ---- MFA (TOTP, §4 — second factor for all roles) ----
+authRouter.get('/mfa/status', (req: Request, res: Response) => {
+  const header = String(req.headers.authorization || '');
+  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  if (!token || token.startsWith('NEXA-')) return res.status(401).json({ success: false, message: 'Sign in with a JWT session to manage MFA.' });
+  try {
+    const c = verifyAccess(token);
+    const cred: any = loadDb().credentials.find((x: any) => String(x.email).toLowerCase() === String(c.email).toLowerCase());
+    res.json({ success: true, data: { enabled: !!(cred as any)?.mfaEnabled } });
+  } catch { res.status(401).json({ success: false, message: 'Invalid token.' }); }
+});
+authRouter.post('/mfa/setup', limiter, requireAuth(), (req: Request, res: Response) => {
+  const ctx = ctxOf(req);
+  const db = loadDb();
+  const cred: any = db.credentials.find((c: any) => String(c.email).toLowerCase() === ctx.email.toLowerCase());
+  if (!cred) return res.status(404).json({ success: false, message: 'No credentials for this account.' });
+  if (cred.mfaEnabled) return res.status(409).json({ success: false, message: 'MFA already enabled. Disable first to rotate.' });
+  const secret = newSecret();
+  cred.mfaPendingSecret = secret; cred.mfaPendingAt = nowIso(); persist();
+  audit(ctx.email, 'AUTH_MFA_SETUP_STARTED', ctx.tenantId, 'auth', ctx.id, req.ip); persist();
+  res.json({ success: true, data: { secret, otpauthUrl: otpauthUrl(secret, ctx.email) } });
+});
+authRouter.post('/mfa/verify', limiter, requireAuth(), (req: Request, res: Response) => {
+  const ctx = ctxOf(req);
+  const { otp } = req.body || {};
+  const db = loadDb();
+  const cred: any = db.credentials.find((c: any) => String(c.email).toLowerCase() === ctx.email.toLowerCase());
+  if (!cred?.mfaPendingSecret) return res.status(400).json({ success: false, message: 'Run setup first.' });
+  if (!verifyTotp(cred.mfaPendingSecret, String(otp || ''))) {
+    audit(ctx.email, 'AUTH_MFA_VERIFY_FAILED', ctx.tenantId, 'auth', ctx.id, req.ip); persist();
+    return res.status(401).json({ success: false, message: 'Invalid code. Check your authenticator clock and retry.' });
+  }
+  const codes = newBackupCodes(8);
+  cred.mfaSecret = cred.mfaPendingSecret; cred.mfaEnabled = true;
+  cred.mfaBackupHashes = codes.map((c) => c.hash);
+  delete cred.mfaPendingSecret; delete cred.mfaPendingAt;
+  audit(ctx.email, 'AUTH_MFA_ENABLED', ctx.tenantId, 'auth', ctx.id, req.ip); persist();
+  res.json({ success: true, data: { enabled: true, backupCodes: codes.map((c) => c.code) }, message: 'MFA enabled. Save backup codes now — they are shown once.' });
+});
+authRouter.post('/mfa/disable', limiter, requireAuth(), async (req: Request, res: Response) => {
+  const ctx = ctxOf(req);
+  const { password } = req.body || {};
+  const db = loadDb();
+  const cred: any = db.credentials.find((c: any) => String(c.email).toLowerCase() === ctx.email.toLowerCase());
+  if (!cred?.mfaEnabled) return res.status(400).json({ success: false, message: 'MFA is not enabled.' });
+  if (!password || !(await verifyPassword(String(password), cred.passwordHash))) return res.status(401).json({ success: false, message: 'Password confirmation failed.' });
+  delete cred.mfaSecret; delete cred.mfaBackupHashes; cred.mfaEnabled = false;
+  audit(ctx.email, 'AUTH_MFA_DISABLED', ctx.tenantId, 'auth', ctx.id, req.ip); persist();
+  res.json({ success: true, message: 'MFA disabled.' });
+});
+authRouter.post('/mfa/challenge', limiter, (req: Request, res: Response) => {
+  const { ticket, otp, backupCode } = req.body || {};
+  let claims;
+  try { claims = verifyMfaTicket(String(ticket || '')); }
+  catch { return res.status(401).json({ success: false, message: 'Challenge expired. Sign in again.' }); }
+  const db = loadDb();
+  const user: any = db.users.find((u: any) => u.id === claims.sub);
+  const cred: any = db.credentials.find((c: any) => String(c.email).toLowerCase() === String(claims.email).toLowerCase());
+  if (!user || !cred?.mfaEnabled) return res.status(401).json({ success: false, message: 'MFA is not enabled for this account.' });
+  if (String(user.status).toLowerCase() !== 'active') return res.status(403).json({ success: false, message: 'Account is suspended. Contact support.' });
+  let ok = otp ? verifyTotp(cred.mfaSecret, String(otp)) : false;
+  if (!ok && backupCode) {
+    const h = hashBackup(String(backupCode));
+    const i = (cred.mfaBackupHashes || []).indexOf(h);
+    if (i >= 0) { cred.mfaBackupHashes.splice(i, 1); ok = true; }
+  }
+  if (!ok) { audit(user.email, 'AUTH_MFA_CHALLENGE_FAILED', user.tenantId, 'auth', user.id, req.ip); persist(); return res.status(401).json({ success: false, message: 'Invalid code.' }); }
+  const accessToken = signAccess({ id: user.id, email: user.email, role: user.role, tenantId: user.tenantId });
+  const jti = randomBytes(8).toString('hex');
+  const refreshToken = signRefresh({ id: user.id, email: user.email }, jti);
+  db.sessions.unshift({ jti, userId: user.id, email: user.email, role: user.role, tenantId: user.tenantId, accessToken: 'legacy-compat', createdAt: nowIso() });
+  user.lastLogin = nowIso();
+  audit(user.email, 'AUTH_MFA_SUCCESS', user.tenantId, 'auth', user.id, req.ip); persist();
+  const out = { id: user.id, email: user.email, role: user.role, tenantId: user.tenantId, name: user.name };
+  res.json({ success: true, data: { accessToken, refreshToken, token: accessToken, user: out }, accessToken, refreshToken, token: accessToken, user: out, message: 'Second factor verified.' });
+});
+authRouter.post('/mfa/reset', limiter, requireAuth(['superadmin','platform_owner']), requirePermission('manage_permissions'), (req: Request, res: Response) => {
+  const { email } = req.body || {};
+  if (!email) return res.status(400).json({ success: false, message: 'email required.' });
+  const db = loadDb();
+  const cred: any = db.credentials.find((c: any) => String(c.email).toLowerCase() === String(email).toLowerCase());
+  if (!cred) return res.status(404).json({ success: false, message: 'No credentials for this account.' });
+  delete cred.mfaSecret; delete cred.mfaBackupHashes; delete cred.mfaPendingSecret; cred.mfaEnabled = false;
+  audit(ctxOf(req).email, `AUTH_MFA_RESET:${email}`, 'TNT-GLOBAL', 'auth', cred.userId, req.ip); persist();
+  res.json({ success: true, message: `MFA reset for ${email}. They can re-enroll on next sign-in.` });
 });
 
 // Backfill seed credentials on boot (fire-and-forget)

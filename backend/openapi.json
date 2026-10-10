@@ -11,7 +11,18 @@
   "paths": {
     "/api/health": { "get": { "summary": "Health + phase list", "responses": { "200": { "description": "healthy" } } } },
     "/api/v1/auth/login": { "post": { "summary": "Phase 0/1: bcrypt login, role-locked 403", "responses": { "200": { "description": "JWT pair" }, "401": { "description": "bad credentials" }, "403": { "description": "suspended or wrong workspace" } } } },
-    "/api/v1/auth/refresh": { "post": { "summary": "Rotate JWT pair, reuse detection", "responses": { "200": { "description": "new pair" }, "401": { "description": "reused/invalid" } } } },
+
+    "/api/v1/auth/mfa/setup": { "post": { "summary": "Start TOTP enrol (returns secret + otpauth URL)", "responses": { "200": { "description": "ok" }, "409": { "description": "already enabled" } } } },
+
+    "/api/v1/auth/mfa/verify": { "post": { "summary": "Confirm TOTP code, enable MFA, one-time backup codes", "responses": { "200": { "description": "ok" }, "401": { "description": "bad code" } } } },
+
+    "/api/v1/auth/mfa/challenge": { "post": { "summary": "Complete MFA login with ticket + otp|backupCode", "responses": { "200": { "description": "tokens" }, "401": { "description": "bad/expired" } } } },
+
+    "/api/v1/auth/mfa/disable": { "post": { "summary": "Disable MFA (password-confirmed)", "responses": { "200": { "description": "ok" } } } },
+
+    "/api/v1/auth/mfa/status": { "get": { "summary": "MFA enabled flag for own account", "responses": { "200": { "description": "ok" } } } },
+
+    "/api/v1/auth/mfa/reset": { "post": { "summary": "Admin MFA reset (perm: manage_permissions, audited)", "responses": { "200": { "description": "ok" } } } },    "/api/v1/auth/refresh": { "post": { "summary": "Rotate JWT pair, reuse detection", "responses": { "200": { "description": "new pair" }, "401": { "description": "reused/invalid" } } } },
     "/api/v1/auth/logout": { "post": { "summary": "Revoke + audit", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/auth/me": { "get": { "summary": "Resolve session", "responses": { "200": { "description": "session" } } } },
     "/api/v1/auth/forgot-password": { "post": { "summary": "Anti-enumeration request", "responses": { "200": { "description": "ok" } } } },
@@ -96,23 +107,42 @@
     "/api/v1/offers": { "post": { "summary": "Issue offer", "responses": { "201": { "description": "created" } } } },
     "/api/v1/placements": { "get": { "summary": "List placements", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Mark joined (triggers commission eval)", "responses": { "201": { "description": "created" } } } },
     "/api/v1/plans": { "get": { "summary": "Plans", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Create plan version", "responses": { "201": { "description": "created" } } } },
-    "/api/v1/subscriptions": { "get": { "summary": "List subscriptions", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Subscribe (snapshots plan)", "responses": { "201": { "description": "created" } } } },
-    "/api/v1/subscriptions/{id}/status": { "patch": { "summary": "8-state lifecycle", "responses": { "200": { "description": "ok" } } } },
+
+    "/api/v1/plans/{id}/versions": { "get": { "summary": "Plan version snapshots", "responses": { "200": { "description": "ok" } } } },
+
+    "/api/v1/plans/{id}/new-version": { "post": { "summary": "Mint plan version (old terms snapshotted)", "responses": { "201": { "description": "created" } } } },
+
+    "/api/v1/plans/{id}/archive": { "patch": { "summary": "Archive plan (active-sub guard, force override)", "responses": { "200": { "description": "ok" }, "422": { "description": "referenced" } } } },    "/api/v1/subscriptions": { "get": { "summary": "List subscriptions", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Subscribe (snapshots plan)", "responses": { "201": { "description": "created" } } } },
+
+    "/api/v1/subscriptions/{id}/change-plan": { "post": { "summary": "Upgrade/downgrade with history", "responses": { "200": { "description": "ok" }, "422": { "description": "archived target" } } } },
+
+    "/api/v1/subscriptions/{id}/renewal": { "patch": { "summary": "Auto-renew + discount tuning", "responses": { "200": { "description": "ok" } } } },    "/api/v1/subscriptions/{id}/status": { "patch": { "summary": "8-state lifecycle", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/usage": { "get": { "summary": "Quota summary", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/outreach": { "get": { "summary": "Campaigns", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Send campaign (idempotent quota)", "responses": { "201": { "description": "created" } } } },
     "/api/v1/invoices": { "get": { "summary": "Invoices", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Issue (immutable, tax math)", "responses": { "201": { "description": "created" } } } },
 
+    "/api/v1/invoices/{id}": { "put": { "summary": "Edit Draft invoice (locked after issue)", "responses": { "200": { "description": "ok" }, "422": { "description": "not a draft" } } } },
+
+    "/api/v1/invoices/{id}/issue": { "post": { "summary": "Issue a Draft invoice", "responses": { "200": { "description": "ok" } } } },
+
+    "/api/v1/invoices/{id}/document": { "get": { "summary": "Printable invoice document (lines, org, payments, credits)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/invoices/{id}/void": { "patch": { "summary": "Void invoice with reason (Paid/Credited blocked)", "responses": { "200": { "description": "ok" }, "422": { "description": "use credit note" } } } },
     "/api/v1/credit-notes": { "post": { "summary": "Amend via credit note (perm: refund)", "responses": { "201": { "description": "created" } } } },
     "/api/v1/payments": { "get": { "summary": "Payments", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Record payment (idempotent)", "responses": { "201": { "description": "created" } } } },
     "/api/v1/payments/webhook": { "post": { "summary": "Provider webhook (signature-verified)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/commission-agreements": { "get": { "summary": "Agreements", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Create (configurable trigger)", "responses": { "201": { "description": "created" } } } },
-    "/api/v1/commissions": { "get": { "summary": "Commission ledger", "responses": { "200": { "description": "ok" } } } },
+
+    "/api/v1/commissions/check": { "get": { "summary": "Duplicate placement+trigger diagnostic", "responses": { "200": { "description": "ok" }, "400": { "description": "bad query" } } } },    "/api/v1/commissions": { "get": { "summary": "Commission ledger", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/commissions/{id}/approve": { "patch": { "summary": "Approve (perm: approve)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/payouts": { "get": { "summary": "Payouts (separate ledger)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Process payout", "responses": { "201": { "description": "created" } } } },
     "/api/v1/reconciliation": { "get": { "summary": "Invoiced vs paid", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/leads": { "get": { "summary": "Leads (paged)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Create lead", "responses": { "201": { "description": "created" } } } },
-    "/api/v1/leads/{id}": { "put": { "summary": "Edit lead (audited)", "responses": { "200": { "description": "ok" } } }, "delete": { "summary": "Delete lead (Won blocked)", "responses": { "200": { "description": "ok" }, "422": { "description": "audit-protected" } } } },
+
+    "/api/v1/leads/{id}/merge": { "post": { "summary": "Merge duplicates (moves links, trails history)", "responses": { "200": { "description": "ok" }, "422": { "description": "protected" } } } },
+
+    "/api/v1/permissions": { "get": { "summary": "Own effective set (admins: all overrides)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Grant/revoke exception (perm: manage_permissions)", "responses": { "201": { "description": "created" } } }, "delete": { "summary": "Clear exception", "responses": { "200": { "description": "ok" } } } },
+
+    "/api/v1/exports/log": { "post": { "summary": "Audit-log a CSV export", "responses": { "201": { "description": "logged" } } } },    "/api/v1/leads/{id}": { "put": { "summary": "Edit lead (audited)", "responses": { "200": { "description": "ok" } } }, "delete": { "summary": "Delete lead (Won blocked)", "responses": { "200": { "description": "ok" }, "422": { "description": "audit-protected" } } } },
 
     "/api/v1/leads/{id}/stage": { "patch": { "summary": "Pipeline transition (lost needs reason)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/leads/{id}/activities": { "post": { "summary": "Log activity", "responses": { "201": { "description": "created" } } } },

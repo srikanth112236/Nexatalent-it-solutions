@@ -259,6 +259,7 @@ function claimId(key: string): boolean {
   const db = loadDb();
   if (db.idempotency.find((x: any) => x.key === key)) return false;
   db.idempotency.unshift({ key, createdAt: nowIso() });
+  if (db.idempotency.length > 5000) db.idempotency.length = 5000;
   return true;
 }
 function amtRound(n: number): number { return Math.round(n * 100) / 100; }
