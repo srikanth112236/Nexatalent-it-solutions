@@ -7,7 +7,8 @@ import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
 import {
   SubscriptionsPanel, BillingPanel, CommissionsPanel, LeadsPanel, PerformancePanel,
   ReportsPanel, NotificationsPanel, AdminControlsPanel, RequisitionsPanel, ApplicationsPanel,
-  CandidatesPanel, AgencyPanel,
+  CandidatesPanel, AgencyPanel, BranchesPanel, JobsPanel, SupportPanel,
+  InterviewsPanel, OffersPlacementsPanel,
 } from '../common/EnterprisePanels';
 import { Modal, Select, Field } from '../../shared/ui/EnterpriseKit';
 import { OrganizationsManager, UsersManager } from './SuperAdminDirectory';
@@ -18,14 +19,19 @@ const navItems = [
   { label: 'Global Directory', path: '/superadmin/users' },
   { label: 'Agencies & Vendors', path: '/superadmin/agencies' },
   { label: 'Candidate Directory', path: '/superadmin/candidates' },
+  { label: 'Branches', path: '/superadmin/branches' },
   { label: 'Requisitions & Jobs', path: '/superadmin/requisitions' },
+  { label: 'Job Board (Admin)', path: '/superadmin/jobs' },
   { label: 'Applications', path: '/superadmin/applications' },
+  { label: 'Interviews', path: '/superadmin/interviews' },
+  { label: 'Placements', path: '/superadmin/placements' },
   { label: 'Subscriptions & Plans', path: '/superadmin/subscriptions' },
   { label: 'Billing & Payments', path: '/superadmin/billing' },
   { label: 'Commissions & Payouts', path: '/superadmin/commissions' },
   { label: 'Leads & Pipeline', path: '/superadmin/leads' },
   { label: 'Sales Performance', path: '/superadmin/performance' },
   { label: 'Reports', path: '/superadmin/reports' },
+  { label: 'Support & Issues', path: '/superadmin/support' },
   { label: 'Access Controls', path: '/superadmin/controls' },
   { label: 'Notifications', path: '/superadmin/notifications' },
   { label: 'Security Audit Logs', path: '/superadmin/audit-logs' },
@@ -41,14 +47,19 @@ export function SuperAdminPortal() {
     if (p.includes('/users')) return 'users';
     if (p.includes('/agencies')) return 'agencies';
     if (p.includes('/candidates')) return 'candidates';
+    if (p.includes('/branches')) return 'branches';
     if (p.includes('/requisitions')) return 'requisitions';
+    if (p.includes('/jobs')) return 'jobs';
     if (p.includes('/applications')) return 'applications';
+    if (p.includes('/interviews')) return 'interviews';
+    if (p.includes('/placements') || p.includes('/offers')) return 'placements';
     if (p.includes('/subscriptions')) return 'subscriptions';
     if (p.includes('/billing') || p.includes('/payments') || p.includes('/invoices')) return 'billing';
     if (p.includes('/commissions') || p.includes('/payouts')) return 'commissions';
     if (p.includes('/leads') || p.includes('/pipeline')) return 'leads';
     if (p.includes('/performance') || p.includes('/targets')) return 'performance';
     if (p.includes('/reports')) return 'reports';
+    if (p.includes('/support')) return 'support';
     if (p.includes('/controls')) return 'controls';
     if (p.includes('/notifications')) return 'notifications';
     if (p.includes('/audit')) return 'audit';
@@ -465,13 +476,18 @@ export function SuperAdminPortal() {
         {/* ENTERPRISE: new phase modules */}
         {currentTab === 'requisitions' && <RequisitionsPanel />}
         {currentTab === 'candidates' && <CandidatesPanel />}
+        {currentTab === 'branches' && <BranchesPanel />}
+        {currentTab === 'jobs' && <JobsPanel />}
         {currentTab === 'applications' && <ApplicationsPanel />}
+        {currentTab === 'interviews' && <InterviewsPanel />}
+        {currentTab === 'placements' && <OffersPlacementsPanel />}
         {currentTab === 'subscriptions' && <SubscriptionsPanel />}
         {currentTab === 'billing' && <BillingPanel />}
         {currentTab === 'commissions' && <CommissionsPanel />}
         {currentTab === 'leads' && <LeadsPanel />}
         {currentTab === 'performance' && <PerformancePanel />}
         {currentTab === 'reports' && <ReportsPanel />}
+        {currentTab === 'support' && <SupportPanel />}
         {currentTab === 'controls' && <AdminControlsPanel />}
         {currentTab === 'notifications' && <NotificationsPanel />}
 

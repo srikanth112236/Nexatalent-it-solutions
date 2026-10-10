@@ -35,9 +35,16 @@ export const directoryApi = {
   deleteUser: (id: string, reason?: string) => apiClient.delete(`/api/v1/users/${id}`, { reason } as unknown as undefined),
   branches: () => apiClient.get('/api/v1/branches'),
   createBranch: (body: unknown) => apiClient.post('/api/v1/branches', body),
+  updateBranch: (id: string, body: unknown) => apiClient.put(`/api/v1/branches/${id}`, body),
+  deleteBranch: (id: string) => apiClient.delete(`/api/v1/branches/${id}`),
+  supportTickets: (params = '') => apiClient.get(`/api/v1/support-tickets${params}`),
+  openTicket: (body: unknown) => apiClient.post('/api/v1/support-tickets', body),
+  updateTicket: (id: string, body: unknown) => apiClient.patch(`/api/v1/support-tickets/${id}`, body),
   candidatesDirectory: (params = '') => apiClient.get(`/api/v1/directory/candidates${params}`),
   updateCandidate: (id: string, body: unknown) => apiClient.put(`/api/v1/directory/candidates/${id}`, body),
   setCandidateStatus: (id: string, status: string, reason: string) => apiClient.patch(`/api/v1/directory/candidates/${id}/status`, { status, reason }),
+  candidate360: (id: string) => apiClient.get(`/api/v1/directory/candidates/${id}/360`),
+  tenant360: (id: string) => apiClient.get(`/api/v1/tenants/${id}/360`),
   auditLogs: (params = '') => apiClient.get(`/api/v1/audit-logs${params}`),
 };
 

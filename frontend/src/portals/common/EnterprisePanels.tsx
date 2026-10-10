@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../../shared/api-client';
+import { Candidate360Drawer } from '../superadmin/SuperAdmin360';
 import {
   applicationsApi, interviewsApi, chatApi, talentApi, requisitionsApi, jobsApi,
   offersPlacementsApi, billingApi, salesApi, platformApi, documentsApi, workforceApi,
@@ -231,16 +232,19 @@ export function RequisitionsPanel() {
         <EmptyState title="No requisitions" message="Create the first hiring requisition to start the approval flow." />
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-slate-200">
-          <table className="w-full text-left text-xs min-w-[820px]">
+          <table className="w-full text-left text-xs min-w-[980px]">
             <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
-              <th className="px-4 py-3">Requisition</th><th className="px-4 py-3">Department</th><th className="px-4 py-3">Openings</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-4 py-3">Requisition</th><th className="px-4 py-3">Department</th><th className="px-4 py-3">Location</th><th className="px-4 py-3">Openings</th><th className="px-4 py-3">Hiring manager</th><th className="px-4 py-3">Created</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
             </tr></thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.map((r) => (
                 <tr key={r.id} className="hover:bg-slate-50/70">
                   <td className="px-4 py-3"><div className="font-bold text-slate-900">{r.title}</div><div className="font-mono text-[11px] text-slate-500">{r.id}</div></td>
                   <td className="px-4 py-3">{r.department || '—'}</td>
+                  <td className="px-4 py-3">{r.location || r.city || '—'}</td>
                   <td className="px-4 py-3 font-bold">{r.openings || 1}</td>
+                  <td className="px-4 py-3">{r.hiringManager || '—'}</td>
+                  <td className="px-4 py-3 text-slate-500">{String(r.createdAt || '').slice(0, 10) || '—'}</td>
                   <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">{r.status}</span></td>
                   <td className="px-4 py-3"><div className="flex justify-end"><RowMenu items={[
                     { label: 'View details', onSelect: () => setDetail(r) },
@@ -366,7 +370,7 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
             <div key={a.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="font-extrabold text-slate-900 text-sm truncate">{a.jobTitle || a.jobId}</div>
-                <div className="text-xs text-slate-500 font-medium">{a.id} • {a.candidateEmail} • <strong className="text-blue-600">{a.stage}</strong></div>
+                <div className="text-xs text-slate-500 font-medium">{a.id} • {a.candidateEmail} • <strong className="text-blue-600">{a.stage}</strong> • applied {String(a.createdAt || '').slice(0, 10) || '—'}</div>
               </div>
               <RowMenu items={[
                 { label: 'View + history', onSelect: () => openDetail(a) },
@@ -1095,10 +1099,12 @@ export function BillingPanel() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="space-y-2">
           <div className="text-xs font-extrabold text-slate-700">Invoices ({filteredInv.length}/{invoices.length}) — Void / Credit</div>
-          {filteredInv.map((i) => (
+          {filteredInv.map((i) => {
+            const overdue = Number(i.balance || 0) > 0 && i.dueDate && new Date(i.dueDate) < new Date() && !['Paid', 'Void', 'Credited'].includes(i.status);
+            return (
             <div key={i.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
               <div className="font-bold flex items-center justify-between gap-2">
-                <span className="truncate">{i.number || i.id} • ₹{i.total} • bal ₹{i.balance} • {i.status}</span>
+                <span className="truncate">{i.number || i.id} • ₹{i.total} • bal ₹{i.balance} • {i.status}{overdue ? ' • OVERDUE' : ''}</span>
                 <RowMenu items={[
                   { label: 'Void…', danger: true, onSelect: () => { setVoidFor(i); setVoidReason(''); } },
                   { label: 'Credit note…', onSelect: () => { setCreditFor(i); setCreditForm({ amount: '', reason: '' }); } },
@@ -1109,7 +1115,8 @@ export function BillingPanel() {
                 {Array.isArray(i.lines) && i.lines.length > 0 && ` • ${i.lines.length} line(s): ${i.lines.map((l: any) => `${l.label}×${l.qty}`).join(', ')}`}
               </div>
             </div>
-          ))}
+            );
+          })}
           {filteredInv.length === 0 && <div className="text-xs text-slate-500">No invoices match.</div>}
         </div>
         <div className="space-y-2">
@@ -1319,7 +1326,7 @@ export function CommissionsPanel() {
       {filteredComms.length === 0 && <EmptyState title="No commissions yet" message="Placement triggers auto-create commission records from approved agreements." />}
       {filteredComms.map((c) => (
         <div key={c.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
-          <span className="min-w-0 truncate">{c.id} • gross ₹{c.gross} • total ₹{c.total || c.net} • {c.approvalStatus}/{c.paymentStatus}</span>
+          <span className="min-w-0 truncate">{c.id} • {c.agencyId || c.orgId} • trig {c.trigger || '—'} • gross ₹{c.gross} • total ₹{c.total || c.net} • {c.approvalStatus}/{c.paymentStatus}</span>
           <RowMenu items={[
             ...(c.approvalStatus !== 'Approved' ? [{ label: 'Approve commission', onSelect: () => approve(c.id) }] : []),
             ...(c.approvalStatus === 'Approved' && c.paymentStatus !== 'Paid' ? [{ label: 'Process payout', onSelect: () => setPayoutId(c.id) }] : []),
@@ -2005,7 +2012,7 @@ export function CandidatesPanel() {
   };
   const exportCsv = async () => {
     const { downloadCsv } = await import('./CrudKit');
-    downloadCsv('candidates.csv', filtered, ['id', 'name', 'email', 'phone', 'roleTitle', 'experienceYears', 'location', 'status']);
+    downloadCsv('candidates.csv', filtered, ['id', 'name', 'email', 'phone', 'roleTitle', 'experienceYears', 'location', 'skills', 'completeness', 'applicationCount', 'visibility', 'status']);
   };
   const pill = (s: string) => {
     const tone = s === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : s === 'Suspended' || s === 'Blocked' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-slate-100 text-slate-700 border-slate-200';
@@ -2032,9 +2039,9 @@ export function CandidatesPanel() {
         <EmptyState title="No candidates" message="Registered candidate profiles appear here." />
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-slate-200">
-          <table className="w-full text-left text-xs min-w-[960px]">
+          <table className="w-full text-left text-xs min-w-[1120px]">
             <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
-              <th className="px-4 py-3">Candidate</th><th className="px-4 py-3">Contact</th><th className="px-4 py-3">Designation</th><th className="px-4 py-3">Location</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-4 py-3">Candidate</th><th className="px-4 py-3">Contact</th><th className="px-4 py-3">Designation</th><th className="px-4 py-3">Skills</th><th className="px-4 py-3">Profile</th><th className="px-4 py-3">Apps</th><th className="px-4 py-3">Location</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
             </tr></thead>
             <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
               {filtered.map((c) => (
@@ -2042,6 +2049,9 @@ export function CandidatesPanel() {
                   <td className="px-4 py-3"><div className="font-bold text-slate-900">{c.name || '—'}</div><div className="font-mono text-[11px] text-slate-500">{c.id}</div></td>
                   <td className="px-4 py-3"><div>{c.email || '—'}</div><div className="text-slate-500">{c.phone || '—'}</div></td>
                   <td className="px-4 py-3">{c.roleTitle || '—'} • {c.experienceYears ?? '—'}y</td>
+                  <td className="px-4 py-3 max-w-[220px]"><div className="truncate" title={Array.isArray(c.skills) ? c.skills.join(', ') : (c.skills || '')}>{Array.isArray(c.skills) ? c.skills.join(', ') : (c.skills || '—')}</div></td>
+                  <td className="px-4 py-3 font-bold text-emerald-700">{c.completeness ?? '—'}{c.completeness !== undefined ? '%' : ''}</td>
+                  <td className="px-4 py-3 font-bold text-blue-700">{c.applicationCount ?? '—'}</td>
                   <td className="px-4 py-3">{c.location || '—'}</td>
                   <td className="px-4 py-3">{pill(c.status || 'Active')}</td>
                   <td className="px-4 py-3"><div className="flex justify-end"><RowMenu items={[
@@ -2057,16 +2067,7 @@ export function CandidatesPanel() {
       )}
       <Pager page={page} total={total || filtered.length} pageSize={pageSize} onPage={setPage} />
       {detail && (
-        <Modal open onClose={() => setDetail(null)} title={detail.name || detail.id} subtitle={`${detail.id} • ${detail.email || ''}`}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-            {[['Email', detail.email], ['Phone', detail.phone], ['Designation', detail.roleTitle], ['Experience', detail.experienceYears], ['Location', detail.location], ['Current CTC', detail.currentCtc], ['Expected CTC', detail.expectedCtc], ['Notice', detail.noticePeriod], ['Skills', Array.isArray(detail.skills) ? detail.skills.join(', ') : detail.skills], ['Visibility', detail.visibility], ['Status', detail.status]].map(([k, v]) => (
-              <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—')}</div></div>
-            ))}
-          </div>
-          <div className="flex justify-end gap-2 pt-3">
-            <button type="button" onClick={() => { openEdit(detail); setDetail(null); }} className={btnPrimary}>Edit profile</button>
-          </div>
-        </Modal>
+        <Candidate360Drawer candidateId={detail.id} onClose={() => setDetail(null)} />
       )}
       <Modal open={editing !== null} onClose={() => setEditing(null)} title={`Edit candidate — ${editing?.id || ''}`} subtitle="Audited edit">
         <form onSubmit={saveEdit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2387,6 +2388,366 @@ function UserRow({ u, reason, act, confirm }: { u: any; reason: string; act: (p:
       <RowMenu label="User actions" items={u.status === 'Active'
         ? [{ label: 'Suspend user', danger: true, onSelect: () => confirm('Suspend user', `Suspend ${u.email}? Sessions are revoked immediately.`, 'Suspend', () => act(reason ? api.setUserStatus(u.id, 'Suspended', reason) : Promise.reject(new Error('Enter a reason first.')))) }]
         : [{ label: 'Reactivate user', onSelect: () => act(api.setUserStatus(u.id, 'Active', reason || 'reactivated')) }]} />
+    </div>
+  );
+}
+
+/* ---------------- Branches (§6.4/§3.4) — full CRUD ---------------- */
+export function BranchesPanel() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
+  const [q, setQ] = useState('');
+  const [form, setForm] = useState({ name: '', city: '', orgId: '' });
+  const [showCreate, setShowCreate] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
+  const [deleteFor, setDeleteFor] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+  const load = async () => {
+    setLoading(true); setError('');
+    try {
+      const { directoryApi } = await import('../../shared/enterprise/phaseApi');
+      setRows(unwrapList(await directoryApi.branches()));
+    } catch (e) { setError(errMsg(e)); } finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
+  const create = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!form.name.trim()) return;
+    setBusy(true);
+    try {
+      const { directoryApi } = await import('../../shared/enterprise/phaseApi');
+      const created = unwrapObj(await directoryApi.createBranch({ name: form.name.trim(), city: form.city.trim(), orgId: form.orgId.trim() || undefined }));
+      if (created?.id) setRows((r) => [created, ...r]);
+      setForm({ name: '', city: '', orgId: '' }); setShowCreate(false); setOk('Branch created.'); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const saveEdit = async () => {
+    if (!editing) return;
+    setBusy(true);
+    try {
+      const { directoryApi } = await import('../../shared/enterprise/phaseApi');
+      const updated = unwrapObj(await directoryApi.updateBranch(editing.id, { name: editing.name, city: editing.city, status: editing.status }));
+      setRows((r) => r.map((x) => (x.id === editing.id ? { ...x, ...(updated?.id ? updated : editing) } : x)));
+      setEditing(null); setOk('Branch updated.'); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const doDelete = async () => {
+    if (!deleteFor) return;
+    setBusy(true);
+    try {
+      const { directoryApi } = await import('../../shared/enterprise/phaseApi');
+      await directoryApi.deleteBranch(deleteFor.id);
+      setRows((r) => r.filter((x) => x.id !== deleteFor.id)); setDeleteFor(null); setOk('Branch deleted.'); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const filtered = rows.filter((b) => !q.trim() || `${b.id} ${b.name} ${b.city} ${b.orgId}`.toLowerCase().includes(q.toLowerCase()));
+  return (
+    <div className={cardCls}>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-base font-extrabold text-slate-900">Branches — Create / Edit / Delete / Export</h3>
+          <div className="flex gap-2">
+            <button type="button" onClick={async () => { const { downloadCsv } = await import('./CrudKit'); downloadCsv('branches.csv', filtered, ['id', 'orgId', 'name', 'city', 'status']); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Export</button>
+            <button type="button" onClick={() => setShowCreate(true)} className={btnPrimary}>+ New branch</button>
+          </div>
+        </div>
+        <input className={inputCls} placeholder="Search branch, city, org…" value={q} onChange={(e) => setQ(e.target.value)} />
+      </div>
+      {error && <PanelError message={error} onRetry={load} />}
+      {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New branch" subtitle="Scoped to an organization">
+        <form onSubmit={create} className="space-y-3">
+          <Field label="Branch name *"><input className={kitInput} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Mumbai Branch" /></Field>
+          <Field label="City"><input className={kitInput} value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></Field>
+          <Field label="Organization ID (admin only — blank = own org)"><input className={kitInput} value={form.orgId} onChange={(e) => setForm({ ...form, orgId: e.target.value })} placeholder="TNT-9011" /></Field>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button disabled={busy || !form.name.trim()} className={btnPrimary}>{busy ? 'Creating…' : 'Create branch'}</button>
+          </div>
+        </form>
+      </Modal>
+      {loading ? <InlineLoading message="Loading branches…" /> : filtered.length === 0 ? (
+        <EmptyState title="No branches" message="Create the first branch office." />
+      ) : (
+        <div className="overflow-x-auto rounded-2xl border border-slate-200">
+          <table className="w-full text-left text-xs min-w-[720px]">
+            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
+              <th className="px-4 py-3">Branch</th><th className="px-4 py-3">City</th><th className="px-4 py-3">Organization</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
+            </tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {filtered.map((b) => (
+                <tr key={b.id} className="hover:bg-slate-50/70">
+                  <td className="px-4 py-3"><div className="font-bold text-slate-900">{b.name}</div><div className="font-mono text-[11px] text-slate-500">{b.id}</div></td>
+                  <td className="px-4 py-3">{b.city || '—'}</td>
+                  <td className="px-4 py-3 font-mono font-bold text-amber-700">{b.orgId}</td>
+                  <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px]">{b.status}</span></td>
+                  <td className="px-4 py-3"><div className="flex justify-end"><RowMenu items={[
+                    { label: 'Edit…', onSelect: () => setEditing({ ...b }) },
+                    { label: 'Delete…', danger: true, onSelect: () => setDeleteFor(b) },
+                  ]} /></div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <Modal open={editing !== null} onClose={() => setEditing(null)} title={`Edit branch — ${editing?.id || ''}`}>
+        <div className="space-y-3">
+          <Field label="Branch name"><input className={kitInput} value={editing?.name || ''} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></Field>
+          <Field label="City"><input className={kitInput} value={editing?.city || ''} onChange={(e) => setEditing({ ...editing, city: e.target.value })} /></Field>
+          <Field label="Status"><Select value={editing?.status || 'Active'} onChange={(v) => setEditing({ ...editing, status: v })} options={['Active', 'Closed'].map((s) => ({ value: s, label: s }))} /></Field>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setEditing(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button type="button" disabled={busy} onClick={saveEdit} className={btnPrimary}>{busy ? 'Saving…' : 'Save changes'}</button>
+          </div>
+        </div>
+      </Modal>
+      <ConfirmDialog open={deleteFor !== null} onCancel={() => setDeleteFor(null)} title={`Delete branch ${deleteFor?.name || ''}?`} body="Branches with requisitions referencing them should be closed, not deleted. Continue?" confirmLabel="Delete" onConfirm={doDelete} />
+    </div>
+  );
+}
+
+export const JOB_TRANSITIONS: Record<string, string[]> = {
+  Draft: ['Pending Review'], 'Pending Review': ['Approved', 'Draft'], Approved: ['Published'],
+  Published: ['Paused', 'Closed'], Paused: ['Published', 'Closed'], Closed: ['Archived'], Archived: [],
+};
+
+/* ---------------- Admin Jobs (§6.7) — list + detail + pipeline + assign ---------------- */
+export function JobsPanel() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
+  const [q, setQ] = useState('');
+  const [statusF, setStatusF] = useState('');
+  const [detail, setDetail] = useState<any>(null);
+  const [pipeline, setPipeline] = useState<{ apps: any[]; interviews: any[] }>({ apps: [], interviews: [] });
+  const [editing, setEditing] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+  const load = async () => {
+    setLoading(true); setError('');
+    try { setRows(unwrapList(await jobsApi.list('?page=1&pageSize=100'))); }
+    catch (e) { setError(errMsg(e)); } finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
+  const openDetail = async (j: any) => {
+    setDetail(j); setPipeline({ apps: [], interviews: [] });
+    try {
+      const [aRes, iRes] = await Promise.all([
+        applicationsApi.list(`?page=1&pageSize=100`).catch(() => null),
+        interviewsApi.list().catch(() => null),
+      ]);
+      const apps = unwrapList(aRes).filter((a: any) => a.jobId === j.id);
+      const ivs = unwrapList(iRes).filter((i: any) => i.jobId === j.id);
+      setPipeline({ apps, interviews: ivs });
+    } catch { /* pipeline is best-effort */ }
+  };
+  const transition = async (id: string, status: string) => {
+    try {
+      const updated = unwrapObj(await jobsApi.setStatus(id, status));
+      setRows((r) => r.map((x) => (x.id === id ? { ...x, ...(updated?.id ? updated : { status }) } : x)));
+      if (detail?.id === id) setDetail((d: any) => ({ ...d, status }));
+      setOk(`${id} → ${status}.`); syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const saveEdit = async () => {
+    if (!editing) return;
+    setBusy(true);
+    try {
+      const payload = { ...editing, assignedAgencies: String(editing.assignedAgencies || '').split(',').map((s: string) => s.trim()).filter(Boolean), assignedVendors: String(editing.assignedVendors || '').split(',').map((s: string) => s.trim()).filter(Boolean) };
+      const updated = unwrapObj(await jobsApi.update(editing.id, payload));
+      setRows((r) => r.map((x) => (x.id === editing.id ? { ...x, ...(updated?.id ? updated : editing) } : x)));
+      setEditing(null); setOk('Job updated.'); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const filtered = rows.filter((j) => {
+    if (statusF && j.status !== statusF) return false;
+    if (!q.trim()) return true;
+    return `${j.id} ${j.title} ${j.orgId} ${j.location}`.toLowerCase().includes(q.toLowerCase());
+  });
+  return (
+    <div className={cardCls}>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-base font-extrabold text-slate-900">Jobs — View / Edit / Publish / Pause / Assign / Export</h3>
+          <button type="button" onClick={async () => { const { downloadCsv } = await import('./CrudKit'); downloadCsv('jobs.csv', filtered, ['id', 'requisitionId', 'title', 'orgId', 'location', 'employmentType', 'status', 'expiryDate']); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Export</button>
+        </div>
+        <div className="flex flex-col lg:flex-row gap-2">
+          <input className={`${inputCls} flex-1`} placeholder="Search ID, title, org, location…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <select value={statusF} onChange={(e) => setStatusF(e.target.value)} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none">
+            <option value="">All statuses</option>{['Draft', 'Pending Review', 'Approved', 'Published', 'Paused', 'Closed', 'Archived'].map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+      </div>
+      {error && <PanelError message={error} onRetry={load} />}
+      {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
+      {loading ? <InlineLoading message="Loading jobs…" /> : filtered.length === 0 ? (
+        <EmptyState title="No jobs" message="Published requisitions become jobs here." />
+      ) : (
+        <div className="overflow-x-auto rounded-2xl border border-slate-200">
+          <table className="w-full text-left text-xs min-w-[980px]">
+            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
+              <th className="px-4 py-3">Job</th><th className="px-4 py-3">Requisition</th><th className="px-4 py-3">Org / Location</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Applicants</th><th className="px-4 py-3">Expiry</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
+            </tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {filtered.map((j) => (
+                <tr key={j.id} className="hover:bg-slate-50/70">
+                  <td className="px-4 py-3"><div className="font-bold text-slate-900">{j.title}</div><div className="font-mono text-[11px] text-slate-500">{j.id}</div></td>
+                  <td className="px-4 py-3 font-mono">{j.requisitionId || '—'}</td>
+                  <td className="px-4 py-3"><div className="font-mono font-bold text-amber-700">{j.orgId}</div><div className="text-slate-500">{j.location || '—'}</div></td>
+                  <td className="px-4 py-3">{j.employmentType || '—'}</td>
+                  <td className="px-4 py-3 font-bold">{j.applicantsCount ?? '—'}</td>
+                  <td className="px-4 py-3 text-slate-500">{String(j.expiryDate || '').slice(0, 10) || '—'}</td>
+                  <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">{j.status}</span></td>
+                  <td className="px-4 py-3"><div className="flex justify-end"><RowMenu items={[
+                    { label: 'View + pipeline', onSelect: () => openDetail(j) },
+                    { label: 'Edit…', onSelect: () => setEditing({ ...j, assignedAgencies: (j.assignedAgencies || []).join(', '), assignedVendors: (j.assignedVendors || []).join(', ') }) },
+                    ...(JOB_TRANSITIONS[j.status] || []).map((s) => ({ label: `Move to ${s}`, onSelect: () => transition(j.id, s) })),
+                  ]} /></div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {detail && (
+        <Modal open onClose={() => setDetail(null)} title={detail.title} subtitle={`${detail.id} • req ${detail.requisitionId || '—'} • ${detail.status}`}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            {[['Organization', detail.orgId], ['Location', detail.location], ['Employment', detail.employmentType], ['Arrangement', detail.workArrangement], ['Salary', detail.salaryMin ? `₹${detail.salaryMin}–₹${detail.salaryMax}` : (detail.budgetRange || '—')], ['Visibility', detail.visibility], ['Applicants', detail.applicantsCount], ['Expiry', String(detail.expiryDate || '').slice(0, 10)], ['Agencies', (detail.assignedAgencies || []).join(', ')], ['Vendors', (detail.assignedVendors || []).join(', ')]].map(([k, v]) => (
+              <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—') || '—'}</div></div>
+            ))}
+            <div className="sm:col-span-2 p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">Description</div><div className="font-medium mt-1 whitespace-pre-wrap">{detail.description || '—'}</div></div>
+          </div>
+          <div className="text-xs font-extrabold pt-2">Pipeline — {pipeline.apps.length} applications, {pipeline.interviews.length} interviews</div>
+          {pipeline.apps.length === 0 ? <div className="text-[11px] text-slate-500">No applications for this job yet.</div> : pipeline.apps.slice(0, 10).map((a: any) => (
+            <div key={a.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">{a.candidateEmail} • <strong>{a.stage}</strong></div>
+          ))}
+        </Modal>
+      )}
+      <Modal open={editing !== null} onClose={() => setEditing(null)} title={`Edit job — ${editing?.id || ''}`} subtitle="Agency/vendor assignment controls who can submit">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="sm:col-span-2"><Field label="Title"><input className={kitInput} value={editing?.title || ''} onChange={(e) => setEditing({ ...editing, title: e.target.value })} /></Field></div>
+          <Field label="Location"><input className={kitInput} value={editing?.location || ''} onChange={(e) => setEditing({ ...editing, location: e.target.value })} /></Field>
+          <Field label="Employment type"><input className={kitInput} value={editing?.employmentType || ''} onChange={(e) => setEditing({ ...editing, employmentType: e.target.value })} /></Field>
+          <Field label="Visibility"><Select value={editing?.visibility || 'public'} onChange={(v) => setEditing({ ...editing, visibility: v })} options={['public', 'private', 'assigned'].map((v) => ({ value: v, label: v }))} /></Field>
+          <Field label="Expiry date"><DatePicker value={String(editing?.expiryDate || '').slice(0, 10)} onChange={(v) => setEditing({ ...editing, expiryDate: v })} /></Field>
+          <div className="sm:col-span-2"><Field label="Assigned agencies (comma separated — blank = open to all)"><input className={kitInput} value={editing?.assignedAgencies || ''} onChange={(e) => setEditing({ ...editing, assignedAgencies: e.target.value })} /></Field></div>
+          <div className="sm:col-span-2"><Field label="Assigned vendors (comma separated)"><input className={kitInput} value={editing?.assignedVendors || ''} onChange={(e) => setEditing({ ...editing, assignedVendors: e.target.value })} /></Field></div>
+          <div className="sm:col-span-2 flex justify-end gap-2">
+            <button type="button" onClick={() => setEditing(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button type="button" disabled={busy} onClick={saveEdit} className={btnPrimary}>{busy ? 'Saving…' : 'Save changes'}</button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+/* ---------------- Support / Account issues (§6.1 Platform) ---------------- */
+const TICKET_TRANSITIONS: Record<string, string[]> = { Open: ['In Progress', 'Closed'], 'In Progress': ['Resolved', 'Closed'], Resolved: ['Closed', 'In Progress'], Closed: [] };
+export function SupportPanel() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
+  const [q, setQ] = useState('');
+  const [statusF, setStatusF] = useState('');
+  const [form, setForm] = useState({ subject: '', category: 'Account', priority: 'Medium', body: '' });
+  const [showOpen, setShowOpen] = useState(false);
+  const [detail, setDetail] = useState<any>(null);
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const load = async () => {
+    setLoading(true); setError('');
+    try {
+      const { directoryApi } = await import('../../shared/enterprise/phaseApi');
+      setRows(unwrapList(await directoryApi.supportTickets('?page=1&pageSize=100')));
+    } catch (e) { setError(errMsg(e)); } finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
+  const open = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!form.subject.trim() || !form.body.trim()) return;
+    setBusy(true);
+    try {
+      const { directoryApi } = await import('../../shared/enterprise/phaseApi');
+      const created = unwrapObj(await directoryApi.openTicket(form));
+      if (created?.id) setRows((r) => [created, ...r]);
+      setForm({ subject: '', category: 'Account', priority: 'Medium', body: '' }); setShowOpen(false); setOk('Ticket opened.'); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const update = async (id: string, patch: any) => {
+    try {
+      const { directoryApi } = await import('../../shared/enterprise/phaseApi');
+      const updated = unwrapObj(await directoryApi.updateTicket(id, patch));
+      setRows((r) => r.map((x) => (x.id === id ? { ...x, ...(updated?.id ? updated : patch) } : x)));
+      if (detail?.id === id) setDetail((d: any) => ({ ...d, ...(updated?.id ? updated : patch) }));
+      setNote(''); setOk('Ticket updated.'); syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const filtered = rows.filter((t) => {
+    if (statusF && t.status !== statusF) return false;
+    if (!q.trim()) return true;
+    return `${t.id} ${t.subject} ${t.requester} ${t.orgId}`.toLowerCase().includes(q.toLowerCase());
+  });
+  return (
+    <div className={cardCls}>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-base font-extrabold text-slate-900">Support & Account Issues — Open / Triage / Resolve</h3>
+          <div className="flex gap-2">
+            <button type="button" onClick={async () => { const { downloadCsv } = await import('./CrudKit'); downloadCsv('support.csv', filtered, ['id', 'subject', 'requester', 'orgId', 'priority', 'status']); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Export</button>
+            <button type="button" onClick={() => setShowOpen(true)} className={btnPrimary}>+ Open ticket</button>
+          </div>
+        </div>
+        <div className="flex flex-col lg:flex-row gap-2">
+          <input className={`${inputCls} flex-1`} placeholder="Search ID, subject, requester, org…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <select value={statusF} onChange={(e) => setStatusF(e.target.value)} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none">
+            <option value="">All statuses</option>{['Open', 'In Progress', 'Resolved', 'Closed'].map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+      </div>
+      {error && <PanelError message={error} onRetry={load} />}
+      {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
+      <Modal open={showOpen} onClose={() => setShowOpen(false)} title="Open support ticket" subtitle="Account, billing, access and data issues">
+        <form onSubmit={open} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="sm:col-span-2"><Field label="Subject *"><input className={kitInput} value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} placeholder="e.g. Cannot access billing invoices" /></Field></div>
+          <Field label="Category"><Select value={form.category} onChange={(v) => setForm({ ...form, category: v })} options={['Account', 'Billing', 'Access', 'Data', 'Other'].map((c) => ({ value: c, label: c }))} /></Field>
+          <Field label="Priority"><Select value={form.priority} onChange={(v) => setForm({ ...form, priority: v })} options={['Low', 'Medium', 'High'].map((p) => ({ value: p, label: p }))} /></Field>
+          <div className="sm:col-span-2"><Field label="Describe the issue *"><textarea rows={4} className={kitInput} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} /></Field></div>
+          <div className="sm:col-span-2 flex justify-end gap-2">
+            <button type="button" onClick={() => setShowOpen(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button disabled={busy} className={btnPrimary}>{busy ? 'Opening…' : 'Open ticket'}</button>
+          </div>
+        </form>
+      </Modal>
+      {loading ? <InlineLoading message="Loading tickets…" /> : filtered.length === 0 ? (
+        <EmptyState title="No tickets" message="Support and account issues land here." />
+      ) : (
+        <div className="space-y-2">{filtered.map((t) => (
+          <div key={t.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <div className="font-extrabold text-slate-900 text-sm">{t.subject}</div>
+              <div className="text-xs text-slate-500 font-medium">{t.id} • {t.requester} • {t.orgId} • <strong className="text-blue-600">{t.status}</strong> • {t.priority} priority</div>
+            </div>
+            <RowMenu items={[
+              { label: 'View + notes', onSelect: () => { setDetail(t); setNote(''); } },
+              ...(TICKET_TRANSITIONS[t.status] || []).map((s) => ({ label: `Move to ${s}`, onSelect: () => update(t.id, { status: s }) })),
+            ]} />
+          </div>
+        ))}</div>
+      )}
+      <Modal open={detail !== null} onClose={() => setDetail(null)} title={detail?.subject || ''} subtitle={`${detail?.id || ''} • ${detail?.requester || ''} • ${detail?.status || ''}`}>
+        <p className="text-xs text-slate-700 whitespace-pre-wrap p-3 rounded-xl bg-slate-50 border border-slate-200">{detail?.body}</p>
+        <div className="text-xs font-extrabold">Staff notes ({(detail?.notes || []).length})</div>
+        {(detail?.notes || []).length === 0 ? <div className="text-[11px] text-slate-500">No notes yet.</div> : (detail.notes || []).map((n: any, i: number) => (
+          <div key={i} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs"><strong>{n.by}</strong> • <span className="text-slate-500">{String(n.at || '').slice(0, 16).replace('T', ' ')}</span><div>{n.text}</div></div>
+        ))}
+        <div className="flex gap-2">
+          <input className={`${kitInput} flex-1`} placeholder="Add a staff note…" value={note} onChange={(e) => setNote(e.target.value)} />
+          <button type="button" disabled={!note.trim()} onClick={() => update(detail.id, { note: note.trim() })} className={btnDark}>Add note</button>
+        </div>
+      </Modal>
     </div>
   );
 }

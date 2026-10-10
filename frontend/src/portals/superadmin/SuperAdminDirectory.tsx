@@ -3,6 +3,7 @@ import { directoryApi } from '../../shared/enterprise/phaseApi';
 import { syncAll } from '../common/EnterprisePanels';
 import { Modal, Select, Field, ConfirmDialog, RowMenu } from '../../shared/ui/EnterpriseKit';
 import { CrudToolbar, DetailDrawer, KeyValues, StatusPill, downloadCsv } from '../common/CrudKit';
+import { Company360Drawer } from './SuperAdmin360';
 import { EmptyState } from '../../shared/ui/DataState';
 
 function _unwrapList(res: unknown): any[] {
@@ -115,13 +116,13 @@ export function OrganizationsManager({ tenants, setTenants, onAudit }: {
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
       <CrudToolbar search={search} onSearch={(v) => { setSearch(v); setPage(1); }} searchPh="Search ID, legal name, brand, plan…"
         status={status} onStatus={(v) => { setStatus(v); setPage(1); }} statuses={['Active', 'Invited', 'Suspended', 'Closed']}
-        onExport={() => downloadCsv('organizations.csv', filtered, ['id', 'legalName', 'displayName', 'plan', 'seats', 'verificationStatus', 'accountStatus', 'createdDate'])} />
+        onExport={() => downloadCsv('organizations.csv', filtered, ['id', 'legalName', 'displayName', 'entityType', 'industry', 'companySize', 'website', 'plan', 'seats', 'businessEmail', 'businessPhone', 'accountManager', 'salesOwner', 'verificationStatus', 'accountStatus', 'createdDate'])} />
       {pageRows.length === 0 ? <EmptyState title="No organizations match" message="Adjust filters or provision a new tenant." /> : (
         <div className="overflow-x-auto rounded-2xl border border-slate-200">
-          <table className="w-full text-left text-xs min-w-[900px]">
+          <table className="w-full text-left text-xs min-w-[1060px]">
             <thead className="bg-slate-50">
               <tr className="text-slate-500 font-bold uppercase tracking-wider">
-                <th className="px-4 py-3">Tenant</th><th className="px-4 py-3">Organization</th><th className="px-4 py-3">Plan / Seats</th>
+                <th className="px-4 py-3">Tenant</th><th className="px-4 py-3">Organization</th><th className="px-4 py-3">Industry</th><th className="px-4 py-3">Business contact</th><th className="px-4 py-3">Plan / Seats</th>
                 <th className="px-4 py-3">Verification</th><th className="px-4 py-3">Account</th><th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -130,7 +131,9 @@ export function OrganizationsManager({ tenants, setTenants, onAudit }: {
                 <tr key={t.id} className="hover:bg-slate-50/70">
                   <td className="px-4 py-3 font-mono font-bold text-amber-700">{t.id}</td>
                   <td className="px-4 py-3"><div className="font-bold text-slate-900">{t.displayName || t.name || t.legalName}</div>
-                    <div className="text-slate-500 text-[11px]">{t.legalName && t.displayName ? t.legalName : t.industry || ''}</div></td>
+                    <div className="text-slate-500 text-[11px]">{t.legalName && t.displayName ? t.legalName : (t.entityType || '')}</div></td>
+                  <td className="px-4 py-3"><div>{t.industry || '—'}</div><div className="text-slate-500 text-[11px]">{t.companySize || ''}</div></td>
+                  <td className="px-4 py-3"><div>{t.businessEmail || '—'}</div><div className="text-slate-500 text-[11px]">{t.businessPhone || t.accountManager || ''}</div></td>
                   <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">{t.plan}</span>
                     <div className="text-slate-500 text-[11px] mt-1">{t.seats} seats</div></td>
                   <td className="px-4 py-3"><StatusPill value={t.verificationStatus || 'Pending'} /></td>
@@ -162,24 +165,7 @@ export function OrganizationsManager({ tenants, setTenants, onAudit }: {
       </div>
 
       {detail && (
-        <DetailDrawer title={detail.displayName || detail.name || detail.legalName} subtitle={`${detail.id} • provisioned ${detail.createdDate || ''}`} onClose={() => setDetail(null)}>
-          <KeyValues data={[
-            ['Tenant ID', <span className="font-mono">{detail.id}</span>],
-            ['Legal name', detail.legalName || detail.name],
-            ['Brand name', detail.displayName || '—'],
-            ['Plan', detail.plan], ['Seats', String(detail.seats)],
-            ['Verification', <StatusPill value={detail.verificationStatus || 'Pending'} />],
-            ['Account', <StatusPill value={detail.accountStatus || detail.status} />],
-            ['Industry', detail.industry || '—'], ['Website', detail.website || '—'],
-            ['Business email', detail.businessEmail || '—'], ['Business phone', detail.businessPhone || '—'],
-            ['Account manager', detail.accountManager || 'Unassigned'],
-            ['Suspend reason', detail.suspendReason || '—'],
-          ]} />
-          <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => { openEdit(detail); setDetail(null); }} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs">Edit details</button>
-            <button type="button" onClick={() => { setSuspendFor(detail); setDetail(null); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Suspend / Reactivate</button>
-          </div>
-        </DetailDrawer>
+        <Company360Drawer tenantId={detail.id} onClose={() => setDetail(null)} />
       )}
 
       <Modal open={editing !== null} onClose={() => setEditing(null)} title={`Edit — ${editing?.id || ''}`} subtitle="Changes are audited with actor + timestamp">
