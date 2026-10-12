@@ -113,7 +113,7 @@ export function VendorPortal() {
 
   return (
     <PortalShell portalTitle="Vendor Partner Workspace" portalRole="vendor" navItems={navItems}>
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto space-y-4">
         
         {/* Top Header — dashboard only */}
         {currentTab === 'overview' && (
@@ -177,7 +177,7 @@ export function VendorPortal() {
                 <EmptyState title="No contractors deployed" message="Deploy your first contractor resource to get started." />
               ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full text-left text-xs min-w-[720px]">
                   <thead>
                     <tr className="border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
                       <th className="pb-3">Contractor Name</th>
@@ -259,10 +259,10 @@ export function VendorPortal() {
               <EmptyState title="Roster is empty" message="Deployed contractors will appear in this roster." />
             ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full text-left text-xs min-w-[720px]">
                 <thead>
-                  <tr className="border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
-                    <th className="pb-3">Contractor ID</th>
+                    <tr className="border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                      <th className="pb-3">Contractor ID</th>
                     <th className="pb-3">Full Name</th>
                     <th className="pb-3">Role & Skillset</th>
                     <th className="pb-3">Client Account</th>

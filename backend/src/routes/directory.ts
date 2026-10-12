@@ -10,7 +10,16 @@ directoryRouter.get('/tenants', requireAuth(['superadmin','platform_owner','oper
   res.json({ success: true, data: loadDb().organizations });
 });
 directoryRouter.post('/tenants', requireAuth(['superadmin','platform_owner']), (req: Request, res: Response) => {
-  const org = { id: uid('TNT'), status: 'Invited', verificationStatus: 'Pending', accountStatus: 'Invited', createdDate: nowIso().slice(0, 10), ...req.body };
+  const b: any = req.body || {};
+  if (!b.legalName && !b.displayName && !b.name) return res.status(400).json({ success: false, message: 'legalName required.' });
+  // P6: allowlist — was ...req.body (caller could set id/status/verification).
+  const org = {
+    id: uid('TNT'), status: 'Invited', verificationStatus: 'Pending', accountStatus: 'Invited', createdDate: nowIso().slice(0, 10),
+    legalName: String(b.legalName || b.displayName || b.name || '').slice(0, 160),
+    displayName: String(b.displayName || b.legalName || b.name || '').slice(0, 160),
+    industry: String(b.industry || '').slice(0, 80),
+    website: String(b.website || '').slice(0, 160),
+  };
   loadDb().organizations.unshift(org); audit(ctxOf(req).email, `TENANT_PROVISIONED:${org.id}`, org.id, 'organization', org.id, req.ip); persist();
   res.status(201).json({ success: true, data: org });
 });
@@ -27,7 +36,8 @@ directoryRouter.patch('/tenants/:id', requireAuth(['superadmin','platform_owner'
   const db = loadDb(); const o: any = db.organizations.find((x: any) => x.id === req.params.id);
   if (!o) return res.status(404).json({ success: false, message: 'Not found.' });
   const b: any = req.body || {};
-  for (const k of ['legalName','displayName','entityType','industry','subIndustry','companySize','website','description','countryOfIncorporation','registrationNumber','gstin','taxIds','registeredAddress','headquarters','operatingLocations','logoUrl','primaryContact','primaryContactDesignation','businessEmail','businessPhone','billingContact','financeEmail','plan','seats','accountManager','salesOwner']) {
+  // Phase B: plan/seats are subscription-owned — direct org edits must not bypass entitlements.
+  for (const k of ['legalName','displayName','entityType','industry','subIndustry','companySize','website','description','countryOfIncorporation','registrationNumber','gstin','taxIds','registeredAddress','headquarters','operatingLocations','logoUrl','primaryContact','primaryContactDesignation','businessEmail','businessPhone','billingContact','financeEmail','accountManager','salesOwner','payrollRules']) {
     if (b[k] !== undefined) o[k] = b[k];
   }
   o.updatedAt = nowIso(); o.updatedBy = ctxOf(req).email;
@@ -99,12 +109,15 @@ directoryRouter.get('/users', requireAuth(['superadmin','platform_owner','operat
   const db = loadDb();
   const { page, pageSize, q } = paginate.parse(req.query);
   let rows = db.users as any[];
-  if (q) rows = rows.filter((u) => JSON.stringify(u).toLowerCase().includes(String(q).toLowerCase()));
+  // P1-5: field-scoped search (was JSON.stringify over all fields incl. PII).
+  if (q) { const s = String(q).toLowerCase(); rows = rows.filter((u) => `${u.id || ''} ${u.name || ''} ${u.email || ''} ${u.role || ''} ${u.tenantId || ''} ${u.status || ''}`.toLowerCase().includes(s)); }
   // never leak password hashes or MFA secrets — expose only the enabled flag
+  // P1-5: mask phone/addresses unless caller holds view_sensitive_fields.
+  const canSee = ((req as any).auth?.permissions || []).includes('view_sensitive_fields');
   rows = rows.map((u) => {
     const { ...safe } = u;
     const cred: any = db.credentials.find((c: any) => c.userId === u.id);
-    return { ...safe, mfaEnabled: !!cred?.mfaEnabled };
+    return { ...safe, phone: canSee ? (safe as any).phone : ((safe as any).phone ? '**********' : undefined), mfaEnabled: !!cred?.mfaEnabled };
   });
   res.json({ success: true, ...paged(rows, page, pageSize) });
 });
@@ -113,7 +126,12 @@ directoryRouter.post('/users', requireAuth(['superadmin','platform_owner']), req
   if (!email || !String(email).includes('@')) return res.status(400).json({ success: false, message: 'Valid email required.' });
   if (!password || String(password).length < 8) return res.status(400).json({ success: false, message: '8-char password required.' });
   if (!tenantId) return res.status(400).json({ success: false, message: 'tenantId required.' });
+  if (role && !(ALL_ROLES as readonly string[]).includes(role)) return res.status(400).json({ success: false, message: `Unknown role '${role}'.` });
   const db = loadDb();
+  // P6: org must exist (was mint-into-arbitrary-tenant).
+  if (tenantId !== 'TNT-GLOBAL' && tenantId !== 'TNT-CANDIDATE' && !db.organizations.some((o: any) => o.id === tenantId) && !db.agencyProfiles.some((a: any) => a.tenantId === tenantId)) {
+    return res.status(404).json({ success: false, message: 'Tenant not found.' });
+  }
   if (db.users.some((u: any) => String(u.email).toLowerCase() === String(email).toLowerCase())) return res.status(409).json({ success: false, message: 'Exists.' });
   const { hashPassword } = await import('../auth/password.js');
   const user = { id: uid('USR'), name: name || email.split('@')[0], email, role: role || 'employer', tenantId, status: 'Active', invitationStatus: 'Pending', invitedAt: nowIso(), phone: phone || '', startDate: startDate || '', endDate: endDate || '', lastLogin: 'Never' };
@@ -127,6 +145,9 @@ directoryRouter.put('/users/:id', requireAuth(['superadmin','platform_owner']), 
   const db = loadDb(); const u: any = db.users.find((x: any) => x.id === req.params.id);
   if (!u) return res.status(404).json({ success: false, message: 'Not found.' });
   const patch = req.body || {};
+  if (patch.role !== undefined && !(ALL_ROLES as readonly string[]).includes(patch.role)) {
+    return res.status(400).json({ success: false, message: `Unknown role '${patch.role}'.` });
+  }
   for (const k of ['name', 'phone', 'employeeId', 'department', 'designation', 'branch', 'reportingManager', 'role', 'startDate', 'endDate']) {
     if (patch[k] !== undefined) (u as any)[k] = patch[k];
   }
@@ -317,11 +338,16 @@ directoryRouter.post('/bulk-import', requireAuth(['superadmin','platform_owner',
   res.json({ success: true, data: { mode: preview ? 'preview' : 'commit', summary, rows: out } });
 });
 // Export audit trail (§4.3 — every CSV export is actor-stamped)
-directoryRouter.post('/exports/log', requireAuth(), (req, res) => {
-  const { resource, count } = req.body || {};
+directoryRouter.post('/exports/log', requireAuth(), requirePermission('export'), (req, res) => {
+  const { resource, count, filters, columns } = req.body || {};
   if (!resource) return res.status(400).json({ success: false, message: 'resource required.' });
   const ctx = ctxOf(req);
-  audit(ctx.email, `EXPORT:${resource}x${Number(count || 0)}`, ctx.tenantId, 'export', String(resource), req.ip); persist();
+  // Phase C: the audit row carries the visible scope, not just a count.
+  const safeMeta = {
+    filters: filters && typeof filters === 'object' ? JSON.stringify(filters).slice(0, 1000) : '',
+    columns: Array.isArray(columns) ? columns.map(String).slice(0, 40) : [],
+  };
+  audit(ctx.email, `EXPORT:${resource}x${Number(count || 0)}`, ctx.tenantId, 'export', String(resource), req.ip, safeMeta); persist();
   res.status(201).json({ success: true, message: 'Logged.' });
 });
 
@@ -463,17 +489,61 @@ directoryRouter.get('/directory/candidates/:id/360', requireAuth(['superadmin','
   const email = String(c.email || '').toLowerCase();
   const apps = (db.applications as any[]).filter((a) => String(a.candidateEmail).toLowerCase() === email);
   const appIds = new Set(apps.map((a) => a.id));
+  // Documents: seed writes candidateEmail (+ownerEmail on newer rows) — accept all shapes,
+  // and normalize to the {name, mime, version, uploadedAt} card shape the drawer renders.
+  const documents = (db.documents as any[])
+    .filter((d) => [d.candidateEmail, d.ownerEmail, d.email].some((v) => String(v || '').toLowerCase() === email))
+    .map((d: any) => ({
+      ...d,
+      name: d.name || String(d.ref || `resumes/${c.id}.pdf`).split('/').pop(),
+      mime: d.mime || (String(d.kind || '').includes('resume') ? 'application/pdf' : String(d.kind || 'document')),
+      version: d.version ?? 1,
+      uploadedAt: d.uploadedAt || d.createdAt || null,
+    })).slice(0, 100);
+  // Consents: seed writes candidateEmail; admin writes email — accept both, normalize flags.
+  const consents = (db.consents as any[])
+    .filter((x) => [x.candidateEmail, x.email].some((v) => String(v || '').toLowerCase() === email))
+    .map((x: any) => ({
+      ...x,
+      marketing: x.marketing ?? (String(x.purpose || '').includes('marketing') ? true : x.status === 'granted'),
+      visibility: x.visibility || c.visibility || 'standard',
+      withdrawn: x.withdrawn ?? ['withdrawn', 'revoked'].includes(String(x.status || '').toLowerCase()),
+      withdrawnAt: x.withdrawnAt || null,
+    }));
+  // Joined collections so Education / Experience / Skills tabs are never hollow.
+  const education = (db.educations as any[]).filter((e) => [e.candidateEmail, e.email].some((v) => String(v || '').toLowerCase() === email));
+  const experience = (db.experiences as any[]).filter((e) => [e.candidateEmail, e.email].some((v) => String(v || '').toLowerCase() === email));
+  const skillsDetail = (db.candidateSkills as any[]).filter((s) => [s.candidateEmail, s.email].some((v) => String(v || '').toLowerCase() === email));
+  const certifications = (db.certifications as any[]).filter((x) => [x.candidateEmail, x.email].some((v) => String(v || '').toLowerCase() === email));
+  const offers = (db.offers as any[]).filter((o) => String(o.candidateEmail || '').toLowerCase() === email).slice(0, 100);
+  const placements = (db.placements as any[]).filter((o) => String(o.candidateEmail || '').toLowerCase() === email).slice(0, 100);
+  const full: any = {
+    ...c,
+    education: (c as any).education || education.map((e: any) => e.institution ? `${e.qualification || ''} @ ${e.institution}` : String(e.label || '')).filter(Boolean).join('; '),
+    experienceList: (c as any).experience || experience,
+    skillsList: skillsDetail.length ? skillsDetail : (c.skills ? String(c.skills).split(',').map((s) => ({ skill: s.trim(), level: 'Intermediate' })) : []),
+    certificationsList: (c as any).certifications || certifications,
+    resumeRef: (c as any).resumeRef || `resumes/${c.id}.pdf`,
+    resumeVersion: (c as any).resumeVersion ?? (documents.length || 1),
+  };
+  full.completeness = completenessOf(full);
   res.json({ success: true, data: {
-    profile: canSee ? { ...c, completeness: completenessOf(c) } : { ...c, phone: '**********', currentCtc: 'Restricted', completeness: completenessOf(c) },
-    completeness: completenessOf(c),
+    profile: canSee ? full : { ...full, phone: '**********', currentCtc: 'Restricted' },
+    completeness: full.completeness,
     applications: apps.slice(0, 200),
-    stageHistory: (db.stageHistory as any[]).filter((h) => appIds.has(h.applicationId)).slice(0, 200),
+    stageHistory: (db.stageHistory as any[]).filter((h) => appIds.has(h.applicationId)).slice(-200).reverse(),
     interviews: (db.interviews as any[]).filter((i) => String(i.candidateEmail || '').toLowerCase() === email).slice(0, 200),
-    documents: (db.documents as any[]).filter((d) => String(d.ownerEmail || '').toLowerCase() === email).map(({ ...d }) => d).slice(0, 100),
-    consents: (db.consents as any[]).filter((x) => String(x.email).toLowerCase() === email),
-    infoRequests: (db.candidateInfoRequests as any[]).filter((r) => r.candidateId === c.id).slice(0, 100),
-    deletionRequests: (db.privacyRequests as any[]).filter((r) => r.candidateId === c.id).slice(0, 100),
-    activity: (db.auditLogs as any[]).filter((l) => l.recordId === c.id || String(l.actor).toLowerCase() === email).slice(0, 100),
+    documents,
+    consents,
+    education: education.slice(0, 100),
+    experience: experience.slice(0, 100),
+    skillsDetail: skillsDetail.slice(0, 100),
+    certifications: certifications.slice(0, 100),
+    offers,
+    placements,
+    infoRequests: (db.candidateInfoRequests as any[]).filter((r) => r.candidateId === c.id || String(r.candidateEmail || r.email || '').toLowerCase() === email).slice(-100).reverse(),
+    deletionRequests: (db.privacyRequests as any[]).filter((r) => r.candidateId === c.id || String(r.candidateEmail || r.email || '').toLowerCase() === email).slice(-100).reverse(),
+    activity: (db.auditLogs as any[]).filter((l) => l.recordId === c.id || String(l.actor).toLowerCase() === email).slice(-100).reverse(),
   } });
 });
 
@@ -608,7 +678,7 @@ directoryRouter.patch('/directory/candidates/:id/deletion-requests/:reqId', requ
       c.visibility = 'private'; c.status = 'Deleted'; c.statusReason = `deletion-request ${r.id}`; c.statusAt = nowIso();
       c.anonymizedAt = nowIso(); c.updatedAt = nowIso();
       anonymized = { id: c.id, status: c.status };
-      const con: any = db.consents.find((x: any) => String(x.email).toLowerCase() === String(c.email).toLowerCase());
+      const con: any = db.consents.find((x: any) => [x.candidateEmail, x.email].some((v: any) => String(v || '').toLowerCase() === String(c.email).toLowerCase()));
       if (con) { con.marketing = false; con.withdrawn = true; con.withdrawnAt = nowIso(); }
     }
   }
@@ -625,27 +695,97 @@ directoryRouter.get('/audit-logs', requireAuth(['superadmin','platform_owner','o
 });
 
 // Notifications + prefs + delivery log
+// Canonical per-kind preference keys (P9). `kinds` maps key -> enabled.
+// Legacy prefs {inApp,email} keep working: email aliases emailCh.
+export const NOTIF_KIND_KEYS = ['application', 'interview', 'offer', 'placement', 'chat', 'info_request', 'billing', 'other'] as const;
+export type NotifKindKey = (typeof NOTIF_KIND_KEYS)[number];
+export const NOTIF_KIND_DEFAULTS: Record<NotifKindKey, boolean> = {
+  application: true, interview: true, offer: true, placement: true, chat: true, info_request: true, billing: true, other: true,
+};
+/** Map a stored notification row to its canonical preference key. */
+export function notifPrefKey(n: any): NotifKindKey {
+  const kind = String(n?.kind || '').toLowerCase();
+  const body = String(n?.body || '').toLowerCase();
+  if (kind === 'application') return /offer|selected/.test(body) ? 'offer' : 'application';
+  if (kind === 'interview') return 'interview';
+  if (kind === 'placement') return /offer/.test(body) ? 'offer' : 'placement';
+  if (kind === 'chat') return 'chat';
+  if (kind === 'info-request' || kind === 'info_request') return 'info_request';
+  if (kind.startsWith('invoice') || kind === 'billing-schedule' || kind === 'commercial' || kind === 'ats' || kind === 'requisition') return 'billing';
+  return 'other';
+}
 directoryRouter.get('/notifications', requireAuth(), (req, res) => {
   const ctx = ctxOf(req); let rows = loadDb().notifications as any[];
-  if (!['superadmin','platform_owner'].includes(ctx.role)) rows = rows.filter((n) => n.recipient === ctx.email || String(n.recipient).includes(ctx.tenantId));
+  // Phase C: exact recipient match — the old substring check leaked TNT-9012
+  // notifications to TNT-9011 tenants (prefix collision).
+  if (!['superadmin','platform_owner'].includes(ctx.role)) {
+    rows = rows.filter((n) => n.recipient === ctx.email || n.recipient === ctx.tenantId || n.recipient === `company:${ctx.tenantId}`);
+  }
+  // Honor per-kind prefs: muted kinds are hidden from the feed (security/account mail is never muted).
+  try {
+    const pref: any = (loadDb().notificationPrefs as any[]).find((p: any) => p.email === ctx.email);
+    const kinds: Record<string, boolean> = pref?.kinds || {};
+    const muted = Object.entries(kinds).filter(([, v]) => v === false).map(([k]) => k);
+    if (muted.length > 0) rows = rows.filter((n) => !muted.includes(notifPrefKey(n)));
+  } catch { /* prefs are best-effort */ }
+  if (req.query.kind) rows = rows.filter((n) => String(n.kind) === String(req.query.kind));
   res.json({ success: true, data: rows.slice(0, 100) });
 });
 directoryRouter.get('/notifications/prefs', requireAuth(), (req, res) => {
-  res.json({ success: true, data: (loadDb().notificationPrefs as any[]).filter((p) => p.email === ctxOf(req).email) });
+  const rows = (loadDb().notificationPrefs as any[]).filter((p) => p.email === ctxOf(req).email);
+  // Normalize legacy rows so the UI always sees {inApp,emailCh,kinds}.
+  const data = rows.map((p: any) => ({
+    ...p,
+    inApp: p.inApp !== false,
+    email: p.emailCh !== undefined ? p.emailCh : p.email !== false,
+    emailCh: p.emailCh !== undefined ? p.emailCh : p.email !== false,
+    kinds: { ...NOTIF_KIND_DEFAULTS, ...(p.kinds || {}) },
+  }));
+  res.json({ success: true, data });
 });
 directoryRouter.put('/notifications/prefs', requireAuth(), (req, res) => {
   const db = loadDb(); const me = ctxOf(req).email;
-  const row = { id: uid('NP'), email: me, inApp: req.body.inApp !== false, emailCh: req.body.email !== false, updatedAt: nowIso() };
+  const b: any = req.body || {};
+  const kindsIn: Record<string, unknown> = (b.kinds && typeof b.kinds === 'object' ? b.kinds : {}) as Record<string, unknown>;
+  const kinds: Record<string, boolean> = {};
+  for (const k of NOTIF_KIND_KEYS) {
+    if (kindsIn[k] !== undefined) kinds[k] = kindsIn[k] !== false;
+    else {
+      const prev: any = (db.notificationPrefs as any[]).find((p: any) => p.email === me);
+      kinds[k] = prev?.kinds?.[k] !== false;
+    }
+  }
+  // Backward compat: legacy {email} boolean aliases emailCh.
+  const emailCh = b.emailCh !== undefined ? b.emailCh !== false : b.email !== undefined ? b.email !== false : undefined;
+  const prev: any = (db.notificationPrefs as any[]).find((p: any) => p.email === me);
+  const row = {
+    id: prev?.id || uid('NP'),
+    email: me,
+    inApp: b.inApp !== undefined ? b.inApp !== false : (prev?.inApp !== false),
+    emailCh: emailCh !== undefined ? emailCh : (prev?.emailCh ?? prev?.email ?? true) !== false,
+    kinds,
+    updatedAt: nowIso(),
+  };
   const i = db.notificationPrefs.findIndex((p: any) => p.email === me);
   if (i >= 0) db.notificationPrefs[i] = { ...db.notificationPrefs[i], ...row };
   else db.notificationPrefs.unshift(row);
-  persist(); res.json({ success: true, data: row });
+  persist(); res.json({ success: true, data: { ...row, email: row.emailCh } });
+});
+directoryRouter.post('/notifications/read-all', requireAuth(), (req, res) => {
+  const db = loadDb(); const ctx = ctxOf(req);
+  let count = 0;
+  for (const n of db.notifications as any[]) {
+    // P6: exact match (was includes(tenantId) — TNT-901 collides with TNT-9012).
+    const mine = ['superadmin','platform_owner'].includes(ctx.role) || n.recipient === ctx.email || n.tenantId === ctx.tenantId;
+    if (mine && n.status !== 'read') { n.status = 'read'; n.readAt = nowIso(); count += 1; }
+  }
+  persist(); res.json({ success: true, data: { marked: count } });
 });
 directoryRouter.patch('/notifications/:id/read', requireAuth(), (req, res) => {
   const db = loadDb(); const ctx = ctxOf(req);
   const n: any = db.notifications.find((x: any) => x.id === req.params.id);
   if (!n) return res.status(404).json({ success: false, message: 'Not found.' });
-  if (!['superadmin','platform_owner'].includes(ctx.role) && n.recipient !== ctx.email && !String(n.recipient).includes(ctx.tenantId)) return res.status(404).json({ success: false, message: 'Not found.' });
+  if (!['superadmin','platform_owner'].includes(ctx.role) && n.recipient !== ctx.email && n.tenantId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Not found.' });
   n.status = 'read'; n.readAt = nowIso(); persist();
   res.json({ success: true, data: n });
 });
@@ -653,6 +793,26 @@ directoryRouter.patch('/notifications/:id/read', requireAuth(), (req, res) => {
 // Reports (§6.14) with definitions + freshness
 directoryRouter.get('/reports/:name', requireAuth(['superadmin','platform_owner','operations_admin','finance_admin','sales_admin','employee']), (req, res) => {
   const db = loadDb(); const name = req.params.name;
+  // Phase C: least-privilege per report — finance aggregates stay with finance,
+  // candidate PII aggregates stay off the sales desk.
+  const REPORT_ROLES: Record<string, string[]> = {
+    'candidate-pipeline': ['superadmin','platform_owner','operations_admin','employee'],
+    'requisition-ageing': ['superadmin','platform_owner','operations_admin','employee'],
+    'receivables': ['superadmin','platform_owner','finance_admin','operations_admin','employee'],
+    'commission-liabilities': ['superadmin','platform_owner','finance_admin','operations_admin','employee'],
+    'sales-pipeline': ['superadmin','platform_owner','sales_admin','operations_admin','employee'],
+    'recruiter-workload': ['superadmin','platform_owner','operations_admin','employee'],
+    'interview-offer': ['superadmin','platform_owner','operations_admin','employee'],
+    'offer-joining': ['superadmin','platform_owner','operations_admin','employee'],
+    'company-hiring': ['superadmin','platform_owner','operations_admin','employee'],
+    'subscription-revenue': ['superadmin','platform_owner','finance_admin','operations_admin','employee'],
+    'agency-performance': ['superadmin','platform_owner','operations_admin','employee'],
+    'duplicates': ['superadmin','platform_owner','operations_admin','employee'],
+  };
+  const allowed = REPORT_ROLES[name];
+  if (allowed && !allowed.includes(ctxOf(req).role)) {
+    return res.status(403).json({ success: false, code: 'REPORT_FORBIDDEN', message: `Role '${ctxOf(req).role}' cannot view the ${name} report.` });
+  }
   const defs: Record<string, any> = {
     'candidate-pipeline': { definition: 'Count of application records by stage (unique applications).', data: stageCounts(db.applications) },
     'requisition-ageing': { definition: 'Open requisitions by days since creation.', data: db.requisitions.filter((r: any) => ['Sourcing','Approved'].includes(r.status)).map((r: any) => ({ id: r.id, title: r.title, daysOpen: Math.max(0, Math.round((Date.now() - new Date(r.createdAt).getTime()) / 864e5)) })) },
@@ -750,20 +910,53 @@ function duplicates(db: any): any {
 // Settings + tasks + company profile + contractors/compliance (compat)
 directoryRouter.get('/settings', requireAuth(['superadmin','platform_owner']), (_req, res) => res.json({ success: true, data: loadDb().settings }));
 directoryRouter.post('/settings', requireAuth(['superadmin','platform_owner']), (req, res) => {
-  const db = loadDb(); db.settings = { ...db.settings, ...req.body };
+  const db = loadDb();
+  // P6: allowlist — was ...req.body (could overwrite jwt/encryption/tenant flags).
+  const b: any = req.body || {};
+  const patch: any = {};
+  for (const k of ['rateLimitingPolicy', 'tenantIsolation', 'cors', 'jwtAccessTokenTtl', 'jwtRefreshTokenTtl', 'maintenanceMode', 'supportEmail']) {
+    if (b[k] !== undefined) patch[k] = String(b[k]).slice(0, 200);
+  }
+  db.settings = { ...db.settings, ...patch };
   audit(ctxOf(req).email, 'PLATFORM_SECURITY_SETTINGS_UPDATED', 'TNT-GLOBAL', 'settings', '-', req.ip); persist();
   res.json({ success: true, data: db.settings });
 });
 directoryRouter.get('/tasks', requireAuth(), (req, res) => {
   const ctx = ctxOf(req); let rows = loadDb().tasks as any[];
-  if (['employee','bda'].includes(ctx.role)) rows = rows.filter((t) => !t.owner || t.owner === ctx.email);
+  if (['employee','bda','internal_recruiter','recruiter','agency_recruiter','agency_admin','vendor'].includes(ctx.role)) rows = rows.filter((t) => !t.owner || t.owner === ctx.email);
   res.json({ success: true, data: rows });
+});
+directoryRouter.post('/tasks', requireAuth(), (req: Request, res: Response) => {
+  const db = loadDb(); const ctx = ctxOf(req);
+  const title = String(req.body?.title || '').trim();
+  if (!title) return res.status(400).json({ success: false, message: 'title required.' });
+  let owner = ctx.email;
+  if (req.body.owner && String(req.body.owner).toLowerCase() !== ctx.email.toLowerCase()) {
+    if (!['superadmin','platform_owner','operations_admin','employee','sales_manager','sales_admin'].includes(ctx.role)) {
+      return res.status(403).json({ success: false, message: 'Only managers can assign tasks to others.' });
+    }
+    owner = String(req.body.owner);
+  }
+  const t = {
+    id: uid('TSK'), title: title.slice(0, 200), client: String(req.body?.client || '').slice(0, 160),
+    dueDate: req.body?.dueDate || null,
+    priority: ['High','Medium','Low'].includes(req.body?.priority) ? req.body.priority : 'Medium',
+    status: 'Pending', owner, createdBy: ctx.email, createdAt: nowIso(), updatedAt: nowIso(),
+  };
+  db.tasks.unshift(t);
+  audit(ctx.email, `TASK_CREATED:${t.id}`, ctx.tenantId, 'task', t.id, req.ip); persist();
+  res.status(201).json({ success: true, data: t });
 });
 directoryRouter.patch('/tasks/:id', requireAuth(), (req, res) => {
   const db = loadDb(); const ctx = ctxOf(req);
   const t: any = db.tasks.find((x: any) => x.id === req.params.id);
   if (!t) return res.status(404).json({ success: false, message: 'Not found.' });
-  if (!['superadmin','platform_owner','operations_admin'].includes(ctx.role) && t.owner && t.owner !== ctx.email) return res.status(404).json({ success: false, message: 'Not found.' });
+  // P6: unowned tasks no longer bypass — non-privileged can only flip own tasks.
+  if (!['superadmin','platform_owner','operations_admin'].includes(ctx.role) && String(t.owner || '').toLowerCase() !== ctx.email.toLowerCase()) return res.status(404).json({ success: false, message: 'Not found.' });
   if (req.body.status && !['Pending','In Progress','Completed','Cancelled'].includes(req.body.status)) return res.status(400).json({ success: false, message: 'Invalid status.' });
-  t.status = req.body.status || t.status; t.updatedAt = nowIso(); persist(); res.json({ success: true, data: t });
+  const tFrom = t.status;
+  t.status = req.body.status || t.status; t.updatedAt = nowIso();
+  // Phase E: status moves are audited with before/after.
+  audit(ctx.email, `TASK_STATUS:${t.id} ${tFrom}->${t.status}`, ctx.tenantId, 'task', t.id, req.ip, { before: tFrom, after: t.status }); persist();
+  res.json({ success: true, data: t });
 });

@@ -6,6 +6,11 @@ import { messageSchema } from '../validate/schemas.js';
 /** Interview-only chat (§13). Eligibility enforced on every call. */
 export const messagingRouter = Router();
 
+// P1-6: chat is plain-text — strip HTML so stored XSS can't execute in feeds.
+function plainText(s: string, max = 4000): string {
+  return String(s || '').replace(/<[^>]*>/g, '').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '').slice(0, max).trim();
+}
+
 messagingRouter.get('/conversations', requireAuth(), (req, res) => {
   const ctx = ctxOf(req); const appId = String(req.query.applicationId || '');
   let rows = loadDb().conversations as any[];
@@ -27,6 +32,14 @@ messagingRouter.get('/conversations/:id/messages', requireAuth(), (req, res) => 
   const iv = db.interviews.find((i: any) => i.applicationId === conv.applicationId && ['Scheduled','Rescheduled','Completed'].includes(i.status));
   if (!iv && !['superadmin','platform_owner'].includes(ctx.role)) return res.status(403).json({ success: false, message: 'Chat unlocks after an interview is scheduled for this application.', code: 'CHAT_LOCKED' });
   const msgs = db.messages.filter((m: any) => m.conversationId === conv.id).sort((a: any, b: any) => String(a.createdAt).localeCompare(String(b.createdAt)));
+  // Delivery receipt: messages from others become 'delivered' once the thread is opened.
+  let touched = false;
+  for (const m of msgs) {
+    if (m.sender !== ctx.email && m.deliveryStatus !== 'delivered' && m.deliveryStatus !== 'read') {
+      m.deliveryStatus = 'delivered'; touched = true;
+    }
+  }
+  if (touched) persist();
   res.json({ success: true, data: { conversation: conv, messages: msgs } });
 });
 
@@ -46,11 +59,38 @@ messagingRouter.post('/messages', requireAuth(['candidate','employer','superadmi
   const window = Date.now() - 5 * 60 * 1000;
   const recent = db.messages.filter((m: any) => m.conversationId === conv.id && m.sender === ctx.email && new Date(m.createdAt).getTime() > window).length;
   if (recent >= 30) return res.status(429).json({ success: false, message: 'Rate limited. Slow down.' });
-  const msg = { id: uid('MSG'), sender: ctx.email, senderRole: ctx.role, ...parsed.data, createdAt: nowIso() };
+  // Attachment messages must reference an existing document the sender can access.
+  if (parsed.data.attachment) {
+    const d: any = db.documents.find((x: any) => x.id === parsed.data.attachment!.docId);
+    if (!d) return res.status(400).json({ success: false, message: 'Attachment not found. Upload first.' });
+    const canSee = ctx.role === 'superadmin' || String(d.ownerEmail || '').toLowerCase() === ctx.email.toLowerCase() || d.orgId === ctx.tenantId;
+    if (!canSee) return res.status(400).json({ success: false, message: 'Attachment not found. Upload first.' });
+  }
+  if (parsed.data.type === 'attachment' && !parsed.data.attachment) {
+    return res.status(400).json({ success: false, message: 'Attachment reference required for attachment messages.' });
+  }
+  const cleanBody = plainText(parsed.data.body, 4000);
+  if (!cleanBody) return res.status(400).json({ success: false, message: 'body (1–4000 chars) required.' });
+  const msg = { id: uid('MSG'), sender: ctx.email, senderRole: ctx.role, ...parsed.data, body: cleanBody, deliveryStatus: 'sent', editedAt: null, createdAt: nowIso() };
   db.messages.unshift(msg); conv.lastMessageAt = nowIso();
   db.notifications.unshift({ id: uid('NOTIF'), recipient: ctx.role === 'candidate' ? `company:${conv.companyId}` : conv.candidateId, kind: 'chat', body: `New message in ${conv.id}`, channel: 'in-app', status: 'queued', createdAt: nowIso(), tenantId: conv.companyId });
   audit(ctx.email, `CHAT_MESSAGE:${conv.id}`, conv.companyId, 'message', msg.id, req.ip); persist();
   res.status(201).json({ success: true, data: msg });
+});
+
+// Edit own message (history preserved — editedAt stamped, no deletes per §13)
+messagingRouter.patch('/messages/:id', requireAuth(['candidate','employer','superadmin','company_admin','hiring_manager','company_recruiter']), (req: Request, res: Response) => {
+  const db = loadDb(); const ctx = ctxOf(req);
+  const m: any = db.messages.find((x: any) => x.id === req.params.id);
+  if (!m) return res.status(404).json({ success: false, message: 'Message not found.' });
+  if (m.sender !== ctx.email && !['superadmin','platform_owner'].includes(ctx.role)) {
+    return res.status(404).json({ success: false, message: 'Message not found.' });
+  }
+  const body = plainText(String(req.body?.body || ''));
+  if (!body || body.length > 4000) return res.status(400).json({ success: false, message: 'body (1–4000 chars) required.' });
+  m.body = body; m.editedAt = nowIso();
+  audit(ctx.email, `CHAT_EDITED:${m.id}`, ctx.tenantId, 'message', m.id, req.ip); persist();
+  res.json({ success: true, data: m });
 });
 
 // Close conversation (withdrawal / closure / suspension) — history preserved (§13)

@@ -1,18 +1,61 @@
 import { Router, Request, Response } from 'express';
-import { loadDb, persist, uid, nowIso, audit } from '../db/store.js';
+import rateLimit from 'express-rate-limit';
+import { loadDb, persist, uid, nowIso, audit, pushHistory } from '../db/store.js';
+import { notify } from '../domain/pipeline.js';
 import { requireAuth, ctxOf } from '../middleware/rbac.js';
 import { leadSchema, paginate, paged } from '../validate/schemas.js';
 
 export const salesRouter = Router();
+// Phase 7: public enquiries are rate-limited and never trust client owner/status.
+const enquiryLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
+
+// ---- Public business enquiry → lead (no auth; server sets owner/status) ----
+salesRouter.post('/enquiries', enquiryLimiter, (req: Request, res: Response) => {
+  const b: any = req.body || {};
+  const contactName = String(b.contactName || '').trim();
+  const companyName = String(b.companyName || '').trim();
+  const workEmail = String(b.workEmail || b.email || '').trim().toLowerCase();
+  const message = String(b.message || '').trim();
+  if (!contactName) return res.status(400).json({ success: false, message: 'Contact name is required.' });
+  if (!companyName) return res.status(400).json({ success: false, message: 'Company name is required.' });
+  if (!/.+@.+\..+/.test(workEmail)) return res.status(400).json({ success: false, message: 'Valid work email is required.' });
+  if (message.length < 10) return res.status(400).json({ success: false, message: 'Message must be at least 10 characters.' });
+  const db = loadDb();
+  // Idempotent within 24h on the same email+company — never double-create.
+  const dayAgo = Date.now() - 24 * 3600 * 1000;
+  const dup = (db.leads as any[]).find((l: any) =>
+    String(l.email || '').toLowerCase() === workEmail &&
+    String(l.companyName || '').toLowerCase() === companyName.toLowerCase() &&
+    new Date(l.createdAt || 0).getTime() > dayAgo);
+  if (dup) return res.status(200).json({ success: true, code: 'ENQUIRY_DUPLICATE', message: 'Enquiry already received — our team will follow up.', data: { id: dup.id } });
+  const lead = {
+    id: uid('LEAD'), contactName, companyName, email: workEmail,
+    phone: String(b.phone || '').slice(0, 30),
+    website: String(b.website || '').slice(0, 160),
+    industry: String(b.industry || '').slice(0, 80),
+    enquiryType: ['employer', 'candidate', 'partner'].includes(b.enquiryType) ? b.enquiryType : 'employer',
+    service: String(b.service || '').slice(0, 120),
+    formName: String(b.formName || '').slice(0, 80),
+    sourcePage: String(b.sourcePage || '').slice(0, 200),
+    notes: message.slice(0, 4000),
+    consent: b.consent === true,
+    source: 'Website', stage: 'New', priority: 'Medium', owner: '',
+    createdAt: nowIso(), history: [{ stage: 'New', at: nowIso() }],
+  };
+  db.leads.unshift(lead);
+  db.leadActivities.unshift({ id: uid('LACT'), leadId: lead.id, type: 'enquiry', outcome: 'received', notes: `Website enquiry from ${contactName} @ ${companyName}.`, owner: '', createdAt: nowIso() });
+  audit('website', `ENQUIRY_RECEIVED:${lead.id}`, 'TNT-GLOBAL', 'lead', lead.id, req.ip); persist();
+  res.status(201).json({ success: true, data: { id: lead.id } });
+});
 const LEAD_FLOW: Record<string, string[]> = { New: ['Contacted','Lost'], Contacted: ['Qualified','Lost','Nurture'], Qualified: ['Discovery Scheduled','Lost'], 'Discovery Scheduled': ['Proposal Sent','Lost'], 'Proposal Sent': ['Negotiation','Lost'], Negotiation: ['Won','Lost','Nurture'], Won: [], Lost: ['New'], Nurture: ['Contacted'] };
 
 // ---- Leads ----
 salesRouter.get('/leads', requireAuth(['superadmin','platform_owner','sales_admin','employee','bda','sales_manager','operations_admin']), (req, res) => {
   const { page, pageSize, q, status } = paginate.parse(req.query);
-  let rows = loadDb().leads as any[];
+  let rows = (loadDb().leads as any[]).filter((l) => !l.deleted);
   if (['bda','employee'].includes(ctxOf(req).role)) rows = rows.filter((l) => !l.owner || l.owner === ctxOf(req).email);
   if (status) rows = rows.filter((l) => l.stage === status);
-  if (q) rows = rows.filter((l) => JSON.stringify(l).toLowerCase().includes(String(q).toLowerCase()));
+  if (q) { const s = String(q).toLowerCase(); rows = rows.filter((l) => `${l.id || ''} ${l.contactName || ''} ${l.companyName || ''} ${l.email || ''} ${l.stage || ''} ${l.owner || ''}`.toLowerCase().includes(s)); }
   res.json({ success: true, ...paged(rows, page, pageSize) });
 });
 salesRouter.post('/leads', requireAuth(['superadmin','platform_owner','sales_admin','employee','bda','sales_manager']), (req: Request, res: Response) => {
@@ -24,23 +67,31 @@ salesRouter.post('/leads', requireAuth(['superadmin','platform_owner','sales_adm
 });
 salesRouter.put('/leads/:id', requireAuth(['superadmin','platform_owner','sales_admin','employee','bda','sales_manager']), (req: Request, res: Response) => {
   const db = loadDb(); const l: any = db.leads.find((x: any) => x.id === req.params.id);
-  if (!l) return res.status(404).json({ success: false, message: 'Lead not found.' });
+  if (!l || l.deleted) return res.status(404).json({ success: false, message: 'Lead not found.' });
+  const ctx = ctxOf(req);
+  // Phase B: ownership — BDA/employee edit owned leads only; managers+admins anywhere.
+  if (['bda','employee'].includes(ctx.role) && l.owner && l.owner !== ctx.email) {
+    return res.status(404).json({ success: false, message: 'Lead not found.' });
+  }
   const b: any = req.body || {};
+  // P2-8: BDA/employee cannot reassign ownership to hide/transfer pipeline.
+  const BLOCK_REASSIGN = ['bda', 'employee'].includes(ctx.role) ? ['owner', 'team', 'branch'] : [];
   for (const k of ['contactName','designation','email','phone','companyName','website','industry','companySize','location','source','service','hiringNeed','openings','value','budget','closeDate','priority','owner','team','branch','nextFollowUp','notes']) {
-    if (b[k] !== undefined) l[k] = b[k];
+    if (b[k] !== undefined && !BLOCK_REASSIGN.includes(k)) l[k] = b[k];
   }
   l.updatedAt = nowIso();
   audit(ctxOf(req).email, `LEAD_EDITED:${l.id}`, 'TNT-GLOBAL', 'lead', l.id, req.ip); persist();
   res.json({ success: true, data: l });
 });
 salesRouter.delete('/leads/:id', requireAuth(['superadmin','platform_owner','sales_admin','sales_manager']), (req, res) => {
-  const db = loadDb(); const i = db.leads.findIndex((x: any) => x.id === req.params.id);
-  if (i < 0) return res.status(404).json({ success: false, message: 'Lead not found.' });
-  const l: any = db.leads[i];
+  const db = loadDb(); const l: any = db.leads.find((x: any) => x.id === req.params.id);
+  if (!l || l.deleted) return res.status(404).json({ success: false, message: 'Lead not found.' });
   if (l.stage === 'Won') return res.status(422).json({ success: false, message: 'Won leads cannot be deleted (audit). Mark Lost instead.' });
-  const [removed] = db.leads.splice(i, 1);
-  audit(ctxOf(req).email, `LEAD_DELETED:${l.id}`, 'TNT-GLOBAL', 'lead', l.id, req.ip); persist();
-  res.json({ success: true, data: removed });
+  const reason = String((req.body as any)?.reason || req.query.reason || 'admin-delete (no reason supplied)').slice(0, 500);
+  // P2-8: soft-delete preserves pipeline evidence; hard splice removed.
+  l.deleted = true; l.deletedAt = nowIso(); l.deleteReason = reason; l.deletedBy = ctxOf(req).email;
+  audit(ctxOf(req).email, `LEAD_DELETED:${l.id}`, 'TNT-GLOBAL', 'lead', l.id, req.ip, { reason }); persist();
+  res.json({ success: true, data: { id: l.id, deleted: true } });
 });
 salesRouter.patch('/leads/:id/stage', requireAuth(['superadmin','platform_owner','sales_admin','employee','bda','sales_manager']), (req: Request, res: Response) => {
   const db = loadDb(); const l: any = db.leads.find((x: any) => x.id === req.params.id);
@@ -55,8 +106,16 @@ salesRouter.patch('/leads/:id/stage', requireAuth(['superadmin','platform_owner'
   res.json({ success: true, data: l });
 });
 salesRouter.post('/leads/:id/activities', requireAuth(['superadmin','platform_owner','sales_admin','employee','bda','sales_manager']), (req: Request, res: Response) => {
-  const db = loadDb(); const act = { id: uid('LACT'), leadId: req.params.id, type: req.body.type || 'call', outcome: req.body.outcome || '', notes: String(req.body.notes || '').slice(0, 4000), nextAction: req.body.nextAction || '', followUp: req.body.followUp || '', owner: ctxOf(req).email, createdAt: nowIso() };
-  db.leadActivities.unshift(act); persist();
+  const db = loadDb();
+  const lead: any = db.leads.find((x: any) => x.id === req.params.id);
+  if (!lead) return res.status(404).json({ success: false, message: 'Lead not found.' });
+  const ctx = ctxOf(req);
+  if (['bda','employee'].includes(ctx.role) && lead.owner && lead.owner !== ctx.email) {
+    return res.status(404).json({ success: false, message: 'Lead not found.' });
+  }
+  const act = { id: uid('LACT'), leadId: req.params.id, type: req.body.type || 'call', outcome: req.body.outcome || '', notes: String(req.body.notes || '').slice(0, 4000), nextAction: req.body.nextAction || '', followUp: req.body.followUp || '', owner: ctxOf(req).email, createdAt: nowIso() };
+  db.leadActivities.unshift(act);
+  audit(ctx.email, `LEAD_ACTIVITY:${lead.id}:${act.type}`, 'TNT-GLOBAL', 'lead', lead.id, req.ip); persist();
   res.status(201).json({ success: true, data: act });
 });
 salesRouter.get('/leads/:id/activities', requireAuth(['superadmin','platform_owner','sales_admin','sales_manager','employee','bda']), (req, res) => {
@@ -89,13 +148,39 @@ salesRouter.post('/leads/:id/merge', requireAuth(['superadmin','platform_owner',
 salesRouter.post('/leads/:id/convert', requireAuth(['superadmin','platform_owner','sales_admin','sales_manager']), (req: Request, res: Response) => {
   const db = loadDb(); const l: any = db.leads.find((x: any) => x.id === req.params.id);
   if (!l) return res.status(404).json({ success: false, message: 'Lead not found.' });
-  if (db.organizations.find((o: any) => o.legalName === l.companyName)) return res.status(409).json({ success: false, message: 'Organization already exists (duplicate prevented).' });
+  const onboard = (orgId: string, orgName: string) => {
+    // Phase 8: onboarding team (ops + platform) learns about every conversion.
+    const team = (db.users as any[])
+      .filter((u: any) => ['operations_admin', 'employee', 'superadmin', 'platform_owner'].includes(u.role) && String(u.status || 'Active') === 'Active')
+      .slice(0, 10);
+    for (const u of team) {
+      db.notifications.unshift({ id: uid('NOTIF'), recipient: u.email, kind: 'lead-converted', body: `Lead ${l.id} (${l.companyName}) converted → organization ${orgId} (${orgName}). Review verification.`, channel: 'in-app', status: 'queued', createdAt: nowIso(), tenantId: orgId });
+    }
+  };
+  const ensureOpportunity = (orgId: string) => {
+    if (!(db.opportunities as any[]).some((o: any) => o.leadId === l.id)) {
+      db.opportunities.unshift({ id: uid('OPP'), leadId: l.id, orgId, title: `${l.companyName} opportunity`, value: Number(l.value || 0), currency: 'INR', stage: 'Won', owner: l.owner, createdAt: nowIso() });
+    }
+  };
+  // Phase 8: retry-safe — an existing organization is linked, never duplicated.
+  const existing: any = db.organizations.find((o: any) => String(o.legalName || '').toLowerCase() === String(l.companyName || '').toLowerCase());
+  if (existing) {
+    const already = (existing as any).leadId === l.id && l.stage === 'Won';
+    l.stage = 'Won'; (l.history ||= []).push({ stage: 'Won', at: nowIso(), orgId: existing.id });
+    ensureOpportunity(existing.id);
+    audit(ctxOf(req).email, `LEAD_CONVERTED:${l.id}->${existing.id}`, existing.id, 'lead', l.id, req.ip); persist();
+    onboard(existing.id, existing.displayName || existing.legalName);
+    persist();
+    return res.status(200).json({ success: true, code: already ? 'LEAD_ALREADY_CONVERTED' : 'LEAD_LINKED_EXISTING', message: already ? 'Lead already converted — returning the linked organization.' : 'Organization already exists — lead linked without duplicating.', data: existing });
+  }
   const org = { id: uid('TNT'), legalName: l.companyName, displayName: l.companyName, status: 'Invited', verificationStatus: 'Pending', accountStatus: 'Invited', leadId: l.id, createdDate: nowIso().slice(0, 10) };
   db.organizations.unshift(org);
   l.stage = 'Won'; (l.history ||= []).push({ stage: 'Won', at: nowIso(), orgId: org.id });
   // Won conversions mint a linked opportunity so pipeline value survives the handoff.
   db.opportunities.unshift({ id: uid('OPP'), leadId: l.id, orgId: org.id, title: `${l.companyName} opportunity`, value: Number(l.value || 0), currency: 'INR', stage: 'Won', owner: l.owner, createdAt: nowIso() });
   audit(ctxOf(req).email, `LEAD_CONVERTED:${l.id}->${org.id}`, org.id, 'lead', l.id, req.ip); persist();
+  onboard(org.id, org.displayName);
+  persist();
   res.status(201).json({ success: true, data: org });
 });
 // ---- Targets / performance ----
@@ -124,7 +209,7 @@ salesRouter.delete('/targets/:id', requireAuth(['superadmin','platform_owner','s
   const [removed] = db.targets.splice(i, 1); persist();
   res.json({ success: true, data: removed });
 });
-salesRouter.get('/performance', requireAuth(['superadmin','platform_owner','sales_admin','sales_manager','employee']), (req, res) => {
+salesRouter.get('/performance', requireAuth(['superadmin','platform_owner','sales_admin','sales_manager','employee','bda']), (req, res) => {
   const db = loadDb();
   const q = req.query as Record<string, string>;
   let leads = db.leads as any[];
@@ -170,6 +255,41 @@ salesRouter.get('/performance', requireAuth(['superadmin','platform_owner','sale
     filters: { owners, sources, services, branches },
   } });
 });
+// ---- Unified activity feed (§10.2): lead activities + meetings + proposals, newest first ----
+salesRouter.get('/activities', requireAuth(['superadmin','platform_owner','sales_admin','sales_manager','employee','bda']), (req, res) => {
+  const db: any = loadDb(); const ctx = ctxOf(req);
+  const q = req.query as Record<string, string>;
+  const leadById = new Map((db.leads as any[]).map((l: any) => [l.id, l]));
+  const mineOnly = ['employee','bda'].includes(ctx.role) && !['superadmin','platform_owner','sales_admin','sales_manager'].includes(ctx.role);
+  const visible = (owner: unknown, leadId: unknown) => {
+    if (!mineOnly) return true;
+    if (String(owner || '').toLowerCase() === ctx.email.toLowerCase()) return true;
+    const lead: any = leadById.get(String(leadId || ''));
+    return !!lead && String(lead.owner || '').toLowerCase() === ctx.email.toLowerCase();
+  };
+  const rows: any[] = [];
+  for (const a of (db.leadActivities as any[] || [])) {
+    if (!visible(a.owner, a.leadId)) continue;
+    const lead: any = leadById.get(a.leadId);
+    rows.push({ id: a.id, kind: 'activity', leadId: a.leadId, leadName: lead ? `${lead.contactName || ''} @ ${lead.companyName || ''}`.trim() : a.leadId, title: a.type || 'activity', outcome: a.outcome || '', notes: a.notes || '', nextAction: a.nextAction || '', followUp: a.followUp || '', owner: a.owner, at: a.createdAt, createdAt: a.createdAt });
+  }
+  for (const m of (db.meetings as any[] || [])) {
+    if (!visible(m.owner, m.leadId)) continue;
+    const lead: any = leadById.get(m.leadId);
+    rows.push({ id: m.id, kind: 'meeting', leadId: m.leadId, leadName: lead ? `${lead.contactName || ''} @ ${lead.companyName || ''}`.trim() : m.leadId, title: m.title || 'Meeting', outcome: m.outcome || '', notes: m.notes || '', nextAction: m.nextAction || '', followUp: m.followUp || '', owner: m.owner, at: m.at || m.createdAt, createdAt: m.createdAt });
+  }
+  for (const p of (db.proposals as any[] || [])) {
+    if (!visible(p.owner, p.leadId)) continue;
+    const lead: any = leadById.get(p.leadId);
+    rows.push({ id: p.id, kind: 'proposal', leadId: p.leadId, leadName: lead ? `${lead.contactName || ''} @ ${lead.companyName || ''}`.trim() : p.leadId, title: p.title || 'Proposal', outcome: p.status || '', notes: p.amount !== undefined ? `Amount ${p.currency || 'INR'} ${Number(p.amount || 0).toLocaleString('en-IN')}${p.validUntil ? `, valid until ${p.validUntil}` : ''}` : '', nextAction: '', followUp: '', owner: p.owner, at: p.createdAt, createdAt: p.createdAt });
+  }
+  let out = rows.sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')));
+  if (q.kind) out = out.filter((r) => r.kind === q.kind);
+  if (q.leadId) out = out.filter((r) => r.leadId === q.leadId);
+  if (q.owner) out = out.filter((r) => r.owner === q.owner);
+  const { page, pageSize } = paginate.parse(req.query);
+  res.json({ success: true, ...paged(out, page, pageSize) });
+});
 // ---- Agency submissions (§9.4) with duplicate/ownership window ----
 salesRouter.get('/submissions', requireAuth(), (req, res) => {
   const { page, pageSize } = paginate.parse(req.query);
@@ -190,13 +310,14 @@ salesRouter.post('/submissions', requireAuth(['agency_admin','agency_recruiter',
   const listed = (job.assignedAgencies || []) as string[];
   const assigned = ['superadmin','platform_owner'].includes(ctx.role)
     || (['Published','Approved'].includes(job.status) && (listed.length === 0 || listed.some((a: string) => String(a).toLowerCase().includes(String(ctx.tenantId).toLowerCase()) || String(ctx.email).toLowerCase().includes(String(a).toLowerCase().split(' ')[0]))));
-  if (!assigned) return res.status(403).json({ success: false, message: 'Job not assigned to your agency.' });
+  if (!assigned) return res.status(403).json({ success: false, code: 'AGENCY_NOT_ASSIGNED', message: 'Job not assigned to your agency.' });
   // Duplicate / ownership window: 90 days
   const windowMs = 90 * 864e5;
   const dup = db.submissions.find((s: any) => s.jobId === jobId && String(s.candidateEmail).toLowerCase() === String(candidateEmail).toLowerCase() && Date.now() - new Date(s.createdAt).getTime() < windowMs);
   const existingApp = db.applications.find((a: any) => a.jobId === jobId && String(a.candidateEmail).toLowerCase() === String(candidateEmail).toLowerCase());
   const row = { id: uid('SUBM'), agencyId: ctx.tenantId, jobId, orgId: job.orgId, candidateEmail, resumeRef: resumeRef || '', consentEvidence: consent || '', status: dup || existingApp ? 'Duplicate-Review' : 'Submitted', duplicateOf: dup?.id || existingApp?.id || null, submittedBy: ctx.email, createdAt: nowIso() };
   db.submissions.unshift(row); audit(ctx.email, `SUBMISSION:${row.id}:${row.status}`, job.orgId, 'submission', row.id, req.ip); persist();
+  if (row.status === 'Duplicate-Review') return res.status(201).json({ success: true, code: 'DUPLICATE_SUBMISSION_REVIEW', data: row });
   res.status(201).json({ success: true, data: row });
 });
 salesRouter.patch('/submissions/:id/status', requireAuth(['employer','superadmin','company_admin','hiring_manager','employee','operations_admin']), (req, res) => {
@@ -207,4 +328,37 @@ salesRouter.patch('/submissions/:id/status', requireAuth(['employer','superadmin
   s.status = req.body.status || s.status; s.updatedAt = nowIso();
   audit(ctxOf(req).email, `SUBMISSION_STATUS:${s.id}->${s.status}`, s.orgId, 'submission', s.id, req.ip); persist();
   res.json({ success: true, data: s });
+});
+// Accept a submission into the ATS pipeline: creates the application (Applied),
+// links it back, and marks the submission Shortlisted. Frozen jobs refuse.
+salesRouter.post('/submissions/:id/accept', requireAuth(['employer','superadmin','platform_owner','company_admin','hiring_manager','employee','operations_admin']), (req, res) => {
+  const db: any = loadDb();
+  const s: any = (db.submissions || []).find((x: any) => x.id === req.params.id);
+  if (!s) return res.status(404).json({ success: false, message: 'Not found.' });
+  const ctx = ctxOf(req);
+  if (!['superadmin','platform_owner','employee','operations_admin'].includes(ctx.role) && s.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Not found.' });
+  if (['Rejected','Withdrawn'].includes(s.status)) return res.status(422).json({ success: false, code: 'SUBMISSION_DEAD', message: `Submission is ${s.status} — cannot accept.` });
+  const job: any = db.jobs.find((j: any) => j.id === s.jobId);
+  if (!job) return res.status(404).json({ success: false, message: 'Linked job not found.' });
+  if (job.status !== 'Published' || (job.expiryDate && new Date(job.expiryDate) <= new Date())) {
+    return res.status(422).json({ success: false, code: 'PIPELINE_FROZEN', message: `Job ${job.id} is ${job.status} — resume it to accept submissions.` });
+  }
+  const key = `${s.jobId}::${String(s.candidateEmail).toLowerCase()}`;
+  const dup: any = db.applications.find((a: any) => a.key === key);
+  if (dup || s.applicationId) {
+    const appId = s.applicationId || dup?.id;
+    return res.status(409).json({ success: false, code: 'APPLICATION_EXISTS', message: 'Candidate already in pipeline for this job.', applicationId: appId });
+  }
+  const cand: any = db.candidateProfiles.find((x: any) => String(x.email || '').toLowerCase() === String(s.candidateEmail).toLowerCase());
+  const app = { id: uid('APP'), key, jobId: s.jobId, jobTitle: job.title, orgId: s.orgId, requisitionId: job.requisitionId, candidateEmail: s.candidateEmail, candidateName: cand?.name || s.candidateEmail, stage: 'Applied', source: `submission:${s.id}`, submissionId: s.id, agencyId: s.agencyId, createdAt: nowIso(), updatedAt: nowIso() };
+  db.applications.unshift(app);
+  pushHistory(db.stageHistory, { id: uid('STG'), applicationId: app.id, from: '-', to: 'Applied', actor: ctx.email, reason: `Accepted submission ${s.id}`, createdAt: nowIso() });
+  job.applicantsCount = (job.applicantsCount || 0) + 1;
+  s.status = 'Shortlisted'; s.applicationId = app.id; s.updatedAt = nowIso();
+  audit(ctx.email, `SUBMISSION_ACCEPTED:${s.id}->${app.id}`, s.orgId, 'submission', s.id, req.ip);
+  if (s.submittedBy) notify(db, s.submittedBy, 'submission', `Submission ${s.id} accepted — ${s.candidateEmail} entered the pipeline for ${s.jobId} (${app.id}).`, s.orgId);
+  notify(db, `company:${s.orgId}`, 'submission', `Submission ${s.id} accepted into pipeline (${app.id}).`, s.orgId);
+  persist();
+  const { key: _k, ...pub } = app;
+  res.status(201).json({ success: true, data: { application: pub, submission: s } });
 });

@@ -14,6 +14,7 @@ export interface TableProps<T> extends TableHTMLAttributes<HTMLTableElement> {
   data: T[];
   emptyMessage?: string;
   keyExtractor: (row: T) => string | number;
+  caption?: string;
 }
 
 export function Table<T>({
@@ -21,6 +22,7 @@ export function Table<T>({
   data,
   emptyMessage = 'No records found',
   keyExtractor,
+  caption,
   className,
   ...props
 }: TableProps<T>) {
@@ -39,11 +41,13 @@ export function Table<T>({
         style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}
         {...props}
       >
+        {caption && <caption style={{ textAlign: 'left', padding: '0.5rem 0', fontWeight: 700 }}>{caption}</caption>}
         <thead>
           <tr style={{ borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface-raised)' }}>
             {columns.map((col) => (
               <th
                 key={col.key}
+                scope="col"
                 style={{
                   padding: '0.875rem 1.25rem',
                   fontWeight: 600,

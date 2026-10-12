@@ -22,7 +22,9 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('[NexaTalent ErrorBoundary caught error]:', error, errorInfo);
+    // P6: log message only — full stack/component trace may hold PII/routes.
+    console.error('[NexaTalent ErrorBoundary]:', String(error?.message || 'unknown').slice(0, 300));
+    void errorInfo;
   }
 
   public handleReset = () => {
@@ -70,9 +72,10 @@ export class ErrorBoundary extends Component<Props, State> {
                 marginBottom: '1.5rem',
               }}
             >
-              {this.state.error.message}
+              Something went wrong (ref: {String(Date.now().toString(36))}). Return home and retry.
             </pre>
           )}
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button
             onClick={this.handleReset}
             style={{
@@ -88,6 +91,22 @@ export class ErrorBoundary extends Component<Props, State> {
           >
             Try Again
           </button>
+          <button
+            onClick={() => { window.location.href = '/'; }}
+            style={{
+              padding: '0.625rem 1.25rem',
+              backgroundColor: 'transparent',
+              color: '#ffffff',
+              border: '1px solid var(--color-border)',
+              borderRadius: '6px',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Go home
+          </button>
+          </div>
         </div>
       );
     }

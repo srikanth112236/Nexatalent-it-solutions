@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { directoryApi, mfaApi, permissionsApi } from '../../shared/enterprise/phaseApi';
 import { syncAll } from '../common/EnterprisePanels';
 import { Modal, Select, Field, ConfirmDialog, RowMenu, DatePicker } from '../../shared/ui/EnterpriseKit';
-import { CrudToolbar, DetailDrawer, KeyValues, StatusPill, useQueryState, useDebounced } from '../common/CrudKit';
+import { CrudToolbar, DetailDrawer, KeyValues, StatusPill, useQueryState, useDebounced, DrawerCard, DrawerList, drawerTone } from '../common/CrudKit';
 import { Company360Drawer } from './SuperAdmin360';
 import { EmptyState } from '../../shared/ui/DataState';
 
@@ -175,24 +175,26 @@ export function OrganizationsManager({ tenants, setTenants, onAudit }: {
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
       <CrudToolbar search={search} onSearch={(v) => { setSearch(v); setPage(1); }} searchPh="Search ID, legal name, brand, plan…"
         status={status} onStatus={(v) => { setStatus(v); setPage(1); }} statuses={['Active', 'Invited', 'Suspended', 'Closed']}
+        suggest={{
+          items: tenants,
+          getTitle: (t) => t.displayName || t.name || t.legalName || t.id,
+          getMeta: (t) => `${t.id} • ${t.plan || '—'}`,
+          getStatus: (t) => t.accountStatus || t.status,
+          getQuery: (t) => String(t.id),
+        }}
         exportProps={{ filename: 'organizations.csv', rows: filtered, columns: ['id', 'legalName', 'displayName', 'entityType', 'industry', 'subIndustry', 'companySize', 'website', 'description', 'countryOfIncorporation', 'registrationNumber', 'gstin', 'taxIds', 'registeredAddress', 'headquarters', 'operatingLocations', 'primaryContact', 'primaryContactDesignation', 'businessEmail', 'businessPhone', 'billingContact', 'financeEmail', 'plan', 'seats', 'accountManager', 'salesOwner', 'verificationStatus', 'accountStatus', 'createdDate'] }} />
       {pageRows.length === 0 ? <EmptyState title="No organizations match" message="Adjust filters or provision a new tenant." /> : (<>
-        <div className="space-y-2 md:hidden">
+        <div className="space-y-1.5 md:hidden">
           {pageRows.map((t) => (
-            <div key={t.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="font-extrabold text-slate-900 text-sm truncate">{t.displayName || t.name || t.legalName}</div>
-                  <div className="font-mono text-[11px] text-amber-700">{t.id} • {t.plan}</div>
-                </div>
-                {menuFor(t)}
-              </div>
+            <DrawerCard key={t.id} status={t.accountStatus || t.status} title={t.displayName || t.name || t.legalName}
+              meta={<span className="font-mono">{t.id} • {t.plan}</span>}
+              right={menuFor(t)}>
               <div className="flex flex-wrap gap-1.5">
                 <StatusPill value={t.verificationStatus || 'Pending'} />
                 <StatusPill value={t.accountStatus || t.status} />
               </div>
-              <div className="text-slate-600 font-medium">{t.industry || '—'} • {t.businessEmail || '—'}</div>
-            </div>
+              <div className="text-slate-600 font-medium mt-1">{t.industry || '—'} • {t.businessEmail || '—'}</div>
+            </DrawerCard>
           ))}
         </div>
         <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
@@ -502,6 +504,13 @@ export function UsersManager({ users, setUsers }: { users: any[]; setUsers: (u: 
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
       <div className="flex flex-col lg:flex-row gap-2">
         <div className="flex-1"><CrudToolbar search={search} onSearch={(v) => { setSearch(v); setPage(1); }} searchPh="Search name, email, tenant…"
+          suggest={{
+            items: users,
+            getTitle: (u) => u.name || u.email || u.id,
+            getMeta: (u) => `${u.email || '—'} • ${u.role || '—'}`,
+            getStatus: (u) => u.status,
+            getQuery: (u) => String(u.email || u.id),
+          }}
           exportProps={{ filename: 'users.csv', rows: filtered, columns: ['id', 'name', 'email', 'phone', 'employeeId', 'department', 'designation', 'role', 'branch', 'reportingManager', 'tenantId', 'status', 'invitationStatus', 'mfaEnabled', 'startDate', 'endDate', 'lastLogin'] }} /></div>
         <div className="flex gap-2">
           <div className="w-40 shrink-0">
@@ -515,23 +524,17 @@ export function UsersManager({ users, setUsers }: { users: any[]; setUsers: (u: 
         </div>
       </div>
       {pageRows.length === 0 ? <EmptyState title="No users match" message="Adjust search or role filters." /> : (<>
-        <div className="space-y-2 md:hidden">
+        <div className="space-y-1.5 md:hidden">
           {pageRows.map((u) => (
-            <div key={u.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="font-extrabold text-slate-900 text-sm truncate">{u.name}</div>
-                  <div className="text-slate-500 truncate">{u.email}</div>
-                </div>
-                {userMenuFor(u)}
-              </div>
+            <DrawerCard key={u.id} status={u.status} title={u.name || u.email}
+              meta={<>{u.email} • <span className="font-mono">{u.tenantId}</span></>}
+              right={userMenuFor(u)}>
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 font-bold text-[11px] capitalize">{u.role}</span>
+                <span className="px-2 py-0.5 rounded-full bg-white/70 border border-slate-200 font-bold text-[11px] capitalize">{u.role}</span>
                 <StatusPill value={u.status} />
                 {u.mfaEnabled ? <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px]">MFA on</span> : null}
               </div>
-              <div className="text-slate-600 font-medium font-mono">{u.tenantId}</div>
-            </div>
+            </DrawerCard>
           ))}
         </div>
         <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
@@ -567,6 +570,24 @@ export function UsersManager({ users, setUsers }: { users: any[]; setUsers: (u: 
 
       {detail && (
         <DetailDrawer title={detail.name} subtitle={`${detail.email} • ${detail.id}`} onClose={() => setDetail(null)}>
+          <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-[0_1px_2px_rgba(15,23,42,0.05)] ${drawerTone(detail.status).card}`}>
+            <span aria-hidden="true" className="w-11 h-11 rounded-xl bg-slate-900 text-white font-extrabold text-base flex items-center justify-center shrink-0">
+              {String(detail.name || detail.email || '?').trim().charAt(0).toUpperCase()}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="font-extrabold text-slate-900 text-sm truncate">{detail.name}</div>
+              <div className="text-[11px] text-slate-500 font-medium truncate">{detail.email} • <span className="font-mono">{detail.tenantId}</span></div>
+              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                <span className="px-2 py-0.5 rounded-full bg-white/70 border border-slate-200 font-bold text-[11px] capitalize">{detail.role}</span>
+                <StatusPill value={detail.status} />
+                {detail.mfaEnabled
+                  ? <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px]">MFA on</span>
+                  : <span className="px-2 py-0.5 rounded-full bg-white/70 text-slate-500 border border-slate-200 font-bold text-[11px]">MFA off</span>}
+              </div>
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5 px-0.5">Profile</div>
           <KeyValues data={[
             ['Email', detail.email], ['Work phone', detail.phone || '—'], ['Role', detail.role], ['Tenant', detail.tenantId],
             ['Employee ID', detail.employeeId || '—'], ['Department', detail.department || '—'],
@@ -578,6 +599,7 @@ export function UsersManager({ users, setUsers }: { users: any[]; setUsers: (u: 
             ['End date', detail.endDate ? String(detail.endDate).slice(0, 10) : '—'],
             ['Last login', detail.lastLogin || 'Never'],
           ]} />
+          </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => { openEdit(detail); setDetail(null); }} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs">Edit</button>
             <button type="button" onClick={() => { setStatusFor(detail); setDetail(null); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Suspend / Reactivate</button>
@@ -586,15 +608,15 @@ export function UsersManager({ users, setUsers }: { users: any[]; setUsers: (u: 
           <div>
             <div className="text-xs font-extrabold text-slate-900 mb-2">Assigned work — companies, jobs, leads, candidates, tasks, interviews</div>
             {!assignments ? <div className="text-[11px] text-slate-500">Loading assignments…</div> : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {(['companies', 'jobs', 'requisitions', 'leads', 'candidates', 'tasks', 'interviews', 'targets', 'opportunities', 'meetings'] as const).map((k) => (
-                  <div key={k} className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-                    <div className="font-extrabold capitalize">{k} ({k === 'companies' ? assignments[k].length : assignments.counts?.[k] ?? assignments[k]?.length ?? 0})</div>
-                    {(assignments[k] || []).slice(0, 5).map((r: any) => (
-                      <div key={r.id} className="text-slate-600 font-medium truncate mt-1">
-                        {r.name || r.title || r.companyName || r.candidateName || r.clientName || r.id} • {r.status || r.stage || ''}
-                      </div>
-                    ))}
+                  <div key={k}>
+                    <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5 px-0.5 capitalize">{k} ({k === 'companies' ? assignments[k].length : assignments.counts?.[k] ?? assignments[k]?.length ?? 0})</div>
+                    <DrawerList items={(assignments[k] || []).slice(0, 50)} empty={`No ${k} assigned.`}
+                      render={(r: any) => (
+                        <DrawerCard key={r.id} status={r.status || r.stage} title={r.name || r.title || r.companyName || r.candidateName || r.clientName || r.id}
+                          meta={<span className="font-mono">{r.id}{r.status || r.stage ? ` • ${r.status || r.stage}` : ''}</span>} />
+                      )} />
                   </div>
                 ))}
               </div>
@@ -612,26 +634,22 @@ export function UsersManager({ users, setUsers }: { users: any[]; setUsers: (u: 
               <button type="button" disabled={busy} onClick={() => saveException(detail.email)} className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs shrink-0 disabled:opacity-50">Save</button>
             </div>
             {exceptions.length === 0 ? <div className="text-[11px] text-slate-500">No exceptions — role template applies.</div> : (
-              <div className="space-y-1.5">
-                {exceptions.map((o) => (
-                  <div key={o.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
-                    <span><strong className={o.effect === 'grant' ? 'text-emerald-600' : 'text-red-600'}>{o.effect}</strong> • {o.permission}</span>
-                    <button type="button" onClick={() => clearException(detail.email, o.permission, o.id)} className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 font-bold text-[11px]">Clear</button>
-                  </div>
-                ))}
-              </div>
+              <DrawerList items={exceptions} empty="No exceptions — role template applies."
+                render={(o) => (
+                  <DrawerCard key={o.id} status={o.effect === 'grant' ? 'Active' : 'Rejected'}
+                    title={<><strong className={o.effect === 'grant' ? 'text-emerald-600' : 'text-red-600'}>{o.effect}</strong><span className="text-slate-900"> • {o.permission}</span></>}
+                    right={<button type="button" onClick={() => clearException(detail.email, o.permission, o.id)} className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 font-bold text-[11px] shadow-[0_1px_2px_rgba(15,23,42,0.05)]">Clear</button>} />
+                )} />
             )}
           </div>
           <div>
             <div className="text-xs font-extrabold text-slate-900 mb-2">Access history (latest 20)</div>
             {history.length === 0 ? <div className="text-[11px] text-slate-500">No recorded actions by this account yet.</div> : (
-              <div className="space-y-1.5">
-                {history.map((h: any, i: number) => (
-                  <div key={h.id || i} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-600">
-                    {h.action} • {h.resource}/{h.recordId} • {String(h.timestamp || '').slice(0, 16).replace('T', ' ')}
-                  </div>
-                ))}
-              </div>
+              <DrawerList items={history} empty="No recorded actions by this account yet." label="Access history"
+                render={(h: any, i: number) => (
+                  <DrawerCard key={h.id || i} title={h.action}
+                    meta={<span className="font-mono">{h.resource}/{h.recordId} • {String(h.timestamp || '').slice(0, 16).replace('T', ' ')}</span>} mono />
+                )} />
             )}
           </div>
         </DetailDrawer>

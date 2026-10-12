@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { loadDb, persist, uid, nowIso, audit } from '../db/store.js';
-import { requireAuth, requirePermission, ctxOf, tenantOf } from '../middleware/rbac.js';
+import { requireAuth, requirePermission, ctxOf, tenantOf, denyFinanceUnlessGranted, FINANCE_VIEWERS } from '../middleware/rbac.js';
 import { invoiceSchema, paymentSchema, commissionAgreementSchema, agreementTemplateSchema, feeSlabSchema, invoiceSeriesSchema, paginate, paged } from '../validate/schemas.js';
 import { emit, claimIdempotency } from '../events/bus.js';
 import { mailConfigured } from '../events/mailer.js';
@@ -9,6 +10,16 @@ import PDFDocument from 'pdfkit';
 import { usageSummary, evaluate, consumeQuota } from '../domain/entitlements.js';
 
 export const commercialRouter = Router();
+
+// P5: server-side HTML strip for stored templates (mirrors frontend sanitizeHtml).
+function stripHtml(html: string): string {
+  let s = String(html || '');
+  s = s.replace(/<script[\s\S]*?<\/script\s*>/gi, '');
+  s = s.replace(/<style[\s\S]*?<\/style\s*>/gi, '');
+  s = s.replace(/<\/?(iframe|object|embed|link|meta|base|form|input|button|textarea|select|option)\b[^>]*>/gi, '');
+  s = s.replace(/\s+on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  return s.slice(0, 50000);
+}
 
 // ---- Plans & subscriptions ----
 commercialRouter.get('/plans', requireAuth(), (_req, res) => {
@@ -139,6 +150,38 @@ commercialRouter.get('/outreach', requireAuth(), (req, res) => {
   if (!['superadmin','platform_owner'].includes(ctx.role)) rows = rows.filter((c) => c.orgId === t);
   res.json({ success: true, data: rows });
 });
+// Campaign detail: recipients + events + delivery stats (§8.7)
+commercialRouter.get('/outreach/:id', requireAuth(), (req, res) => {
+  const db = loadDb(); const t = tenantOf(req); const ctx = ctxOf(req);
+  const camp: any = db.campaigns.find((c: any) => c.id === req.params.id);
+  if (!camp) return res.status(404).json({ success: false, message: 'Campaign not found.' });
+  if (!['superadmin','platform_owner'].includes(ctx.role) && camp.orgId !== t) return res.status(404).json({ success: false, message: 'Campaign not found.' });
+  const recipients = (db.campaignRecipients as any[]).filter((r: any) => r.campaignId === camp.id);
+  const events = (db.campaignEvents as any[]).filter((e: any) => e.campaignId === camp.id);
+  const byStatus: Record<string, number> = {};
+  for (const r of recipients) byStatus[r.status] = (byStatus[r.status] || 0) + 1;
+  res.json({ success: true, data: { ...camp, recipients: recipients.slice(0, 200), events: events.slice(0, 200), stats: { total: recipients.length, ...byStatus } } });
+});
+// Retry failed recipients (idempotent — already-queued addresses are skipped) (§8.7)
+commercialRouter.post('/outreach/:id/retry', requireAuth(['employer','company_admin','company_recruiter','superadmin']), (req: Request, res: Response) => {
+  const db = loadDb(); const t = tenantOf(req); const ctx = ctxOf(req);
+  const camp: any = db.campaigns.find((c: any) => c.id === req.params.id);
+  if (!camp) return res.status(404).json({ success: false, message: 'Campaign not found.' });
+  if (!['superadmin','platform_owner'].includes(ctx.role) && camp.orgId !== t) return res.status(404).json({ success: false, message: 'Campaign not found.' });
+  let requeued = 0;
+  for (const r of (db.campaignRecipients as any[]).filter((x: any) => x.campaignId === camp.id && x.status === 'Failed')) {
+    const key = `outreach:${camp.id}:${r.email}:retry`;
+    if (claimIdempotency(key)) {
+      try { consumeQuota(t, ctx.email, 'outreach.monthly_limit', 1, camp.id, key + ':quota'); } catch { continue; }
+      r.status = 'Queued'; r.retriedAt = nowIso();
+      db.campaignEvents.unshift({ id: uid('CMPE'), campaignId: camp.id, email: r.email, event: 'retry-queued', createdAt: nowIso() });
+      requeued += 1;
+    }
+  }
+  camp.status = 'Sent';
+  audit(ctx.email, `OUTREACH_RETRY:${camp.id}x${requeued}`, camp.orgId, 'campaign', camp.id, req.ip); persist();
+  res.json({ success: true, data: { ...camp, requeued } });
+});
 
 // ---- Invoices (Draft → Issued, immutable after issue §6.10) ----
 function withOverdue(inv: any): any {
@@ -146,9 +189,9 @@ function withOverdue(inv: any): any {
   const daysOverdue = overdue ? Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / 864e5) : 0;
   return { ...inv, overdue: !!overdue, daysOverdue };
 }
-commercialRouter.get('/invoices', requireAuth(), (req, res) => {
+commercialRouter.get('/invoices', requireAuth(), denyFinanceUnlessGranted, (req, res) => {
   const ctx = ctxOf(req); let rows = loadDb().invoices as any[];
-  if (!['superadmin','platform_owner','finance_admin','finance_staff'].includes(ctx.role)) rows = rows.filter((i) => i.orgId === ctx.tenantId);
+  if (!(FINANCE_VIEWERS as readonly string[]).includes(ctx.role)) rows = rows.filter((i) => i.orgId === ctx.tenantId);
   rows = rows.map(withOverdue);
   const q = String(req.query.q || '').toLowerCase();
   if (q) rows = rows.filter((i) => `${i.id} ${i.number} ${i.orgId} ${i.status} ${i.agreementId || ''}`.toLowerCase().includes(q));
@@ -159,7 +202,7 @@ commercialRouter.get('/invoices', requireAuth(), (req, res) => {
   const { page, pageSize } = paginate.parse(req.query);
   res.json({ success: true, ...paged(rows, page, pageSize) });
 });
-commercialRouter.get('/invoices/:id/document', requireAuth(), (req, res) => {
+commercialRouter.get('/invoices/:id/document', requireAuth(), denyFinanceUnlessGranted, (req, res) => {
   const db = loadDb(); const inv: any = db.invoices.find((i: any) => i.id === req.params.id);
   if (!inv) return res.status(404).json({ success: false, message: 'Invoice not found.' });
   const ctx = ctxOf(req);
@@ -193,10 +236,16 @@ function buildInvoiceDocument(db: any, inv: any): any {
 commercialRouter.get('/mail-outbox', requireAuth(), (req, res) => {
   const ctx = ctxOf(req); let rows = loadDb().mailOutbox as any[] || [];
   if (!['superadmin','platform_owner','finance_admin'].includes(ctx.role)) rows = rows.filter((m) => m.orgId === ctx.tenantId);
-  res.json({ success: true, data: rows.slice(0, 200), configured: mailConfigured() });
+  // P1-5: redact bodies for non-finance, paginate (was uncapped 200 slice).
+  const canSeeBody = ['superadmin', 'platform_owner', 'finance_admin'].includes(ctx.role) || (ctx.permissions || []).includes('view_sensitive_fields');
+  rows = rows.map((m: any) => (canSeeBody ? m : { ...m, html: m.html ? String(m.html).slice(0, 200) + '…[redacted]' : m.html, subject: m.subject }));
+  const page = Math.max(1, Number(req.query.page || 1));
+  const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize || 20)));
+  const total = rows.length;
+  return res.json({ success: true, data: rows.slice((page - 1) * pageSize, page * pageSize), pagination: { page, pageSize, total }, configured: mailConfigured() });
 });
 // ---- Server-generated PDFs (pdfkit, no browser needed) ----
-commercialRouter.get('/invoices/:id/pdf', requireAuth(), (req, res) => {
+commercialRouter.get('/invoices/:id/pdf', requireAuth(), denyFinanceUnlessGranted, (req, res) => {
   const db = loadDb(); const inv: any = db.invoices.find((i: any) => i.id === req.params.id);
   if (!inv) return res.status(404).json({ success: false, message: 'Invoice not found.' });
   const ctx = ctxOf(req);
@@ -267,7 +316,7 @@ function fillAgreementHtml(tpl: any, ag: any, org: any): Array<{ h?: boolean; t:
     .map((t) => (/^(Placement Services Agreement|Agreement|1\.|2\.|3\.|4\.|5\.|6\.|7\.)/.test(t) && t.length < 80 ? { h: true, t } : { t }));
 }
 // ---- Invoice reminders (due-soon + overdue → superadmin/finance notifications) ----
-commercialRouter.get('/invoice-reminders', requireAuth(), (req, res) => {
+commercialRouter.get('/invoice-reminders', requireAuth(), denyFinanceUnlessGranted, (req, res) => {
   const ctx = ctxOf(req); let rows = loadDb().invoiceReminders as any[];
   if (!['superadmin','platform_owner','finance_admin'].includes(ctx.role)) rows = rows.filter((r) => r.orgId === ctx.tenantId);
   res.json({ success: true, data: rows.slice(0, 200) });
@@ -373,12 +422,20 @@ commercialRouter.get('/refunds', requireAuth(['superadmin','platform_owner','fin
 });
 commercialRouter.post('/refunds', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('refund'), (req: Request, res: Response) => {
   const db = loadDb();
-  const { paymentId, amount, reason } = req.body || {};
+  const { paymentId, amount, reason, idempotencyKey } = req.body || {};
   const pay: any = db.payments.find((p: any) => p.id === paymentId);
   if (!pay) return res.status(404).json({ success: false, message: 'Payment not found.' });
   const amt = Number(amount || 0);
   if (!(amt > 0) || amt > Number(pay.amount || 0)) return res.status(400).json({ success: false, message: 'Invalid refund amount.' });
-  if (!claimIdempotency(`refund:${paymentId}:${amt}:${reason || ''}`)) return res.status(200).json({ success: true, message: 'Duplicate ignored (idempotent).' });
+  // P0-2: cumulative over-refund guard — total refunded can never exceed payment.
+  const already = Number(pay.refundedAmount || 0);
+  if (already + amt > Number(pay.amount || 0) + 0.005) return res.status(422).json({ success: false, code: 'REFUND_EXCEEDS_PAYMENT', message: `Refund would exceed payment balance (already refunded ₹${already}).` });
+  // P0-2: idempotency key must be caller-supplied opaque (min 12) — free-text
+  // reason is audit-only and excluded so tweaking it can't bypass dedupe.
+  const key = typeof idempotencyKey === 'string' && idempotencyKey.length >= 12
+    ? `refund:${idempotencyKey}`
+    : `refund:${paymentId}:${amt}`;
+  if (!claimIdempotency(key)) return res.status(200).json({ success: true, message: 'Duplicate ignored (idempotent).' });
   const refund = { id: uid('RFD'), paymentId, invoiceId: pay.invoiceId, orgId: pay.orgId, amount: amt, reason: reason || '', status: 'processed', createdAt: nowIso(), by: ctxOf(req).email };
   db.refunds.unshift(refund);
   pay.refundedAmount = Number(pay.refundedAmount || 0) + amt;
@@ -404,7 +461,13 @@ commercialRouter.get('/usage-ledger', requireAuth(['superadmin','platform_owner'
 commercialRouter.post('/credit-notes', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('refund'), (req: Request, res: Response) => {
   const db = loadDb(); const inv: any = db.invoices.find((i: any) => i.id === req.body.invoiceId);
   if (!inv) return res.status(404).json({ success: false, message: 'Invoice not found.' });
-  const cn = { id: uid('CN'), invoiceId: inv.id, amount: Number(req.body.amount || 0), reason: req.body.reason || '', createdAt: nowIso(), by: ctxOf(req).email };
+  // P2-8: validate amount + idempotency — negative/over-balance rejected, no silent floor.
+  const amt = Number(req.body.amount || 0);
+  if (!(amt > 0)) return res.status(400).json({ success: false, message: 'Credit amount must be positive.' });
+  if (amt > Number(inv.balance || 0) + 0.005) return res.status(422).json({ success: false, code: 'CREDIT_EXCEEDS_BALANCE', message: `Credit exceeds outstanding balance of ₹${inv.balance}.` });
+  const idem = typeof req.body.idempotencyKey === 'string' && req.body.idempotencyKey.length >= 12 ? `cn:${req.body.idempotencyKey}` : `cn:${inv.id}:${amt}:${String(req.body.reason || '').slice(0, 80)}`;
+  if (!claimIdempotency(idem)) return res.status(200).json({ success: true, message: 'Duplicate ignored (idempotent).' });
+  const cn = { id: uid('CN'), invoiceId: inv.id, amount: amt, reason: String(req.body.reason || '').slice(0, 500), createdAt: nowIso(), by: ctxOf(req).email };
   db.creditNotes.unshift(cn);
   inv.balance = Math.max(0, +(inv.balance - cn.amount).toFixed(2));
   if (inv.balance === 0) inv.status = 'Credited';
@@ -413,20 +476,24 @@ commercialRouter.post('/credit-notes', requireAuth(['superadmin','platform_owner
 });
 
 // ---- Payments (webhook-verified, idempotent §6.9/§15.3) ----
-commercialRouter.get('/payments', requireAuth(), (req, res) => {
+commercialRouter.get('/payments', requireAuth(), denyFinanceUnlessGranted, (req, res) => {
   const ctx = ctxOf(req); let rows = loadDb().payments as any[];
-  if (!['superadmin','platform_owner','finance_admin','finance_staff'].includes(ctx.role)) rows = rows.filter((p) => p.orgId === ctx.tenantId);
+  if (!(FINANCE_VIEWERS as readonly string[]).includes(ctx.role)) rows = rows.filter((p) => p.orgId === ctx.tenantId);
   const qq = String(req.query.q || '').toLowerCase();
   if (qq) rows = rows.filter((p) => `${p.id} ${p.invoiceId} ${p.orgId} ${p.status}`.toLowerCase().includes(qq));
   const { page, pageSize } = paginate.parse(req.query);
   res.json({ success: true, ...paged(rows, page, pageSize) });
 });
-commercialRouter.post('/payments', requireAuth(), (req: Request, res: Response) => {
+commercialRouter.post('/payments', requireAuth(), denyFinanceUnlessGranted, (req: Request, res: Response) => {
   const parsed = paymentSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'Validation failed.', errors: parsed.error.flatten() });
   if (!claimIdempotency(`pay:${parsed.data.idempotencyKey}`)) return res.status(200).json({ success: true, message: 'Duplicate ignored (idempotent).' });
   const db = loadDb(); const inv: any = db.invoices.find((i: any) => i.id === parsed.data.invoiceId);
   if (!inv) return res.status(404).json({ success: false, message: 'Invoice not found.' });
+  // Phase D: no overpayments — amounts beyond the outstanding balance are rejected.
+  if (Number(parsed.data.amount) > Number(inv.balance || 0) + 0.005) {
+    return res.status(422).json({ success: false, code: 'PAYMENT_EXCEEDS_BALANCE', message: `Amount exceeds the outstanding balance of ₹${inv.balance}.` });
+  }
   const ctx = ctxOf(req);
   if (!['superadmin','platform_owner','finance_admin','finance_staff'].includes(ctx.role) && inv.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Invoice not found.' });
   const pay = { id: uid('PAY'), orgId: inv.orgId, status: 'succeeded', transactionDate: nowIso(), ...parsed.data, createdAt: nowIso() };
@@ -436,7 +503,7 @@ commercialRouter.post('/payments', requireAuth(), (req: Request, res: Response) 
   emit('payment.confirmed', { invoiceId: inv.id, amount: parsed.data.amount }, inv.orgId, ctxOf(req).email);
   res.status(201).json({ success: true, data: pay });
 });
-commercialRouter.post('/payments/webhook', (req: Request, res: Response) => {
+commercialRouter.post('/payments/webhook', rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false }), (req: Request, res: Response) => {
   // HMAC verification: signature = hex(hmac_sha256(secret, `${timestamp}.${rawBody}`)).
   // Rejects missing secrets, stale timestamps (>5 min skew), and bad signatures
   // with timing-safe comparison. Legacy plain-secret header no longer accepted.
@@ -459,6 +526,11 @@ commercialRouter.post('/payments/webhook', (req: Request, res: Response) => {
   if (!claimIdempotency(`webhook:${idempotencyKey}`)) return res.json({ success: true, message: 'Duplicate webhook ignored.' });
   const db = loadDb(); const inv: any = db.invoices.find((i: any) => i.id === invoiceId);
   if (!inv) return res.status(404).json({ success: false, message: 'Invoice not found.' });
+  // P0-2: same over-balance guard as manual route — webhooks can't overpay.
+  if (!(Number(amount) > 0)) return res.status(400).json({ success: false, message: 'Invalid amount.' });
+  if (Number(amount) > Number(inv.balance || 0) + 0.005) {
+    return res.status(422).json({ success: false, code: 'PAYMENT_EXCEEDS_BALANCE', message: `Amount exceeds the outstanding balance of ₹${inv.balance}.` });
+  }
   const pay = { id: uid('PAY'), orgId: inv.orgId, invoiceId, amount: Number(amount), provider: 'webhook', reference, status: 'succeeded', transactionDate: nowIso(), createdAt: nowIso() };
   db.payments.unshift(pay);
   db.allocations.unshift({ id: uid('ALC'), paymentId: pay.id, invoiceId: inv.id, amount: Number(amount), createdAt: nowIso(), source: 'webhook' });
@@ -471,7 +543,7 @@ commercialRouter.post('/payments/webhook', (req: Request, res: Response) => {
 function slabFor(db: any, hiringType?: string): any {
   return (db.feeSlabs as any[]).find((s: any) => s.hiringType === hiringType) || null;
 }
-commercialRouter.get('/fee-slabs', requireAuth(), (_req, res) => {
+commercialRouter.get('/fee-slabs', requireAuth(), denyFinanceUnlessGranted, (_req, res) => {
   res.json({ success: true, data: loadDb().feeSlabs });
 });
 commercialRouter.put('/fee-slabs', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), (req: Request, res: Response) => {
@@ -499,6 +571,11 @@ function checkSlabRate(db: any, hiringType: string, feeModel: string, rate: numb
 commercialRouter.post('/commission-agreements', requireAuth(['superadmin','platform_owner','finance_admin','employer','company_admin']), (req: Request, res: Response) => {
   const parsed = commissionAgreementSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'Validation failed.', errors: parsed.error.flatten() });
+  const ctx = ctxOf(req);
+  // P0-2: tenant isolation — company roles can only create inside their own org.
+  if (!['superadmin','platform_owner','finance_admin'].includes(ctx.role) && parsed.data.orgId !== ctx.tenantId) {
+    return res.status(403).json({ success: false, message: 'Cannot create agreements for another organization.' });
+  }
   const db = loadDb();
   const slabErr = checkSlabRate(db, parsed.data.hiringType, parsed.data.feeModel, parsed.data.rate);
   if (slabErr) return res.status(422).json({ success: false, message: slabErr });
@@ -518,7 +595,7 @@ commercialRouter.patch('/commission-agreements/:id/accept', requireAuth(['supera
 });
 
 // ---- Agreement templates (company ↔ platform, versioned) ----
-commercialRouter.get('/agreement-templates', requireAuth(), (req, res) => {
+commercialRouter.get('/agreement-templates', requireAuth(), denyFinanceUnlessGranted, (req, res) => {
   const ctx = ctxOf(req); let rows = loadDb().agreementTemplates as any[];
   if (!['superadmin','platform_owner','finance_admin'].includes(ctx.role)) rows = rows.filter((t) => t.status === 'Active' && (!t.orgId || t.orgId === ctx.tenantId));
   res.json({ success: true, data: rows });
@@ -527,7 +604,10 @@ commercialRouter.post('/agreement-templates', requireAuth(['superadmin','platfor
   const parsed = agreementTemplateSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'Validation failed.', errors: parsed.error.flatten() });
   const db = loadDb();
-  const t = { id: uid('AGT'), version: 1, status: 'Draft', history: [], createdBy: ctxOf(req).email, createdAt: nowIso(), ...parsed.data };
+  // P5: strip scripts/event-handlers from stored template HTML.
+  const clean = { ...parsed.data } as any;
+  if (typeof clean.bodyHtml === 'string') clean.bodyHtml = stripHtml(clean.bodyHtml);
+  const t = { id: uid('AGT'), version: 1, status: 'Draft', history: [], createdBy: ctxOf(req).email, createdAt: nowIso(), ...clean };
   db.agreementTemplates.unshift(t); audit(ctxOf(req).email, `AGREEMENT_TEMPLATE:${t.id}`, t.orgId || 'TNT-GLOBAL', 'commercial', t.id, req.ip); persist();
   res.status(201).json({ success: true, data: t });
 });
@@ -538,6 +618,11 @@ commercialRouter.put('/agreement-templates/:id', requireAuth(['superadmin','plat
   const parsed = agreementTemplateSchema.partial().safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'Validation failed.', errors: parsed.error.flatten() });
   const { name, orgId, ...terms } = parsed.data as any;
+  // P5: sanitize updated HTML fields.
+  if (typeof (terms as any).bodyHtml === 'string') (terms as any).bodyHtml = stripHtml((terms as any).bodyHtml);
+  for (const k of ['ownershipClause', 'duplicatePolicy', 'cancellationTerms', 'gstNote'] as const) {
+    if (typeof (terms as any)[k] === 'string') (terms as any)[k] = String((terms as any)[k]).slice(0, 2000);
+  }
   t.history.unshift({ version: t.version, terms: { hiringType: t.hiringType, rateMin: t.rateMin, rateMax: t.rateMax, basisType: t.basisType, contractMonths: t.contractMonths, paymentTermsDays: t.paymentTermsDays, replacementDays: t.replacementDays, gstNote: t.gstNote, ownershipClause: t.ownershipClause, duplicatePolicy: t.duplicatePolicy, cancellationTerms: t.cancellationTerms, bodyHtml: t.bodyHtml }, by: ctxOf(req).email, at: nowIso() });
   if (name !== undefined) t.name = name;
   if (orgId !== undefined) t.orgId = orgId;
@@ -608,7 +693,7 @@ commercialRouter.get('/commission-agreements/match', requireAuth(['employer','su
   if (!(feeBasis > 0)) return res.status(422).json({ success: false, code: 'NO_BASIS', message: 'No CTC on record for this application. Enter the fee basis (annual CTC, or monthly CTC for contract hires).', agreement });
   res.json({ success: true, data: { application: { id: app.id, jobId: app.jobId, orgId: app.orgId, candidateEmail: app.candidateEmail }, agreement, offer: offer ? { id: offer.id, ctc: offer.ctc } : null, preview: feePreview(agreement, feeBasis) } });
 });
-commercialRouter.get('/commission-agreements', requireAuth(), (req, res) => {
+commercialRouter.get('/commission-agreements', requireAuth(), denyFinanceUnlessGranted, (req, res) => {
   const ctx = ctxOf(req); let rows = loadDb().commissionAgreements as any[];
   if (!['superadmin','platform_owner','finance_admin'].includes(ctx.role)) rows = rows.filter((a) => a.orgId === ctx.tenantId);
   const q = String(req.query.q || '').toLowerCase();
@@ -616,9 +701,9 @@ commercialRouter.get('/commission-agreements', requireAuth(), (req, res) => {
   const { page, pageSize } = paginate.parse(req.query);
   res.json({ success: true, ...paged(rows, page, pageSize) });
 });
-commercialRouter.get('/commissions', requireAuth(), (req, res) => {
+commercialRouter.get('/commissions', requireAuth(), denyFinanceUnlessGranted, (req, res) => {
   const ctx = ctxOf(req); let rows = loadDb().commissions as any[];
-  if (!['superadmin','platform_owner','finance_admin'].includes(ctx.role)) rows = rows.filter((c) => c.orgId === ctx.tenantId || c.agencyId === ctx.tenantId);
+  if (!(FINANCE_VIEWERS as readonly string[]).includes(ctx.role)) rows = rows.filter((c) => c.orgId === ctx.tenantId || c.agencyId === ctx.tenantId);
   const q = String(req.query.q || '').toLowerCase();
   if (q) rows = rows.filter((c) => `${c.id} ${c.orgId} ${c.agencyId || ''} ${c.candidateEmail || ''} ${c.jobId || ''}`.toLowerCase().includes(q));
   const leg = String(req.query.leg || '');
@@ -635,7 +720,7 @@ commercialRouter.get('/commissions', requireAuth(), (req, res) => {
   res.json({ success: true, summary, ...paged(rows, page, pageSize) });
 });
 // Duplicate-trigger diagnostic (§6.11): would this placement+trigger mint a duplicate?
-commercialRouter.get('/commissions/check', requireAuth(), (req, res) => {
+commercialRouter.get('/commissions/check', requireAuth(), denyFinanceUnlessGranted, (req, res) => {
   const { applicationId, placementId, trigger, agreementId } = req.query as Record<string, string>;
   if (!trigger || (!applicationId && !placementId)) return res.status(400).json({ success: false, message: 'trigger + applicationId|placementId required.' });
   const db = loadDb();
@@ -775,20 +860,206 @@ commercialRouter.post('/payouts', requireAuth(['superadmin','platform_owner','fi
   const db = loadDb(); const com: any = db.commissions.find((c: any) => c.id === req.body.commissionId);
   if (!com) return res.status(404).json({ success: false, message: 'Commission not found.' });
   if (com.approvalStatus !== 'Approved') return res.status(422).json({ success: false, message: 'Approve commission first.' });
+  // P0-2: double-payout guard — one payout per commission, status-checked.
+  if (com.paymentStatus === 'Paid' || (db.payouts as any[]).some((p: any) => p.commissionId === com.id)) {
+    return res.status(409).json({ success: false, code: 'PAYOUT_EXISTS', message: 'Payout already processed for this commission.' });
+  }
+  if (!(Number(com.net || 0) > 0)) return res.status(422).json({ success: false, message: 'Nothing payable on this commission.' });
   const payout = { id: uid('PO'), commissionId: com.id, amount: com.net, status: 'Processed', settlementDate: nowIso(), createdAt: nowIso(), by: ctxOf(req).email };
   db.payouts.unshift(payout); com.paymentStatus = 'Paid';
   audit(ctxOf(req).email, `PAYOUT_PROCESSED:${payout.id}`, com.orgId, 'payout', payout.id, req.ip); persist();
   res.status(201).json({ success: true, data: payout });
 });
-commercialRouter.get('/payouts', requireAuth(), (req, res) => {
+commercialRouter.get('/payouts', requireAuth(), denyFinanceUnlessGranted, (req, res) => {
   const ctx = ctxOf(req); let rows = loadDb().payouts as any[];
   // Payouts carry the commission's org scope; non-finance roles see only their org.
-  if (!['superadmin','platform_owner','finance_admin','finance_staff'].includes(ctx.role)) {
+  // Contractor payouts (payroll leg) carry orgId/vendorTenant/candidateEmail instead.
+  if (!(FINANCE_VIEWERS as readonly string[]).includes(ctx.role)) {
     const comIds = new Set(loadDb().commissions.filter((c: any) => c.orgId === ctx.tenantId || c.agencyId === ctx.tenantId).map((c: any) => c.id));
-    rows = rows.filter((p: any) => comIds.has(p.commissionId));
+    rows = rows.filter((p: any) => comIds.has(p.commissionId) || p.orgId === ctx.tenantId || p.vendorTenant === ctx.tenantId || String(p.candidateEmail || '').toLowerCase() === String(ctx.email).toLowerCase());
   }
   const { page, pageSize } = paginate.parse(req.query);
   res.json({ success: true, ...paged(rows, page, pageSize) });
+});
+/* ---------------- Contract payroll: approved timesheets → staffing invoice + contractor payouts ----------------
+   Sync chain: vendor submits → company approves → finance runs payroll (ONE run per org+period, idempotent)
+   → staffing invoice (Company→NexaTalent, +18% GST) + contractor payouts @82% (NexaTalent→candidate, Payable)
+   → company pays invoice → settle marks payouts Processed. Rejected timesheets are excluded. */
+const PAYROLL_GUARD = [requireAuth(['superadmin', 'platform_owner', 'finance_admin']), requirePermission('manage_billing')];
+// Timesheet rules: platform defaults (settings.payrollRules, superadmin-owned),
+// overridable per organization (org.payrollRules, employer-set via tenant PATCH).
+export function payrollRulesFor(db: any, orgId: string): { standardHours: number; overtimeMultiplier: number; payoutPercent: number; taxRate: number } {
+  const d = { standardHours: 160, overtimeMultiplier: 1.5, payoutPercent: 82, taxRate: 18 };
+  const org: any = db.organizations.find((o: any) => o.id === orgId);
+  return { ...d, ...(db.settings?.payrollRules || {}), ...((org as any)?.payrollRules || {}) };
+}
+// Per-timesheet math: regular hours + overtime premium. Returns {regHrs, otHrs, amount}.
+export function timesheetComputed(t: any, rules: { standardHours: number; overtimeMultiplier: number }): { regHrs: number; otHrs: number; amount: number } {
+  const hours = Number(t.hours || 0);
+  const rate = Number(t.hourlyRate ?? 0);
+  const regHrs = Math.min(hours, rules.standardHours);
+  const otHrs = Math.max(0, hours - rules.standardHours);
+  const amount = +(regHrs * rate + otHrs * rate * rules.overtimeMultiplier).toFixed(2);
+  return { regHrs, otHrs, amount };
+}
+function payrollStage(db: any, run: any): 'Issued' | 'Paid' | 'Settled' {
+  const inv: any = db.invoices.find((i: any) => i.id === run.invoiceId);
+  const allocated = (db.allocations as any[]).filter((a: any) => a.invoiceId === run.invoiceId).reduce((s: number, a: any) => s + Number(a.amount || 0), 0);
+  const paid = inv && allocated + 0.005 >= Number(inv.total || 0);
+  const payouts = (db.payouts as any[]).filter((p: any) => p.payrollRunId === run.id);
+  const settled = paid && payouts.length > 0 && payouts.every((p: any) => p.status === 'Processed');
+  return settled ? 'Settled' : paid ? 'Paid' : 'Issued';
+}
+function scopePayrollRuns(db: any, ctx: any): any[] {
+  let rows = (db.payrollRuns as any[]) || [];
+  if ((FINANCE_VIEWERS as readonly string[]).includes(ctx.role)) return rows;
+  return rows.filter((r: any) => {
+    if (r.orgId === ctx.tenantId) return true;
+    const ts = (db.timesheets as any[]).filter((t: any) => (r.timesheetIds || []).includes(t.id));
+    if (ts.some((t: any) => t.vendorTenant === ctx.tenantId || t.submittedBy === ctx.email)) return true;
+    const po = (db.payouts as any[]).filter((p: any) => p.payrollRunId === r.id);
+    return po.some((p: any) => String(p.candidateEmail || '').toLowerCase() === String(ctx.email).toLowerCase());
+  });
+}
+commercialRouter.get('/payroll/preview', ...PAYROLL_GUARD, (req: Request, res: Response) => {
+  const db = loadDb();
+  const orgId = String(req.query.orgId || '');
+  const period = String(req.query.period || '');
+  if (!orgId || !/^\d{4}-(0[1-9]|1[0-2])$/.test(period)) return res.status(400).json({ success: false, message: 'orgId + period (YYYY-MM) required.' });
+  const billed = new Set<string>();
+  for (const r of (db.payrollRuns as any[]) || []) for (const id of r.timesheetIds || []) billed.add(id);
+  const open = (db.timesheets as any[]).filter((t: any) => t.orgId === orgId || t.clientTenant === orgId).filter((t: any) => t.period === period && t.status === 'Approved' && !billed.has(t.id));
+  const rules = payrollRulesFor(db, orgId);
+  const byContractor = new Map<string, any>();
+  for (const t of open) {
+    const calc = timesheetComputed(t, rules);
+    const e = byContractor.get(t.contractorId) || { contractorId: t.contractorId, contractorName: t.contractorName, hours: 0, regHrs: 0, otHrs: 0, amount: 0, timesheets: 0 };
+    e.hours += Number(t.hours || 0); e.regHrs += calc.regHrs; e.otHrs += calc.otHrs; e.amount = +(e.amount + calc.amount).toFixed(2); e.timesheets += 1;
+    byContractor.set(t.contractorId, e);
+  }
+  const subtotal = +[...byContractor.values()].reduce((s: number, e: any) => s + e.amount, 0).toFixed(2);
+  const tax = +(subtotal * rules.taxRate / 100).toFixed(2);
+  res.json({ success: true, data: { orgId, period, rules, timesheets: open.length, contractors: [...byContractor.values()], subtotal, tax, total: +(subtotal + tax).toFixed(2), payoutTotal: +(subtotal * rules.payoutPercent / 100).toFixed(2) } });
+});
+export function createPayrollRun(db: any, orgId: string, period: string, by: string): { run: any; invoice: any; payoutIds: string[] } {
+  const fail = (status: number, message: string, extra: any = {}): never => { throw { status, message, ...extra }; };
+  if (!orgId || !/^\d{4}-(0[1-9]|1[0-2])$/.test(period)) fail(400, 'orgId + period (YYYY-MM) required.');
+  const org: any = db.organizations.find((o: any) => o.id === orgId);
+  if (!org) fail(404, 'Organization not found.');
+  const existing: any = ((db.payrollRuns as any[]) || []).find((r: any) => r.orgId === orgId && r.period === period);
+  if (existing) fail(409, `Payroll already ran for ${orgId} ${period}.`, { run: existing });
+  const billed = new Set<string>();
+  for (const r of (db.payrollRuns as any[]) || []) for (const id of r.timesheetIds || []) billed.add(id);
+  const open = (db.timesheets as any[]).filter((t: any) => t.orgId === orgId || t.clientTenant === orgId).filter((t: any) => t.period === period && t.status === 'Approved' && !billed.has(t.id));
+  if (open.length === 0) fail(422, `No approved unbilled timesheets for ${orgId} ${period}.`);
+  const rules = payrollRulesFor(db, orgId);
+  const perContractor = new Map<string, any>();
+  for (const t of open) {
+    const calc = timesheetComputed(t, rules);
+    const e = perContractor.get(t.contractorId) || { contractorId: t.contractorId, contractorName: t.contractorName, candidateEmail: '', vendorTenant: t.vendorTenant, hours: 0, regHrs: 0, otHrs: 0, amount: 0, ids: [] as string[] };
+    const c: any = db.contractors.find((x: any) => x.id === t.contractorId);
+    e.candidateEmail = e.candidateEmail || (c as any)?.candidateEmail || '';
+    e.hours += Number(t.hours || 0); e.regHrs += calc.regHrs; e.otHrs += calc.otHrs; e.amount = +(e.amount + calc.amount).toFixed(2); e.ids.push(t.id);
+    perContractor.set(t.contractorId, e);
+  }
+  const subtotal = +[...perContractor.values()].reduce((s: number, e: any) => s + e.amount, 0).toFixed(2);
+  const tax = +(subtotal * rules.taxRate / 100).toFixed(2);
+  const total = +(subtotal + tax).toFixed(2);
+  const [y, m] = period.split('-').map(Number);
+  const dueDate = new Date(Date.UTC(y, m, 0) + 15 * 864e5).toISOString().slice(0, 10);
+  const runId = uid('PR');
+  const payPct = rules.payoutPercent / 100;
+  const inv = {
+    id: uid('INV'), number: `INV-${new Date().getFullYear()}-${String(db.invoices.length + 1).padStart(4, '0')}`,
+    orgId, payrollRunId: runId, invoiceType: 'contract_staffing', billingPeriod: period,
+    lines: [...perContractor.values()].map((e: any) => ({ label: `Contract staffing ${period} — ${e.contractorName} (${e.hours}h: ${e.regHrs} reg + ${e.otHrs} OT)`, qty: e.hours, unit: +(e.amount / Math.max(1, e.hours)).toFixed(2) })),
+    discount: 0, taxRate: rules.taxRate, subtotal, tax, total, amountPaid: 0, balance: total,
+    status: 'Issued', issueDate: nowIso(), dueDate, currency: 'INR', createdAt: nowIso(), createdBy: by,
+    rules: { ...rules },
+  };
+  db.invoices.unshift(inv);
+  db.invoiceLines.unshift({ id: uid('INVL'), invoiceId: inv.id, label: `Contract staffing ${period} — consolidated`, qty: 1, unit: subtotal });
+  const payoutIds: string[] = [];
+  const vendorMails = new Set<string>(); const candidateMails = new Set<string>();
+  for (const e of perContractor.values()) {
+    const po = {
+      id: uid('PO'), type: 'contractor_payout', payrollRunId: runId, orgId, period,
+      contractorId: e.contractorId, contractorName: e.contractorName, candidateEmail: e.candidateEmail,
+      vendorTenant: e.vendorTenant, amount: +(e.amount * payPct).toFixed(2), status: 'Payable', createdAt: nowIso(), by,
+    };
+    db.payouts.unshift(po); payoutIds.push(po.id);
+    for (const t of open.filter((x: any) => x.contractorId === e.contractorId)) {
+      if (t.submittedBy) vendorMails.add(String(t.submittedBy).toLowerCase());
+    }
+    if (e.candidateEmail) candidateMails.add(String(e.candidateEmail).toLowerCase());
+  }
+  const run = { id: runId, orgId, period, timesheetIds: open.map((t: any) => t.id), subtotal, tax, total, payoutTotal: +[...perContractor.values()].reduce((s: number, e: any) => s + e.amount * payPct, 0).toFixed(2), invoiceId: inv.id, payoutIds, status: 'Issued', runBy: by, createdAt: nowIso(), rules: { ...rules } };
+  for (const t of open) t.payrollRunId = runId;
+  (db.payrollRuns as any[]).unshift(run);
+  audit(by, `PAYROLL_RUN:${runId}:${orgId}:${period}`, orgId, 'payroll', runId, '127.0.0.1');
+  audit(by, `PAYROLL_INVOICED:${inv.id}`, orgId, 'invoice', inv.id, '127.0.0.1');
+  const notify = (recipient: string, body: string) => db.notifications.unshift({ id: uid('NOTIF'), recipient, kind: 'payroll', body, channel: 'in-app', status: 'queued', createdAt: nowIso(), tenantId: orgId });
+  notify(`company:${orgId}`, `Payroll ${period}: ${open.length} timesheet(s), staffing invoice ${inv.number} for ₹${total.toLocaleString('en-IN')} — due ${dueDate}.`);
+  notify('superadmin', `Payroll run ${runId} for ${orgId} ${period}: invoice ${inv.number}, ${payoutIds.length} contractor payout(s).`);
+  for (const v of vendorMails) notify(v, `Payroll ${period} for ${orgId} is issued — invoice ${inv.number}, your timesheets are billed.`);
+  for (const cm of candidateMails) notify(cm, `Your ${period} pay is calculated — ₹${run.payoutTotal.toLocaleString('en-IN')} across ${payoutIds.length} payout(s), released once ${orgId} pays invoice ${inv.number}.`);
+  persist();
+  return { run, invoice: inv, payoutIds };
+}
+commercialRouter.post('/payroll/run', ...PAYROLL_GUARD, (req: Request, res: Response) => {
+  const db = loadDb();
+  try {
+    const out = createPayrollRun(db, String(req.body?.orgId || ''), String(req.body?.period || ''), ctxOf(req).email);
+    res.status(201).json({ success: true, data: { run: { ...out.run, stage: 'Issued' as const }, invoice: withOverdue(out.invoice), payouts: out.payoutIds.length } });
+  } catch (e: any) {
+    if (e?.status === 409 && e?.run) {
+      const existing = e.run;
+      return res.json({ success: true, data: { deduped: true, run: { ...existing, stage: payrollStage(db, existing) } }, message: `Payroll already ran for ${existing.orgId} ${existing.period} — returning existing run (no double billing).` });
+    }
+    res.status(e?.status || 500).json({ success: false, message: e?.message || 'Payroll run failed.' });
+  }
+});
+commercialRouter.get('/payroll', requireAuth(), denyFinanceUnlessGranted, (req: Request, res: Response) => {
+  const db = loadDb(); const ctx = ctxOf(req);
+  const rows = scopePayrollRuns(db, ctx).map((r: any) => ({ ...r, stage: payrollStage(db, r) }));
+  const { page, pageSize } = paginate.parse(req.query);
+  res.json({ success: true, ...paged(rows, page, pageSize) });
+});
+commercialRouter.get('/payroll/:id', requireAuth(), denyFinanceUnlessGranted, (req: Request, res: Response) => {
+  const db = loadDb(); const ctx = ctxOf(req);
+  const run: any = scopePayrollRuns(db, ctx).find((r: any) => r.id === req.params.id);
+  if (!run) return res.status(404).json({ success: false, message: 'Payroll run not found.' });
+  const timesheets = (db.timesheets as any[]).filter((t: any) => (run.timesheetIds || []).includes(t.id));
+  const invoice: any = db.invoices.find((i: any) => i.id === run.invoiceId);
+  const payouts = (db.payouts as any[]).filter((p: any) => p.payrollRunId === run.id);
+  const allocated = (db.allocations as any[]).filter((a: any) => a.invoiceId === run.invoiceId).reduce((s: number, a: any) => s + Number(a.amount || 0), 0);
+  // Linked placement commissions: contractors' placementIds tie monthly payroll to joining fees.
+  const placementIds = new Set(timesheets.map((t: any) => (db.contractors as any[]).find((c: any) => c.id === t.contractorId)?.placementId).filter(Boolean));
+  const commissions = (db.commissions as any[]).filter((c: any) => placementIds.has(c.placementId) || placementIds.has(c.applicationId));
+  res.json({ success: true, data: { run: { ...run, stage: payrollStage(db, run) }, timesheets, invoice: invoice ? withOverdue(invoice) : null, allocated: +allocated.toFixed(2), payouts, commissions } });
+});
+commercialRouter.post('/payroll/:id/settle', ...PAYROLL_GUARD, (req: Request, res: Response) => {
+  const db = loadDb(); const by = ctxOf(req).email;
+  const run: any = ((db.payrollRuns as any[]) || []).find((r: any) => r.id === req.params.id);
+  if (!run) return res.status(404).json({ success: false, message: 'Payroll run not found.' });
+  const inv: any = db.invoices.find((i: any) => i.id === run.invoiceId);
+  if (!inv) return res.status(422).json({ success: false, message: 'Linked invoice missing.' });
+  const allocated = (db.allocations as any[]).filter((a: any) => a.invoiceId === inv.id).reduce((s: number, a: any) => s + Number(a.amount || 0), 0);
+  const remaining = +(Number(inv.total || 0) - allocated).toFixed(2);
+  if (remaining > 0.005) return res.status(422).json({ success: false, code: 'INVOICE_UNPAID', message: `Collect the company payment first — ₹${remaining.toLocaleString('en-IN')} outstanding on ${inv.number}.` });
+  inv.amountPaid = Number(inv.total || 0); inv.balance = 0; inv.status = 'Paid'; inv.paidAt = nowIso();
+  const payouts = (db.payouts as any[]).filter((p: any) => p.payrollRunId === run.id);
+  for (const p of payouts) { p.status = 'Processed'; p.settlementDate = nowIso(); p.settledBy = by; }
+  run.status = 'Settled'; run.settledAt = nowIso(); run.settledBy = by;
+  audit(by, `PAYROLL_SETTLED:${run.id}`, run.orgId, 'payroll', run.id, req.ip);
+  const notify = (recipient: string, body: string) => db.notifications.unshift({ id: uid('NOTIF'), recipient, kind: 'payroll', body, channel: 'in-app', status: 'queued', createdAt: nowIso(), tenantId: run.orgId });
+  notify(`company:${run.orgId}`, `Payroll ${run.period} settled — invoice ${inv.number} paid, ${payouts.length} contractor payout(s) released.`);
+  for (const p of payouts) {
+    if ((p as any).vendorTenant) notify(`company:${(p as any).vendorTenant}`, `Payout ${p.id} (${run.period}, ₹${Number((p as any).amount || 0).toLocaleString('en-IN')}) processed.`);
+    if ((p as any).candidateEmail) notify((p as any).candidateEmail, `Your ${run.period} pay of ₹${Number((p as any).amount || 0).toLocaleString('en-IN')} is processed.`);
+  }
+  persist();
+  res.json({ success: true, data: { run: { ...run, stage: 'Settled' as const }, payoutsSettled: payouts.length } });
 });
 commercialRouter.get('/reconciliation', requireAuth(['superadmin','platform_owner','finance_admin']), (_req, res) => {
   const db = loadDb();

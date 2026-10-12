@@ -1,4 +1,4 @@
-import { AUTH_STORAGE_KEYS } from '../constants';
+import { AUTH_STORAGE_KEYS, ROLE_DEFAULT_REDIRECTS } from '../constants';
 import type { UserRole } from '../types';
 
 const ALL_KEYS = [
@@ -9,6 +9,9 @@ const ALL_KEYS = [
   AUTH_STORAGE_KEYS.USER_SESSION,
   'user_email',
 ] as const;
+
+// P6: residual UI/PII keys left behind by clearSession (recent jobs, columns, sidebar).
+const RESIDUAL_KEYS = ['nexa_recent_jobs', 'req-columns', 'nexa:sidebar-collapsed', 'nexa:sidebar-open-group'] as const;
 
 export function getAccessToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -26,8 +29,8 @@ export function getRefreshToken(): string | null {
 export function getActiveRole(): UserRole | null {
   if (typeof window === 'undefined') return null;
   const r = localStorage.getItem(AUTH_STORAGE_KEYS.ACTIVE_ROLE);
-  if (r === 'superadmin' || r === 'employee' || r === 'recruiter' || r === 'employer' || r === 'vendor' || r === 'candidate') {
-    return r;
+  if (r && r in ROLE_DEFAULT_REDIRECTS) {
+    return r as UserRole;
   }
   return null;
 }
@@ -80,5 +83,8 @@ export function clearSession() {
   for (const k of ALL_KEYS) {
     localStorage.removeItem(k);
     sessionStorage.removeItem(k);
+  }
+  for (const k of RESIDUAL_KEYS) {
+    try { localStorage.removeItem(k); sessionStorage.removeItem(k); } catch { /* noop */ }
   }
 }

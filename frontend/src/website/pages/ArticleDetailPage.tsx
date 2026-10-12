@@ -13,6 +13,7 @@ import {
 import { SiteNavbar, SiteFooter } from '../components/SiteChrome';
 import { SeoHead } from '../components/SeoHead';
 import { INSIGHTS_ARTICLES } from './InsightsPage';
+import { ALL_POSTS } from '../v2/data/posts';
 import { 
   LightEditorialInsightCard, 
   LightSalaryResourceCard, 
@@ -23,7 +24,7 @@ import {
 
 export function ArticleDetailPage() {
   const { articleSlug } = useParams<{ articleSlug: string }>();
-  const article = INSIGHTS_ARTICLES.find((a) => a.slug === articleSlug) || INSIGHTS_ARTICLES[0];
+  const article = ALL_POSTS.find((a) => a.slug === articleSlug) || INSIGHTS_ARTICLES.find((a) => a.slug === articleSlug) || INSIGHTS_ARTICLES[0];
 
   useEffect(() => {
     let raf = 0;

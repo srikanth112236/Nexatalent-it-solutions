@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { loadDb, persist, uid, nowIso, audit } from '../db/store.js';
-import { requireAuth, requirePermission, ctxOf } from '../middleware/rbac.js';
+import { requireAuth, requirePermission, ctxOf, denyFinanceUnlessGranted, FINANCE_VIEWERS } from '../middleware/rbac.js';
 import { paginate, paged } from '../validate/schemas.js';
 
 export const extendedRouter = Router();
@@ -44,6 +44,14 @@ extendedRouter.post('/documents', requireAuth(['candidate', 'superadmin', 'agenc
   let buf: Buffer;
   try { buf = Buffer.from(String(data), 'base64'); } catch { return res.status(400).json({ success: false, message: 'Invalid base64.' }); }
   if (buf.length === 0 || buf.length > MAX_DOC_BYTES) return res.status(413).json({ success: false, message: 'File must be 1 byte – 5 MB.' });
+  // P1-6: magic-byte check — client mime header alone is not trusted.
+  const magicOk =
+    (mime === 'application/pdf' && buf[0] === 0x25 && buf[1] === 0x50 && buf[2] === 0x44 && buf[3] === 0x46) ||
+    (mime === 'image/png' && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) ||
+    (mime === 'image/jpeg' && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) ||
+    (mime === 'application/msword' && buf[0] === 0xd0 && buf[1] === 0xcf) ||
+    (mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' && buf[0] === 0x50 && buf[1] === 0x4b);
+  if (!magicOk) return res.status(415).json({ success: false, message: 'File content does not match its type.' });
   const ctx = ctxOf(req);
   const owner = candidateEmail ? String(candidateEmail).toLowerCase() : ctx.email.toLowerCase();
   if (ctx.role === 'candidate' && owner !== ctx.email.toLowerCase()) return res.status(404).json({ success: false, message: 'Not found.' });
@@ -78,7 +86,10 @@ extendedRouter.get('/documents/:id/download', requireAuth(), (req, res) => {
   try {
     const buf = readFileSync(join(UPLOAD_DIR, `${d.id}.bin`));
     res.setHeader('Content-Type', d.mime);
-    res.setHeader('Content-Disposition', `attachment; filename="${String(d.name).replace(/"/g, '')}"`);
+    // P1-6: strip CR/LF + quotes to block header injection; nosniff blunts MIME sniff XSS.
+    const safeName = String(d.name || 'file').replace(/["\r\n\\]/g, '').slice(0, 160) || 'file';
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     res.send(buf);
   } catch { res.status(410).json({ success: false, message: 'File no longer available.' }); }
 });
@@ -116,6 +127,8 @@ extendedRouter.post('/consents/withdraw', requireAuth(['candidate', 'superadmin'
 extendedRouter.get('/consents/export', requireAuth(['candidate', 'superadmin']), (req, res) => {
   const db = loadDb(); const ctx = ctxOf(req);
   const email = ctx.role === 'candidate' ? ctx.email.toLowerCase() : String(req.query.email || ctx.email).toLowerCase();
+  // P1-5: export audit — superadmin bulk export of any email is now traced.
+  audit(ctx.email, `CONSENT_EXPORT:${email}`, ctx.tenantId, 'consent', email, req.ip); persist();
   res.json({
     success: true,
     data: {
@@ -142,6 +155,11 @@ extendedRouter.post('/opportunities', requireAuth(['superadmin', 'platform_owner
   const db = loadDb();
   const lead: any = db.leads.find((l: any) => l.id === leadId);
   if (!lead) return res.status(404).json({ success: false, message: 'Lead not found.' });
+  const ctx = ctxOf(req);
+  // Phase B: ownership — BDA/employee work owned leads only.
+  if (['bda', 'employee'].includes(ctx.role) && lead.owner && lead.owner !== ctx.email) {
+    return res.status(404).json({ success: false, message: 'Lead not found.' });
+  }
   const row = { id: uid('OPP'), leadId, title: title || `${lead.companyName} opportunity`, value: Number(value ?? lead.value ?? 0), currency: 'INR', stage: OPP_FLOW.includes(stage) ? stage : 'Qualified', owner: owner || ctxOf(req).email, createdAt: nowIso() };
   db.opportunities.unshift(row); persist();
   res.status(201).json({ success: true, data: row });
@@ -158,13 +176,22 @@ extendedRouter.patch('/opportunities/:id/stage', requireAuth(['superadmin', 'pla
 const PROP_FLOW = ['Draft', 'Sent', 'Accepted', 'Rejected'];
 extendedRouter.get('/proposals', requireAuth(['superadmin', 'platform_owner', 'sales_admin', 'sales_manager', 'employee', 'bda', 'operations_admin']), (req, res) => {
   const { page, pageSize } = paginate.parse(req.query);
+  const ctx = ctxOf(req);
   let rows = loadDb().proposals as any[];
   if (req.query.leadId) rows = rows.filter((p: any) => p.leadId === req.query.leadId);
+  // P1-5: owner scoping parity with opportunities/meetings.
+  if (['bda', 'employee'].includes(ctx.role)) rows = rows.filter((p: any) => !p.owner || p.owner === ctx.email);
   res.json({ success: true, ...paged(rows, page, pageSize) });
 });
 extendedRouter.post('/proposals', requireAuth(['superadmin', 'platform_owner', 'sales_admin', 'sales_manager', 'employee', 'bda']), (req: Request, res: Response) => {
   const { leadId, opportunityId, title, amount, validUntil } = req.body || {};
   if (!leadId || !title) return res.status(400).json({ success: false, message: 'leadId + title required.' });
+  const lead: any = loadDb().leads.find((l: any) => l.id === leadId);
+  if (!lead) return res.status(404).json({ success: false, message: 'Lead not found.' });
+  const ctx = ctxOf(req);
+  if (['bda', 'employee'].includes(ctx.role) && lead.owner && lead.owner !== ctx.email) {
+    return res.status(404).json({ success: false, message: 'Lead not found.' });
+  }
   const row = { id: uid('PRP'), leadId, opportunityId: opportunityId || null, title: String(title), amount: Number(amount || 0), currency: 'INR', validUntil: validUntil || null, status: 'Draft', owner: ctxOf(req).email, createdAt: nowIso() };
   loadDb().proposals.unshift(row); persist();
   res.status(201).json({ success: true, data: row });
@@ -189,6 +216,12 @@ extendedRouter.get('/meetings', requireAuth(['superadmin', 'platform_owner', 'sa
 extendedRouter.post('/meetings', requireAuth(['superadmin', 'platform_owner', 'sales_admin', 'sales_manager', 'employee', 'bda']), (req: Request, res: Response) => {
   const { leadId, title, at, outcome, notes, nextAction, followUp } = req.body || {};
   if (!leadId || !at) return res.status(400).json({ success: false, message: 'leadId + at required.' });
+  const lead: any = loadDb().leads.find((l: any) => l.id === leadId);
+  if (!lead) return res.status(404).json({ success: false, message: 'Lead not found.' });
+  const mctx = ctxOf(req);
+  if (['bda', 'employee'].includes(mctx.role) && lead.owner && lead.owner !== mctx.email) {
+    return res.status(404).json({ success: false, message: 'Lead not found.' });
+  }
   const row = { id: uid('MTG'), leadId, title: title || 'Follow-up meeting', at, outcome: outcome || '', notes: String(notes || '').slice(0, 4000), nextAction: nextAction || '', followUp: followUp || '', owner: ctxOf(req).email, createdAt: nowIso() };
   const db = loadDb(); db.meetings.unshift(row);
   db.leadActivities.unshift({ id: uid('LACT'), leadId, type: 'meeting', outcome: outcome || '', notes: `Meeting ${row.id} @ ${at}. ${notes || ''}`.slice(0, 4000), nextAction: nextAction || '', followUp: followUp || '', owner: ctxOf(req).email, createdAt: nowIso() });
@@ -210,33 +243,71 @@ extendedRouter.get('/timesheets', requireAuth(), (req, res) => {
   const { page, pageSize } = paginate.parse(req.query);
   const ctx = ctxOf(req); let rows = loadDb().timesheets as any[];
   if (['vendor', 'agency_admin', 'agency_recruiter'].includes(ctx.role)) rows = rows.filter((t) => t.vendorTenant === ctx.tenantId || t.submittedBy === ctx.email);
-  else if (![...PLATFORM, 'operations_admin', 'employee', 'finance_admin'].includes(ctx.role)) rows = rows.filter((t) => t.clientTenant === ctx.tenantId);
+  else if (ctx.role === 'candidate') {
+    const ownIds = new Set(loadDb().contractors.filter((c: any) => String((c as any).candidateEmail || '').toLowerCase() === String(ctx.email).toLowerCase()).map((c: any) => c.id));
+    rows = rows.filter((t) => ownIds.has(t.contractorId));
+  }
+  else if (![...PLATFORM, ...(FINANCE_VIEWERS as readonly string[])].includes(ctx.role)) rows = rows.filter((t) => t.clientTenant === ctx.tenantId);
   res.json({ success: true, ...paged(rows, page, pageSize) });
 });
-extendedRouter.post('/timesheets', requireAuth(['vendor', 'agency_admin', 'superadmin', 'platform_owner']), (req: Request, res: Response) => {
+extendedRouter.post('/timesheets', requireAuth(['vendor', 'agency_admin', 'candidate', 'superadmin', 'platform_owner']), (req: Request, res: Response) => {
   const { contractorId, period, hours, notes } = req.body || {};
   if (!contractorId || !period || !(Number(hours) > 0)) return res.status(400).json({ success: false, message: 'contractorId + period + hours required.' });
+  // P1-5: hours sanity cap (744 = max hours in a month) prevents abuse.
+  if (Number(hours) > 744) return res.status(400).json({ success: false, message: 'Hours exceed monthly maximum (744).' });
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(period))) return res.status(400).json({ success: false, message: 'period must be YYYY-MM.' });
   const db = loadDb(); const ctx = ctxOf(req);
   const c: any = db.contractors.find((x: any) => x.id === contractorId);
-  const row = { id: uid('TSH'), contractorId, contractorName: c?.name || '', clientName: c?.clientName || '', clientTenant: (c as any)?.tenantId || '', vendorTenant: ctx.tenantId, period: String(period), hours: Number(hours), notes: String(notes || '').slice(0, 1000), status: 'Submitted', submittedBy: ctx.email, createdAt: nowIso() };
+  if (!c) return res.status(404).json({ success: false, message: 'Contractor not found.' });
+  // Candidates file ONLY their own deployment; vendors only their tenant's contractors.
+  if (ctx.role === 'candidate') {
+    if (String((c as any).candidateEmail || '').toLowerCase() !== String(ctx.email).toLowerCase()) {
+      return res.status(404).json({ success: false, message: 'Contractor not found.' });
+    }
+  } else if (!PLATFORM.includes(ctx.role) && (c as any).tenantId && (c as any).tenantId !== ctx.tenantId) {
+    return res.status(404).json({ success: false, message: 'Contractor not found.' });
+  }
+  const hourlyRate = Number((c as any)?.hourlyRate || 0);
+  const billableAmount = +(Number(hours) * hourlyRate).toFixed(2);
+  const row = { id: uid('TSH'), contractorId, contractorName: c?.name || '', clientName: c?.clientName || '', clientTenant: (c as any)?.clientTenant || (c as any)?.tenantId || '', vendorTenant: ctx.role === 'candidate' ? ((c as any)?.vendorTenant || ctx.tenantId) : ctx.tenantId, period: String(period), hours: Number(hours), hourlyRate, billableAmount, notes: String(notes || '').slice(0, 1000), status: 'Submitted', submittedBy: ctx.email, createdAt: nowIso() };
   db.timesheets.unshift(row);
-  audit(ctx.email, `TIMESHEET_SUBMITTED:${row.id}`, ctx.tenantId, 'timesheet', row.id, req.ip); persist();
+  audit(ctx.email, `TIMESHEET_SUBMITTED:${row.id}`, ctx.tenantId, 'timesheet', row.id, req.ip);
+  if (row.clientTenant) db.notifications.unshift({ id: uid('NOTIF'), recipient: `company:${row.clientTenant}`, kind: 'timesheet', body: `Timesheet ${row.id}: ${row.contractorName} filed ${row.hours}h for ${row.period} — review pending.`, channel: 'in-app', status: 'queued', createdAt: nowIso(), tenantId: row.clientTenant });
+  persist();
   res.status(201).json({ success: true, data: row });
 });
-extendedRouter.patch('/timesheets/:id/approve', requireAuth(['employer', 'company_admin', 'superadmin', 'platform_owner', 'operations_admin', 'employee']), (req, res) => {
+extendedRouter.patch('/timesheets/:id/approve', requireAuth(['employer', 'company_admin', 'superadmin', 'platform_owner', 'operations_admin', 'employee']), async (req, res) => {
   const db = loadDb(); const t: any = db.timesheets.find((x: any) => x.id === req.params.id);
   if (!t) return res.status(404).json({ success: false, message: 'Not found.' });
   const ctx = ctxOf(req);
-  if (![...PLATFORM, 'operations_admin', 'employee'].includes(ctx.role) && t.clientTenant && t.clientTenant !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Not found.' });
+  // P1-5: empty clientTenant no longer skips the guard — non-platform must match.
+  if (![...PLATFORM, 'operations_admin', 'employee'].includes(ctx.role) && t.clientTenant !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Not found.' });
   const decision = req.body.decision === 'reject' ? 'Rejected' : 'Approved';
+  const billedRun = (db.payrollRuns as any[]).find((r: any) => (r.timesheetIds || []).includes(t.id));
+  if (billedRun) return res.status(422).json({ success: false, message: `Already billed in payroll run ${billedRun.id}. Void the run to change this timesheet.` });
   if (!['Submitted'].includes(t.status)) return res.status(422).json({ success: false, message: `Already ${t.status}.` });
   t.status = decision; t.reviewedBy = ctx.email; t.reviewedAt = nowIso(); t.reviewNote = String(req.body.note || '').slice(0, 1000);
-  audit(ctx.email, `TIMESHEET_${decision.toUpperCase()}:${t.id}`, t.vendorTenant, 'timesheet', t.id, req.ip); persist();
-  res.json({ success: true, data: t });
+  audit(ctx.email, `TIMESHEET_${decision.toUpperCase()}:${t.id}`, t.vendorTenant, 'timesheet', t.id, req.ip);
+  if (t.submittedBy) db.notifications.unshift({ id: uid('NOTIF'), recipient: t.submittedBy, kind: 'timesheet', body: `Timesheet ${t.id} (${t.period}, ${t.hours}h) ${decision.toLowerCase()} by ${ctx.email}.`, channel: 'in-app', status: 'queued', createdAt: nowIso(), tenantId: t.clientTenant });
+  persist();
+  // Auto-payroll: approving the last open timesheet of a PAST month closes the period —
+  // system runs payroll immediately (staffing invoice + contractor payouts + notifications).
+  let autoRun: any = null;
+  if (decision === 'Approved' && /^\d{4}-(0[1-9]|1[0-2])$/.test(String(t.period)) && String(t.period) < nowIso().slice(0, 7)) {
+    try {
+      const stillOpen = (db.timesheets as any[]).some((x: any) => (x.orgId === t.clientTenant || x.clientTenant === t.clientTenant) && x.period === t.period && x.status === 'Submitted');
+      const already = ((db.payrollRuns as any[]) || []).some((r: any) => (r.orgId === t.clientTenant || r.orgId === (t as any).orgId) && r.period === t.period);
+      if (!stillOpen && !already && t.clientTenant) {
+        const { createPayrollRun } = await import('./commercial.js');
+        autoRun = createPayrollRun(db, t.clientTenant, t.period, 'system:auto-payroll');
+      }
+    } catch { /* manual run remains available; reason surfaces on the run endpoint */ }
+  }
+  res.json({ success: true, data: t, autoRun: autoRun ? { id: autoRun.run.id, invoiceId: autoRun.run.invoiceId, payouts: autoRun.payoutIds.length } : null });
 });
 
 /* ---------------- Commission adjustments (§6.11) ---------------- */
-extendedRouter.get('/commissions/:id/adjustments', requireAuth(), (req, res) => {
+extendedRouter.get('/commissions/:id/adjustments', requireAuth(), denyFinanceUnlessGranted, (req, res) => {
   const db = loadDb(); const c: any = db.commissions.find((x: any) => x.id === req.params.id);
   if (!c) return res.status(404).json({ success: false, message: 'Not found.' });
   const ctx = ctxOf(req);
@@ -272,20 +343,43 @@ function amtRound(n: number): number { return Math.round(n * 100) / 100; }
 function agencyNameKeys(a: any): string[] {
   return [a.displayName, a.legalName].filter(Boolean).map((s: string) => String(s).toLowerCase());
 }
+function agencyMemberEmails(db: any, a: any): Set<string> {
+  const set = new Set<string>();
+  if (a.contactEmail) set.add(String(a.contactEmail).toLowerCase());
+  for (const u of (db.users as any[] || [])) {
+    if (a.tenantId && u.tenantId === a.tenantId && u.email) set.add(String(u.email).toLowerCase());
+  }
+  return set;
+}
 function agencyJobs(db: any, a: any): any[] {
   const keys = agencyNameKeys(a);
-  if (keys.length === 0 && !a.tenantId) return [];
+  const idKey = String(a.id || '').toLowerCase();
+  if (keys.length === 0 && !a.tenantId && !idKey) return [];
   return (db.jobs as any[]).filter((j) => {
     const listed = [...(j.assignedAgencies || []), ...(j.assignedVendors || [])].map((x: string) => String(x).toLowerCase());
-    return listed.some((l) => keys.some((k) => l.includes(k) || k.includes(l)));
+    return listed.some((l) => {
+      if (idKey && (l === idKey || l.includes(idKey) || idKey.includes(l))) return true;
+      return keys.some((k) => l.includes(k) || k.includes(l));
+    });
   });
+}
+function agencySubmissions(db: any, a: any): any[] {
+  const members = agencyMemberEmails(db, a);
+  return ((db as any).submissions as any[] || []).filter((s) => {
+    if (s.agencyId && (String(s.agencyId) === String(a.id) || String(s.agencyId) === String(a.tenantId))) return true;
+    if (s.submittedBy && members.has(String(s.submittedBy).toLowerCase())) return true;
+    return false;
+  });
+}
+function agencyCommissions(db: any, a: any): any[] {
+  return (db.commissions as any[] || []).filter((c) => c.agencyId === a.id || (a.tenantId && (c.agencyId === a.tenantId || c.orgId === a.tenantId)));
 }
 function agencyStats(db: any, a: any): any {
   const jobs = agencyJobs(db, a);
-  const subs = ((db as any).submissions as any[] || []).filter((s) => (a.tenantId && s.agencyId === a.tenantId) || (s.submittedBy && a.contactEmail && String(s.submittedBy).toLowerCase() === String(a.contactEmail).toLowerCase()));
+  const subs = agencySubmissions(db, a);
   const pairKeys = new Set(subs.map((s) => `${s.jobId}::${String(s.candidateEmail).toLowerCase()}`));
   const placements = (db.placements as any[]).filter((p) => pairKeys.has(`${p.jobId}::${String(p.candidateEmail).toLowerCase()}`));
-  const comms = (db.commissions as any[]).filter((c) => (a.tenantId && (c.agencyId === a.tenantId || c.orgId === a.tenantId)));
+  const comms = agencyCommissions(db, a);
   const balance = comms.filter((c) => c.paymentStatus !== 'Paid').reduce((x: number, c: any) => x + Number(c.net ?? c.total ?? 0), 0);
   return {
     activeAssignments: jobs.filter((j) => ['Published', 'Approved'].includes(j.status)).length,
@@ -298,13 +392,33 @@ function agencyStats(db: any, a: any): any {
 }
 extendedRouter.get('/agency-profiles', requireAuth(), (req, res) => {
   const db = loadDb();
+  const ctx = ctxOf(req);
   const q = req.query as Record<string, string>;
-  let rows = (db.agencyProfiles as any[]).map((a) => ({ ...a, ...agencyStats(db, a) }));
-  if (q.status) rows = rows.filter((a) => a.accountStatus === q.status);
-  if (q.verification) rows = rows.filter((a) => a.verificationStatus === q.verification);
-  if (q.q) { const s = q.q.toLowerCase(); rows = rows.filter((a) => `${a.id} ${a.legalName} ${a.displayName} ${a.contactEmail} ${a.specialties}`.toLowerCase().includes(s)); }
-  const { page, pageSize } = paginate.parse(req.query);
-  res.json({ success: true, ...paged(rows, page, pageSize) });
+  // P1-5: scoped — platform full, own agency full-own, hiring companies lite
+  // (no contactEmail/payoutBalance), everyone else denied.
+  if ([...PLATFORM, 'operations_admin', 'employee', 'finance_admin'].includes(ctx.role)) {
+    let rows = (db.agencyProfiles as any[]).map((a) => ({ ...a, ...agencyStats(db, a) }));
+    if (q.status) rows = rows.filter((a) => a.accountStatus === q.status);
+    if (q.verification) rows = rows.filter((a) => a.verificationStatus === q.verification);
+    if (q.q) { const s = q.q.toLowerCase(); rows = rows.filter((a) => `${a.id} ${a.legalName} ${a.displayName} ${a.contactEmail} ${a.specialties}`.toLowerCase().includes(s)); }
+    const { page, pageSize } = paginate.parse(req.query);
+    return res.json({ success: true, ...paged(rows, page, pageSize) });
+  }
+  if (['agency_admin', 'agency_recruiter', 'vendor', 'recruiter', 'internal_recruiter'].includes(ctx.role)) {
+    const rows = (db.agencyProfiles as any[]).filter((a) => a.tenantId === ctx.tenantId).map((a) => ({ ...a, ...agencyStats(db, a) }));
+    const { page, pageSize } = paginate.parse(req.query);
+    return res.json({ success: true, ...paged(rows, page, pageSize) });
+  }
+  if (['employer', 'company_admin', 'hiring_manager', 'company_recruiter'].includes(ctx.role)) {
+    let rows = (db.agencyProfiles as any[]).map((a) => {
+      const s = agencyStats(db, a);
+      return { id: a.id, displayName: a.displayName, legalName: a.legalName, verificationStatus: a.verificationStatus, accountStatus: a.accountStatus, specialties: a.specialties, activeAssignments: s.activeAssignments };
+    });
+    if (q.q) { const s = q.q.toLowerCase(); rows = rows.filter((a: any) => `${a.id} ${a.legalName} ${a.displayName}`.toLowerCase().includes(s)); }
+    const { page, pageSize } = paginate.parse(req.query);
+    return res.json({ success: true, ...paged(rows, page, pageSize) });
+  }
+  return res.status(403).json({ success: false, message: 'Access denied for this role.' });
 });
 extendedRouter.post('/agency-profiles', requireAuth(['superadmin', 'platform_owner']), (req: Request, res: Response) => {
   const { legalName, displayName } = req.body || {};
@@ -389,20 +503,26 @@ extendedRouter.get('/agency-profiles/:id/360', requireAuth(['superadmin', 'platf
   const db = loadDb(); const a: any = db.agencyProfiles.find((x: any) => x.id === req.params.id);
   if (!a) return res.status(404).json({ success: false, message: 'Not found.' });
   const jobs = agencyJobs(db, a);
-  const subs = ((db as any).submissions as any[] || []).filter((s) => (a.tenantId && s.agencyId === a.tenantId) || (s.submittedBy && a.contactEmail && String(s.submittedBy).toLowerCase() === String(a.contactEmail).toLowerCase()));
+  const subs = agencySubmissions(db, a);
   const pairKeys = new Set(subs.map((s) => `${s.jobId}::${String(s.candidateEmail).toLowerCase()}`));
   const placements = (db.placements as any[]).filter((p) => pairKeys.has(`${p.jobId}::${String(p.candidateEmail).toLowerCase()}`));
-  const comms = (db.commissions as any[]).filter((c) => (a.tenantId && (c.agencyId === a.tenantId || c.orgId === a.tenantId)));
-  const memberEmails = new Set(db.users.filter((u: any) => a.tenantId && u.tenantId === a.tenantId).map((u: any) => String(u.email).toLowerCase()));
+  const comms = agencyCommissions(db, a);
+  const memberEmails = agencyMemberEmails(db, a);
+  const jobIds = new Set(jobs.map((j: any) => j.id));
+  const agreements = (db.commissionAgreements as any[]).filter((x) => (x.agencyId && (String(x.agencyId) === String(a.id) || String(x.agencyId) === String(a.tenantId))) || (x.jobId && jobIds.has(x.jobId))).slice(0, 200);
+  // Direct agency payouts (type=agency_payout) + commission-linked payouts
+  const directPayouts = (db.payouts as any[]).filter((p) => p.agencyId && (String(p.agencyId) === String(a.id) || String(p.agencyId) === String(a.tenantId)));
+  const linkedPayouts = (db.payouts as any[]).filter((p) => comms.some((c) => c.id === p.commissionId));
+  const payouts = [...directPayouts, ...linkedPayouts.filter((p) => !directPayouts.some((d: any) => d.id === p.id))].slice(0, 100);
   res.json({ success: true, data: {
     profile: { ...a, ...agencyStats(db, a) },
     users: (db.users as any[]).filter((u) => a.tenantId && u.tenantId === a.tenantId),
     jobs: jobs.slice(0, 200),
     submissions: subs.slice(0, 200),
     placements: placements.slice(0, 200),
-    agreements: (db.commissionAgreements as any[]).filter((x) => (a.tenantId && (x.agencyId === a.tenantId || x.orgId === a.tenantId))),
+    agreements,
     commissions: comms.slice(0, 200),
-    payouts: (db.payouts as any[]).filter((p) => comms.some((c) => c.id === p.commissionId)).slice(0, 100),
-    activity: (db.auditLogs as any[]).filter((l) => l.recordId === a.id || memberEmails.has(String(l.actor).toLowerCase())).slice(0, 100),
+    payouts,
+    activity: (db.auditLogs as any[]).filter((l) => l.recordId === a.id || l.tenantId === a.tenantId || memberEmails.has(String(l.actor).toLowerCase())).slice(-100).reverse(),
   } });
 });

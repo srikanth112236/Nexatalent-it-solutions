@@ -119,7 +119,7 @@ export function AppRoutes() {
           element={
             <InactivityGuard>
               <AuthGuard>
-                <RoleGuard allowedRoles={['employee', 'superadmin']}>
+                <RoleGuard allowedRoles={['employee', 'superadmin', 'platform_owner', 'operations_admin', 'internal_recruiter', 'finance_admin', 'finance_staff', 'sales_admin', 'sales_manager', 'bda']}>
                   <PortalLazy>
                     <EmployeePortal />
                   </PortalLazy>
@@ -133,7 +133,7 @@ export function AppRoutes() {
           element={
             <InactivityGuard>
               <AuthGuard>
-                <RoleGuard allowedRoles={['recruiter', 'superadmin']}>
+                <RoleGuard allowedRoles={['recruiter', 'superadmin', 'agency_admin', 'agency_recruiter']}>
                   <PortalLazy>
                     <RecruiterPortal />
                   </PortalLazy>
@@ -147,7 +147,7 @@ export function AppRoutes() {
           element={
             <InactivityGuard>
               <AuthGuard>
-                <RoleGuard allowedRoles={['employer', 'superadmin']}>
+                <RoleGuard allowedRoles={['employer', 'superadmin', 'company_admin', 'hiring_manager', 'company_recruiter']}>
                   <PortalLazy>
                     <EmployerPortal />
                   </PortalLazy>

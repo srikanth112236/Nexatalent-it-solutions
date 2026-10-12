@@ -65,3 +65,31 @@ Evidence = file + symbol; line numbers intentionally omitted (they drift).
 - Backend: `npm run typecheck` clean; `npm test` — 88 tests across `enterprise`, `extended`, `platform` suites (serialized workers, shared file store).
 - Frontend: `npm run typecheck` clean; `npm test` — 32 tests.
 - Ops: `docs/RUNBOOK.md` (boot, bootstrap, secrets, daily ops, backups, retention, troubleshooting).
+
+## Release addendum — portal spec Phases 1–11 (no rebuild)
+
+- Phase 1: `denyFinanceUnlessGranted` (`rbac.ts`) on all finance reads + `POST /payments`; stable codes (`AGENCY_NOT_ASSIGNED`, `DUPLICATE_SUBMISSION_REVIEW`, `APPLICATION_ALREADY_EXISTS`); recruiter Commissions nav permission-gated.
+- Phase 2: publish requires `requisitionId` (`REQUIREMENT_MISSING`); `Filled` needs `openingsFilled>=openings` (`OPENINGS_NOT_FILLED`); `GET /requisitions/:id` with rollup; JobsPanel server paging + Requirement filter; UI fee math removed.
+- Phase 3: `APPLICATION_FLOW` enforced (`INVALID_TRANSITION`, `TERMINAL_STAGE`, `HIRE_VIA_PLACEMENT`, `REASON_REQUIRED`); future-only interviews (`INTERVIEW_PAST`); candidate interview writes limited (`INTERVIEW_FORBIDDEN`); Offer/Hired routed via explicit modals.
+- Phase 4: employer nav collapsed (Requirements/Job Postings/Applications); legacy mock board retired; `/candidate/profile|applications` scoped + masked; Branches card with confirmed removal; company self-verify impossible.
+- Phase 5: `internal_recruiter` assigned scope (req/job/app/interview/placement/tasks); attach via `POST /applications` with `JOB_NOT_ASSIGNED` gate; ATS moves confirmed with reason; fee wording removed.
+- Phase 6: agency payable-leg default + finance controls hidden without grant; submission reviews confirmed; gate/duplicate/no-payable tests.
+- Phase 7: public `POST /enquiries` (rate-limited, deduped, server-owned) + `GET /jobs-public/:id`; live openings on `/jobs`; live job banner + real enquiry capture on `/jobs/:slug` (no fake references).
+- Phase 8: idempotent convert (`LEAD_ALREADY_CONVERTED`/`LEAD_LINKED_EXISTING`, one org) + onboarding notifications.
+- Phase 9: HR negative tests (roles/permissions/suspend/finance writes all 403).
+- Phase 10: commercial invariants tested (single mint, immutable issued totals, granted adjustments, webhook replay, own-leg scope). Known: post-invoice adjustments correct via credit note, not invoice rewrite.
+- Phase 11: every list is a table (`overflow-x-auto` + `min-w`) with `RowMenu` actions; consequential actions behind `ActionConfirm`/`ConfirmDialog` with reason; both production builds pass.
+- Verification: backend `npm test` — 101 tests; frontend `npm test` — 32 tests; `npm run build` clean on both (frontend chunk-size warning pre-existing).
+- Out of scope (untouched): subscription plans/billing, payroll, native apps, AI matching.
+
+## Security & quality sweep — issue-fix Phases A–G (287 findings)
+
+- Phase A (P0): token-bound password reset (single-use, session-killing); per-tenant registration (no shared-company leak); legacy `/candidates` scoped+paged with effective grants; legacy stage writes allowlisted+reasoned+scoped; profile dedupe; `/agencies` + `/crm` scoping; compliance allowlist+audit; `budgetRange` out of public DTO; webhook limiter; 8 MB body for resumes; legacy-token expiry + session caps.
+- Phase B: live-visibility edit lock; agency-name validation; lead/activity/opportunity/proposal/meeting ownership; user-role validation; plan/seats out of direct org edits; bounded histories (`pushHistory`); recruiter notified on change requests.
+- Phase C: per-report role matrix; exact-match notifications; candidate interview projection; offer-letter rate redaction; agency placement visibility; export permission + scope logging; unified masking.
+- Phase D: valid-date + min/max schemas; interview job match; single open offer; CTC/money sanity; no overpayments; live-count job caps.
+- Phase E: task-status audit; request-id tracing; interviews/placements paging; one-query feedback count; suite fixture hygiene; 30 s test timeout.
+- Phase F: one confirm family (`ActionConfirm`/`ConfirmDialog`); agency verification confirmed; dead board/drawer/mock-store removed; recruiter sourcing from live pipeline; ATS moves confirmed.
+- Phase G: invented match-scores and metrics removed; production secret fail-closed; docs updated.
+- Verification: backend `npm test` — 108 tests; frontend `npm test` — 32 tests; both `npm run build` clean.
+- Residual (documented, not rebuilt): CSP stays off (website inline styles); per-endpoint IP limits only on auth/enquiry/webhook/messages; file DB needs real backup story for uploads; marketing AI-demo widgets remain showcase-only.

@@ -130,7 +130,7 @@ export const PUBLIC_JOB_FIELDS = [
   'qualifications', 'experienceMin', 'experienceMax', 'location', 'employmentType',
   'workArrangement', 'salaryMin', 'salaryMax', 'currency', 'salaryDisclosure',
   'visibility', 'startDate', 'expiryDate', 'companyName', 'department',
-  'applicantsCount', 'status',
+  'applicantsCount', 'status', 'industry', 'selectionProcess', 'createdAt',
 ] as const;
 
 export function publicJob(job: any): any {

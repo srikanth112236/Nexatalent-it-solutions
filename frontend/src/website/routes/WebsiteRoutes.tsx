@@ -18,35 +18,46 @@ import { IndustriesPage } from '../pages/IndustriesPage';
 import { WhyNexaPage } from '../pages/WhyNexaPage';
 import { SolutionDetailPage } from '../pages/SolutionDetailPage';
 import { IndustryDetailPage } from '../pages/IndustryDetailPage';
-import { JobDetailPage } from '../pages/JobDetailPage';
 import { CaseStudyDetailPage } from '../pages/CaseStudyDetailPage';
 import { InsightsPage } from '../pages/InsightsPage';
-import { ArticleDetailPage } from '../pages/ArticleDetailPage';
 import { LegalPage } from '../pages/LegalPage';
+import { NewHomePage } from '../v2/pages/NewHomePage';
+import { NewSolutionsPage } from '../v2/pages/NewSolutionsPage';
+import { NewIndustriesPage } from '../v2/pages/NewIndustriesPage';
+import { NewJobsPage } from '../v2/pages/NewJobsPage';
+import { NewInsightsPage } from '../v2/pages/NewInsightsPage';
+import { NewEmployersPage } from '../v2/pages/NewEmployersPage';
+import { NewAboutPage } from '../v2/pages/NewAboutPage';
+import { NewArticleDetailPage } from '../v2/pages/NewArticleDetailPage';
+import { NewJobDetailPage } from '../v2/pages/NewJobDetailPage';
+import { NewContactPage } from '../v2/pages/NewContactPage';
 
 export function WebsiteRoutes() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#ffffff' }}>
       <main style={{ flex: 1 }}>
         <Routes>
-          {/* 1. Main Homepage — HomePageV5 set as default */}
-          <Route path="/" element={<HomePageV5 />} />
+          {/* 1. Main Homepage — new replica (old preserved at /v5, /home-v5) */}
+          <Route path="/" element={<NewHomePage />} />
           <Route path="/v1" element={<HomePage />} />
           <Route path="/home-v1" element={<HomePage />} />
 
-          {/* 2. Core Employer & Client Pages */}
-          <Route path="/employers" element={<EmployersPage />} />
-          <Route path="/employer" element={<EmployersPage />} />
-          <Route path="/hire-talent" element={<EmployersPage />} />
-          <Route path="/request-talent" element={<EmployersPage />} />
+          {/* 2. Core Employer & Client Pages — new standard (old preserved at /classic/*) */}
+          <Route path="/employers" element={<NewEmployersPage />} />
+          <Route path="/employer" element={<NewEmployersPage />} />
+          <Route path="/hire-talent" element={<NewEmployersPage />} />
+          <Route path="/request-talent" element={<NewEmployersPage />} />
+          <Route path="/classic/employers" element={<EmployersPage />} />
           <Route path="/why-nexatalent" element={<WhyNexaPage />} />
 
           {/* 3. Solutions Suite (Overview + Dynamic Slugs) */}
-          <Route path="/solutions" element={<SolutionsPage />} />
+          <Route path="/solutions" element={<NewSolutionsPage />} />
+          <Route path="/classic/solutions" element={<SolutionsPage />} />
           <Route path="/solutions/:slug" element={<SolutionDetailPage />} />
 
           {/* 4. Industries Suite (Overview + Dynamic Slugs) */}
-          <Route path="/industries" element={<IndustriesPage />} />
+          <Route path="/industries" element={<NewIndustriesPage />} />
+          <Route path="/classic/industries" element={<IndustriesPage />} />
           <Route path="/industries/:slug" element={<IndustryDetailPage />} />
 
           {/* 5. Candidates & Career Services Suite */}
@@ -56,8 +67,9 @@ export function WebsiteRoutes() {
           <Route path="/candidate-resources" element={<CandidatesPage />} />
 
           {/* 6. Jobs Board & Single Job Detail Mandates */}
-          <Route path="/jobs" element={<JobsPage />} />
-          <Route path="/jobs/:jobSlug" element={<JobDetailPage />} />
+          <Route path="/jobs" element={<NewJobsPage />} />
+          <Route path="/classic/jobs" element={<JobsPage />} />
+          <Route path="/jobs/:jobSlug" element={<NewJobDetailPage />} />
 
           {/* 7. Partner / Vendor Empanelment */}
           <Route path="/partners" element={<PartnersPage />} />
@@ -69,14 +81,17 @@ export function WebsiteRoutes() {
           {/* 8. Authority, Proof & Insights Engine */}
           <Route path="/case-studies" element={<CaseStudiesPage />} />
           <Route path="/case-studies/:caseStudySlug" element={<CaseStudyDetailPage />} />
-          <Route path="/insights" element={<InsightsPage />} />
-          <Route path="/insights/:articleSlug" element={<ArticleDetailPage />} />
-          <Route path="/guides" element={<InsightsPage />} />
-          <Route path="/reports" element={<InsightsPage />} />
+          <Route path="/insights" element={<NewInsightsPage />} />
+          <Route path="/classic/insights" element={<InsightsPage />} />
+          <Route path="/insights/:articleSlug" element={<NewArticleDetailPage />} />
+          <Route path="/guides" element={<NewInsightsPage />} />
+          <Route path="/reports" element={<NewInsightsPage />} />
 
-          {/* 10. Company & Direct Contact */}
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/contact" element={<ContactPage />} />
+          {/* 10. Company & Direct Contact — new light design (old at /classic/*) */}
+          <Route path="/about" element={<NewAboutPage />} />
+          <Route path="/classic/about" element={<AboutPage />} />
+          <Route path="/contact" element={<NewContactPage />} />
+          <Route path="/classic/contact" element={<ContactPage />} />
 
           {/* 11. Legal & Compliance Suite */}
           <Route path="/privacy-policy" element={<LegalPage />} />

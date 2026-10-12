@@ -35,6 +35,7 @@ export function CandidateRegisterPage() {
     email: '',
     phone: '',
     currentCity: '',
+    country: '',
     preferredWorkMode: '',
 
     // Step 2: Technical Footprint & Skills
@@ -56,6 +57,9 @@ export function CandidateRegisterPage() {
     githubUrl: '',
     portfolioUrl: '',
     stealthMode: true,
+    authMethod: 'password',
+    termsAccepted: false,
+    marketingOptIn: false,
     password: '',
     confirmPassword: ''
   });
@@ -93,6 +97,10 @@ export function CandidateRegisterPage() {
       setFormError('Passwords do not match.');
       return;
     }
+    if (!formData.termsAccepted) {
+      setFormError('You must accept the Terms & Privacy Policy to register.');
+      return;
+    }
     setIsSubmitting(true);
     try {
       const res = await apiClient.post<any>('/api/v1/auth/register/candidate', {
@@ -100,6 +108,19 @@ export function CandidateRegisterPage() {
         email: formData.email.trim(),
         password: formData.password,
         phone: formData.phone.trim(),
+        country: formData.country.trim(),
+        authMethod: formData.authMethod,
+        termsAccepted: true,
+        marketing: formData.marketingOptIn,
+        // Pre-fill the candidate profile so onboarding (§7.1) can resume after sign-in.
+        city: formData.currentCity.trim(),
+        currentCity: formData.currentCity.trim(),
+        primaryRole: formData.primaryRole.trim(),
+        roleTitle: formData.primaryRole.trim(),
+        primaryTechStack: [formData.primaryTechStack, formData.secondarySkills].filter(Boolean).join(', '),
+        currentCtc: formData.currentCtc.trim(),
+        expectedCtc: formData.expectedCtc.trim(),
+        noticePeriod: formData.noticePeriod,
       });
       const created = (res as { data?: { id?: string } })?.data;
       setRefId(created?.id || 'RECEIVED');
@@ -224,7 +245,8 @@ export function CandidateRegisterPage() {
                       <Award size={15} /> Added to Nexa AI Matching Graph
                     </div>
                     <p className="text-slate-600 leading-relaxed">
-                      Your resume {resumeFile ? `(${resumeFile.name})` : ''} has been parsed. Your current employer identity is locked in stealth privacy mode.
+                      Your profile details are saved — continue in onboarding after signing in.
+                      {resumeFile ? ` Re-upload ${resumeFile.name} from Documents so it attaches to applications (sign-in is required for uploads).` : ' Upload your resume from Documents after signing in so it attaches to applications.'}
                     </p>
                   </div>
                   <div className="text-xs font-bold text-slate-500 animate-pulse">
@@ -321,6 +343,18 @@ export function CandidateRegisterPage() {
                             ].map((o) => ({ value: o, label: o }))}
                           />
                         </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-700 font-bold mb-1">Country *</label>
+                        <input
+                          type="text"
+                          required
+                          value={formData.country}
+                          onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                          placeholder="e.g. India"
+                          className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold focus:bg-white focus:border-emerald-600 outline-none"
+                        />
                       </div>
                     </motion.div>
                   )}
@@ -524,12 +558,25 @@ export function CandidateRegisterPage() {
                         </div>
                       </div>
 
-                      {/* Password Fields */}
+                      {/* Password + auth method */}
                       {formError && (
                         <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-bold">
                           {formError}
                         </div>
                       )}
+                      <div>
+                        <label className="block text-slate-700 font-bold mb-1">Authentication method *</label>
+                        <Select
+                          value={formData.authMethod}
+                          onChange={(v) => setFormData({ ...formData, authMethod: v })}
+                          ariaLabel="Authentication method"
+                          options={[
+                            { value: 'password', label: 'Password sign-in' },
+                            { value: 'otp', label: 'Email OTP sign-in' },
+                            { value: 'sso', label: 'SSO (where enabled)' },
+                          ]}
+                        />
+                      </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-slate-700 font-bold mb-1">Create Password (min 8) *</label>
@@ -559,6 +606,26 @@ export function CandidateRegisterPage() {
                           />
                         </div>
                       </div>
+
+                      {/* Terms + marketing consent (§7.1 — separate controls) */}
+                      <label className="flex items-start gap-2 cursor-pointer p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 font-medium">
+                        <input
+                          type="checkbox"
+                          checked={formData.termsAccepted}
+                          onChange={(e) => setFormData({ ...formData, termsAccepted: e.target.checked })}
+                          className="w-4 h-4 mt-0.5 text-emerald-600 rounded border-slate-300"
+                        />
+                        <span>I accept the <Link to="/terms" target="_blank" className="text-emerald-700 font-bold underline">Terms of Service</Link> and <Link to="/privacy" target="_blank" className="text-emerald-700 font-bold underline">Privacy Policy</Link> *</span>
+                      </label>
+                      <label className="flex items-start gap-2 cursor-pointer p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 font-medium">
+                        <input
+                          type="checkbox"
+                          checked={formData.marketingOptIn}
+                          onChange={(e) => setFormData({ ...formData, marketingOptIn: e.target.checked })}
+                          className="w-4 h-4 mt-0.5 text-emerald-600 rounded border-slate-300"
+                        />
+                        <span>Send me job alerts and product updates (optional — you can change this anytime in Privacy settings)</span>
+                      </label>
 
                       {/* Stealth Privacy Switch */}
                       <div className="p-3.5 rounded-2xl bg-slate-900 text-white flex items-center justify-between">

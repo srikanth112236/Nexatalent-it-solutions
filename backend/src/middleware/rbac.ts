@@ -83,13 +83,17 @@ function suspended(email: string): boolean {
 /** Verifies real JWT, revocation, suspension. Attaches AuthCtx. */
 export function requireAuth(allowedRoles?: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
-    // Legacy compat: old opaque NEXA-* tokens issued before upgrade
+    // Legacy compat: old opaque NEXA-* tokens issued before upgrade.
+    // Phase A: legacy tokens are time-boxed (24 h) and suspension-checked.
     const header = String(req.headers.authorization || '');
     const token = header.startsWith('Bearer ') ? header.slice(7) : '';
     if (!token) return res.status(401).json({ success: false, message: 'Authentication required. Please sign in.' });
     if (token.startsWith('NEXA-')) {
       const sess = loadDb().sessions.find((s: any) => s.accessToken === token);
       if (!sess) return res.status(401).json({ success: false, message: 'Session expired. Please sign in again.' });
+      if (sess.createdAt && Date.now() - new Date(sess.createdAt).getTime() > 24 * 3600 * 1000) {
+        return res.status(401).json({ success: false, message: 'Legacy session expired. Please sign in again.' });
+      }
       if (suspended(sess.email)) return res.status(403).json({ success: false, message: 'Account suspended. Contact support.' });
       if (allowedRoles && !allowedRoles.includes(sess.role)) {
         return res.status(403).json({ success: false, message: `Access denied for role '${sess.role}'.` });
@@ -143,4 +147,48 @@ export function maskCandidate<T extends Record<string, any>>(row: T, canSeeSensi
 
 export function hasPerm(role: string, perm: string): boolean {
   return (ROLE_PERMISSIONS[role] || []).includes(perm);
+}
+
+/**
+ * Phase 1 — finance deny-by-default (new spec §3.3).
+ * Roles here cannot read finance ledgers (commissions/invoices/payouts/payments,
+ * agreements, fee slabs, adjustments, reconciliation) unless they hold an
+ * explicit finance grant (manage_billing / reconcile / adjust_commission / refund).
+ * Server is authoritative; UI hiding is secondary.
+ */
+export const FINANCE_BLOCKED_ROLES = [
+  'recruiter',
+  'bda',
+  'sales_admin',
+  'sales_manager',
+  'agency_recruiter',
+  'support_admin',
+] as const;
+// Platform delivery staff see finance RECORDS (read-only) so timesheets/payroll stay
+// synced across the suite. Mutations still require manage_billing (finance/superadmin).
+// NOTE: 'candidate' is intentionally NOT blocked — handler-level scoping limits
+// candidates to their own contractor payouts + payroll runs (invoices/payments
+// stay tenant-scoped, so other orgs' records remain invisible).
+export const FINANCE_VIEWERS = [
+  'superadmin', 'platform_owner', 'finance_admin', 'finance_staff',
+  'operations_admin', 'employee', 'internal_recruiter',
+] as const;
+// NOTE: 'candidate' is intentionally NOT blocked — handler-level scoping limits
+// candidates to their own contractor payouts + payroll runs (invoices/payments
+// stay tenant-scoped, so other orgs' records remain invisible).
+
+const FINANCE_GRANTS = ['manage_billing', 'reconcile', 'adjust_commission', 'refund'];
+
+export function denyFinanceUnlessGranted(req: Request, res: Response, next: NextFunction) {
+  const ctx = (req as any).auth as AuthCtx | undefined;
+  if (!ctx) return res.status(401).json({ success: false, message: 'Authentication required.' });
+  const blocked = (FINANCE_BLOCKED_ROLES as readonly string[]).includes(ctx.role);
+  if (!blocked) return next();
+  const granted = ctx.permissions.some((p) => FINANCE_GRANTS.includes(p));
+  if (granted) return next();
+  return res.status(403).json({
+    success: false,
+    code: 'FINANCE_FORBIDDEN',
+    message: `Role '${ctx.role}' cannot access finance records. Ask a finance-authorized admin for access.`,
+  });
 }

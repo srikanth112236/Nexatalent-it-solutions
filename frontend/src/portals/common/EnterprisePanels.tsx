@@ -1,17 +1,20 @@
 import { useState, useEffect, useMemo, useRef, Fragment } from 'react';
+import { FileText, Download, ExternalLink, X } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../../shared/api-client';
 import { Candidate360Drawer, AgencyDrawer } from '../superadmin/SuperAdmin360';
-import { ExportButton, useQueryState, useDebounced, checkRecordAction, useActionGuard, DetailDrawer, GlobalCreateModal } from './CrudKit';
+import { ExportButton, useQueryState, useDebounced, checkRecordAction, useActionGuard, DetailDrawer, SearchSuggest, DrawerCard, DrawerList, StatusPill, KeyValues, drawerTone, CrudToolbar } from './CrudKit';
 import { useAuth, useCan, usePermissions } from '../../shared/auth/AuthContext';
 import {
   applicationsApi, interviewsApi, chatApi, talentApi, requisitionsApi, jobsApi,
-  offersPlacementsApi, billingApi, salesApi, platformApi, documentsApi, workforceApi,
+  offersPlacementsApi, billingApi, salesApi, platformApi, documentsApi, workforceApi, directoryApi,
 } from '../../shared/enterprise/phaseApi';
 import { invalidateCollections } from '../../shared/data/store';
 import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
 import { Modal, ConfirmDialog, RowMenu, Select, DatePicker, Field, ActionConfirm, RichText, inputCls as kitInput } from '../../shared/ui/EnterpriseKit';
+import { sanitizeHtml, escHtml } from '../../shared/utils';
+import { bulkPublish, unpublishJob } from './jobPublish';
 
 /** Portal base from the URL (/superadmin, /employer…) — full-page creators navigate under it. */
 export function portalBase(): string {
@@ -43,7 +46,7 @@ function errMsg(err: unknown): string {
 const inputCls = 'w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:border-blue-500';
 const btnPrimary = 'px-4 py-2.5 rounded-xl bg-spec-electric hover:bg-[#0069d1] text-white font-bold text-xs shadow-md cursor-pointer';
 const btnDark = 'px-4 py-2.5 rounded-xl bg-spec-navy hover:bg-spec-midnight text-white font-bold text-xs shadow-md cursor-pointer';
-const cardCls = 'bg-white rounded-3xl border border-slate-200/90 p-6 shadow-sm space-y-4';
+const cardCls = 'bg-white rounded-3xl border border-slate-200/90 p-4 shadow-sm space-y-3';
 
 function PanelError({ message, onRetry, status }: { message: string; onRetry: () => void; status?: number }) {
   if (status === 403) {
@@ -463,14 +466,24 @@ export function InfoTip({ title, body }: { title: string; body: React.ReactNode 
 export function ConfirmButton({ label, confirmLabel = 'Confirm?', onConfirm, className }: { label: string; confirmLabel?: string; onConfirm: () => void | Promise<void>; className?: string }) {
   const [arming, setArming] = useState(false);
   const [busy, setBusy] = useState(false);
+  const confirmRef = useRef<HTMLButtonElement>(null);
+  // P4: focus confirm on arm + auto-disarm after 10s so it can't stay armed.
+  useEffect(() => {
+    if (!arming) return;
+    confirmRef.current?.focus();
+    const t = setTimeout(() => setArming(false), 10000);
+    return () => clearTimeout(t);
+  }, [arming]);
   if (!arming) {
     return <button type="button" className={className} onClick={() => setArming(true)}>{label}</button>;
   }
   return (
     <span className="inline-flex items-center gap-1.5" role="alertdialog" aria-live="assertive" aria-label={confirmLabel}>
       <button
+        ref={confirmRef}
         type="button"
         disabled={busy}
+        aria-busy={busy}
         className="px-3 py-1.5 rounded-lg bg-red-600 text-white font-bold text-[11px] disabled:opacity-50"
         onClick={async () => { setBusy(true); try { await onConfirm(); } finally { setBusy(false); setArming(false); } }}
       >
@@ -529,9 +542,7 @@ export function RequisitionsPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
-  const [form, setForm] = useState({ title: '', department: '', category: '', location: '', branch: '', openings: 1, employmentType: 'Full-time', priority: 'Medium', description: '', responsibilities: '', requiredSkills: '', preferredSkills: '', qualifications: '', budgetMin: '', budgetMax: '', currency: 'INR', payPeriod: 'annual', benefits: '', recruiter: '', experienceMin: '', experienceMax: '', deadline: '' });
   const [busy, setBusy] = useState(false);
-  const [showCreate, setShowCreate] = useState(false);
   const [showCols, setShowCols] = useState(false);
   const [visibleCols, setVisibleCols] = useState<string[]>(loadVisibleCols);
   const [page, setPage] = useState(1);
@@ -544,7 +555,8 @@ export function RequisitionsPanel() {
   const { user } = useAuth();
   const perms = usePermissions();
   const privileged = !!user && ['superadmin', 'platform_owner'].includes(user.role);
-  const can = (p: string) => perms === null || perms.includes(p);
+  // P2-8: fail-closed while permissions load.
+  const can = (p: string) => !!perms && perms.includes(p);
   const guard = (r: any, action: string) => checkRecordAction('requirement', r, action, { privileged, can });
   const [pipelineFor, setPipelineFor] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
@@ -555,7 +567,6 @@ export function RequisitionsPanel() {
   const [recruiters, setRecruiters] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<Record<string, any[] | null>>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const emptyForm = { title: '', department: '', category: '', location: '', branch: '', openings: 1, employmentType: 'Full-time', priority: 'Medium', description: '', responsibilities: '', requiredSkills: '', preferredSkills: '', qualifications: '', budgetMin: '', budgetMax: '', currency: 'INR', payPeriod: 'annual', benefits: '', recruiter: '', experienceMin: '', experienceMax: '', deadline: '' };
   const pageSize = 10;
 
   const buildParams = (p: number) => {
@@ -582,28 +593,6 @@ export function RequisitionsPanel() {
   const refreshRow = (updated: any) => {
     setRows((r) => r.map((x) => (x.id === updated.id ? updated : x)));
     setPipelineFor((d: any) => (d && d.id === updated.id ? updated : d));
-  };
-  const create = async (e: React.FormEvent) => {
-    e.preventDefault(); if (!form.title.trim()) return;
-    setBusy(true);
-    try {
-      const created = unwrapObj(await requisitionsApi.create({
-        ...form,
-        openings: Number(form.openings) || 1,
-        experienceMin: form.experienceMin === '' ? undefined : Number(form.experienceMin),
-        experienceMax: form.experienceMax === '' ? undefined : Number(form.experienceMax),
-        budgetMin: form.budgetMin === '' ? undefined : Number(form.budgetMin),
-        budgetMax: form.budgetMax === '' ? undefined : Number(form.budgetMax),
-        deadline: form.deadline || undefined,
-        recruiter: form.recruiter.trim() || undefined,
-        branch: form.branch.trim() || undefined,
-      }));
-      if (created?.id) { setRows((r) => [created, ...r]); setTotal((t) => t + 1); }
-      setForm(emptyForm);
-      setShowCreate(false);
-      setOk('Requirement created as Draft.');
-      syncAll();
-    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
   };
   const transition = async (id: string, status: string, reason?: string) => {
     try {
@@ -741,7 +730,9 @@ export function RequisitionsPanel() {
       {error && <PanelError message={error} status={loadError} onRetry={() => load(page)} />}
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
       <div className="flex flex-col lg:flex-row gap-2">
-        <div className="relative flex-1"><input className={inputCls} placeholder="Search ID, title, department, manager…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+        <div className="relative flex-1"><SearchSuggest value={q} onChange={setQ} placeholder="Search ID, title, department, manager…"
+    items={rows.map((r: any) => ({ key: String(r.id), query: String(r.id), title: String(r.title || r.id), meta: [r.id, r.department].filter(Boolean).join(' • '), status: r.status }))}
+    onPick={(it) => { setQ(it.query ?? it.key); setPage(1); }} /></div>
         <div className="flex gap-2">
           <div className="w-44 shrink-0">
             <Select value={statusF} onChange={setStatusF} ariaLabel="Requirement status filter" placeholder="All statuses"
@@ -767,8 +758,7 @@ export function RequisitionsPanel() {
             )}
           </div>
           <ExportButton filename="requirements.csv" rows={rows} columns={['id', 'title', 'orgId', 'department', 'location', 'branch', 'hiringManager', 'recruiter', 'employmentType', 'experienceMin', 'experienceMax', 'openings', 'status', 'createdAt']} />
-          <button type="button" onClick={() => navigate(`${portalBase()}/requisitions/new`)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Full-page editor →</button>
-          <button type="button" onClick={() => setShowCreate(true)} className={btnPrimary}>+ New requirement</button>
+          <button type="button" onClick={() => navigate(`${portalBase()}/requisitions/new`)} className={btnPrimary}>+ New requirement</button>
         </div>
       </div>
       {selected.size > 0 && (
@@ -780,56 +770,6 @@ export function RequisitionsPanel() {
           <button type="button" onClick={() => setSelected(new Set())} className="px-3 py-1.5 rounded-lg text-slate-500">Clear</button>
         </div>
       )}
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New requirement" subtitle="Internal demand — Draft → Pending Approval → Approved → Sourcing" wide>
-        <form onSubmit={create} className="space-y-4">
-          <div>
-            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Basics</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="sm:col-span-2"><Field label="Requirement title *"><input className={kitInput} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Senior QA Automation Engineer" /></Field></div>
-              <Field label="Department"><input className={kitInput} value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} /></Field>
-              <Field label="Category"><input className={kitInput} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></Field>
-              <Field label="Location"><input className={kitInput} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></Field>
-              <Field label="Branch"><input className={kitInput} value={form.branch} onChange={(e) => setForm({ ...form, branch: e.target.value })} placeholder="e.g. Bengaluru HQ" /></Field>
-              <Field label="Employment type"><input className={kitInput} value={form.employmentType} onChange={(e) => setForm({ ...form, employmentType: e.target.value })} /></Field>
-              <Field label="Priority"><Select value={form.priority} onChange={(v) => setForm({ ...form, priority: v })} options={['Low', 'Medium', 'High', 'Critical'].map((p) => ({ value: p, label: p }))} /></Field>
-            </div>
-          </div>
-          <div>
-            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Role details</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="sm:col-span-2"><Field label="Role description"><input className={kitInput} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Responsibilities, must-haves…" /></Field></div>
-              <div className="sm:col-span-2"><Field label="Responsibilities"><textarea rows={2} className={kitInput} value={form.responsibilities} onChange={(e) => setForm({ ...form, responsibilities: e.target.value })} placeholder="Day-to-day scope…" /></Field></div>
-              <div className="sm:col-span-2"><Field label="Required skills"><SkillPicker value={form.requiredSkills} onChange={(v) => setForm({ ...form, requiredSkills: v })} /></Field></div>
-              <div className="sm:col-span-2"><Field label="Preferred skills"><SkillPicker value={form.preferredSkills} onChange={(v) => setForm({ ...form, preferredSkills: v })} /></Field></div>
-              <div className="sm:col-span-2"><Field label="Qualifications"><input className={kitInput} value={form.qualifications} onChange={(e) => setForm({ ...form, qualifications: e.target.value })} placeholder="Degree, certifications…" /></Field></div>
-              <Field label="Min experience (yrs)"><input className={kitInput} type="number" min={0} value={form.experienceMin} onChange={(e) => setForm({ ...form, experienceMin: e.target.value })} /></Field>
-              <Field label="Max experience (yrs)"><input className={kitInput} type="number" min={0} value={form.experienceMax} onChange={(e) => setForm({ ...form, experienceMax: e.target.value })} /></Field>
-            </div>
-          </div>
-          <div>
-            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Compensation</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Min budget / CTC"><input className={kitInput} type="number" min={0} value={form.budgetMin} onChange={(e) => setForm({ ...form, budgetMin: e.target.value })} /></Field>
-              <Field label="Max budget / CTC"><input className={kitInput} type="number" min={0} value={form.budgetMax} onChange={(e) => setForm({ ...form, budgetMax: e.target.value })} /></Field>
-              <Field label="Currency"><Select value={form.currency} onChange={(v) => setForm({ ...form, currency: v })} options={['INR', 'USD', 'EUR', 'GBP', 'AED'].map((c) => ({ value: c, label: c }))} /></Field>
-              <Field label="Pay period"><Select value={form.payPeriod} onChange={(v) => setForm({ ...form, payPeriod: v })} options={[{ value: 'annual', label: 'Annual' }, { value: 'monthly', label: 'Monthly' }, { value: 'hourly', label: 'Hourly' }]} /></Field>
-              <div className="sm:col-span-2"><Field label="Benefits"><input className={kitInput} value={form.benefits} onChange={(e) => setForm({ ...form, benefits: e.target.value })} placeholder="Insurance, ESOPs, hybrid…" /></Field></div>
-            </div>
-          </div>
-          <div>
-            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Timeline & ownership</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Openings"><input className={kitInput} type="number" min={1} value={form.openings} onChange={(e) => setForm({ ...form, openings: Number(e.target.value) })} /></Field>
-              <Field label="Target deadline"><DatePicker value={form.deadline} onChange={(v) => setForm({ ...form, deadline: v })} ariaLabel="Target deadline" /></Field>
-              <div className="sm:col-span-2"><Field label="Recruiter (email)"><input className={kitInput} value={form.recruiter} onChange={(e) => setForm({ ...form, recruiter: e.target.value })} placeholder="recruiter@company.com" /></Field></div>
-            </div>
-          </div>
-          <div className="flex justify-end gap-2 pt-1 border-t border-slate-100 mt-1">
-            <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs mt-3">Cancel</button>
-            <button className={`${btnPrimary} mt-3`} disabled={busy || !form.title.trim()}>{busy ? 'Creating…' : 'Create requirement'}</button>
-          </div>
-        </form>
-      </Modal>
       {loading ? <InlineLoading message="Loading requirements…" /> : rows.length === 0 ? (
         <EmptyState title="No requirements" message="Create the first hiring requirement to start the approval flow." />
       ) : (<>
@@ -1120,6 +1060,43 @@ export function JobCreatePage({ base }: { base: string }) {
 const FUNNEL_STEPS = ['applied', 'screening', 'interview', 'offer', 'hired'] as const;
 const FUNNEL_LABELS: Record<string, string> = { applied: 'Applied', screening: 'Screening', interview: 'Interview', offer: 'Offer', hired: 'Hired' };
 
+/** Shared detail-drawer primitives — one tab look, status-differentiated pills everywhere. */
+const TONE_OK = new Set(['Active', 'Approved', 'Published', 'Filled', 'Hired', 'Completed', 'Selected', 'Shortlisted', 'Signed', 'Accepted', 'Joined', 'Confirmed', 'Issued', 'Paid']);
+const TONE_INFO = new Set(['Pending Approval', 'Pending Review', 'Sourcing', 'Scheduled', 'Rescheduled', 'Under Review', 'Screening', 'Applied', 'Interview', 'Offer', 'In Progress', 'Open']);
+const TONE_WARN = new Set(['Draft', 'Paused', 'On Hold', 'No-show', 'Partially Paid', 'Invited']);
+const TONE_BAD = new Set(['Cancelled', 'Closed', 'Archived', 'Rejected', 'Withdrawn', 'Declined', 'Failed', 'Expired']);
+export function tonePill(status: unknown): string {
+  const s = String(status ?? '—');
+  const base = 'inline-block px-2 py-0.5 rounded-full border font-bold text-[11px] whitespace-nowrap';
+  if (TONE_OK.has(s)) return `${base} bg-emerald-50 text-emerald-700 border-emerald-200`;
+  if (TONE_INFO.has(s)) return `${base} bg-blue-50 text-blue-700 border-blue-200`;
+  if (TONE_WARN.has(s)) return `${base} bg-amber-50 text-amber-800 border-amber-200`;
+  if (TONE_BAD.has(s)) return `${base} bg-slate-100 text-slate-500 border-slate-200`;
+  return `${base} bg-slate-100 text-slate-600 border-slate-200`;
+}
+export function DetailTabs({ tabs, active, onPick }: { tabs: { key: string; label: string; count?: number }[]; active: string; onPick: (k: string) => void }) {
+  return (
+    <div className="flex gap-1.5 overflow-x-auto pb-1" role="tablist" aria-label="Detail sections">
+      {tabs.map((t) => (
+        <button key={t.key} role="tab" aria-selected={t.key === active} type="button" onClick={() => onPick(t.key)}
+          className={`px-3 py-1.5 rounded-lg font-bold text-[11px] whitespace-nowrap border ${t.key === active ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+          {t.label}{t.count !== undefined ? ` (${t.count})` : ''}
+        </button>
+      ))}
+    </div>
+  );
+}
+export function DetailSection({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) {
+  return (
+    <section className="rounded-2xl bg-white border border-slate-200 overflow-hidden">
+      <header className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between gap-2">
+        <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600">{title}{count !== undefined ? ` (${count})` : ''}</h4>
+      </header>
+      <div className="p-3.5 space-y-2">{children}</div>
+    </section>
+  );
+}
+
 export function RequirementPipeline({ reqId, onClose, onDecide, onEdit, onAssign, onDelete }: {
   reqId: string; onClose: () => void;
   onDecide: (row: any, action: 'approve' | 'reject' | 'changes') => void;
@@ -1129,6 +1106,7 @@ export function RequirementPipeline({ reqId, onClose, onDecide, onEdit, onAssign
   const [interviews, setInterviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [tab, setTab] = useState('overview');
   const gApprove = useActionGuard('requirement', data, 'approve');
   const gEdit = useActionGuard('requirement', data, 'edit');
   const gDelete = useActionGuard('requirement', data, 'delete');
@@ -1156,6 +1134,7 @@ export function RequirementPipeline({ reqId, onClose, onDecide, onEdit, onAssign
     !gEdit.allowed && gEdit.reason,
     !gDelete.allowed && gDelete.reason,
   ].filter(Boolean) as string[];
+  const activity = [...(data?.changeRequests || []).map((c: any) => ({ at: c.at, kind: 'changes', text: `Changes requested by ${c.by}: ${c.note}` })), ...(data?.history || []).map((h: any) => ({ at: h.at, kind: h.to, text: `${h.from} → ${h.to} by ${h.by}${h.reason ? `: ${h.reason}` : ''}` }))].reverse().slice(0, 30);
   return (
     <DetailDrawer title={data?.title || reqId} subtitle={`${reqId} • ${data?.status || ''} • ${f.openingsFilled}/${data?.openings || 1} filled`} onClose={onClose} width="max-w-4xl">
       {loading ? <InlineLoading message="Loading pipeline…" /> : error ? (
@@ -1175,72 +1154,79 @@ export function RequirementPipeline({ reqId, onClose, onDecide, onEdit, onAssign
               </div>
             )}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {[['Owner', data?.hiringManager || '—'], ['Recruiter', data?.recruiter || 'Unassigned'], ['Deadline', String(data?.deadline || '').slice(0, 10) || '—']].map(([k, v]) => (
-              <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 truncate">{String(v ?? '—')}</div></div>
-            ))}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={tonePill(data?.status)}>{data?.status || '—'}</span>
+            <span className="text-[11px] font-mono text-slate-500 bg-slate-100 border border-slate-200 rounded-md px-1.5 py-0.5">{reqId}</span>
+            <span className="text-[11px] font-bold text-slate-500">{f.openingsFilled}/{data?.openings || 1} filled • {f.applications} apps → {f.hired} hired</span>
           </div>
-          <div>
-            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Role profile</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {[['Department / Category', [data?.department, data?.category].filter(Boolean).join(' • ') || '—'], ['Location / Branch', [data?.location, data?.branch].filter(Boolean).join(' • ') || '—'], ['Employment', data?.employmentType || '—'], ['Experience', (data?.experienceMin !== undefined || data?.experienceMax !== undefined) ? `${data?.experienceMin ?? '—'}–${data?.experienceMax ?? '—'} yrs` : '—'], ['Budget', (data?.budgetMin || data?.budgetMax) ? `${data?.currency || 'INR'} ${data?.budgetMin ?? '—'}–${data?.budgetMax ?? '—'} ${data?.payPeriod || ''}` : '—'], ['Priority', data?.priority || '—']].map(([k, v]) => (
-                <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1">{String(v ?? '—')}</div></div>
-              ))}
-              {[['Description', data?.description], ['Responsibilities', data?.responsibilities], ['Required skills', data?.requiredSkills], ['Preferred skills', data?.preferredSkills], ['Qualifications', data?.qualifications], ['Benefits', data?.benefits]].filter(([, v]) => v).map(([k, v]) => (
-                <div key={k as string} className="sm:col-span-2 p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-medium mt-1 whitespace-pre-wrap">{String(v)}</div></div>
-              ))}
-            </div>
-          </div>
-          <div>
-            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Hiring funnel — live counts</div>
-            <div className="flex items-stretch gap-1" role="img" aria-label={`Funnel: ${FUNNEL_STEPS.map((s) => `${FUNNEL_LABELS[s]} ${f[s]}`).join(', ')}`}>
-              {FUNNEL_STEPS.map((s, i) => (
-                <div key={s} className="flex-1 min-w-0">
-                  <div className="text-center font-extrabold text-sm">{f[s]}</div>
-                  <div className={`h-2 rounded-full ${f[s] > 0 ? 'bg-[#087BFF]' : 'bg-slate-200'}`} style={{ opacity: 0.45 + (0.55 * f[s]) / max }} />
-                  <div className="text-center text-[10px] font-bold text-slate-500 mt-1 truncate">{FUNNEL_LABELS[s]}</div>
-                  {i < FUNNEL_STEPS.length - 1 && <div className="hidden" />}
+          <DetailTabs tabs={[{ key: 'overview', label: 'Overview' }, { key: 'interviews', label: 'Interviews', count: interviews.length }, { key: 'activity', label: 'Activity', count: activity.length }]} active={tab} onPick={setTab} />
+          {tab === 'overview' && (
+            <div className="space-y-3">
+              <DetailSection title="Ownership">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {[['Owner', data?.hiringManager || '—'], ['Recruiter', data?.recruiter || 'Unassigned'], ['Deadline', String(data?.deadline || '').slice(0, 10) || '—']].map(([k, v]) => (
+                    <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 truncate">{String(v ?? '—')}</div></div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-          <div>
-            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Linked jobs ({(f.linkedJobs || []).length})</div>
-            {(f.linkedJobs || []).length === 0 ? <div className="text-[11px] text-slate-500">No postings yet.</div> : (
-              <div className="space-y-1.5">
-                {f.linkedJobs.map((j: any) => (
-                  <div key={j.id} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
-                    <div className="min-w-0"><div className="font-bold truncate">{j.title}</div><div className="font-mono text-[10px] text-slate-500">{j.id}</div></div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-bold">{j.counts.applications} apps → {j.counts.hired} hired</span>
-                      <span className="px-2 py-0.5 rounded-full bg-white border border-slate-200 font-bold text-[10px]">{j.status}</span>
+              </DetailSection>
+              <DetailSection title="Role profile">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {[['Department / Category', [data?.department, data?.category].filter(Boolean).join(' • ') || '—'], ['Location / Branch', [data?.location, data?.branch].filter(Boolean).join(' • ') || '—'], ['Employment', data?.employmentType || '—'], ['Experience', (data?.experienceMin !== undefined || data?.experienceMax !== undefined) ? `${data?.experienceMin ?? '—'}–${data?.experienceMax ?? '—'} yrs` : '—'], ['Budget', (data?.budgetMin || data?.budgetMax) ? `${data?.currency || 'INR'} ${data?.budgetMin ?? '—'}–${data?.budgetMax ?? '—'} ${data?.payPeriod || ''}` : '—'], ['Priority', data?.priority || '—']].map(([k, v]) => (
+                    <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1">{String(v ?? '—')}</div></div>
+                  ))}
+                  {[['Description', data?.description], ['Responsibilities', data?.responsibilities], ['Required skills', data?.requiredSkills], ['Preferred skills', data?.preferredSkills], ['Qualifications', data?.qualifications], ['Benefits', data?.benefits]].filter(([, v]) => v).map(([k, v]) => (
+                    <div key={k as string} className="sm:col-span-2 p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-medium mt-1 whitespace-pre-wrap">{String(v)}</div></div>
+                  ))}
+                </div>
+              </DetailSection>
+              <DetailSection title="Hiring funnel — live counts">
+                <div className="flex items-stretch gap-1" role="img" aria-label={`Funnel: ${FUNNEL_STEPS.map((s) => `${FUNNEL_LABELS[s]} ${f[s]}`).join(', ')}`}>
+                  {FUNNEL_STEPS.map((s) => (
+                    <div key={s} className="flex-1 min-w-0">
+                      <div className="text-center font-extrabold text-sm">{f[s]}</div>
+                      <div className={`h-2 rounded-full ${f[s] > 0 ? 'bg-[#087BFF]' : 'bg-slate-200'}`} style={{ opacity: 0.45 + (0.55 * f[s]) / max }} />
+                      <div className="text-center text-[10px] font-bold text-slate-500 mt-1 truncate">{FUNNEL_LABELS[s]}</div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <div>
-            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Upcoming interviews ({interviews.length})</div>
-            {interviews.length === 0 ? <div className="text-[11px] text-slate-500">None scheduled.</div> : (
-              <div className="space-y-1.5">
-                {interviews.map((iv: any) => (
-                  <div key={iv.id} className="p-3 rounded-xl bg-slate-50 border border-slate-200 font-semibold">
-                    {iv.candidateName || iv.candidateEmail} • {iv.round || ''} • {String(iv.scheduledAt || '').slice(0, 16).replace('T', ' ')}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <div>
-            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">Activity</div>
-            <div className="space-y-1.5">
-              {[...(data?.changeRequests || []).map((c: any) => ({ at: c.at, text: `Changes requested by ${c.by}: ${c.note}` })), ...(data?.history || []).map((h: any) => ({ at: h.at, text: `${h.from} → ${h.to} by ${h.by}${h.reason ? `: ${h.reason}` : ''}` }))].reverse().slice(0, 20).map((e: any, i: number) => (
-                <div key={i} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 font-medium">{e.text} <span className="text-slate-400">• {String(e.at || '').slice(0, 16).replace('T', ' ')}</span></div>
-              ))}
-              {((data?.changeRequests || []).length === 0 && (data?.history || []).length === 0) && <div className="text-[11px] text-slate-500">No recorded transitions yet.</div>}
+                  ))}
+                </div>
+              </DetailSection>
+              <DetailSection title="Linked jobs" count={(f.linkedJobs || []).length}>
+                {(f.linkedJobs || []).length === 0 ? <div className="text-[11px] text-slate-500 font-medium">No postings yet — publish a job under this requirement to start sourcing.</div> : (
+                  <DrawerList items={f.linkedJobs || []} empty="" render={(j: any) => (
+                    <DrawerCard key={j.id} status={j.status} title={j.title}
+                      meta={<><span className="font-mono">{j.id}</span> • {j.counts.applications} apps → {j.counts.hired} hired</>}
+                      right={<span className={tonePill(j.status)}>{j.status}</span>} />
+                  )} />
+                )}
+              </DetailSection>
             </div>
-          </div>
+          )}
+          {tab === 'interviews' && (
+            <DetailSection title="Upcoming interviews" count={interviews.length}>
+              {interviews.length === 0 ? <div className="text-[11px] text-slate-500 font-medium">None scheduled — schedule rounds from shortlisted applications.</div> : (
+                <DrawerList items={interviews} empty="" render={(iv: any) => (
+                  <DrawerCard key={iv.id} status={iv.status} title={`${iv.round || 'Interview'} — ${iv.candidateName || iv.candidateEmail || ''}`}
+                    meta={<><span className="font-mono">{String(iv.scheduledAt || '').slice(0, 16).replace('T', ' ')}</span>{iv.mode ? ` • ${iv.mode}` : ''}{iv.interviewer ? ` • ${iv.interviewer}` : ''}</>}
+                    right={<span className={tonePill(iv.status)}>{iv.status}</span>} />
+                )} />
+              )}
+            </DetailSection>
+          )}
+          {tab === 'activity' && (
+            <DetailSection title="Change & status history" count={activity.length}>
+              {activity.length === 0 ? <div className="text-[11px] text-slate-500 font-medium">No recorded transitions yet.</div> : (
+                <ol className="relative ml-1.5 border-l-2 border-slate-100 space-y-3">
+                  {activity.map((e: any, i: number) => (
+                    <li key={i} className="ml-4 relative">
+                      <span className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-slate-900 ring-4 ring-slate-100" />
+                      <div className="font-bold text-slate-900">{e.text}</div>
+                      <div className="text-[11px] text-slate-500 font-medium font-mono">{String(e.at || '').slice(0, 16).replace('T', ' ')}</div>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </DetailSection>
+          )}
         </div>
       )}
     </DetailDrawer>
@@ -1313,36 +1299,51 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
     } catch (e) { setError(errMsg(e)); }
   };
   const [moveFor, setMoveFor] = useState<{ app: any; to: string } | null>(null);
-  const [offerFor, setOfferFor] = useState<any>(null);
-  const [offerForm, setOfferForm] = useState({ ctc: '', joinDate: '' });
-  const [joinFor, setJoinFor] = useState<any>(null);
+  const emptyOfferForm = { basic: '', hra: '', special: '', variable: '', pf: '', gratuity: '', joinDate: '' };
+  const [offerForm, setOfferForm] = useState({ ...emptyOfferForm });
+  const [offerOpen, setOfferOpen] = useState(false);
+  const offerTotal = (f: typeof emptyOfferForm) => ['basic', 'hra', 'special', 'variable', 'pf', 'gratuity'].reduce((s, k) => s + (Number((f as any)[k]) || 0), 0);
   const [joinForm, setJoinForm] = useState({ joinDate: '', feeBasis: '' });
+  const [joinOpen, setJoinOpen] = useState(false);
   const [joinMatch, setJoinMatch] = useState<any>(null);
   const [joinBusy, setJoinBusy] = useState(false);
+  const [resumeOpen, setResumeOpen] = useState(false);
   const doOffer = async () => {
-    if (!offerFor) return;
-    const created = unwrapObj(await offersPlacementsApi.offer({ applicationId: offerFor.id, ctc: Number(offerForm.ctc) || 0, joinDate: offerForm.joinDate || undefined }));
-    if (created?.id) { patchBoth(offerFor.id, { ...offerFor, stage: 'Offer' }); if (detail?.id === offerFor.id) setDetail((d: any) => ({ ...d, stage: 'Offer' })); }
-    setOfferFor(null); setOfferForm({ ctc: '', joinDate: '' }); syncAll();
+    if (!detail) return;
+    const ctc = offerTotal(offerForm);
+    if (!(ctc > 0)) { setError('Enter a salary breakdown — Total CTC must be greater than zero.'); return; }
+    const created = unwrapObj(await offersPlacementsApi.offer({ applicationId: detail.id, ctc, joinDate: offerForm.joinDate || undefined }));
+    if (created?.id) {
+      const next = { ...detail, stage: 'Offer', offerCtc: ctc, ctc, joinDate: offerForm.joinDate || detail.joinDate, offerStatus: 'Issued' };
+      patchBoth(detail.id, next); setDetail(next);
+    }
+    setOfferOpen(false); setOfferForm({ ...emptyOfferForm }); syncAll();
   };
   const checkJoinFee = async () => {
-    if (!joinFor) return;
+    if (!detail) return;
     setJoinBusy(true);
     try {
-      const m = unwrapObj(await offersPlacementsApi.matchFee(joinFor.id, Number(joinForm.feeBasis) || undefined));
+      const m = unwrapObj(await offersPlacementsApi.matchFee(detail.id, Number(joinForm.feeBasis) || undefined));
       setJoinMatch(m);
       if (!joinForm.feeBasis && m?.preview) setJoinForm((f) => ({ ...f, feeBasis: String(m.preview.feeBasis || '') }));
     } catch (e) { setError(errMsg(e)); } finally { setJoinBusy(false); }
   };
   const doJoin = async () => {
-    if (!joinFor) return;
-    const p = unwrapObj(await offersPlacementsApi.place(joinFor.id, joinForm.joinDate || undefined, Number(joinForm.feeBasis) || 0));
-    if (p?.id) { patchBoth(joinFor.id, { ...joinFor, stage: 'Hired' }); if (detail?.id === joinFor.id) setDetail((d: any) => ({ ...d, stage: 'Hired' })); }
-    setJoinFor(null); setJoinForm({ joinDate: '', feeBasis: '' }); setJoinMatch(null); syncAll();
+    if (!detail) return;
+    const fee = Number(joinForm.feeBasis) || 0;
+    const p = unwrapObj(await offersPlacementsApi.place(detail.id, joinForm.joinDate || undefined, fee));
+    if (p?.id) {
+      const next = { ...detail, stage: 'Hired', feeBasis: fee, joinDate: joinForm.joinDate || detail.joinDate, offerStatus: 'Joined' };
+      patchBoth(detail.id, next); setDetail(next);
+    }
+    setJoinOpen(false); setJoinForm({ joinDate: '', feeBasis: '' }); setJoinMatch(null); syncAll();
   };
   const dropMove = (a: any, to: string) => {
     if (to === a.stage) return;
-    if (['Hired', 'Withdrawn', 'Rejected'].includes(a.stage)) { setError(`${a.stage} applications are terminal — reopen explicitly to continue.`); return; }
+    if (['Hired', 'Withdrawn', 'Rejected', 'Job Closed'].includes(a.stage)) { setError(`${a.stage} applications are terminal — reopen explicitly to continue.`); return; }
+    // Phase 3: Offer/Hired go through their explicit in-drawer workflows (offer record + joining with agreement).
+    if (to === 'Offer') { void openDetail(a); setOfferForm({ ...emptyOfferForm }); setOfferOpen(true); setJoinOpen(false); return; }
+    if (to === 'Hired') { void openDetail(a); setJoinForm({ joinDate: '', feeBasis: '' }); setJoinMatch(null); setJoinOpen(true); setOfferOpen(false); return; }
     if (to === 'Withdrawn') { setWithdrawId(a.id); return; }
     setMoveFor({ app: a, to });
   };
@@ -1359,14 +1360,15 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
 
   const filteredApps = rows.filter((a) => !dqApp.trim() || `${a.id} ${a.jobTitle} ${a.candidateEmail}`.toLowerCase().includes(dqApp.toLowerCase()));
   const appMenuFor = (a: any) => {
-    const moves = ['Shortlisted', 'Interview Scheduled', 'Offer', 'Hired', 'Rejected', 'Withdrawn', 'On Hold'].filter((s) => s !== a.stage).slice(0, 5);
+    // Phase 3: Offer/Hired excluded from direct moves — use Issue offer / Record joining (explicit records).
+    const moves = ['Shortlisted', 'Interview Scheduled', 'Selected', 'Rejected', 'Withdrawn', 'On Hold'].filter((s) => s !== a.stage).slice(0, 6);
     const canWithdraw = !['Hired', 'Withdrawn', 'Rejected'].includes(a.stage);
     return (
       <RowMenu label={`Application ${a.id}`} items={[
         { label: 'View + history', onSelect: () => openDetail(a) },
-        ...(!['Hired', 'Withdrawn', 'Rejected', 'Offer'].includes(a.stage) ? [{ label: 'Issue offer…', onSelect: () => { setOfferFor(a); setOfferForm({ ctc: '', joinDate: '' }); } }] : []),
-        ...(!['Hired', 'Withdrawn', 'Rejected'].includes(a.stage) ? [{ label: 'Record joining…', onSelect: () => { setJoinFor(a); setJoinForm({ joinDate: '', feeBasis: '' }); setJoinMatch(null); } }] : []),
-        ...moves.map((s) => ({ label: `Move to ${s}…`, onSelect: () => { if (['Hired', 'Withdrawn', 'Rejected'].includes(a.stage)) { setError(`${a.stage} applications are terminal — reopen explicitly to continue.`); return; } if (s === 'Withdrawn') { setWithdrawId(a.id); return; } setMoveFor({ app: a, to: s }); } })),
+        ...(!['Hired', 'Withdrawn', 'Rejected', 'Offer'].includes(a.stage) ? [{ label: 'Issue offer…', onSelect: () => { void openDetail(a); setOfferForm({ ...emptyOfferForm }); setOfferOpen(true); setJoinOpen(false); } }] : []),
+        ...(!['Hired', 'Withdrawn', 'Rejected'].includes(a.stage) ? [{ label: 'Record joining…', onSelect: () => { void openDetail(a); setJoinForm({ joinDate: '', feeBasis: '' }); setJoinMatch(null); setJoinOpen(true); setOfferOpen(false); } }] : []),
+        ...moves.map((s) => ({ label: `Move to ${s}…`, onSelect: () => { if (['Hired', 'Withdrawn', 'Rejected', 'Job Closed'].includes(a.stage)) { setError(`${a.stage} applications are terminal — reopen explicitly to continue.`); return; } if (s === 'Withdrawn') { setWithdrawId(a.id); return; } setMoveFor({ app: a, to: s }); } })),
         ...(canWithdraw ? [{ label: 'Withdraw application', danger: true, onSelect: () => setWithdrawId(a.id) }] : []),
         ...(checkRecordAction('application', a, 'reopen', {}).allowed ? [{ label: 'Reopen…', onSelect: () => { setReopenFor(a); setReopenTarget('Applied'); } }] : []),
       ]} />
@@ -1374,8 +1376,27 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
   };
   const openDetail = async (a: any) => {
     setDetail(a); setHistory([]);
+    setOfferOpen(false); setJoinOpen(false); setResumeOpen(false);
     try {
-      const res: any = await apiClient.get(`/api/v1/applications/${a.id}/history`);
+      const res: any = await applicationsApi.detail(a.id);
+      const full = (res as { data?: any })?.data;
+      if (full?.id) {
+        setDetail(full);
+        setHistory(Array.isArray(full.history) ? full.history : []);
+        // Offers live in a separate record — pull the issued CTC so the
+        // drawer shows it even after reload (best-effort, never blocks).
+        if (['Offer', 'Hired'].includes(full.stage)) {
+          try {
+            const m: any = unwrapObj(await offersPlacementsApi.matchFee(full.id));
+            const ctc = Number(m?.offer?.ctc || 0);
+            if (ctc > 0) setDetail((d: any) => (d && d.id === full.id ? { ...d, offerCtc: ctc, ctc } : d));
+          } catch { /* offer lookup is best-effort */ }
+        }
+        return;
+      }
+    } catch { /* fall through to history-only load */ }
+    try {
+      const res: any = await applicationsApi.history(a.id);
       const h = (res as { data?: any[] })?.data || [];
       setHistory(Array.isArray(h) ? h : []);
     } catch { setHistory([]); }
@@ -1399,11 +1420,13 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
             <ExportButton filename="applications.csv" rows={filteredApps} columns={['id', 'jobTitle', 'jobId', 'candidateEmail', 'stage']} />
           </div>
         </div>
-        <input className={inputCls} placeholder="Search job title, candidate email, application ID…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <SearchSuggest value={q} onChange={setQ} placeholder="Search job title, candidate email, application ID…"
+        items={rows.map((a: any) => ({ key: String(a.id), query: String(a.id), title: String(a.jobTitle || a.id), meta: String(a.candidateEmail || ''), status: a.stage }))}
+        onPick={(it) => { setQ(it.query ?? it.key); setPage(1); }} />
       </div>
       {error && <PanelError message={error} status={loadError} onRetry={() => load(page, appliedFilter)} />}
       {!compact && (
-        <input className={inputCls} placeholder="Reason / note attached to next stage move (required when rejecting)" value={reason} onChange={(e) => setReason(e.target.value)} />
+        <input className={inputCls} placeholder="Reason / note for next move (required for Rejected, Withdrawn, On Hold)" value={reason} onChange={(e) => setReason(e.target.value)} />
       )}
       {(view || 'list') === 'board' ? (
         boardLoading ? <InlineLoading message="Loading board…" /> : boardRows.length === 0 ? (
@@ -1475,34 +1498,6 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
         tone={moveFor?.to === 'Rejected' ? 'danger' : 'dark'}
         onConfirm={async (r) => { if (moveFor) { await move(moveFor.app.id, moveFor.to, r); setMoveFor(null); } }}
       />
-      <Modal open={offerFor !== null} onClose={() => setOfferFor(null)} title={`Issue offer — ${offerFor?.id || ''}`} subtitle={`${offerFor?.jobTitle || ''} • ${offerFor?.candidateEmail || ''}`}>
-        <div className="space-y-3">
-          <Field label="CTC (annual)"><input className={kitInput} type="number" value={offerForm.ctc} onChange={(e) => setOfferForm({ ...offerForm, ctc: e.target.value })} /></Field>
-          <Field label="Joining date"><DatePicker value={offerForm.joinDate} onChange={(v) => setOfferForm({ ...offerForm, joinDate: v })} ariaLabel="Joining date" /></Field>
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setOfferFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
-            <button type="button" onClick={() => doOffer()} className={btnPrimary}>Issue offer</button>
-          </div>
-          <p className="text-[11px] text-slate-500 font-medium">Offer CTC becomes the default fee basis at joining. Application moves to Offer.</p>
-        </div>
-      </Modal>
-      <Modal open={joinFor !== null} onClose={() => { setJoinFor(null); setJoinMatch(null); }} title={`Record joining — ${joinFor?.id || ''}`} subtitle={`${joinFor?.jobTitle || ''} • ${joinFor?.candidateEmail || ''}`}>
-        <div className="space-y-3">
-          <Field label="Joining date"><DatePicker value={joinForm.joinDate} onChange={(v) => setJoinForm({ ...joinForm, joinDate: v })} ariaLabel="Joining date" /></Field>
-          <Field label="Fee basis (auto-filled from offer)"><input className={kitInput} type="number" value={joinForm.feeBasis} onChange={(e) => { setJoinForm({ ...joinForm, feeBasis: e.target.value }); setJoinMatch(null); }} /></Field>
-          <button type="button" disabled={joinBusy} onClick={checkJoinFee} className={btnDark}>{joinBusy ? 'Checking…' : 'Check fee…'}</button>
-          {joinMatch?.preview && (
-            <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs font-bold space-y-1">
-              <div>Agreement {joinMatch.agreement?.id} • {joinMatch.agreement?.hiringType} @ {joinMatch.agreement?.rate}%</div>
-              <div>Basis ₹{Number(joinMatch.preview.feeBasis).toLocaleString('en-IN')} → gross ₹{Number(joinMatch.preview.gross).toLocaleString('en-IN')} + GST = <strong>₹{Number(joinMatch.preview.total).toLocaleString('en-IN')}</strong></div>
-            </div>
-          )}
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => { setJoinFor(null); setJoinMatch(null); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
-            <button type="button" onClick={doJoin} className={btnPrimary}>Record joining</button>
-          </div>
-        </div>
-      </Modal>
       <ActionConfirm
         open={reopenFor !== null}
         onCancel={() => setReopenFor(null)}
@@ -1518,20 +1513,175 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
         tone="dark"
         onConfirm={async (r) => { if (reopenFor) await reopen(reopenFor, reopenTarget, r); }}
       />
-      <Modal open={detail !== null} onClose={() => setDetail(null)} title={`${detail?.jobTitle || detail?.jobId || ''}`} subtitle={`${detail?.id || ''} • ${detail?.candidateEmail || ''} • ${detail?.stage || ''}`}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-          {[['Application', detail?.id], ['Job', `${detail?.jobTitle || ''} (${detail?.jobId || ''})`], ['Candidate', detail?.candidateEmail], ['Stage', detail?.stage], ['Source', detail?.source], ['Updated', String(detail?.updatedAt || '').slice(0, 10)]].map(([k, v]) => (
-            <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—')}</div></div>
-          ))}
-        </div>
-        {checkRecordAction('application', detail, 'reopen', {}).allowed && (
-          <button type="button" onClick={() => { setReopenFor(detail); setReopenTarget('Applied'); }} className="px-4 py-2 rounded-xl bg-spec-navy text-white font-bold text-xs w-fit">Reopen application…</button>
-        )}
-        <div className="text-xs font-extrabold pt-1">Stage history ({history.length})</div>
-        {history.length === 0 ? <div className="text-[11px] text-slate-500">No history rows yet.</div> : history.map((h: any) => (
-          <div key={h.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">{h.from} → <strong>{h.to}</strong> • by {h.actor} • <span className="text-slate-500">{String(h.createdAt || '').slice(0, 16).replace('T', ' ')}</span>{h.reason ? <div className="text-slate-600">{h.reason}</div> : null}</div>
-        ))}
-      </Modal>
+      {detail && (
+        <>
+          <DetailDrawer title={detail.jobTitle || detail.jobId || detail.id} subtitle={`${detail.id} • ${detail.candidateEmail || ''}`} onClose={() => setDetail(null)} width="max-w-4xl">
+            <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-[0_1px_2px_rgba(15,23,42,0.05)] ${drawerTone(detail.stage).card}`}>
+              <span aria-hidden="true" className="w-11 h-11 rounded-xl bg-slate-900 text-white font-extrabold text-base flex items-center justify-center shrink-0">
+                {String(detail.candidateEmail || detail.jobTitle || '?').trim().charAt(0).toUpperCase()}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="font-extrabold text-slate-900 text-sm truncate">{detail.jobTitle || detail.jobId}</div>
+                <div className="text-[11px] text-slate-500 font-medium truncate">{detail.candidateEmail} • <span className="font-mono">{detail.id}</span></div>
+                <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                  <StatusPill value={detail.stage} />
+                  {detail.source ? <span className="px-2 py-0.5 rounded-full bg-white/70 border border-slate-200 font-bold text-[11px]">{detail.source}</span> : null}
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {!['Hired', 'Withdrawn', 'Rejected', 'Offer'].includes(detail.stage) && (
+                <button type="button" onClick={() => { setOfferOpen((v) => !v); setJoinOpen(false); }} className={`px-4 py-2.5 rounded-xl font-bold text-xs ${offerOpen ? 'bg-slate-900 text-white' : 'bg-[#087BFF] text-white'}`}>Issue offer…</button>
+              )}
+              {!['Hired', 'Withdrawn', 'Rejected'].includes(detail.stage) && (
+                <button type="button" onClick={() => { setJoinOpen((v) => !v); setOfferOpen(false); if (!joinOpen) { setJoinForm({ joinDate: '', feeBasis: '' }); setJoinMatch(null); } }} className={`px-4 py-2.5 rounded-xl border font-bold text-xs ${joinOpen ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200'}`}>Record joining…</button>
+              )}
+              {checkRecordAction('application', detail, 'reopen', {}).allowed && (
+                <button type="button" onClick={() => { setReopenFor(detail); setReopenTarget('Applied'); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Reopen application…</button>
+              )}
+            </div>
+            {offerOpen && !['Hired', 'Withdrawn', 'Rejected', 'Offer'].includes(detail.stage) && (
+              <div className="rounded-2xl border border-blue-200 bg-blue-50/40 p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-xs font-extrabold text-slate-900">Issue offer — salary breakup (annual ₹)</div>
+                  <button type="button" onClick={() => setOfferOpen(false)} className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px]">Collapse</button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {([['basic', 'Basic pay'], ['hra', 'House rent allowance'], ['special', 'Special allowance'], ['variable', 'Variable pay / bonus'], ['pf', 'Employer PF contribution'], ['gratuity', 'Gratuity']] as const).map(([k, label]) => (
+                    <Field key={k} label={`${label} (annual)`}>
+                      <input className={kitInput} type="number" min={0} placeholder="₹ 0" value={(offerForm as any)[k]}
+                        onChange={(e) => setOfferForm({ ...offerForm, [k]: e.target.value })} />
+                    </Field>
+                  ))}
+                </div>
+                <div className="px-4 py-3 rounded-2xl bg-emerald-50/70 border border-emerald-200/70 flex items-center justify-between gap-2">
+                  <div>
+                    <div className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700">Total CTC (annual)</div>
+                    <div className="text-lg font-extrabold text-emerald-900">₹{offerTotal(offerForm).toLocaleString('en-IN')}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700">≈ Monthly</div>
+                    <div className="text-sm font-extrabold text-emerald-900">₹{Math.round(offerTotal(offerForm) / 12).toLocaleString('en-IN')}</div>
+                  </div>
+                </div>
+                <Field label="Joining date"><DatePicker value={offerForm.joinDate} onChange={(v) => setOfferForm({ ...offerForm, joinDate: v })} ariaLabel="Joining date" /></Field>
+                <div className="flex justify-end gap-2">
+                  <button type="button" onClick={() => setOfferOpen(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+                  <button type="button" disabled={!(offerTotal(offerForm) > 0)} onClick={() => doOffer()} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50">Issue offer</button>
+                </div>
+                <p className="text-[11px] text-slate-500 font-medium">The breakup sums to Total CTC — that total is issued as the offer CTC and becomes the default fee basis at joining. Application moves to Offer.</p>
+              </div>
+            )}
+            {joinOpen && !['Hired', 'Withdrawn', 'Rejected'].includes(detail.stage) && (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-xs font-extrabold text-slate-900">Record joining</div>
+                  <button type="button" onClick={() => { setJoinOpen(false); setJoinMatch(null); }} className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px]">Collapse</button>
+                </div>
+                <div className="px-4 py-3 rounded-2xl bg-blue-50/60 border border-blue-200/70 text-xs">
+                  <div className="text-[10px] font-extrabold uppercase tracking-wider text-blue-700">Offer reference</div>
+                  {(detail.offerCtc || detail.ctc)
+                    ? <div className="font-extrabold text-slate-900 mt-0.5">Offer CTC ₹{Number(detail.offerCtc || detail.ctc).toLocaleString('en-IN')} — fee basis auto-fills from this.</div>
+                    : <div className="font-bold text-slate-600 mt-0.5">No stored offer CTC on this record — enter the fee basis below or press Check fee to resolve it from the agreement.</div>}
+                </div>
+                <Field label="Joining date *"><DatePicker value={joinForm.joinDate} onChange={(v) => setJoinForm({ ...joinForm, joinDate: v })} ariaLabel="Joining date" /></Field>
+                <div>
+                  <Field label="Fee basis (annual ₹) — auto-filled from offer">
+                    <input className={kitInput} type="number" min={0} placeholder="₹ 0" value={joinForm.feeBasis}
+                      onChange={(e) => { setJoinForm({ ...joinForm, feeBasis: e.target.value }); setJoinMatch(null); }} />
+                  </Field>
+                  <button type="button" disabled={joinBusy} onClick={checkJoinFee} className={`${btnDark} mt-2`}>{joinBusy ? 'Checking…' : 'Check fee…'}</button>
+                </div>
+                {joinMatch?.preview && (
+                  <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs font-bold space-y-1">
+                    <div>Agreement {joinMatch.agreement?.id} • {joinMatch.agreement?.hiringType} @ {joinMatch.agreement?.rate}%</div>
+                    <div>Basis ₹{Number(joinMatch.preview.feeBasis).toLocaleString('en-IN')} → gross ₹{Number(joinMatch.preview.gross).toLocaleString('en-IN')} + GST = <strong>₹{Number(joinMatch.preview.total).toLocaleString('en-IN')}</strong></div>
+                  </div>
+                )}
+                <div className="flex justify-end gap-2">
+                  <button type="button" onClick={() => { setJoinOpen(false); setJoinMatch(null); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+                  <button type="button" disabled={!joinForm.joinDate} onClick={doJoin} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50">Record joining</button>
+                </div>
+                <p className="text-[11px] text-slate-500 font-medium">Joining mints the placement, resolves the commission agreement and moves the application to Hired.</p>
+              </div>
+            )}
+            <div>
+              <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5 px-0.5">Application profile</div>
+              <KeyValues data={[
+                ['Application', <span className="font-mono">{detail.id}</span>],
+                ['Job', `${detail.jobTitle || ''} (${detail.jobId || ''})`],
+                ['Candidate', detail.candidateEmail],
+                ['Stage', <StatusPill value={detail.stage} />],
+                ['Source', detail.source || '—'],
+                ['Applied', detail.createdAt ? String(detail.createdAt).slice(0, 10) : '—'],
+                ['Updated', detail.updatedAt ? String(detail.updatedAt).slice(0, 10) : '—'],
+                ['Conversation', detail.conversation ? `${detail.conversation.id} • ${detail.conversation.status}` : '—'],
+              ]} />
+            </div>
+            {(detail.offerCtc || detail.ctc || detail.feeBasis || detail.joinDate || ['Offer', 'Hired'].includes(detail.stage)) && (
+              <div>
+                <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5 px-0.5">Offer & joining</div>
+                <KeyValues data={(() => {
+                  const ctc = Number(detail.offerCtc || detail.ctc || 0);
+                  const fee = Number(detail.feeBasis || 0);
+                  return [
+                    ['Offer CTC', ctc > 0 ? `₹${ctc.toLocaleString('en-IN')} (≈ ₹${Math.round(ctc / 12).toLocaleString('en-IN')}/mo)` : '—'],
+                    ['Joining date', detail.joinDate ? String(detail.joinDate).slice(0, 10) : '—'],
+                    ['Fee basis', fee > 0 ? `₹${fee.toLocaleString('en-IN')}` : '—'],
+                    ['Offer status', detail.offerStatus || (detail.stage === 'Offer' ? 'Issued' : detail.stage === 'Hired' ? 'Joined' : '—')],
+                  ];
+                })()} />
+              </div>
+            )}
+            <div>
+              <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5 px-0.5">Resume</div>
+              <DrawerCard
+                title={detail.resumeName || 'Srikanth_M_Resume.pdf'}
+                meta="PDF resume • static test file for now — switches to the candidate's resume automatically later."
+                right={<StatusPill value="Available" />}>
+                <div className="flex flex-wrap gap-1.5">
+                  <button type="button" onClick={() => setResumeOpen((v) => !v)} className="px-3 py-1.5 rounded-lg bg-slate-900 text-white font-bold text-[11px] shadow-[0_1px_2px_rgba(15,23,42,0.05)]">{resumeOpen ? 'Hide preview' : 'View'}</button>
+                  <a href={detail.resumeUrl || '/Srikanth_M_Resume.pdf'} target="_blank" rel="noreferrer" className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px]">Open in new tab</a>
+                  <a href={detail.resumeUrl || '/Srikanth_M_Resume.pdf'} download="Srikanth_M_Resume.pdf" className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px]">Download PDF</a>
+                </div>
+                {resumeOpen && (
+                  <div className="mt-2 overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-[0_6px_20px_rgba(15,23,42,0.22)]">
+                    <div className="flex items-center gap-2 px-3 py-2">
+                      <FileText size={14} className="text-slate-300 shrink-0" />
+                      <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-red-500 text-white shrink-0">PDF</span>
+                      <span className="text-[11px] font-bold text-slate-200 truncate flex-1 min-w-0">{detail.resumeName || 'Srikanth_M_Resume.pdf'}</span>
+                      <a href={detail.resumeUrl || '/Srikanth_M_Resume.pdf'} target="_blank" rel="noreferrer" aria-label="Open resume in new tab"
+                        className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10"><ExternalLink size={14} /></a>
+                      <a href={detail.resumeUrl || '/Srikanth_M_Resume.pdf'} download="Srikanth_M_Resume.pdf" aria-label="Download resume PDF"
+                        className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10"><Download size={14} /></a>
+                      <button type="button" onClick={() => setResumeOpen(false)} aria-label="Hide resume preview"
+                        className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10"><X size={14} /></button>
+                    </div>
+                    <iframe src={`${detail.resumeUrl || '/Srikanth_M_Resume.pdf'}#zoom=page-width`} title={`Resume of ${detail.candidateEmail || detail.id}`} className="block w-full h-[62vh] bg-white" />
+                  </div>
+                )}
+              </DrawerCard>
+            </div>
+            <div>
+              <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5 px-0.5">Interviews ({(detail.interviews || []).length})</div>
+              <DrawerList items={detail.interviews || []} empty="No interviews scheduled for this application yet."
+                render={(iv: any) => (
+                  <DrawerCard key={iv.id} status={iv.status} title={iv.round || iv.roundName || 'Interview'}
+                    meta={[iv.scheduledAt ? String(iv.scheduledAt).slice(0, 16).replace('T', ' ') : '', iv.mode, iv.interviewer].filter(Boolean).join(' • ')}
+                    right={<StatusPill value={iv.status} />} />
+                )} />
+            </div>
+            <div>
+              <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5 px-0.5">Stage history ({history.length})</div>
+              <DrawerList items={history} empty="No history rows yet."
+                render={(h: any) => (
+                  <DrawerCard key={h.id} status={h.to} title={`${h.from} → ${h.to}`}
+                    meta={<>by {h.actor} • <span className="font-mono">{String(h.createdAt || '').slice(0, 16).replace('T', ' ')}</span>{h.reason ? ` • ${h.reason}` : ''}</>} />
+                )} />
+            </div>
+          </DetailDrawer>
+        </>
+      )}
       <Pager page={page} total={total} pageSize={pageSize} onPage={setPage} />
     </div>
   );
@@ -1586,22 +1736,159 @@ export function ApplicationsKanban({ apps, onOpen, onDropMove }: { apps: any[]; 
 }
 
 /* ---------------- Phase 2: Interviews ---------------- */
+const SCORECARD_DIMS = ['Technical depth', 'Problem solving', 'Communication', 'Ownership & culture'];
+const RECO_TONE: Record<string, string> = {
+  'Strong hire': 'bg-emerald-600 text-white border-emerald-600',
+  'Hire': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  'Hold': 'bg-amber-50 text-amber-800 border-amber-200',
+  'No hire': 'bg-red-50 text-red-700 border-red-200',
+};
+/** Enterprise scorecard card — overall, dimensions, recommendation, strengths/gaps. */
+export function ScorecardCard({ f }: { f: any }) {
+  const dims: Record<string, number> = f.dimensions || {};
+  const avg = Object.values(dims).length ? (Object.values(dims).reduce((a: number, b: number) => a + Number(b), 0) / Object.values(dims).length) : null;
+  return (
+    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="font-extrabold text-slate-900 text-sm">★ {f.rating ?? '—'}/5</span>
+        {avg !== null ? <span className="text-[11px] font-bold text-slate-500">dims avg {avg.toFixed(1)}</span> : null}
+        {f.recommendation ? <span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${RECO_TONE[f.recommendation] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>{f.recommendation}</span> : null}
+        <span className="font-medium text-slate-500">• {f.by} • {String(f.createdAt || '').slice(0, 16).replace('T', ' ')}</span>
+      </div>
+      {Object.keys(dims).length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {Object.entries(dims).map(([k, v]) => (
+            <span key={k} className="px-2 py-0.5 rounded-full bg-white border border-slate-200 font-bold text-[11px]">{k}: {String(v)}/5</span>
+          ))}
+        </div>
+      ) : null}
+      {f.strengths ? <div><span className="font-extrabold text-emerald-700">Strengths — </span><span className="whitespace-pre-wrap">{f.strengths}</span></div> : null}
+      {f.gaps ? <div><span className="font-extrabold text-amber-700">Gaps — </span><span className="whitespace-pre-wrap">{f.gaps}</span></div> : null}
+      {f.notes && <div className="whitespace-pre-wrap text-slate-700">{f.notes}</div>}
+    </div>
+  );
+}
+/** Enterprise scorecard form — one code path for drawer tab + modal; parent syncs every list. */
+export function ScorecardForm({ interviewId, onSaved, onCancel }: { interviewId: string; onSaved: (fb: any) => void; onCancel?: () => void }) {
+  const [rating, setRating] = useState('4');
+  const [dims, setDims] = useState<Record<string, string>>({});
+  const [reco, setReco] = useState('');
+  const [strengths, setStrengths] = useState('');
+  const [gaps, setGaps] = useState('');
+  const [notes, setNotes] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault(); setBusy(true); setError('');
+    try {
+      const dimensions: Record<string, number> = {};
+      for (const [k, v] of Object.entries(dims)) if (v !== '') dimensions[k] = Number(v);
+      const created = unwrapObj(await interviewsApi.feedback(interviewId, {
+        rating: Number(rating), ...(Object.keys(dimensions).length ? { dimensions } : {}),
+        ...(reco ? { recommendation: reco } : {}),
+        ...(strengths.trim() ? { strengths: strengths.trim() } : {}),
+        ...(gaps.trim() ? { gaps: gaps.trim() } : {}),
+        ...(notes.trim() ? { notes: notes.trim() } : {}),
+      }));
+      if (created?.id) { onSaved(created); setDims({}); setReco(''); setStrengths(''); setGaps(''); setNotes(''); setRating('4'); }
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  return (
+    <form onSubmit={submit} className="space-y-3 p-3 rounded-2xl bg-white border border-slate-200">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <Field label="Overall (1–5) *"><Select value={rating} onChange={setRating} options={['1', '2', '3', '4', '5'].map((r) => ({ value: r, label: `${r} / 5` }))} /></Field>
+        <Field label="Recommendation"><Select value={reco} onChange={setReco} placeholder="Choose…" options={['Strong hire', 'Hire', 'Hold', 'No hire'].map((r) => ({ value: r, label: r }))} /></Field>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {SCORECARD_DIMS.map((d) => (
+          <Field key={d} label={d}><Select value={dims[d] || ''} onChange={(v) => setDims((m) => ({ ...m, [d]: v }))} placeholder="—" options={['1', '2', '3', '4', '5'].map((r) => ({ value: r, label: `${r}` }))} /></Field>
+        ))}
+      </div>
+      <Field label="Strengths"><textarea rows={2} className={kitInput} value={strengths} onChange={(e) => setStrengths(e.target.value)} placeholder="What stood out…" /></Field>
+      <Field label="Gaps / concerns"><textarea rows={2} className={kitInput} value={gaps} onChange={(e) => setGaps(e.target.value)} placeholder="Risks, missing depth…" /></Field>
+      <Field label="Overall notes"><textarea rows={2} className={kitInput} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Hire / no-hire reasoning…" /></Field>
+      {error ? <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-800 text-[11px] font-bold">{error}</div> : null}
+      <div className="flex justify-end gap-2">
+        {onCancel ? <button type="button" onClick={onCancel} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Close</button> : null}
+        <button className={btnPrimary} disabled={busy}>{busy ? 'Saving…' : 'Record scorecard'}</button>
+      </div>
+    </form>
+  );
+}
+
 export function InterviewsPanel() {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [loadError, setLoadError] = useState(0);
-  const [form, setForm] = useState({ applicationId: '', jobId: '', round: 'Technical Round 1', date: '', hour: '10', minute: '00', mode: 'video', interviewer: '', meetingLink: '', venue: '', instructions: '' });
+  const [form, setForm] = useState({ applicationId: '', jobId: '', round: 'Technical Round 1', date: '', hour: '10', minute: '00', mode: 'video', interviewer: '', panel: '', meetingLink: '', venue: '', instructions: '', timezone: 'Asia/Kolkata' });
   const [busy, setBusy] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
   const [resched, setResched] = useState({ id: '', date: '', hour: '10', minute: '00', reason: '' });
   const [cancelId, setCancelId] = useState('');
-  const emptyForm = { applicationId: '', jobId: '', round: 'Technical Round 1', date: '', hour: '10', minute: '00', mode: 'video', interviewer: '', meetingLink: '', venue: '', instructions: '' };
+  const [editIv, setEditIv] = useState<any>(null);
+  const [editForm, setEditForm] = useState({ round: '', mode: 'video', interviewer: '', panel: '', meetingLink: '', venue: '', instructions: '', timezone: 'Asia/Kolkata', confirmationStatus: 'Pending' });
+  const [fbFor, setFbFor] = useState<any>(null);
+  const [fbList, setFbList] = useState<any[]>([]);
+  const [detailIv, setDetailIv] = useState<any>(null);
+  const [detailFb, setDetailFb] = useState<any[]>([]);
+  const [detailTab, setDetailTab] = useState('overview');
+  const [detailApp, setDetailApp] = useState<any>(null);
+  const [detailCand, setDetailCand] = useState<any>(null);
+  const [detailJob, setDetailJob] = useState<any>(null);
+  const [confirmComplete, setConfirmComplete] = useState(false);
+  const openDetail = async (i: any) => {
+    setDetailIv(i); setDetailTab('overview'); setDetailFb([]); setDetailApp(null); setDetailCand(null); setDetailJob(null); setConfirmComplete(false);
+    try { setDetailFb(unwrapList(await interviewsApi.feedbackList(i.id))); } catch { setDetailFb([]); }
+    if (i.applicationId) {
+      try {
+        const aRes: any = await apiClient.get(`/api/v1/applications/${i.applicationId}`).catch(() => null);
+        const app = (aRes as { data?: any })?.data ?? null;
+        if (app?.id) setDetailApp(app);
+      } catch { /* application context is best-effort */ }
+    }
+    if (i.candidateEmail) {
+      try {
+        const cRes: any = await directoryApi.candidatesDirectory('?page=1&pageSize=100').catch(() => null);
+        const found = unwrapList(cRes).find((c: any) => String(c.email || '').toLowerCase() === String(i.candidateEmail || '').toLowerCase());
+        setDetailCand(found || null);
+      } catch { /* candidate context is best-effort */ }
+    }
+    if (i.jobId) {
+      try {
+        const jRes: any = await jobsApi.detail(i.jobId).catch(() => null);
+        const job = unwrapObj(jRes);
+        setDetailJob(job?.id ? job : null);
+      } catch { /* job context is best-effort */ }
+    }
+  };
+  const pushFeedback = (fb: any, interviewId: string) => {
+    if (!fb?.id) return;
+    if (detailIv?.id === interviewId) setDetailFb((x) => (x.some((f) => f.id === fb.id) ? x : [fb, ...x]));
+    if (fbFor?.id === interviewId) setFbList((x) => (x.some((f) => f.id === fb.id) ? x : [fb, ...x]));
+    syncAll();
+  };
+  const [q, setQ] = useQueryState('iv_q');
+  const [status, setStatus] = useQueryState('iv_status');
+  const [mode, setMode] = useQueryState('iv_mode');
+  const [upcoming, setUpcoming] = useState(false);
+  const [page, setPage] = useState(1);
+  const pageSize = 40;
+  const emptyForm = { applicationId: '', jobId: '', round: 'Technical Round 1', date: '', hour: '10', minute: '00', mode: 'video', interviewer: '', panel: '', meetingLink: '', venue: '', instructions: '', timezone: 'Asia/Kolkata' };
+  const dq = useDebounced(q);
   const ivMenuFor = (i: any) => (
     <RowMenu label={`Interview ${i.id}`} items={[
-      ...(i.meetingLink ? [{ label: 'Join meeting', onSelect: () => window.open(i.meetingLink, '_blank', 'noopener') }] : []),
+      { label: 'View details', onSelect: () => openDetail(i) },
+      ...((i.meetingLink || i.meetLink) ? [{ label: 'Join meeting', onSelect: () => window.open(i.meetingLink || i.meetLink, '_blank', 'noopener') }] : []),
+      { label: 'Edit details…', onSelect: () => {
+        setEditIv(i);
+        setEditForm({ round: i.round || '', mode: i.mode || 'video', interviewer: i.interviewer || '', panel: i.panel || '', meetingLink: i.meetingLink || i.meetLink || '', venue: i.venue || '', instructions: i.instructions || '', timezone: i.timezone || 'Asia/Kolkata', confirmationStatus: i.confirmationStatus || 'Pending' });
+      } },
+      { label: 'Feedback / scorecard…', onSelect: () => openFeedback(i) },
       ...(['Scheduled', 'Rescheduled'].includes(i.status) ? [
-        { label: 'Reschedule…', onSelect: () => setResched({ id: i.id, date: '', hour: '10', minute: '00', reason: '' }) },
+        { label: 'Reschedule…', onSelect: () => { openDetail(i); setResched({ id: i.id, date: '', hour: '10', minute: '00', reason: '' }); } },
+        { label: 'Mark completed', onSelect: () => setStatusOf(i.id, 'Completed') },
+        { label: 'Mark no-show', onSelect: () => setStatusOf(i.id, 'No-show') },
         { label: 'Cancel interview…', danger: true, onSelect: () => setCancelId(i.id) },
       ] : []),
     ]} />
@@ -1611,7 +1898,7 @@ export function InterviewsPanel() {
 
   const load = async () => {
     setLoading(true); setError('');
-    try { setRows(unwrapList(await interviewsApi.list())); }
+    try { setRows(unwrapList(await interviewsApi.list('?page=1&pageSize=100'))); }
     catch (e) { setError(errMsg(e)); setLoadError(errStatus(e)); }
     finally { setLoading(false); }
   };
@@ -1620,9 +1907,11 @@ export function InterviewsPanel() {
   const schedule = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.applicationId.trim() || !form.jobId.trim() || !form.date) { setError('Application, job and date are required.'); return; }
+    // Phase 3: client-side future check mirrors the server guard (server re-validates).
+    if (new Date(`${form.date}T${form.hour}:${form.minute}:00`).getTime() <= Date.now()) { setError('Interview must be scheduled in the future.'); return; }
     setBusy(true);
     try {
-      const created = unwrapObj(await interviewsApi.schedule({ ...form, scheduledAt: `${form.date}T${form.hour}:${form.minute}:00`, timezone: 'Asia/Kolkata' }));
+      const created = unwrapObj(await interviewsApi.schedule({ ...form, scheduledAt: `${form.date}T${form.hour}:${form.minute}:00` }));
       if (created?.id) setRows((r) => [created, ...r]);
       setForm(emptyForm);
       setShowSchedule(false);
@@ -1631,94 +1920,153 @@ export function InterviewsPanel() {
   };
   const confirmReschedule = async (id: string) => {
     if (!resched.date) { setError('Pick a new date.'); return; }
+    if (new Date(`${resched.date}T${resched.hour}:${resched.minute}:00`).getTime() <= Date.now()) { setError('Rescheduled time must be in the future.'); return; }
     try {
       const u = unwrapObj(await interviewsApi.reschedule(id, { scheduledAt: `${resched.date}T${resched.hour}:${resched.minute}:00`, reason: resched.reason || undefined }));
-      setRows((r) => r.map((x) => (x.id === id ? u : x))); setResched({ id: '', date: '', hour: '10', minute: '00', reason: '' }); syncAll();
+      setRows((r) => r.map((x) => (x.id === id ? u : x)));
+      if (detailIv?.id === id && u?.id) setDetailIv(u);
+      setResched({ id: '', date: '', hour: '10', minute: '00', reason: '' }); syncAll();
     } catch (e) { setError(errMsg(e)); }
   };
+  const setStatusOf = async (id: string, next: string, reason?: string) => {
+    try {
+      const u = unwrapObj(await interviewsApi.reschedule(id, { status: next, ...(reason ? { reason } : {}) }));
+      setRows((r) => r.map((x) => (x.id === id ? u : x)));
+      if (detailIv?.id === id && u?.id) setDetailIv(u);
+      syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const saveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editIv) return;
+    setBusy(true);
+    try {
+      const u = unwrapObj(await interviewsApi.reschedule(editIv.id, { ...editForm }));
+      setRows((r) => r.map((x) => (x.id === editIv.id ? u : x)));
+      if (detailIv?.id === editIv.id && u?.id) setDetailIv(u);
+      setEditIv(null); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const openFeedback = async (i: any) => {
+    setFbFor(i); setFbList([]);
+    try { setFbList(unwrapList(await interviewsApi.feedbackList(i.id))); }
+    catch (e) { setError(errMsg(e)); }
+  };
+
+  const filtered = rows.filter((i) => {
+    if (dq.trim()) {
+      const s = dq.trim().toLowerCase();
+      if (!`${i.id} ${i.candidateName || ''} ${i.candidateEmail || ''} ${i.applicationId || ''} ${i.jobId || ''}`.toLowerCase().includes(s)) return false;
+    }
+    if (status && i.status !== status) return false;
+    if (mode && String(i.mode || '') !== mode) return false;
+    if (upcoming && !['Scheduled', 'Rescheduled'].includes(i.status)) return false;
+    return true;
+  }).sort((a, b) => String(a.scheduledAt || '').localeCompare(String(b.scheduledAt || '')));
+  const total = filtered.length;
+  const pagedRows = filtered.slice((page - 1) * pageSize, page * pageSize);
+  useEffect(() => { setPage(1); }, [dq, status, mode, upcoming]);
 
   return (
     <div className={cardCls}>
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-base font-extrabold text-slate-900">Interviews — Schedule & Track</h3>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h3 className="text-base font-extrabold text-slate-900">Interviews — Schedule, Track & Score</h3>
         <button type="button" onClick={() => setShowSchedule(true)} className={btnPrimary}>+ Schedule</button>
       </div>
       {error && <PanelError message={error} status={loadError} onRetry={load} />}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <SearchSuggest value={q} onChange={setQ} placeholder="Search candidate, application, job…" ariaLabel="Search interviews"
+    items={rows.map((i: any) => ({ key: String(i.id), query: String(i.id), title: String(i.candidateName || i.candidateEmail || i.id), meta: [i.candidateEmail, i.jobId].filter(Boolean).join(' • '), status: i.status }))}
+    onPick={(it) => setQ(it.query ?? it.key)} />
+        <div className="w-40 shrink-0">
+          <Select value={status} onChange={setStatus} ariaLabel="Status filter" placeholder="All statuses"
+            options={[{ value: '', label: 'All statuses' }, ...['Scheduled', 'Rescheduled', 'Completed', 'No-show', 'Cancelled'].map((s) => ({ value: s, label: s }))]} />
+        </div>
+        <div className="w-32 shrink-0">
+          <Select value={mode} onChange={setMode} ariaLabel="Mode filter" placeholder="Any mode"
+            options={[{ value: '', label: 'Any mode' }, ...['video', 'phone', 'onsite'].map((s) => ({ value: s, label: s }))]} />
+        </div>
+        <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 whitespace-nowrap px-2">
+          <input type="checkbox" checked={upcoming} onChange={(e) => setUpcoming(e.target.checked)} /> Upcoming only
+        </label>
+      </div>
+      <div className="text-[11px] font-bold text-slate-500">{total} interview(s) match.</div>
       <Modal open={showSchedule} onClose={() => setShowSchedule(false)} title="Schedule interview" subtitle="Scheduling auto-enables the application chat">
         <form onSubmit={schedule} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="sm:col-span-2"><Field label="Candidate / application *"><ApplicationPicker value={form.applicationId} onChange={(v) => setForm({ ...form, applicationId: v })} onPick={(a) => setForm((f) => ({ ...f, jobId: a.jobId || f.jobId }))} /></Field></div>
           <Field label="Job ID *"><input className={kitInput} value={form.jobId} onChange={(e) => setForm({ ...form, jobId: e.target.value })} /></Field>
           <Field label="Round"><input className={kitInput} value={form.round} onChange={(e) => setForm({ ...form, round: e.target.value })} /></Field>
           <Field label="Mode"><Select value={form.mode} onChange={(v) => setForm({ ...form, mode: v })} options={[{ value: 'video', label: 'Video' }, { value: 'phone', label: 'Phone' }, { value: 'onsite', label: 'Onsite' }]} /></Field>
+          <Field label="Timezone"><Select value={form.timezone} onChange={(v) => setForm({ ...form, timezone: v })} options={['Asia/Kolkata', 'UTC', 'America/New_York', 'Europe/London', 'Asia/Dubai', 'Asia/Singapore'].map((z) => ({ value: z, label: z }))} /></Field>
           <Field label="Date *"><DatePicker value={form.date} onChange={(v) => setForm({ ...form, date: v })} /></Field>
           <div className="grid grid-cols-2 gap-2">
             <Field label="Hour"><Select value={form.hour} onChange={(v) => setForm({ ...form, hour: v })} options={HOURS} /></Field>
             <Field label="Minute"><Select value={form.minute} onChange={(v) => setForm({ ...form, minute: v })} options={MINUTES} /></Field>
           </div>
-          <Field label="Interviewer"><input className={kitInput} value={form.interviewer} onChange={(e) => setForm({ ...form, interviewer: e.target.value })} /></Field>
+          <Field label="Interviewer / panel lead"><input className={kitInput} value={form.interviewer} onChange={(e) => setForm({ ...form, interviewer: e.target.value })} /></Field>
+          <Field label="Full panel"><input className={kitInput} value={form.panel} onChange={(e) => setForm({ ...form, panel: e.target.value })} placeholder="Names, comma separated" /></Field>
           <Field label="Meeting link"><input className={kitInput} value={form.meetingLink} onChange={(e) => setForm({ ...form, meetingLink: e.target.value })} /></Field>
           <Field label="Venue (onsite)"><input className={kitInput} value={form.venue} onChange={(e) => setForm({ ...form, venue: e.target.value })} /></Field>
-          <div><Field label="Instructions"><input className={kitInput} value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} /></Field></div>
+          <div className="sm:col-span-2"><Field label="Instructions"><input className={kitInput} value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} /></Field></div>
           <div className="sm:col-span-2 flex justify-end gap-2 pt-1">
             <button type="button" onClick={() => setShowSchedule(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
             <button className={btnPrimary} disabled={busy}>{busy ? 'Scheduling…' : 'Schedule interview'}</button>
           </div>
         </form>
       </Modal>
-      {loading ? <InlineLoading message="Loading interviews…" /> : rows.length === 0 ? (
-        <EmptyState title="No interviews" message="Scheduled interviews appear here; scheduling auto-enables application chat." />
+      {loading ? <InlineLoading message="Loading interviews…" /> : filtered.length === 0 ? (
+        <EmptyState title="No interviews match" message="Adjust filters, or schedule the first round for a shortlisted application." />
       ) : (<>
-        <div className="space-y-2 md:hidden">
-          {rows.map((i) => (
-            <div key={i.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="font-extrabold text-slate-900 text-sm truncate">{i.round} — {i.candidateName || i.candidateEmail}</div>
-                  <div className="font-mono text-[11px] text-slate-500">{i.id} • App {i.applicationId}</div>
-                </div>
-                {ivMenuFor(i)}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${i.status === 'Cancelled' ? 'bg-red-50 text-red-700 border-red-200' : i.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>{i.status}</span>
-                <span className="text-slate-500 font-medium">{String(i.scheduledAt || '').slice(0, 16).replace('T', ' ')}</span>
-              </div>
-              {resched.id === i.id && (
-                <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-white border border-slate-200">
-                  <DatePicker value={resched.date} onChange={(v) => setResched({ ...resched, date: v })} ariaLabel="New date" />
-                  <Select value={resched.hour} onChange={(v) => setResched({ ...resched, hour: v })} ariaLabel="Hour" options={HOURS} />
-                  <input className={inputCls} placeholder="Reason" value={resched.reason} onChange={(e) => setResched({ ...resched, reason: e.target.value })} />
-                  <button type="button" className={btnDark} onClick={() => confirmReschedule(i.id)}>Confirm move</button>
-                </div>
-              )}
-            </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
+          {pagedRows.map((i) => (
+            <DrawerCard key={i.id} status={i.status}
+              title={`${i.round || 'Interview'} — ${i.candidateName || i.candidateEmail || ''}`}
+              meta={`${String(i.scheduledAt || '').slice(0, 16).replace('T', ' ') || 'Unscheduled'} • ${i.mode || ''}`}
+              right={<><StatusPill value={i.status} />{ivMenuFor(i)}</>}>
+              <div className="text-[11px] text-slate-500 font-medium truncate">App <span className="font-mono">{i.applicationId}</span> • {i.jobId || ''}</div>
+              <div className="text-[11px] text-slate-500 font-medium truncate">{i.interviewer ? `Panel: ${i.interviewer}${i.panel ? ` + ${i.panel}` : ''}` : 'Panel TBD'}</div>
+              <button type="button" onClick={() => openDetail(i)} className="mt-1.5 w-full px-3 py-1.5 rounded-lg bg-slate-900 text-white font-bold text-[11px] hover:bg-slate-700 transition">View details →</button>
+            </DrawerCard>
           ))}
         </div>
-        <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
-          <table className="w-full text-left text-xs min-w-[920px]">
-            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
-              <th className="px-4 py-3">Interview</th><th className="px-4 py-3">Candidate</th><th className="px-4 py-3">Application</th><th className="px-4 py-3">Scheduled</th><th className="px-4 py-3">Mode</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
-            </tr></thead>
-            <tbody className="divide-y divide-slate-100">
-              {rows.map((i) => (
-                <tr key={i.id} className="hover:bg-slate-50/70">
-                  <td className="px-4 py-3"><div className="font-bold text-slate-900">{i.round}</div><div className="font-mono text-[11px] text-slate-500">{i.id}</div></td>
-                  <td className="px-4 py-3">{i.candidateName || i.candidateEmail}</td>
-                  <td className="px-4 py-3 font-mono">{i.applicationId}</td>
-                  <td className="px-4 py-3">{String(i.scheduledAt || '').slice(0, 16).replace('T', ' ')}</td>
-                  <td className="px-4 py-3 capitalize">{i.mode || '—'}</td>
-                  <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${i.status === 'Cancelled' ? 'bg-red-50 text-red-700 border-red-200' : i.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>{i.status}</span></td>
-                  <td className="px-4 py-3"><div className="flex justify-end">{ivMenuFor(i)}</div></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Pager page={page} total={total} pageSize={pageSize} onPage={setPage} />
       </>)}
+      <Modal open={editIv !== null} onClose={() => setEditIv(null)} title={`Edit interview — ${editIv?.id || ''}`} subtitle="Panel, link, venue and instructions stay editable until completion">
+        <form onSubmit={saveEdit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Round"><input className={kitInput} value={editForm.round} onChange={(e) => setEditForm({ ...editForm, round: e.target.value })} /></Field>
+          <Field label="Mode"><Select value={editForm.mode} onChange={(v) => setEditForm({ ...editForm, mode: v })} options={[{ value: 'video', label: 'Video' }, { value: 'phone', label: 'Phone' }, { value: 'onsite', label: 'Onsite' }]} /></Field>
+          <Field label="Interviewer / panel lead"><input className={kitInput} value={editForm.interviewer} onChange={(e) => setEditForm({ ...editForm, interviewer: e.target.value })} /></Field>
+          <Field label="Full panel"><input className={kitInput} value={editForm.panel} onChange={(e) => setEditForm({ ...editForm, panel: e.target.value })} /></Field>
+          <Field label="Meeting link"><input className={kitInput} value={editForm.meetingLink} onChange={(e) => setEditForm({ ...editForm, meetingLink: e.target.value })} /></Field>
+          <Field label="Venue"><input className={kitInput} value={editForm.venue} onChange={(e) => setEditForm({ ...editForm, venue: e.target.value })} /></Field>
+          <Field label="Timezone"><Select value={editForm.timezone} onChange={(v) => setEditForm({ ...editForm, timezone: v })} options={['Asia/Kolkata', 'UTC', 'America/New_York', 'Europe/London', 'Asia/Dubai', 'Asia/Singapore'].map((z) => ({ value: z, label: z }))} /></Field>
+          <Field label="Candidate confirmation"><Select value={editForm.confirmationStatus} onChange={(v) => setEditForm({ ...editForm, confirmationStatus: v })} options={['Pending', 'Confirmed', 'Declined'].map((s) => ({ value: s, label: s }))} /></Field>
+          <div className="sm:col-span-2"><Field label="Instructions"><input className={kitInput} value={editForm.instructions} onChange={(e) => setEditForm({ ...editForm, instructions: e.target.value })} /></Field></div>
+          <div className="sm:col-span-2 flex justify-end gap-2">
+            <button type="button" onClick={() => setEditIv(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
+            <button className={btnPrimary} disabled={busy}>{busy ? 'Saving…' : 'Save changes'}</button>
+          </div>
+        </form>
+      </Modal>
+      <Modal open={fbFor !== null} onClose={() => setFbFor(null)} title={`Scorecard — ${fbFor?.id || ''}`} subtitle={`${fbFor?.candidateName || fbFor?.candidateEmail || ''} • ${fbFor?.round || ''}`}>
+        <div className="space-y-3">
+          {fbList.length === 0 ? (
+            <div className="text-xs text-slate-500 font-medium">No feedback recorded yet — the panel's scorecard lands here.</div>
+          ) : (
+            <div className="space-y-2">{fbList.map((f: any) => <ScorecardCard key={f.id} f={f} />)}</div>
+          )}
+          {fbFor ? <ScorecardForm interviewId={fbFor.id} onSaved={(fb) => pushFeedback(fb, fbFor.id)} onCancel={() => setFbFor(null)} /> : null}
+        </div>
+      </Modal>
       <ActionConfirm
         open={cancelId !== ''}
         onCancel={() => setCancelId('')}
         title={`Cancel interview ${cancelId || ''}`}
-        subtitle={rows.find((x) => x.id === cancelId)?.round || ''}
+        subtitle={(() => {
+          const row = rows.find((x) => x.id === cancelId);
+          const appStage = detailIv?.id === cancelId && detailApp ? ` • application ${detailApp.id} at ${detailApp.stage}` : (row?.applicationId ? ` • application ${row.applicationId}` : '');
+          return `${row?.round || detailIv?.round || ''} • currently ${row?.status || detailIv?.status || ''}${appStage}`;
+        })()}
         why={['Interview is currently Scheduled / Rescheduled', 'Cancellation is an explicit, audited terminal step']}
         steps={['Status moves to Cancelled', 'Feedback history is preserved', 'Both sides are notified']}
         consequences={['The slot is released', 'Candidate stays in pipeline — reschedule creates a fresh round']}
@@ -1729,11 +2077,193 @@ export function InterviewsPanel() {
         onConfirm={async (reasonText) => {
           const u = unwrapObj(await interviewsApi.reschedule(cancelId, { status: 'Cancelled', reason: reasonText || 'cancelled' }));
           setRows((r) => r.map((x) => (x.id === cancelId ? u : x)));
+          if (detailIv?.id === cancelId && u?.id) setDetailIv(u);
           setCancelId('');
           setResched({ id: '', date: '', hour: '10', minute: '00', reason: '' });
           syncAll();
         }}
       />
+      {detailIv && (
+        <DetailDrawer title={`${detailIv.round || 'Interview'} — ${detailIv.candidateName || detailIv.candidateEmail || ''}`} subtitle={`${detailIv.id} • App ${detailIv.applicationId || '—'} • ${detailIv.jobId || ''}`} onClose={() => setDetailIv(null)} width="max-w-4xl">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={tonePill(detailIv.status)}>{detailIv.status}</span>
+            <span className="text-[11px] font-bold text-slate-500 capitalize">{detailIv.mode || ''}{detailIv.timezone ? ` • ${detailIv.timezone}` : ''}</span>
+            {detailIv.confirmationStatus && detailIv.confirmationStatus !== 'Pending' ? <span className={tonePill(detailIv.confirmationStatus)}>{detailIv.confirmationStatus}</span> : null}
+            <span className="text-[11px] font-mono text-slate-500 bg-slate-100 border border-slate-200 rounded-md px-1.5 py-0.5">{detailIv.id}</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {detailIv.meetingLink || detailIv.meetLink ? <button type="button" onClick={() => window.open(detailIv.meetingLink || detailIv.meetLink, '_blank', 'noopener')} className={btnPrimary}>Join meeting ↗</button> : null}
+            {['Scheduled', 'Rescheduled'].includes(detailIv.status) && resched.id !== detailIv.id && !confirmComplete ? (<>
+              <button type="button" onClick={() => setResched({ id: detailIv.id, date: '', hour: '10', minute: '00', reason: '' })} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">Reschedule…</button>
+              <button type="button" onClick={() => setConfirmComplete(true)} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs">Mark completed</button>
+              <button type="button" onClick={() => setCancelId(detailIv.id)} className="px-4 py-2 rounded-xl bg-white border border-red-200 text-red-600 font-bold text-xs">Cancel…</button>
+            </>) : null}
+          </div>
+          {resched.id === detailIv.id ? (
+            <div className="p-3.5 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-2.5">
+              <div className="text-[11px] font-extrabold uppercase tracking-wider text-blue-800">Reschedule — {detailIv.id} • currently {detailIv.status}</div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <Field label="New date *"><DatePicker value={resched.date} onChange={(v) => setResched({ ...resched, date: v })} ariaLabel="New date" /></Field>
+                <Field label="Hour"><Select value={resched.hour} onChange={(v) => setResched({ ...resched, hour: v })} ariaLabel="Hour" options={HOURS} /></Field>
+                <Field label="Minute"><Select value={resched.minute} onChange={(v) => setResched({ ...resched, minute: v })} ariaLabel="Minute" options={MINUTES} /></Field>
+                <Field label="Reason"><input className={kitInput} placeholder="Candidate requested…" value={resched.reason} onChange={(e) => setResched({ ...resched, reason: e.target.value })} /></Field>
+              </div>
+              <div className="text-[11px] font-medium text-blue-900">Moves to <strong>Rescheduled</strong> — history is preserved and both sides are notified.</div>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setResched({ id: '', date: '', hour: '10', minute: '00', reason: '' })} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">Keep slot</button>
+                <button type="button" onClick={() => confirmReschedule(detailIv.id)} className={btnDark}>Confirm move</button>
+              </div>
+            </div>
+          ) : null}
+          {confirmComplete ? (
+            <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-2.5">
+              <div className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-800">Mark completed — check the context</div>
+              <div className="text-xs font-medium text-emerald-900 space-y-1">
+                <div>Interview <strong className="font-mono">{detailIv.id}</strong>: <span className={tonePill(detailIv.status)}>{detailIv.status}</span> → <span className={tonePill('Completed')}>Completed</span></div>
+                <div>Application <strong className="font-mono">{detailIv.applicationId || '—'}</strong> is currently at stage <strong>{detailApp?.stage || '…'}</strong>{detailFb.length === 0 ? ' • no scorecard yet — add one after completing' : ` • ${detailFb.length} scorecard(s) on file`}.</div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setConfirmComplete(false)} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">Keep {detailIv.status.toLowerCase()}</button>
+                <button type="button" onClick={() => { setConfirmComplete(false); setStatusOf(detailIv.id, 'Completed'); }} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs">Confirm completed</button>
+              </div>
+            </div>
+          ) : null}
+          <DetailTabs tabs={[{ key: 'overview', label: 'Overview' }, { key: 'feedback', label: 'Feedback', count: detailFb.length }, { key: 'ats', label: 'ATS & Fit' }, { key: 'activity', label: 'Activity', count: (detailIv.history || []).length }]} active={detailTab} onPick={setDetailTab} />
+          {detailTab === 'overview' && (
+            <div className="space-y-3">
+              <DetailSection title="Schedule">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  {[['Candidate', detailIv.candidateName || detailIv.candidateEmail || '—'], ['Application', detailIv.applicationId || '—'], ['Job', detailIv.jobId || detailIv.jobTitle || '—'], ['When', String(detailIv.scheduledAt || '').slice(0, 16).replace('T', ' ') || '—'], ['Mode', detailIv.mode || '—'], ['Venue', detailIv.venue || (detailIv.mode === 'onsite' ? '—' : 'Remote link above')], ['Timezone', detailIv.timezone || 'Asia/Kolkata'], ['Confirmation', detailIv.confirmationStatus || 'Pending']].map(([k, v]) => (
+                    <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—')}</div></div>
+                  ))}
+                  {detailIv.meetingLink || detailIv.meetLink ? <div className="sm:col-span-2 p-3 rounded-xl bg-blue-50/60 border border-blue-200 text-xs break-all"><span className="text-[10px] font-bold text-blue-800 uppercase">Meeting link </span><span className="font-mono">{detailIv.meetingLink || detailIv.meetLink}</span></div> : null}
+                </div>
+              </DetailSection>
+              <DetailSection title="Panel & instructions">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  {[['Interviewer / lead', detailIv.interviewer || '—'], ['Full panel', detailIv.panel || '—']].map(([k, v]) => (
+                    <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—')}</div></div>
+                  ))}
+                  <div className="sm:col-span-2 p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">Instructions</div><div className="font-medium mt-1 whitespace-pre-wrap">{detailIv.instructions || '—'}</div></div>
+                </div>
+              </DetailSection>
+            </div>
+          )}
+          {detailTab === 'feedback' && (
+            <DetailSection title="Scorecards" count={detailFb.length}>
+              {detailFb.length === 0 ? <div className="text-[11px] text-slate-500 font-medium">No feedback recorded yet — the panel's scorecard lands here.</div> : (
+                <div className="space-y-2">{detailFb.map((x: any) => <ScorecardCard key={x.id} f={x} />)}</div>
+              )}
+              <ScorecardForm interviewId={detailIv.id} onSaved={(fb) => pushFeedback(fb, detailIv.id)} />
+            </DetailSection>
+          )}
+          {detailTab === 'ats' && (
+            <div className="space-y-3">
+              {(() => {
+                const keywords = `${detailIv.jobTitle || ''} ${detailIv.round || ''}`.toLowerCase().split(/\s+/).filter((k) => k.length >= 2);
+                const a = matchAnalysis({ job: detailJob, keywords, expMin: '', expMax: '', cand: detailCand });
+                const ratings = detailFb.map((x: any) => Number(x.rating)).filter((n: number) => Number.isFinite(n));
+                const avgR = ratings.length ? ratings.reduce((s: number, n: number) => s + n, 0) / ratings.length : null;
+                const prob = avgR !== null ? Math.round(a.score * 0.7 + (avgR / 5) * 100 * 0.3) : a.score;
+                const probLabel = prob >= 80 ? 'High' : prob >= 60 ? 'Moderate' : prob >= 40 ? 'Possible' : 'Low';
+                const bar = prob >= 80 ? 'bg-emerald-500' : prob >= 60 ? 'bg-blue-500' : prob >= 40 ? 'bg-amber-500' : 'bg-slate-400';
+                const resumeBits: string[] = [];
+                let resumeScore = 0;
+                if (!detailCand) { resumeBits.push('candidate profile not on file'); }
+                else {
+                  if (detailCand.resumeRef) { resumeScore += 50; resumeBits.push(`resume on file (v${detailCand.resumeVersion || 1})`); }
+                  else resumeBits.push('no resume uploaded');
+                  const upd = new Date(detailCand.updatedAt || detailCand.createdAt || 0).getTime();
+                  if (upd && Date.now() - upd < 90 * 864e5) { resumeScore += 20; resumeBits.push('fresh (90d)'); }
+                  else if (upd) resumeBits.push('stale profile');
+                  if (detailCand.summary) { resumeScore += 15; resumeBits.push('has summary'); }
+                  const skN = Array.isArray(detailCand.skills) ? detailCand.skills.length : String(detailCand.skills || '').split(',').filter((s: string) => s.trim()).length;
+                  if (skN > 0) { resumeScore += 10; resumeBits.push(`${skN} skills listed`); }
+                  if (detailCand.education) { resumeScore += 5; resumeBits.push('education on file'); }
+                }
+                resumeScore = Math.min(100, resumeScore);
+                return (
+                  <div className="space-y-3">
+                    <div className="px-4 py-3 rounded-2xl bg-slate-900 text-white flex items-center gap-4">
+                      <div className={`text-3xl font-extrabold ${prob >= 80 ? 'text-emerald-300' : prob >= 60 ? 'text-blue-300' : prob >= 40 ? 'text-amber-300' : 'text-slate-300'}`}>{prob}%</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[11px] font-bold text-slate-300">{probLabel} hiring probability{avgR !== null ? ` • panel avg ${avgR.toFixed(1)}/5` : ' • ATS only, no scorecards yet'}</div>
+                        <div className="mt-1.5 h-2 rounded-full bg-white/15 overflow-hidden">
+                          <div className={`h-full rounded-full ${bar}`} style={{ width: `${prob}%` }} />
+                        </div>
+                        <div className="text-[10px] font-bold mt-1 text-slate-400">ATS 70% · panel signal 30%{avgR === null ? ' (pending)' : ''}</div>
+                      </div>
+                    </div>
+                    <DetailSection title="Match factors">
+                      <div className="space-y-1.5">
+                        {a.factors.map((ft) => (
+                          <div key={ft.label} className="flex items-center gap-2">
+                            <span className="w-28 shrink-0 text-[11px] font-bold text-slate-600 truncate">{ft.label}</span>
+                            <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                              <div className="h-full rounded-full bg-[#087BFF]" style={{ width: `${ft.max ? Math.round((ft.got / ft.max) * 100) : 0}%` }} />
+                            </div>
+                            <span className="w-12 shrink-0 text-right text-[11px] font-extrabold text-slate-800">{ft.got}/{ft.max}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-2 text-xs font-extrabold text-slate-900">{a.verdict}</div>
+                    </DetailSection>
+                    <DetailSection title={`Resume score — ${resumeScore}/100`}>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                          <div className="h-full rounded-full bg-emerald-500" style={{ width: `${resumeScore}%` }} />
+                        </div>
+                        <span className="text-[11px] font-extrabold text-slate-800 shrink-0">{resumeScore}</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 font-medium mt-1.5">{resumeBits.join(' • ')}</div>
+                      <div className="text-[10px] text-slate-400 font-medium mt-0.5">Document signal from resume metadata + profile completeness — not a parse of resume content.</div>
+                    </DetailSection>
+                    {(a.skillMatched.length > 0 || a.skillMissing.length > 0) && (
+                      <DetailSection title={`Skill match (${a.skillMatched.length} hit)`}>
+                        <div className="flex flex-wrap gap-1.5">
+                          {a.skillMatched.map((t) => <span key={`m${t}`} className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px]">✓ {t}</span>)}
+                          {a.skillMissing.map((t) => <span key={`x${t}`} className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 border border-slate-200 font-bold text-[11px]">{t}</span>)}
+                        </div>
+                      </DetailSection>
+                    )}
+                    {(a.best.length > 0 || a.gaps.length > 0 || a.nextSteps.length > 0) && (
+                      <DetailSection title="Fit summary">
+                        {a.best.map((b) => <div key={b} className="text-xs font-bold text-emerald-800">✓ {b}</div>)}
+                        {a.gaps.map((g) => <div key={g} className="text-xs font-bold text-amber-800">• {g}</div>)}
+                        {a.nextSteps.map((s, i) => <div key={s} className="text-xs font-bold text-blue-800">{i + 1}. {s}</div>)}
+                      </DetailSection>
+                    )}
+                    <DetailSection title="Related details">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        {[['Candidate', detailCand ? `${detailCand.name || detailIv.candidateEmail} • ${detailCand.roleTitle || ''} • ${detailCand.experienceYears ?? '—'}y` : (detailIv.candidateName || detailIv.candidateEmail || '—')], ['Application', detailApp ? `${detailApp.id} • ${detailApp.stage}` : (detailIv.applicationId || '—')], ['Job', detailJob ? `${detailJob.title || detailJob.id} • ${detailJob.location || ''}` : (detailIv.jobId || detailIv.jobTitle || '—')], ['Round', `${detailIv.round || ''} • ${detailIv.mode || ''} • ${String(detailIv.scheduledAt || '').slice(0, 16).replace('T', ' ') || '—'}`]].map(([k, v]) => (
+                          <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—')}</div></div>
+                        ))}
+                      </div>
+                      {!detailJob && <div className="text-[10px] text-slate-400 font-medium mt-1.5">Job record not on file — scoring falls back to title keywords.</div>}
+                      {!detailCand && <div className="text-[10px] text-slate-400 font-medium mt-1">Candidate profile not on file — scoring uses interview data only.</div>}
+                    </DetailSection>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+          {detailTab === 'activity' && (
+            <DetailSection title="Reschedule & status history" count={(detailIv.history || []).length}>
+              {(detailIv.history || []).length === 0 ? <div className="text-[11px] text-slate-500 font-medium">No moves recorded yet — reschedules and status changes land here with actor and reason.</div> : (
+                <ol className="relative ml-1.5 border-l-2 border-slate-100 space-y-3">
+                  {(detailIv.history || []).slice(-30).reverse().map((h: any, i: number) => (
+                    <li key={i} className="ml-4 relative">
+                      <span className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-slate-900 ring-4 ring-slate-100" />
+                      <div className="text-xs font-bold text-slate-900">{h.from} → {h.to} <span className="font-medium text-slate-500">• {h.by}{h.reason ? ` • ${h.reason}` : ''}</span></div>
+                      <div className="text-[11px] text-slate-400 font-mono">{String(h.at || '').slice(0, 16).replace('T', ' ')}</div>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </DetailSection>
+          )}
+        </DetailDrawer>
+      )}
     </div>
   );
 }
@@ -1751,6 +2281,10 @@ export function ChatPanel({ initialAppId = '' }: { initialAppId?: string } = {})
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [loadError, setLoadError] = useState(0);
+  const [attBusy, setAttBusy] = useState(false);
+  const [editingId, setEditingId] = useState('');
+  const [editingBody, setEditingBody] = useState('');
+  const me = useMemo(() => { try { return (localStorage.getItem('user_email') || '').toLowerCase(); } catch { return ''; } }, []);
 
   const find = async () => {
     setLoading(true); setError('');
@@ -1772,6 +2306,32 @@ export function ChatPanel({ initialAppId = '' }: { initialAppId?: string } = {})
       const m = unwrapObj(await chatApi.send(active, draft.trim()));
       if (m?.id) setMsgs((x) => [...x, m]);
       setDraft('');
+      syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const sendAttachment = async (f: File) => {
+    if (!active) return;
+    if (f.size > 5 * 1024 * 1024) { setError('Attachment must be under 5 MB (PDF, DOC, DOCX, PNG, JPG).'); return; }
+    setAttBusy(true); setError('');
+    try {
+      const buf = await f.arrayBuffer();
+      let binary = '';
+      const bytes = new Uint8Array(buf);
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      const up = unwrapObj(await documentsApi.upload({ name: f.name, mime: f.type || 'application/pdf', data: btoa(binary), kind: 'chat-attachment' }));
+      const m = unwrapObj(await chatApi.send(active, draft.trim() || f.name, { docId: up.id, name: up.name || f.name, mime: up.mime || f.type, size: up.size || f.size }));
+      if (m?.id) setMsgs((x) => [...x, m]);
+      setDraft('');
+      syncAll();
+    } catch (e) { setError(errMsg(e)); }
+    finally { setAttBusy(false); }
+  };
+  const saveEdit = async (id: string) => {
+    if (!editingBody.trim()) return;
+    try {
+      const m = unwrapObj(await chatApi.edit(id, editingBody.trim()));
+      if (m?.id) setMsgs((x) => x.map((row) => (row.id === id ? m : row)));
+      setEditingId(''); setEditingBody('');
       syncAll();
     } catch (e) { setError(errMsg(e)); }
   };
@@ -1810,11 +2370,37 @@ export function ChatPanel({ initialAppId = '' }: { initialAppId?: string } = {})
             </div>
           )}
           {msgs.length === 0 && <div className="text-xs text-slate-500 font-medium">No messages yet.</div>}
-          {msgs.map((m) => (
-            <div key={m.id} className="text-xs"><strong>{m.sender}:</strong> {m.body} <span className="text-slate-400">• {String(m.createdAt || '').slice(0, 16).replace('T', ' ')}{m.editedAt ? ' • edited' : ''}{m.deliveryStatus ? ` • ${m.deliveryStatus}` : ''}</span></div>
-          ))}
+          {msgs.map((m) => {
+            const mine = me && String(m.sender || '').toLowerCase() === me;
+            const isEditing = editingId === m.id;
+            return (
+              <div key={m.id} className="text-xs">
+                <strong>{m.sender}:</strong>{' '}
+                {isEditing ? (
+                  <span className="inline-flex items-center gap-1">
+                    <input className={inputCls + ' !w-48 !inline-block'} value={editingBody} onChange={(e) => setEditingBody(e.target.value)} />
+                    <button type="button" onClick={() => saveEdit(m.id)} className="font-bold text-emerald-700 underline">Save</button>
+                    <button type="button" onClick={() => { setEditingId(''); setEditingBody(''); }} className="font-bold text-slate-500 underline">Cancel</button>
+                  </span>
+                ) : (
+                  <>{m.body}</>
+                )}{' '}
+                {m.attachment?.docId && (
+                  <button type="button" onClick={() => downloadDocumentFile(m.attachment.docId, m.attachment.name).catch(() => {})} className="font-bold text-blue-600 underline">📎 {m.attachment.name}</button>
+                )}{' '}
+                <span className="text-slate-400">• {String(m.createdAt || '').slice(0, 16).replace('T', ' ')}{m.editedAt ? ' • edited' : ''}{m.deliveryStatus ? ` • ${m.deliveryStatus}` : ''}</span>
+                {mine && !isEditing && (
+                  <button type="button" onClick={() => { setEditingId(m.id); setEditingBody(m.body); }} className="ml-2 font-bold text-slate-500 underline">Edit</button>
+                )}
+              </div>
+            );
+          })}
           <form onSubmit={send} className="flex gap-2">
             <input className={inputCls} placeholder="Write a message…" value={draft} onChange={(e) => setDraft(e.target.value)} />
+            <label className={`px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs cursor-pointer${attBusy ? ' opacity-50' : ''}`}>
+              {attBusy ? 'Uploading…' : '📎 Attach'}
+              <input type="file" className="hidden" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" disabled={attBusy || !active} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) sendAttachment(f); }} />
+            </label>
             <button className={btnPrimary}>Send</button>
           </form>
         </div>
@@ -1848,8 +2434,17 @@ export function SavedJobsPanel() {
       ) : (
         <div className="space-y-2">
           {rows.map((s) => (
-            <div key={s.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-              <div className="font-extrabold text-slate-900 text-sm">{s.jobId}</div>
+            <div key={s.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2 flex-wrap">
+              <div className="min-w-0">
+                <div className="font-extrabold text-slate-900 text-sm">{s.job?.title || s.jobId}</div>
+                <div className="text-xs text-slate-500 font-medium">
+                  {s.job ? `${s.job.companyName || ''} • ${s.job.location || ''}${s.job.industry ? ` • ${s.job.industry}` : ''}` : (s.jobMissing ? 'Posting unavailable — retained in history' : s.jobId)}
+                </div>
+                <div className="flex gap-1 flex-wrap mt-1">
+                  {s.closed && <span className="px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 font-bold text-[10px]">Closed — retained</span>}
+                  {s.applied && <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[10px]">Applied</span>}
+                </div>
+              </div>
               <button type="button" onClick={() => unsave(s.jobId)} className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold text-[11px]">Remove</button>
             </div>
           ))}
@@ -1859,46 +2454,228 @@ export function SavedJobsPanel() {
   );
 }
 
-/* ---------------- Phase 2: Talent pools ---------------- */
+/* ---------------- Phase 2: Talent pools (cards + drawers + shortlist-to-job) ---------------- */
 export function TalentPoolsPanel() {
+  const navigate = useNavigate();
   const [pools, setPools] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [name, setName] = useState('');
-  const [member, setMember] = useState({ poolId: '', candidateId: '' });
-  const [openPool, setOpenPool] = useState('');
+  const [ok, setOk] = useState('');
+  const [search, setSearch] = useState('');
+  const [statusTab, setStatusTab] = useState<'all' | 'active' | 'archived'>('all');
+  const [counts, setCounts] = useState<Record<string, { total: number; stale: number }>>({});
+  // drawers
+  const [drawerPool, setDrawerPool] = useState<any>(null);
+  const [poolTab, setPoolTab] = useState<'members' | 'details' | 'analytics'>('members');
   const [members, setMembers] = useState<any[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [memberDetail, setMemberDetail] = useState<any>(null);
+  const [memberTab, setMemberTab] = useState<'profile' | 'pipeline' | 'actions'>('profile');
+  const [memberApps, setMemberApps] = useState<any[]>([]);
+  const [memberAppsLoading, setMemberAppsLoading] = useState(false);
+  // modals
+  const [name, setName] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [addPoolId, setAddPoolId] = useState('');
+  const [addQuery, setAddQuery] = useState('');
+  const [addResults, setAddResults] = useState<any[]>([]);
+  const [addPick, setAddPick] = useState('');
+  const [renameFor, setRenameFor] = useState<any>(null);
+  const [renameName, setRenameName] = useState('');
   const [removeMember, setRemoveMember] = useState<{ poolId: string; memberId: string; label: string } | null>(null);
+  const [shortlistFor, setShortlistFor] = useState<any>(null);
+  const [shortlistJob, setShortlistJob] = useState('');
+  const [liveJobs, setLiveJobs] = useState<any[]>([]);
+  const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState(0);
+  const staleOf = (m: any) => !m.candidate;
   const load = async () => {
     setLoading(true); setError('');
-    try { setPools(unwrapList(await talentApi.pools())); }
-    catch (e) { setError(errMsg(e)); setLoadError(errStatus(e)); }
+    try {
+      const rows = unwrapList(await talentApi.pools());
+      setPools(rows);
+      const map: Record<string, { total: number; stale: number }> = {};
+      await Promise.all(rows.map(async (p: any) => {
+        try {
+          const ms = unwrapList(await talentApi.poolMembers(p.id));
+          map[p.id] = { total: ms.length, stale: ms.filter(staleOf).length };
+        } catch { map[p.id] = { total: 0, stale: 0 }; }
+      }));
+      setCounts(map);
+    } catch (e) { setError(errMsg(e)); setLoadError(errStatus(e)); }
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
+  const openDrawer = async (p: any) => {
+    setDrawerPool(p); setPoolTab('members'); setMembers([]); setMemberDetail(null);
+    setMembersLoading(true);
+    try { setMembers(unwrapList(await talentApi.poolMembers(p.id))); }
+    catch (e) { setError(errMsg(e)); } finally { setMembersLoading(false); }
+  };
+  const refreshMembers = async (poolId: string) => {
+    try {
+      const ms = unwrapList(await talentApi.poolMembers(poolId));
+      setMembers(ms);
+      setCounts((c) => ({ ...c, [poolId]: { total: ms.length, stale: ms.filter(staleOf).length } }));
+      return ms;
+    } catch (e) { setError(errMsg(e)); return []; }
+  };
   const create = async (e: React.FormEvent) => {
     e.preventDefault(); if (!name.trim()) return;
-    try {       const p = unwrapObj(await talentApi.createPool({ name: name.trim() })); if (p?.id) setPools((x) => [p, ...x]); setName(''); setShowCreate(false); syncAll(); }
+    try { const p = unwrapObj(await talentApi.createPool({ name: name.trim() })); if (p?.id) { setPools((x) => [p, ...x]); setCounts((c) => ({ ...c, [p.id]: { total: 0, stale: 0 } })); } setName(''); setShowCreate(false); syncAll(); }
     catch (e) { setError(errMsg(e)); }
+  };
+  const searchCandidates = async (q: string) => {
+    setAddQuery(q);
+    if (q.trim().length < 2) { setAddResults([]); return; }
+    try {
+      const res: any = await talentApi.search('preview', q.trim());
+      setAddResults(unwrapList(res).slice(0, 8));
+    } catch { setAddResults([]); }
   };
   const add = async (e: React.FormEvent) => {
-    e.preventDefault(); if (!member.poolId || !member.candidateId) return;
-      try { await talentApi.addMember(member.poolId, member.candidateId); setMember({ poolId: '', candidateId: '' }); setShowAdd(false); syncAll(); }
-    catch (e) { setError(errMsg(e)); }
+    e.preventDefault(); if (!addPoolId || !addPick) return;
+    setBusy(true);
+    try {
+      await talentApi.addMember(addPoolId, addPick);
+      setAddPick(''); setAddQuery(''); setAddResults([]); setShowAdd(false); setOk('Member added.');
+      if (drawerPool?.id === addPoolId) refreshMembers(addPoolId);
+      else load();
+      syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
   };
+  const doRename = async () => {
+    if (!renameFor || !renameName.trim()) return;
+    setBusy(true);
+    try {
+      const u = unwrapObj(await talentApi.editPool(renameFor.id, { name: renameName.trim() }));
+      setPools((x) => x.map((y) => (y.id === renameFor.id ? { ...y, name: u?.name || renameName.trim() } : y)));
+      if (drawerPool?.id === renameFor.id) setDrawerPool({ ...drawerPool, name: renameName.trim() });
+      setRenameFor(null); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const doArchive = async (p: any) => {
+    try {
+      const u = unwrapObj(await talentApi.editPool(p.id, { status: 'Archived' }));
+      setPools((x) => x.map((y) => (y.id === p.id ? { ...u, status: 'Archived' } : y)));
+      if (drawerPool?.id === p.id) setDrawerPool({ ...drawerPool, status: 'Archived' });
+      syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const removeStale = async (p: any) => {
+    const stale = members.filter(staleOf);
+    if (stale.length === 0) return;
+    setBusy(true);
+    try {
+      for (const m of stale) { try { await talentApi.removeMember(p.id, m.id); } catch { /* keep going */ } }
+      setOk(`Removed ${stale.length} stale profile(s).`);
+      refreshMembers(p.id); syncAll();
+    } finally { setBusy(false); }
+  };
+  const startOutreach = (emails: string[], label: string) => {
+    const clean = [...new Set(emails.map((e) => String(e || '').trim()).filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)))];
+    if (clean.length === 0) { setError('No usable email addresses in this selection.'); return; }
+    try { localStorage.setItem('nexa_outreach_recipients', JSON.stringify(clean)); } catch { /* private mode */ }
+    setOk(`${clean.length} address(es) staged for outreach — ${label}.`);
+    navigate('/employer/outreach');
+  };
+  const openMember = async (m: any) => {
+    setMemberDetail(m); setMemberTab('profile'); setMemberApps([]); setMemberAppsLoading(true);
+    const email = m.candidateEmail || m.candidate?.email || '';
+    if (email) {
+      try {
+        const res: any = await apiClient.get(`/api/v1/applications?q=${encodeURIComponent(email)}&page=1&pageSize=50`);
+        setMemberApps(unwrapList(res));
+      } catch { setMemberApps([]); }
+    }
+    setMemberAppsLoading(false);
+  };
+  const doShortlist = async () => {
+    if (!shortlistFor || !shortlistJob) return;
+    setBusy(true); setError(''); setOk('');
+    try {
+      const out = unwrapObj(await talentApi.shortlistMember(shortlistFor.poolId || drawerPool?.id, shortlistFor.id, shortlistJob));
+      setOk(`Shortlisted to ${shortlistJob} — application ${out?.application?.id || ''} created in pipeline.`);
+      setShortlistFor(null); setShortlistJob('');
+      if (drawerPool) refreshMembers(drawerPool.id);
+      syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const openShortlist = async (m: any, poolId: string) => {
+    setShortlistFor({ ...m, poolId }); setShortlistJob('');
+    try {
+      const res: any = await apiClient.get('/api/v1/jobs?page=1&pageSize=100');
+      setLiveJobs(unwrapList(res).filter((j: any) => j.status === 'Published'));
+    } catch { setLiveJobs([]); }
+  };
+  const totals = { pools: pools.length, active: pools.filter((p) => p.status !== 'Archived').length, archived: pools.filter((p) => p.status === 'Archived').length, members: Object.values(counts).reduce((s, c) => s + c.total, 0), stale: Object.values(counts).reduce((s, c) => s + c.stale, 0) };
+  const visible = pools
+    .filter((p) => (statusTab === 'all' || (statusTab === 'archived' ? p.status === 'Archived' : p.status !== 'Archived')))
+    .filter((p) => !search.trim() || `${p.name} ${p.id}`.toLowerCase().includes(search.trim().toLowerCase()));
+  const skillMix = (() => {
+    const map = new Map<string, number>();
+    for (const m of members) for (const s of String(m.candidate?.skills || '').split(/[,;|]+/)) {
+      const k = s.trim(); if (k.length >= 2) map.set(k, (map.get(k) || 0) + 1);
+    }
+    return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+  })();
   return (
-    <div className={cardCls}>
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-base font-extrabold text-slate-900">Talent Pools</h3>
-        <div className="flex gap-2">
-          <button type="button" onClick={() => setShowAdd(true)} className={btnDark}>+ Add member</button>
-          <button type="button" onClick={() => setShowCreate(true)} className={btnPrimary}>+ New pool</button>
-        </div>
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {([
+          ['Pools', totals.pools, 'total groups'],
+          ['Active', totals.active, 'hiring now'],
+          ['Members', totals.members, 'bench strength'],
+          ['Stale', totals.stale, 'needs cleanup'],
+          ['Archived', totals.archived, 'retained'],
+        ] as const).map(([label, value, sub]) => (
+          <div key={label} className="p-4 bg-white rounded-2xl border border-slate-200/90 shadow-sm">
+            <div className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">{label}</div>
+            <div className={`text-2xl font-extrabold ${label === 'Stale' && value > 0 ? 'text-amber-600' : 'text-slate-900'}`}>{value}</div>
+            <div className="text-[11px] font-bold text-slate-500">{sub}</div>
+          </div>
+        ))}
       </div>
-      {error && <PanelError message={error} status={loadError} onRetry={() => load()} />}
+      <div className={cardCls}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex rounded-xl bg-slate-100 border border-slate-200 p-0.5 w-fit" role="tablist" aria-label="Pool status">
+            {([[ 'all', 'All' ], [ 'active', 'Active' ], [ 'archived', 'Archived' ]] as const).map(([v, label]) => (
+              <button key={v} role="tab" aria-selected={statusTab === v} type="button" onClick={() => setStatusTab(v)}
+                className={`px-3.5 py-1.5 rounded-lg font-bold text-xs cursor-pointer ${statusTab === v ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>{label}</button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search pools…" className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:border-blue-500 w-44" />
+            <button type="button" onClick={() => { setAddPoolId(drawerPool?.id || pools.find((p) => p.status !== 'Archived')?.id || ''); setShowAdd(true); }} className={btnDark}>+ Add member</button>
+            <button type="button" onClick={() => setShowCreate(true)} className={btnPrimary}>+ New pool</button>
+          </div>
+        </div>
+        {error && <PanelError message={error} status={loadError} onRetry={() => load()} />}
+        {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
+        {loading ? <InlineLoading message="Loading pools…" /> : visible.length === 0 ? (
+          <EmptyState title="No pools" message="Create a talent pool to group shortlisted candidates." />
+        ) : (
+          <div className="space-y-2">{visible.map((p) => {
+            const c = counts[p.id] || { total: 0, stale: 0 };
+            return (
+              <div key={p.id} className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 transition">
+                <button type="button" onClick={() => openDrawer(p)} className="flex-1 min-w-0 text-left cursor-pointer" title="Open pool">
+                  <div className="font-extrabold text-slate-900 text-sm truncate">{p.name} <span className="font-mono text-[11px] text-slate-400">{p.id}</span></div>
+                  <div className="text-[11px] text-slate-500 font-medium">{c.total} member{c.total === 1 ? '' : 's'}{c.stale > 0 ? <span className="ml-1.5 text-amber-700 font-bold">• {c.stale} stale</span> : ''} • {p.status === 'Archived' ? 'archived' : 'active'}</div>
+                </button>
+                <RowMenu label={`Manage ${p.id}`} items={[
+                  { label: 'Open pool', onSelect: () => openDrawer(p) },
+                  { label: 'Add member', onSelect: () => { setAddPoolId(p.id); setShowAdd(true); } },
+                  { label: 'Rename', onSelect: () => { setRenameFor(p); setRenameName(p.name || ''); } },
+                  ...(p.status !== 'Archived' ? [{ label: 'Archive pool', danger: true, onSelect: () => doArchive(p) }] : []),
+                ]} />
+              </div>
+            );
+          })}</div>
+        )}
+      </div>
+
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New talent pool">
         <form onSubmit={create} className="space-y-3">
           <Field label="Pool name *"><input className={kitInput} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Senior Backend — Q4" /></Field>
@@ -1909,44 +2686,133 @@ export function TalentPoolsPanel() {
         </form>
       </Modal>
       <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add pool member">
-        <form onSubmit={add} className="space-y-3">
-          <Field label="Pool ID *"><input className={kitInput} value={member.poolId} onChange={(e) => setMember({ ...member, poolId: e.target.value })} /></Field>
-          <Field label="Candidate ID *"><input className={kitInput} value={member.candidateId} onChange={(e) => setMember({ ...member, candidateId: e.target.value })} /></Field>
+        <div className="space-y-3">
+          <Field label="Pool *"><Select value={addPoolId} onChange={setAddPoolId} placeholder="Select pool" options={pools.filter((p) => p.status !== 'Archived').map((p) => ({ value: p.id, label: `${p.name} (${p.id})` }))} /></Field>
+          <Field label="Find candidate *"><SearchSuggest value={addQuery} onChange={searchCandidates} placeholder="Type 2+ letters of name, role or skill…"
+            items={addResults.map((c: any) => ({ key: String(c.id), query: String(c.name || c.id), title: String(c.name || c.id), meta: [c.roleTitle, c.location].filter(Boolean).join(' • ') }))}
+            onPick={(it) => { setAddPick(it.key); setAddQuery(it.query ?? it.key); }} /></Field>
+          {addPick && <div className="text-[11px] font-bold text-emerald-700">Selected: {addQuery} ({addPick})</div>}
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setShowAdd(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
-            <button className={btnDark}>Add member</button>
+            <button type="button" disabled={busy || !addPoolId || !addPick} onClick={add} className={btnDark}>{busy ? 'Adding…' : 'Add member'}</button>
           </div>
-        </form>
+        </div>
       </Modal>
-      {loading ? <InlineLoading message="Loading pools…" /> : pools.length === 0 ? (
-        <EmptyState title="No pools" message="Create a talent pool to group shortlisted candidates." />
-      ) : (
-        <div className="space-y-2">{pools.map((p) => (
-          <div key={p.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-            <div className="text-xs font-bold text-slate-800 flex items-center justify-between gap-2">
-              <span className="min-w-0 truncate">{p.name} <span className="text-slate-500 font-mono">({p.id})</span> {p.status === 'Archived' && <span className="text-amber-600">(archived)</span>}</span>
-              <RowMenu items={[
-                { label: openPool === p.id ? 'Hide members' : 'View members', onSelect: async () => {
-                  try { setMembers(unwrapList(await talentApi.poolMembers(p.id))); setOpenPool(openPool === p.id ? '' : p.id); }
-                  catch (e) { setError(errMsg(e)); }
-                } },
-                ...(p.status !== 'Archived' ? [{ label: 'Archive pool', onSelect: async () => {
-                  try { const u = unwrapObj(await talentApi.editPool(p.id, { status: 'Archived' })); setPools((x) => x.map((y) => (y.id === p.id ? u : y))); syncAll(); }
-                  catch (e) { setError(errMsg(e)); }
-                } }] : []),
-              ]} />
-            </div>
-            {openPool === p.id && (
-              <div className="space-y-1.5">
-                {members.length === 0 && <div className="text-[11px] text-slate-500 font-medium">No members yet.</div>}
-                {members.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between text-[11px] font-bold bg-white border border-slate-200 rounded-lg px-3 py-1.5">
-                    <span className="truncate">{m.candidateId}</span>
-                    <RowMenu label="Member actions" items={[{ label: 'Remove member', danger: true, onSelect: () => setRemoveMember({ poolId: p.id, memberId: m.id, label: m.candidateId }) }]} />
-                  </div>
-                ))}
+      <Modal open={renameFor !== null} onClose={() => setRenameFor(null)} title={`Rename pool — ${renameFor?.id || ''}`}>
+        <div className="space-y-3">
+          <Field label="Pool name *"><input className={kitInput} value={renameName} onChange={(e) => setRenameName(e.target.value)} /></Field>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setRenameFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button type="button" disabled={busy || !renameName.trim()} onClick={doRename} className={btnPrimary}>{busy ? 'Saving…' : 'Rename'}</button>
+          </div>
+        </div>
+      </Modal>
+
+      {drawerPool && (
+        <DetailDrawer title={drawerPool.name || drawerPool.id} subtitle={`${drawerPool.id} • ${drawerPool.status === 'Archived' ? 'archived' : 'active'}`} onClose={() => { setDrawerPool(null); setMemberDetail(null); }}>
+          <div className="flex rounded-xl bg-slate-100 border border-slate-200 p-0.5 w-fit" role="tablist" aria-label="Pool details">
+            {([[ 'members', `Members (${members.length})` ], [ 'details', 'Details' ], [ 'analytics', 'Analytics' ]] as const).map(([v, label]) => (
+              <button key={v} role="tab" aria-selected={poolTab === v} type="button" onClick={() => setPoolTab(v)}
+                className={`px-3.5 py-1.5 rounded-lg font-bold text-xs cursor-pointer whitespace-nowrap ${poolTab === v ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>{label}</button>
+            ))}
+          </div>
+          {poolTab === 'members' && (
+            <div className="space-y-2">
+              <div className="flex gap-2 flex-wrap">
+                <button type="button" onClick={() => { setAddPoolId(drawerPool.id); setShowAdd(true); }} className="px-3 py-2 rounded-xl bg-slate-900 text-white font-bold text-[11px] cursor-pointer">+ Add member</button>
+                <button type="button" disabled={busy || members.filter(staleOf).length === 0} onClick={() => removeStale(drawerPool)} className="px-3 py-2 rounded-xl bg-white border border-slate-200 font-bold text-[11px] disabled:opacity-40 cursor-pointer">Remove stale ({members.filter(staleOf).length})</button>
+                <button type="button" onClick={() => startOutreach(members.map((m) => m.candidateEmail), `pool ${drawerPool.name}`)} className="px-3 py-2 rounded-xl bg-white border border-slate-200 font-bold text-[11px] cursor-pointer">Start outreach →</button>
               </div>
-            )}
+              {membersLoading ? <InlineLoading message="Loading members…" /> : members.length === 0 ? (
+                <div className="text-[11px] text-slate-500 font-medium p-3 rounded-xl bg-slate-50 border">No members yet — add from Talent Search.</div>
+              ) : members.map((m) => (
+                <button key={m.id} type="button" onClick={() => openMember(m)} className="w-full flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 text-left cursor-pointer transition">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${staleOf(m) ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                  <span className="flex-1 min-w-0">
+                    <span className="block font-extrabold text-slate-900 text-sm truncate">{m.candidate?.name || 'Unknown candidate'}</span>
+                    <span className="block text-[11px] text-slate-500 font-medium truncate">{m.candidate ? `${m.candidate.roleTitle || '—'} • ${m.candidate.experienceYears ?? '—'}y • ${m.candidate.location || '—'}` : 'profile no longer on file'}</span>
+                  </span>
+                  {m.applicationId && <span className="px-2 py-0.5 rounded-full bg-blue-50 text-[#087BFF] border border-blue-200 font-bold text-[10px] shrink-0">in pipeline</span>}
+                </button>
+              ))}
+            </div>
+          )}
+          {poolTab === 'details' && (
+            <KeyValues data={[
+              ['Pool', drawerPool.name || '—'], ['Pool ID', drawerPool.id], ['Owner', drawerPool.owner || '—'],
+              ['Status', <StatusPill value={drawerPool.status || 'Active'} />],
+              ['Created', drawerPool.createdAt ? String(drawerPool.createdAt).slice(0, 10) : '—'],
+              ['Description', drawerPool.description || '—'],
+            ]} />
+          )}
+          {poolTab === 'analytics' && (
+            <div className="space-y-2">
+              <div className="text-xs font-extrabold text-slate-900">Skill mix across {members.length} member(s)</div>
+              {skillMix.length === 0 ? <div className="text-[11px] text-slate-500">No skill data on file.</div> : skillMix.map(([s, n]) => (
+                <div key={s} className="flex items-center gap-2">
+                  <span className="w-32 text-[11px] font-bold text-slate-600 truncate">{s}</span>
+                  <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-[#087BFF]" style={{ width: `${Math.round((n / Math.max(1, members.length)) * 100)}%` }} /></div>
+                  <span className="w-8 text-right text-[11px] font-extrabold">{n}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </DetailDrawer>
+      )}
+      {memberDetail && (
+        <DetailDrawer title={memberDetail.candidate?.name || 'Unknown candidate'} subtitle={`${memberDetail.id} • ${memberDetail.candidate?.roleTitle || 'no profile'}`} onClose={() => setMemberDetail(null)}>
+          <div className="flex rounded-xl bg-slate-100 border border-slate-200 p-0.5 w-fit" role="tablist" aria-label="Member">
+            {([[ 'profile', 'Profile' ], [ 'pipeline', `Pipeline (${memberApps.length})` ], [ 'actions', 'Actions' ]] as const).map(([v, label]) => (
+              <button key={v} role="tab" aria-selected={memberTab === v} type="button" onClick={() => setMemberTab(v)}
+                className={`px-3.5 py-1.5 rounded-lg font-bold text-xs cursor-pointer whitespace-nowrap ${memberTab === v ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>{label}</button>
+            ))}
+          </div>
+          {memberTab === 'profile' && (
+            staleOf(memberDetail)
+              ? <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-800">Profile no longer on file — remove this member or re-add from Talent Search.</div>
+              : <KeyValues data={[
+                ['Name', memberDetail.candidate?.name || '—'], ['Role', memberDetail.candidate?.roleTitle || '—'],
+                ['Experience', memberDetail.candidate?.experienceYears != null ? `${memberDetail.candidate.experienceYears} yrs` : '—'],
+                ['Location', memberDetail.candidate?.location || '—'], ['Skills', memberDetail.candidate?.skills || '—'],
+                ['Stage', memberDetail.candidate?.stage || '—'],
+                ['Added by', memberDetail.addedBy || '—'], ['Added on', memberDetail.createdAt ? String(memberDetail.createdAt).slice(0, 10) : '—'],
+              ]} />
+          )}
+          {memberTab === 'pipeline' && (
+            <div className="space-y-1.5">
+              {memberAppsLoading ? <InlineLoading message="Loading pipeline…" /> : memberApps.length === 0 ? (
+                <div className="text-[11px] text-slate-500 font-medium p-3 rounded-xl bg-slate-50 border">No applications in your org yet — shortlist them to a live job.</div>
+              ) : memberApps.map((a: any) => (
+                <div key={a.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between gap-2">
+                  <span className="font-bold truncate">{a.jobTitle || a.jobId}</span>
+                  <StatusPill value={a.stage} />
+                </div>
+              ))}
+            </div>
+          )}
+          {memberTab === 'actions' && (
+            <div className="space-y-2">
+              <div className="text-[11px] font-bold text-slate-500">Pool: {drawerPool?.name || memberDetail.poolId} • Added by {memberDetail.addedBy || '—'}</div>
+              <div className="flex gap-2 flex-wrap">
+                {!staleOf(memberDetail) && <button type="button" onClick={() => openShortlist(memberDetail, memberDetail.poolId || drawerPool?.id)} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs cursor-pointer">Shortlist to job →</button>}
+                <button type="button" onClick={() => startOutreach([memberDetail.candidateEmail], memberDetail.candidate?.name || 'member')} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs cursor-pointer">Start outreach →</button>
+                <button type="button" onClick={() => setRemoveMember({ poolId: memberDetail.poolId || drawerPool?.id, memberId: memberDetail.id, label: memberDetail.candidate?.name || 'member' })} className="px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 font-bold text-xs cursor-pointer">Remove</button>
+              </div>
+              {memberDetail.applicationId && <div className="text-[11px] font-bold text-blue-700">Already in pipeline: {memberDetail.applicationId}</div>}
+            </div>
+          )}
+        </DetailDrawer>
+      )}
+      <Modal open={shortlistFor !== null} onClose={() => setShortlistFor(null)} title={`Shortlist to job — ${shortlistFor?.candidate?.name || ''}`} subtitle="Creates an application in the ATS pipeline (audited)">
+        <div className="space-y-3">
+          <Field label="Live job *"><Select value={shortlistJob} onChange={setShortlistJob} placeholder="Select a published job" options={liveJobs.map((j: any) => ({ value: j.id, label: `${j.title} (${j.id})` }))} /></Field>
+          {error && <PanelError message={error} onRetry={() => setError('')} />}
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setShortlistFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button type="button" disabled={busy || !shortlistJob} onClick={doShortlist} className={btnPrimary}>{busy ? 'Shortlisting…' : 'Shortlist'}</button>
+          </div>
+        </div>
+      </Modal>
       <ConfirmDialog
         open={removeMember !== null}
         title="Remove pool member"
@@ -1956,72 +2822,565 @@ export function TalentPoolsPanel() {
           if (!removeMember) return;
           await talentApi.removeMember(removeMember.poolId, removeMember.memberId);
           setMembers((x) => x.filter((y) => y.id !== removeMember.memberId));
+          if (memberDetail?.id === removeMember.memberId) setMemberDetail(null);
+          setCounts((c) => ({ ...c, [removeMember.poolId]: { total: Math.max(0, (c[removeMember.poolId]?.total || 1) - 1), stale: c[removeMember.poolId]?.stale || 0 } }));
           setRemoveMember(null);
           syncAll();
         }}
         onCancel={() => setRemoveMember(null)}
       />
-          </div>
-        ))}</div>
-      )}
     </div>
   );
 }
 
 /* ---------------- Phase 2: Candidate search (tiered) ---------------- */
+
+/* ---------- Talent match analysis (client-side v1) — required skills 60 ·
+   preferred 15 · experience 15 · location 10. Full ATS engine lands later. ---------- */
+function matchTokens(v: unknown): string[] {
+  const s = Array.isArray(v) ? v.join(',') : String(v || '');
+  return [...new Set(s.split(/[,;|\n]+/).map((t) => t.trim().toLowerCase()).filter((t) => t.length >= 2))].slice(0, 24);
+}
+function matchNum(v: unknown): number | null {
+  const n = typeof v === 'number' ? v : (String(v ?? '').trim() === '' ? NaN : Number(v));
+  return Number.isFinite(n) ? n : null;
+}
+function matchAnalysis(opts: { job: any | null; keywords: string[]; expMin: string; expMax: string; cand: any }): {
+  score: number; skillMatched: string[]; skillMissing: string[]; expNote: string; locNote: string; best: string[]; gaps: string[];
+  factors: { label: string; got: number; max: number }[]; verdict: string; nextSteps: string[];
+} {
+  const { job, keywords, expMin, expMax, cand } = opts;
+  const skillBits = Array.isArray(cand?.skills) ? cand.skills : [];
+  const corpus = [...skillBits.map((s: unknown) => String(s)), cand?.headline, cand?.roleTitle, cand?.summary, cand?.location,
+    Array.isArray(cand?.education) ? cand.education.map((e: any) => `${e.institution || ''} ${e.qualification || ''}`).join(' ') : cand?.education].filter(Boolean).join(' ').toLowerCase();
+  const req = job ? matchTokens(job.requiredSkills) : keywords.map((k) => k.toLowerCase()).filter((k) => k.length >= 2);
+  const pref = job ? matchTokens(job.preferredSkills) : [];
+  const mReq = req.filter((t) => corpus.includes(t));
+  const mPref = pref.filter((t) => corpus.includes(t));
+  const reqScore = req.length ? (mReq.length / req.length) * 60 : 30;
+  const prefScore = pref.length ? (mPref.length / pref.length) * 15 : 7;
+  const exp = matchNum(cand?.experienceYears);
+  const emin = matchNum(job ? job.experienceMin : expMin);
+  const emax = matchNum(job ? job.experienceMax : expMax);
+  let expScore = 7; let expNote = 'experience unknown';
+  if (exp !== null) {
+    const lo = emin ?? exp; const hi = emax ?? exp;
+    if (exp >= lo && exp <= hi) { expScore = 15; expNote = `${exp} yrs — in range`; }
+    else if (exp >= lo - 1 && exp <= hi + 1) { expScore = 9; expNote = `${exp} yrs — close`; }
+    else { expScore = 4; expNote = `${exp} yrs — outside range`; }
+  }
+  let locScore = 5; let locNote = 'no location basis';
+  const jobLoc = String(job?.location || '').trim().toLowerCase();
+  const candLoc = String(cand?.location || '').toLowerCase();
+  if (jobLoc && candLoc) {
+    if (candLoc.includes(jobLoc) || jobLoc.includes(candLoc)) { locScore = 10; locNote = 'location match'; }
+    else { locScore = 2; locNote = 'different location'; }
+  } else if (keywords.length && candLoc) {
+    locNote = keywords.some((k) => candLoc.includes(k.toLowerCase())) ? 'location keyword match' : 'location unknown';
+    locScore = locNote === 'location keyword match' ? 10 : 5;
+  }
+  const missing = [...req.filter((t) => !corpus.includes(t)), ...pref.filter((t) => !corpus.includes(t))].slice(0, 12);
+  const best: string[] = [];
+  if (mReq.length) best.push(`${mReq.length}/${req.length || 1} key skills match`);
+  if (expScore >= 15) best.push('Experience in range');
+  if (locScore >= 10) best.push('Location fit');
+  const gaps: string[] = [];
+  if (missing.length) gaps.push(`Missing: ${missing.slice(0, 6).join(', ')}`);
+  if (expScore <= 4) gaps.push(expNote);
+  if (locScore <= 2) gaps.push(locNote);
+  const score = Math.max(0, Math.min(100, Math.round(reqScore + prefScore + expScore + locScore)));
+  const factors = [
+    { label: 'Required skills', got: Math.round(reqScore), max: 60 },
+    { label: 'Preferred skills', got: Math.round(prefScore), max: 15 },
+    { label: 'Experience', got: expScore, max: 15 },
+    { label: 'Location', got: locScore, max: 10 },
+  ];
+  const verdict = score >= 80 ? 'Strong fit — shortlist now'
+    : score >= 60 ? 'Good fit — interview to confirm the gaps'
+    : score >= 40 ? 'Partial fit — probe the gaps first'
+    : 'Weak fit for this role';
+  const nextSteps: string[] = [];
+  if (missing.length) nextSteps.push(`Screen for: ${missing.slice(0, 4).join(', ')}`);
+  if (expScore <= 9) nextSteps.push('Align on seniority and compensation expectations early');
+  if (locScore <= 5) nextSteps.push('Confirm work-location fit (relocation / remote)');
+  if (score >= 60) nextSteps.push('Move to a technical interview round');
+  return { score, skillMatched: [...mReq, ...mPref].slice(0, 12), skillMissing: missing, expNote, locNote, best, gaps, factors, verdict, nextSteps: nextSteps.slice(0, 4) };
+}
+
 export function CandidateSearchPanel() {
   const [q, setQ] = useQueryState('talent_q');
   const [tier, setTier] = useState('preview');
+  const [f, setF] = useState({ skills: '', expMin: '', expMax: '', availability: '', resume: '' });
+  // Multi-select facets (single-select: availability, resume). Option lists are
+  // deduplicated case-insensitively so DB repeats never show twice.
+  const [selDesg, setSelDesg] = useState<string[]>([]);
+  const [selSkills, setSelSkills] = useState<string[]>([]);
+  const [selLoc, setSelLoc] = useState<string[]>([]);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [openGroup, setOpenGroup] = useState<string | null>('designation');
+  const [desgQ, setDesgQ] = useState('');
+  const [skillQ, setSkillQ] = useState('');
+  const [locQ, setLocQ] = useState('');
   const [rows, setRows] = useState<any[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [upgrade, setUpgrade] = useState(false);
   const [skills, setSkills] = useState<any[]>([]);
+  const [pools, setPools] = useState<any[]>([]);
+  const [shortPool, setShortPool] = useState('');
+  const [ok, setOk] = useState('');
+  // Detail drawer (tabs) + per-job match
+  const [detail, setDetail] = useState<any>(null);
+  const [detailTab, setDetailTab] = useState<'profile' | 'match' | 'shortlist'>('profile');
+  const [myJobs, setMyJobs] = useState<any[]>([]);
+  const [matchJobId, setMatchJobId] = useState('');
+  const pageSize = 40;
   const debouncedQ = useDebouncedValue(q, 500);
-  const search = async (term = debouncedQ) => {
-    setLoading(true); setError('');
-    try { setRows(unwrapList(await talentApi.search(tier, term))); }
-    catch (e) { setError(errMsg(e)); setRows([]); }
-    finally { setLoading(false); }
+  const normKey = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
+  const toggleSel = (list: string[], setList: (v: string[]) => void, label: string) => {
+    const k = normKey(label);
+    setList(list.some((x) => normKey(x) === k) ? list.filter((x) => normKey(x) !== k) : [...list, label]);
+  };
+  const advActive = Object.values(f).some((v) => String(v).trim() !== '') || selDesg.length > 0 || selSkills.length > 0 || selLoc.length > 0;
+  const clearFilters = () => {
+    setF({ skills: '', expMin: '', expMax: '', availability: '', resume: '' });
+    setSelDesg([]); setSelSkills([]); setSelLoc([]);
+    setDesgQ(''); setSkillQ(''); setLocQ('');
+  };
+  const buildParams = (p: number) => {
+    const sp = new URLSearchParams({ tier, page: String(p), pageSize: String(pageSize) });
+    if (q.trim()) sp.set('q', q.trim());
+    if (selDesg.length) sp.set('designation', selDesg.join(', '));
+    const skillBits = [f.skills.trim(), selSkills.join(', ')].filter(Boolean).join(', ');
+    if (skillBits) sp.set('skills', skillBits);
+    if (f.expMin !== '') sp.set('expMin', f.expMin);
+    if (f.expMax !== '') sp.set('expMax', f.expMax);
+    if (selLoc.length) sp.set('location', selLoc.join(', '));
+    if (f.availability.trim()) sp.set('availability', f.availability.trim());
+    if (f.resume) sp.set('resume', f.resume);
+    return `?${sp.toString()}`;
+  };
+  const search = async (p = 1) => {
+    setLoading(true); setError(''); setUpgrade(false); setOk('');
+    try {
+      const res: any = await talentApi.searchFull(buildParams(p));
+      setRows(unwrapList(res));
+      setTotal(Number(res?.pagination?.total ?? unwrapList(res).length));
+      setPage(p);
+    } catch (e: any) {
+      setRows([]);
+      if (e?.response?.data?.upgrade || e?.response?.status === 403) {
+        setUpgrade(true);
+        setError(e?.response?.data?.message || 'This tier is locked for your plan.');
+      } else setError(errMsg(e));
+    } finally { setLoading(false); }
   };
   useEffect(() => {
-    if (debouncedQ.trim().length >= 2) search(debouncedQ);
+    if (debouncedQ.trim().length >= 2 || advActive) search(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedQ, tier]);
   useEffect(() => {
     (async () => {
       try { setSkills(unwrapList(await documentsApi.skills())); }
       catch { /* suggestions best-effort */ }
+      try { setPools(unwrapList(await talentApi.pools())); }
+      catch { /* pools best-effort */ }
+      try { setMyJobs(unwrapList(await jobsApi.list('?page=1&pageSize=100'))); }
+      catch { /* job picker best-effort */ }
     })();
   }, []);
+  // Contextual facets: derived from the CURRENT search results, so
+  // designation/location options always reflect the keyword/job searched.
+  // Deduped case-insensitively — DB repeats never show twice.
+  const facetFrom = (pick: (c: any) => unknown): { label: string; count: number }[] => {
+    const m = new Map<string, { label: string; count: number }>();
+    for (const c of rows) {
+      const label = String(pick(c) || '').trim();
+      if (!label) continue;
+      const k = label.toLowerCase().replace(/\s+/g, ' ');
+      const e = m.get(k);
+      if (e) e.count += 1; else m.set(k, { label, count: 1 });
+    }
+    return [...m.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label)).slice(0, 80);
+  };
+  const desgFacets = useMemo(() => facetFrom((c) => c.roleTitle), [rows]);
+  const locFacets = useMemo(() => facetFrom((c) => c.location), [rows]);
+  const shortlist = async () => {
+    if (!detail || !shortPool) return;
+    try {
+      await talentApi.addMember(shortPool, detail.id);
+      setOk(`${detail.name || detail.id} shortlisted to pool.`);
+      syncAll();
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const openDrawer = (c: any, tab: 'profile' | 'match' | 'shortlist' = 'profile') => {
+    setDetail(c); setDetailTab(tab); setOk('');
+    if (tab === 'shortlist' && pools.length > 0 && !shortPool) setShortPool(pools[0]?.id || '');
+  };
+  const skillOpts = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const s of skills) {
+      const label = String((s as any)?.name || '').trim();
+      if (!label) continue;
+      const k = label.toLowerCase().replace(/\s+/g, ' ');
+      if (!m.has(k)) m.set(k, label);
+    }
+    return [...m.values()].sort((a, b) => a.localeCompare(b));
+  }, [skills]);
+  const facetGroup = (id: string, title: string, count: number, body: React.ReactNode) => (
+    <div className="rounded-xl border border-slate-200 overflow-hidden">
+      <button type="button" onClick={() => setOpenGroup(openGroup === id ? null : id)} aria-expanded={openGroup === id}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 bg-slate-50 hover:bg-slate-100 transition">
+        <span className="text-xs font-extrabold text-slate-800">{title}</span>
+        <span className="flex items-center gap-1.5 shrink-0">
+          {count > 0 && <span className="px-1.5 py-0.5 rounded-full bg-[#087BFF] text-white font-extrabold text-[10px]">{count}</span>}
+          <span className="text-slate-400 text-xs">{openGroup === id ? '▴' : '▾'}</span>
+        </span>
+      </button>
+      {openGroup === id && <div className="p-2.5 border-t border-slate-100">{body}</div>}
+    </div>
+  );
+  const checkRow = (label: string, checked: boolean, onToggle: () => void, count?: number) => (
+    <label className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
+      <input type="checkbox" checked={checked} onChange={onToggle} className="w-4 h-4 accent-[#087BFF] shrink-0" />
+      <span className="flex-1 min-w-0 text-xs font-semibold text-slate-800 truncate">{label}</span>
+      {count !== undefined && <span className="text-[10px] font-bold text-slate-400 shrink-0">{count}</span>}
+    </label>
+  );
+  const facetSearch = (value: string, onChange: (v: string) => void, ph: string) => (
+    <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={ph}
+      className="w-full mb-1.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-semibold outline-none focus:border-blue-500" />
+  );
   return (
     <div className={cardCls}>
       <h3 className="text-base font-extrabold text-slate-900">Candidate Search (subscription-tiered)</h3>
-      {error && <PanelError message={error} onRetry={() => search()} />}
+      {error && !upgrade && <PanelError message={error} onRetry={() => search(page)} />}
+      {upgrade && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-2">
+          <div className="font-extrabold">🔒 {tier === 'preview' ? 'Search' : tier} tier is locked — {error}</div>
+          <div className="font-medium">Filters are preserved. Upgrade your plan to unlock {tier === 'contact' ? 'contact details' : 'full profiles'}; preview results below never include hidden data.</div>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => search(page)} className="px-3 py-1.5 rounded-lg bg-amber-600 text-white font-bold">Retry</button>
+            <button type="button" onClick={() => { setTier('preview'); }} className="px-3 py-1.5 rounded-lg bg-white border border-amber-300 font-bold">Fall back to preview</button>
+          </div>
+        </div>
+      )}
+      {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
       {skills.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {skills.slice(0, 12).map((s: any) => (
-            <button key={s.id} type="button" onClick={() => { setQ(s.name); search(s.name); }} className="px-2.5 py-1 rounded-full bg-white border border-slate-200 text-[11px] font-bold text-slate-600 hover:border-spec-electric hover:text-spec-electric">
+            <button key={s.id} type="button" onClick={() => { setQ(s.name); }} className="px-2.5 py-1 rounded-full bg-white border border-slate-200 text-[11px] font-bold text-slate-600 hover:border-spec-electric hover:text-spec-electric">
               {s.name}
             </button>
           ))}
         </div>
       )}
-      <form onSubmit={(e) => { e.preventDefault(); search(q); }} className="flex flex-col sm:flex-row gap-2">
-        <input className={inputCls} placeholder="Keyword, title, location…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <form onSubmit={(e) => { e.preventDefault(); search(1); }} className="flex flex-col sm:flex-row gap-2">
+        <SearchSuggest value={q} onChange={setQ} placeholder="Keyword, title, location…" ariaLabel="Keyword"
+          items={rows.map((c: any) => ({ key: String(c.id), query: String(c.name || c.id), title: String(c.name || c.roleTitle || c.id), meta: [c.roleTitle, c.location].filter(Boolean).join(' • ') }))}
+          onPick={(it) => setQ(it.query ?? it.key)} />
         <div style={{ maxWidth: 190 }}>
           <Select value={tier} onChange={setTier} ariaLabel="Access tier" options={[{ value: 'preview', label: 'Preview' }, { value: 'full', label: 'Full profile' }, { value: 'contact', label: 'Contact unlock' }]} />
         </div>
+        <button type="button" onClick={() => setFilterOpen(true)} className={`px-4 py-2 rounded-xl border font-bold text-xs whitespace-nowrap ${advActive ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-slate-200 text-slate-700'}`}>
+          Filters{(selDesg.length + selSkills.length + selLoc.length + Object.values(f).filter((v) => String(v).trim() !== '').length) > 0 ? ` • ${selDesg.length + selSkills.length + selLoc.length + Object.values(f).filter((v) => String(v).trim() !== '').length}` : ''} ▾
+        </button>
         <button className={btnPrimary}>Search</button>
       </form>
+      {(selDesg.length + selSkills.length + selLoc.length > 0 || Object.values(f).some((v) => String(v).trim() !== '')) && (
+        <div className="flex flex-wrap gap-1.5">
+          {selDesg.map((d) => (
+            <button key={`d${d}`} type="button" onClick={() => setSelDesg(selDesg.filter((x) => x !== d))} className="px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 font-bold text-[11px] hover:bg-blue-100">{d} ✕</button>
+          ))}
+          {selSkills.map((s) => (
+            <button key={`s${s}`} type="button" onClick={() => setSelSkills(selSkills.filter((x) => x !== s))} className="px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-[11px] hover:bg-emerald-100">{s} ✕</button>
+          ))}
+          {selLoc.map((l) => (
+            <button key={`l${l}`} type="button" onClick={() => setSelLoc(selLoc.filter((x) => x !== l))} className="px-2.5 py-1 rounded-full bg-violet-50 border border-violet-200 text-violet-700 font-bold text-[11px] hover:bg-violet-100">{l} ✕</button>
+          ))}
+          {f.skills.trim() && <span className="px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-[11px]">Skills: {f.skills.trim()}</span>}
+          {(f.expMin !== '' || f.expMax !== '') && <span className="px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-bold text-[11px]">Exp: {f.expMin || '0'}–{f.expMax || '∞'} yrs</span>}
+          {f.availability.trim() && <span className="px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-bold text-[11px]">{f.availability.trim()}</span>}
+          {f.resume && <span className="px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-bold text-[11px]">{f.resume === 'yes' ? 'Has resume' : 'No resume'}</span>}
+          <button type="button" onClick={clearFilters} className="px-2.5 py-1 rounded-full bg-white border border-slate-200 text-slate-500 font-bold text-[11px] hover:bg-slate-50">Clear all</button>
+        </div>
+      )}
+      <div className="text-[11px] font-bold text-slate-500">{total} result(s) • page {page} • tier: {tier}{tier !== 'preview' ? ' (quota-checked)' : ''}</div>
       {loading ? <InlineLoading message="Searching…" /> : rows.length === 0 ? (
         <EmptyState title="No results yet" message="Run a search. Locked tiers explain the upgrade path instead of leaking data." />
       ) : (
-        <div className="space-y-2">{rows.map((c) => (
-          <div key={c.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-            <div className="font-extrabold text-slate-900 text-sm">{c.name || c.roleTitle} {c.contactLocked && <span className="text-amber-600 text-[11px]">(contact locked)</span>}</div>
-            <div className="text-xs text-slate-500 font-medium">{c.roleTitle} • {c.experienceYears}y • {c.location} • {c.email || 'email hidden'}</div>
-          </div>
+        <>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">{rows.map((c) => (
+          <DrawerCard key={c.id} title={<>{c.name || c.roleTitle} {c.contactLocked && <span className="text-amber-600 text-[11px] font-bold">(contact locked)</span>}</>}
+            meta={`${c.roleTitle || '—'} • ${c.experienceYears ?? '—'}y • ${c.location || '—'}`}
+            right={<RowMenu label="Candidate actions" items={[
+              { label: 'View full profile', onSelect: () => openDrawer(c, 'profile') },
+              { label: 'Match analysis', onSelect: () => openDrawer(c, 'match') },
+              ...(pools.length > 0 ? [{ label: 'Shortlist to pool…', onSelect: () => openDrawer(c, 'shortlist') }] : []),
+            ]} />}>
+            <div className="text-[11px] text-slate-500 font-medium truncate">{c.email || 'email hidden'}</div>
+            <button type="button" onClick={() => openDrawer(c, 'profile')} className="mt-1.5 w-full px-3 py-1.5 rounded-lg bg-slate-900 text-white font-bold text-[11px] hover:bg-slate-700 transition">View profile →</button>
+          </DrawerCard>
         ))}</div>
+        <Pager page={page} total={total} pageSize={pageSize} onPage={(p) => search(p)} />
+        </>
+      )}
+      {/* Filter sidebar — small animated slide-over with accordion groups */}
+      <div aria-hidden="true" onClick={() => setFilterOpen(false)}
+        className={`fixed inset-0 z-40 bg-slate-950/50 transition-opacity duration-200 ${filterOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`} />
+      <aside role="dialog" aria-label="Candidate filters"
+        className={`fixed top-0 right-0 z-50 h-full w-full max-w-sm bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-out ${filterOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="shrink-0 px-5 py-4 border-b border-slate-200 flex items-center justify-between gap-2">
+          <div>
+            <div className="text-sm font-extrabold text-slate-900">Filters</div>
+            <div className="text-[11px] text-slate-500 font-medium">
+              {(selDesg.length + selSkills.length + selLoc.length + Object.values(f).filter((v) => String(v).trim() !== '').length) || 'No'} filters selected
+            </div>
+          </div>
+          <button type="button" onClick={() => setFilterOpen(false)} aria-label="Close filters"
+            className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600"><X size={16} /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2" data-lenis-prevent>
+          {facetGroup('designation', 'Designation', selDesg.length, (
+            <>
+              {facetSearch(desgQ, setDesgQ, 'Search designations…')}
+              <div className="space-y-0.5 max-h-52 overflow-y-auto">
+                {desgFacets.length === 0 && <div className="text-[11px] text-slate-500 font-medium px-2 py-1.5">Run a search first — options come from the matching candidates.</div>}
+                {desgFacets.filter((d) => d.label.toLowerCase().includes(desgQ.trim().toLowerCase())).map((d) => (
+                  <div key={normKey(d.label)}>{checkRow(d.label, selDesg.some((x) => normKey(x) === normKey(d.label)), () => toggleSel(selDesg, setSelDesg, d.label), d.count)}</div>
+                ))}
+              </div>
+            </>
+          ))}
+          {facetGroup('skills', 'Skills', selSkills.length + (f.skills.trim() ? 1 : 0), (
+            <>
+              {facetSearch(skillQ, setSkillQ, 'Search skills…')}
+              <input value={f.skills} onChange={(e) => setF({ ...f, skills: e.target.value })} placeholder="Custom skills (comma separated)…"
+                className="w-full mb-1.5 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] font-semibold outline-none focus:border-blue-500" />
+              <div className="space-y-0.5 max-h-52 overflow-y-auto">
+                {skillOpts.filter((s) => s.toLowerCase().includes(skillQ.trim().toLowerCase())).map((s) => (
+                  <div key={normKey(s)}>{checkRow(s, selSkills.some((x) => normKey(x) === normKey(s)), () => toggleSel(selSkills, setSelSkills, s))}</div>
+                ))}
+                {skillOpts.length === 0 && <div className="text-[11px] text-slate-500 font-medium px-2 py-1.5">No skills taxonomy loaded yet.</div>}
+              </div>
+            </>
+          ))}
+          {facetGroup('location', 'Location', selLoc.length, (
+            <>
+              {facetSearch(locQ, setLocQ, 'Search locations…')}
+              <div className="space-y-0.5 max-h-52 overflow-y-auto">
+                {locFacets.length === 0 && <div className="text-[11px] text-slate-500 font-medium px-2 py-1.5">Run a search first — options come from the matching candidates.</div>}
+                {locFacets.filter((l) => l.label.toLowerCase().includes(locQ.trim().toLowerCase())).map((l) => (
+                  <div key={normKey(l.label)}>{checkRow(l.label, selLoc.some((x) => normKey(x) === normKey(l.label)), () => toggleSel(selLoc, setSelLoc, l.label), l.count)}</div>
+                ))}
+              </div>
+            </>
+          ))}
+          {facetGroup('experience', 'Experience', (f.expMin !== '' || f.expMax !== '') ? 1 : 0, (
+            <div className="flex gap-2">
+              <input type="number" min={0} placeholder="Min yrs" value={f.expMin} aria-label="Min experience" onChange={(e) => setF({ ...f, expMin: e.target.value })}
+                className="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold outline-none" />
+              <input type="number" min={0} placeholder="Max yrs" value={f.expMax} aria-label="Max experience" onChange={(e) => setF({ ...f, expMax: e.target.value })}
+                className="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold outline-none" />
+            </div>
+          ))}
+          {facetGroup('availability', 'Availability', f.availability ? 1 : 0, (
+            <div className="flex flex-wrap gap-1.5">
+              {['Immediate', '15 days', '30 days', '60 days', '90 days'].map((a) => (
+                <button key={a} type="button" onClick={() => setF({ ...f, availability: f.availability === a ? '' : a })}
+                  className={`px-2.5 py-1.5 rounded-lg border font-bold text-[11px] transition ${f.availability === a ? 'bg-[#087BFF] text-white border-blue-600' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-400'}`}>{a}</button>
+              ))}
+            </div>
+          ))}
+          {facetGroup('resume', 'Resume', f.resume ? 1 : 0, (
+            <div className="flex flex-wrap gap-1.5">
+              {[{ v: '', l: 'Any' }, { v: 'yes', l: 'Has resume' }, { v: 'no', l: 'No resume' }].map((o) => (
+                <button key={o.l} type="button" onClick={() => setF({ ...f, resume: o.v })}
+                  className={`px-2.5 py-1.5 rounded-lg border font-bold text-[11px] transition ${f.resume === o.v ? 'bg-[#087BFF] text-white border-blue-600' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-400'}`}>{o.l}</button>
+              ))}
+            </div>
+          ))}
+        </div>
+        <div className="shrink-0 px-4 py-3 border-t border-slate-200 flex gap-2">
+          <button type="button" onClick={clearFilters} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Clear all</button>
+          <button type="button" onClick={() => { setFilterOpen(false); search(1); }} className="flex-1 px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs">Show results</button>
+        </div>
+      </aside>
+      {detail && (
+        <DetailDrawer title={detail.name || detail.roleTitle || detail.id} subtitle={`${detail.roleTitle || ''} • ${detail.id}`} onClose={() => setDetail(null)} width="max-w-4xl">
+          <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-[0_1px_2px_rgba(15,23,42,0.05)] ${drawerTone(detail.contactLocked ? 'Pending' : 'Active').card}`}>
+            <span aria-hidden="true" className="w-11 h-11 rounded-xl bg-slate-900 text-white font-extrabold text-base flex items-center justify-center shrink-0">
+              {String(detail.name || detail.roleTitle || '?').trim().charAt(0).toUpperCase()}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="font-extrabold text-slate-900 text-sm truncate">{detail.name || detail.roleTitle}</div>
+              <div className="text-[11px] text-slate-500 font-medium truncate">
+                {detail.roleTitle || '—'} • {detail.experienceYears ?? '—'}y • {detail.location || '—'} • {detail.email || 'email hidden'}
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                <span className="px-2 py-0.5 rounded-full bg-white/70 border border-slate-200 font-bold text-[11px] capitalize">{tier}</span>
+                {detail.contactLocked
+                  ? <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-bold text-[11px]">contact locked</span>
+                  : <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px]">contact visible</span>}
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-1.5" role="tablist" aria-label="Candidate detail">
+            {([['profile', 'Profile'], ['match', 'Match analysis'], ['shortlist', 'Shortlist']] as const).map(([v, label]) => (
+              <button key={v} role="tab" aria-selected={detailTab === v} type="button" onClick={() => setDetailTab(v)}
+                className={`px-3.5 py-1.5 rounded-lg font-bold text-[11px] border transition ${detailTab === v ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {detailTab === 'profile' && (
+            <div className="space-y-3">
+              <KeyValues data={[
+                ['Contact', detail.email || (detail.contactLocked ? 'Locked — unlock via Contact tier' : '—')],
+                ['Availability', detail.availability || detail.noticePeriod || '—'],
+                ['Expected CTC', detail.expectedCtc || '—'],
+                ['Experience', detail.experienceYears != null ? `${detail.experienceYears} yrs` : '—'],
+                ['Location', detail.location || '—'],
+                ['Resume', detail.resumeRef ? `On file (v${detail.resumeVersion || 1})` : 'Not uploaded'],
+                ['Freshness', String(detail.updatedAt || detail.createdAt || '').slice(0, 10) || '—'],
+                ['Source', detail.source || '—'],
+              ]} />
+              {detail.summary && (
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Summary</div>
+                  <div className="text-xs font-medium text-slate-800 mt-1">{detail.summary}</div>
+                </div>
+              )}
+              <div>
+                <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5 px-0.5">Skills</div>
+                {tier === 'preview' && !detail.skills
+                  ? <div className="text-[11px] text-slate-500 font-medium p-3 rounded-xl bg-amber-50 border border-amber-200">Skills hidden in preview tier — switch to Full profile for skill-level detail.</div>
+                  : <div className="flex flex-wrap gap-1.5">{(Array.isArray(detail.skills) ? detail.skills : String(detail.skills || '').split(',')).map((s: unknown) => String(s).trim()).filter(Boolean).map((s: string) => (
+                    <span key={s} className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">{s}</span>
+                  ))}</div>}
+              </div>
+              <div>
+                <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5 px-0.5">Education</div>
+                {Array.isArray(detail.education) && detail.education.length > 0 ? (
+                  <DrawerList items={detail.education} empty="No education on file."
+                    render={(e: any, i: number) => (
+                      <DrawerCard key={i} title={typeof e === 'string' ? e : (e.institution || 'Education')}
+                        meta={typeof e === 'string' ? undefined : (`${e.qualification || ''}${e.year ? ` — ${e.year}` : ''}` || undefined)} />
+                    )} />
+                ) : <div className="text-[11px] text-slate-500 font-medium">{typeof detail.education === 'string' ? detail.education : 'No education on file.'}</div>}
+              </div>
+            </div>
+          )}
+          {detailTab === 'match' && (
+            <div className="space-y-3">
+              <div className="w-full">
+                <Select value={matchJobId} onChange={setMatchJobId} ariaLabel="Match against job"
+                  options={[{ value: '', label: 'Current search keywords' }, ...myJobs.map((j: any) => ({ value: j.id, label: `${j.title || j.id} (${j.id})` }))]} />
+              </div>
+              {(() => {
+                const job = myJobs.find((j: any) => j.id === matchJobId) || null;
+                const keywords = q.trim().toLowerCase().split(/\s+/).filter((k) => k.length >= 2);
+                const a = matchAnalysis({ job, keywords, expMin: f.expMin, expMax: f.expMax, cand: detail });
+                const bar = a.score >= 75 ? 'bg-emerald-500' : a.score >= 50 ? 'bg-amber-500' : 'bg-slate-400';
+                return (
+                  <div className="space-y-3">
+                    <div className="px-4 py-3 rounded-2xl bg-slate-900 text-white flex items-center gap-4">
+                      <div className={`text-3xl font-extrabold ${a.score >= 75 ? 'text-emerald-300' : a.score >= 50 ? 'text-amber-300' : 'text-slate-300'}`}>{a.score}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[11px] font-bold text-slate-300">Match score vs {job ? (job.title || job.id) : 'search keywords'}</div>
+                        <div className="mt-1.5 h-2 rounded-full bg-white/15 overflow-hidden">
+                          <div className={`h-full rounded-full ${bar}`} style={{ width: `${a.score}%` }} />
+                        </div>
+                        <div className="text-[10px] font-bold mt-1 text-slate-400">skills 60 · preferred 15 · experience 15 · location 10</div>
+                      </div>
+                    </div>
+                    {tier === 'preview' && !detail.skills && (
+                      <div className="text-[11px] text-slate-500 font-medium p-3 rounded-xl bg-amber-50 border border-amber-200">Skill-level matching is limited in preview tier (skills hidden) — Full profile unlocks precise skill analysis.</div>
+                    )}
+                    <div className={`px-4 py-2.5 rounded-2xl border text-xs font-extrabold ${a.score >= 80 ? 'bg-emerald-50/70 border-emerald-200/70 text-emerald-900' : a.score >= 60 ? 'bg-blue-50/70 border-blue-200/70 text-blue-900' : a.score >= 40 ? 'bg-amber-50/70 border-amber-200/70 text-amber-900' : 'bg-slate-100 border-slate-200 text-slate-600'}`}>
+                      {a.verdict}
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5 px-0.5">Score factors</div>
+                      <div className="space-y-1.5">
+                        {a.factors.map((ft) => (
+                          <div key={ft.label} className="flex items-center gap-2">
+                            <span className="w-28 shrink-0 text-[11px] font-bold text-slate-600 truncate">{ft.label}</span>
+                            <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                              <div className="h-full rounded-full bg-[#087BFF]" style={{ width: `${ft.max ? Math.round((ft.got / ft.max) * 100) : 0}%` }} />
+                            </div>
+                            <span className="w-12 shrink-0 text-right text-[11px] font-extrabold text-slate-800">{ft.got}/{ft.max}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5 px-0.5">Skills ({a.skillMatched.length} matched)</div>
+                      {(a.skillMatched.length > 0 || a.skillMissing.length > 0) ? (
+                        <div className="flex flex-wrap gap-1.5">
+                          {a.skillMatched.map((t) => <span key={`m${t}`} className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px]">✓ {t}</span>)}
+                          {a.skillMissing.map((t) => <span key={`x${t}`} className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 border border-slate-200 font-bold text-[11px]">{t}</span>)}
+                        </div>
+                      ) : <div className="text-[11px] text-slate-500 font-medium">No skill basis to compare — pick a job with required skills.</div>}
+                    </div>
+                    <KeyValues data={[
+                      ['Experience', a.expNote],
+                      ['Location', a.locNote],
+                    ]} />
+                    {a.best.length > 0 && (
+                      <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200/70 space-y-1">
+                        <div className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700">Why this fits</div>
+                        {a.best.map((b) => <div key={b} className="text-xs font-bold text-emerald-900">✓ {b}</div>)}
+                      </div>
+                    )}
+                    {a.gaps.length > 0 && (
+                      <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-200/70 space-y-1">
+                        <div className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700">Gaps & suggestions</div>
+                        {a.gaps.map((g) => <div key={g} className="text-xs font-bold text-amber-900">• {g}</div>)}
+                      </div>
+                    )}
+                    {a.nextSteps.length > 0 && (
+                      <div className="p-3 rounded-2xl bg-blue-50/60 border border-blue-200/70 space-y-1">
+                        <div className="text-[10px] font-extrabold uppercase tracking-wider text-blue-700">Suggested next steps</div>
+                        {a.nextSteps.map((s, i) => <div key={s} className="text-xs font-bold text-blue-900">{i + 1}. {s}</div>)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+          {detailTab === 'shortlist' && (
+            <div className="space-y-3">
+              <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 px-0.5">Talent pool * — the candidate joins the selected pool</div>
+              {pools.length === 0
+                ? <div className="text-[11px] text-slate-500 font-medium p-3 rounded-xl bg-slate-50 border border-slate-200">No talent pools yet — create one under Talent Pools first, then shortlist here.</div>
+                : (
+                  <div className="space-y-1.5">
+                    {pools.map((p: any) => (
+                      <button key={p.id} type="button" onClick={() => setShortPool(p.id)}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border text-left text-xs transition ${shortPool === p.id ? 'bg-blue-50/70 border-blue-300 shadow-[0_1px_2px_rgba(15,23,42,0.06)]' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
+                        <span aria-hidden="true" className={`w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center ${shortPool === p.id ? 'border-[#087BFF]' : 'border-slate-300'}`}>
+                          {shortPool === p.id && <span className="w-2 h-2 rounded-full bg-[#087BFF]" />}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-bold text-slate-900 truncate">{p.name}</span>
+                          <span className="block text-[10px] text-slate-500 font-medium font-mono">{p.id}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setDetailTab('profile')} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Back</button>
+                <button type="button" disabled={!shortPool || pools.length === 0} onClick={shortlist} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50">Shortlist to pool</button>
+              </div>
+            </div>
+          )}
+        </DetailDrawer>
       )}
     </div>
   );
@@ -2032,10 +3391,15 @@ export function OffersPlacementsPanel() {
   const [placements, setPlacements] = useState<any[]>([]);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
-  const [offer, setOffer] = useState({ applicationId: '', ctc: '', joinDate: '' });
+  const [offer, setOffer] = useState({ applicationId: '', ctc: '', payPeriod: 'annual', joinDate: '', letterMode: 'generate' as 'generate' | 'upload', letterRef: '' });
+  const [offerStep, setOfferStep] = useState(1);
+  const [offerApp, setOfferApp] = useState<any>(null);
+  const [offerFile, setOfferFile] = useState('');
   const [place, setPlace] = useState({ applicationId: '', joinDate: '', feeBasis: '' });
+  const [placeApp, setPlaceApp] = useState<any>(null);
   const [showOffer, setShowOffer] = useState(false);
   const [showPlace, setShowPlace] = useState(false);
+  const resetOffer = () => { setOffer({ applicationId: '', ctc: '', payPeriod: 'annual', joinDate: '', letterMode: 'generate', letterRef: '' }); setOfferStep(1); setOfferApp(null); setOfferFile(''); };
   const [placeDetail, setPlaceDetail] = useState<any>(null);
   const [offerLetter, setOfferLetter] = useState<any>(null);
   const [offerLetterBusy, setOfferLetterBusy] = useState(false);
@@ -2046,12 +3410,55 @@ export function OffersPlacementsPanel() {
       setOfferLetter(d);
     } catch (e) { setError(errMsg(e)); } finally { setOfferLetterBusy(false); }
   };
-  const offerLetterHtml = (d: any) => `
+  const offerLetterHtml = (d: any) => {
+    const ctc = Number(d.offer?.ctc || d.placement?.feeBasis || 0);
+    const period = d.offer?.payPeriod || 'annual';
+    const annual = period === 'annual' ? ctc : period === 'monthly' ? ctc * 12 : ctc * 2080;
+    const basic = Math.round(annual * 0.4), hra = Math.round(basic * 0.4), flex = Math.max(0, annual - basic - hra);
+    const monthly = (n: number) => `₹${Math.round(n / 12).toLocaleString('en-IN')}`;
+    const money = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`;
+    const PAGE = '<div style="page-break-before: always;"></div>';
+    return sanitizeHtml(`
     <h2>Offer of Employment</h2>
-    <p>Dear <strong>${d.candidate?.name || d.candidate?.email || ''}</strong>,</p>
-    <p><strong>${d.organization?.legalName || ''}</strong> is pleased to offer you the position of <strong>${d.job?.title || ''}</strong>${d.job?.location ? ` (${d.job.location})` : ''}.</p>
-    <table><tr><th>Annual CTC</th><td>₹${Number(d.offer?.ctc || 0).toLocaleString('en-IN')}</td></tr><tr><th>Joining date</th><td>${String(d.offer?.joinDate || d.placement?.joinDate || '').slice(0, 10)}</td></tr><tr><th>Employment</th><td>${d.job?.employmentType || 'Full-time'}</td></tr><tr><th>Placement ref</th><td>${d.placement?.id || ''}</td></tr></table>
-    <div class="terms"><h3>Terms</h3><p>• This offer is subject to successful completion of verification and background checks.</p><p>• Fees between the company and NexaTalent are governed by the commercial agreement${d.terms?.hiringType ? ` (${d.terms.hiringType}${d.terms?.rate !== null ? ` @ ${d.terms.rate}%` : ''})` : ''}.</p><p>• Payment within ${d.terms?.paymentTermsDays ?? 30} days of joining; ${d.terms?.replacementDays ?? 90}-day replacement applies.</p></div>`;
+    <p>Ref: ${escHtml(d.placement?.id || d.offer?.id || '')} &nbsp;•&nbsp; Date: ${escHtml(String(d.generatedAt || '').slice(0, 10))}</p>
+    <p>Dear <strong>${escHtml(d.candidate?.name || d.candidate?.email || '')}</strong>,</p>
+    <p>On behalf of <strong>${escHtml(d.organization?.legalName || '')}</strong>, we are pleased to offer you the position of <strong>${escHtml(d.job?.title || '')}</strong>${d.job?.location ? `, based at ${escHtml(d.job.location)}` : ''}. Your employment type is <strong>${escHtml(d.job?.employmentType || 'Full-time')}</strong> with an expected joining date of <strong>${escHtml(String(d.offer?.joinDate || d.placement?.joinDate || '').slice(0, 10))}</strong>.</p>
+    <h3>1 &nbsp;•&nbsp; Compensation summary</h3>
+    <table><tr><th>Component</th><th>Amount</th></tr>
+    <tr><td>Cost to Company (${escHtml(period)})</td><td><strong>${money(ctc)} ${escHtml(period === 'annual' ? 'per annum' : `per ${period}`)}</strong></td></tr>
+    ${period !== 'annual' ? `<tr><td>Annualised equivalent</td><td>${money(annual)} per annum</td></tr>` : `<tr><td>Monthly equivalent</td><td>${monthly(annual)} per month</td></tr>`}
+    <tr><td>Placement ref</td><td>${escHtml(d.placement?.id || '')}</td></tr>
+    <tr><td>Offer ref</td><td>${escHtml(d.offer?.id || '')}</td></tr></table>
+    <p>This offer is subject to successful completion of document verification and background checks. Please confirm acceptance within 7 days of receipt.</p>
+    ${PAGE}
+    <h2>Annexure A — Compensation breakup (indicative, annualised)</h2>
+    <table><tr><th>Head</th><th>Annual</th><th>Monthly</th></tr>
+    <tr><td>Basic salary (40%)</td><td>${money(basic)}</td><td>${monthly(basic)}</td></tr>
+    <tr><td>House Rent Allowance</td><td>${money(hra)}</td><td>${monthly(hra)}</td></tr>
+    <tr><td>Special / flexible allowance</td><td>${money(flex)}</td><td>${monthly(flex)}</td></tr>
+    <tr><td><strong>Total CTC</strong></td><td><strong>${money(annual)}</strong></td><td><strong>${monthly(annual)}</strong></td></tr></table>
+    <p>Statutory deductions (PF, ESI, professional tax, TDS) apply as per prevailing law. Gratuity, where eligible, is payable per the Payment of Gratuity Act in addition to the CTC above.</p>
+    ${PAGE}
+    <h2>Annexure B — Role, duties &amp; working terms</h2>
+    <h3>2 &nbsp;•&nbsp; Role &amp; reporting</h3>
+    <p>You will perform the duties of <strong>${escHtml(d.job?.title || '')}</strong> and such other duties as may reasonably be assigned by your reporting manager. Your normal place of work is <strong>${escHtml(d.job?.location || 'as assigned')}</strong>, with remote / hybrid arrangements only where confirmed in writing.</p>
+    <h3>3 &nbsp;•&nbsp; Probation &amp; working hours</h3>
+    <p>• You will serve a probation period of 6 months, extendable by up to 3 months at management discretion. • Standard working hours are 9:00–18:00 IST, Monday–Friday, with reasonable additional effort during releases. • Leave accrues per company policy shared on joining.</p>
+    ${PAGE}
+    <h2>Annexure C — Confidentiality, IP &amp; termination</h2>
+    <h3>4 &nbsp;•&nbsp; Confidentiality &amp; intellectual property</h3>
+    <p>• You agree to hold all company and client confidential information in strict confidence during and after employment. • All work product, code, designs and inventions created in the course of employment vest exclusively in the company.</p>
+    <h3>5 &nbsp;•&nbsp; Notice &amp; termination</h3>
+    <p>• Either party may terminate confirmed employment with 30 days' written notice (15 days during probation), or salary in lieu thereof. • The company may terminate immediately for misconduct, breach of confidentiality, or failed verification. • A ${Number(d.terms?.replacementDays ?? 90)}-day replacement assurance applies to this placement under the NexaTalent commercial terms.</p>
+    ${PAGE}
+    <h2>Acceptance &amp; checklist</h2>
+    <p>I accept the above terms and confirm my joining on <strong>${escHtml(String(d.offer?.joinDate || d.placement?.joinDate || '').slice(0, 10))}</strong>.</p>
+    <p>Signature: ____________________ &nbsp;&nbsp; Name: ${escHtml(d.candidate?.name || '')} &nbsp;&nbsp; Date: __________</p>
+    <h3>Documents to carry on joining day</h3>
+    <p>• Photo ID + address proof • Education &amp; experience letters • Relieving letter (if applicable) • PAN + bank details for payroll</p>
+    <p>For the company: ____________________ &nbsp;&nbsp; Date: __________</p>
+    <div class="terms"><h3>Commercial note (internal)</h3><p>• Fees between the company and NexaTalent are governed by the commercial agreement${d.terms?.hiringType ? ` (${escHtml(d.terms.hiringType)}${d.terms?.rate !== null && d.terms?.rate !== undefined ? ` @ ${Number(d.terms.rate)}%` : ''})` : ''}. • Payment within ${Number(d.terms?.paymentTermsDays ?? 30)} days of joining.</p></div>`);
+  };
   const [feeMatch, setFeeMatch] = useState<any>(null);
   const [feeBusy, setFeeBusy] = useState(false);
   const [placeConfirm, setPlaceConfirm] = useState(false);
@@ -2066,14 +3473,22 @@ export function OffersPlacementsPanel() {
   };
   const load = async () => {
     try { setPlacements(unwrapList(await offersPlacementsApi.placements())); }
-    catch (e) { setError(errMsg(e)); }
-  };
+    catch (e) { setError(errMsg(e)); }  };
   useEffect(() => { load(); }, []);
-  const issue = async (e: React.FormEvent) => {
-    e.preventDefault(); setError(''); setOk('');
+  const offerLetterRef = () => (offer.letterRef.trim() || offerFile).trim();
+  const offerValid = offer.applicationId.trim() !== '' && Number(offer.ctc) > 0 && (offer.letterMode === 'generate' || offerLetterRef() !== '');
+  const issue = async (e?: React.FormEvent) => {
+    e?.preventDefault(); setError(''); setOk('');
+    if (!offerValid) { setError(offer.applicationId.trim() === '' ? 'Pick a candidate application first.' : Number(offer.ctc) <= 0 ? 'Enter the offered CTC.' : 'Upload the company letter or switch to Generate.'); return; }
     try {
-      await offersPlacementsApi.offer({ applicationId: offer.applicationId, ctc: Number(offer.ctc) || 0, joinDate: offer.joinDate });
-      setOk('Offer issued.'); setOffer({ applicationId: '', ctc: '', joinDate: '' });
+      await offersPlacementsApi.offer({
+        applicationId: offer.applicationId.trim(), ctc: Number(offer.ctc) || 0, payPeriod: offer.payPeriod,
+        joinDate: offer.joinDate || undefined,
+        offerLetterMode: offer.letterMode === 'upload' ? 'uploaded' : 'generated',
+        offerLetterRef: offer.letterMode === 'upload' ? offerLetterRef() : undefined,
+      });
+      setOk(`Offer issued${offer.letterMode === 'upload' ? ` with uploaded letter (${offerLetterRef()})` : ' with NexaTalent generated letter'}.`);
+      resetOffer();
       setShowOffer(false);
       syncAll();
     } catch (e) { setError(errMsg(e)); }
@@ -2084,7 +3499,7 @@ export function OffersPlacementsPanel() {
       const p = unwrapObj(await offersPlacementsApi.place(place.applicationId, place.joinDate || undefined, Number(place.feeBasis) || 0));
       if (p?.id) setPlacements((x) => [p, ...x]);
       setOk(`Placement recorded — commission auto-minted under agreement ${p?.agreementId || ''}.`);
-      setPlace({ applicationId: '', joinDate: '', feeBasis: '' }); setFeeMatch(null);
+      setPlace({ applicationId: '', joinDate: '', feeBasis: '' }); setFeeMatch(null); setPlaceApp(null);
       setShowPlace(false);
       syncAll();
     } catch (e) { setError(errMsg(e)); }
@@ -2094,29 +3509,114 @@ export function OffersPlacementsPanel() {
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-base font-extrabold text-slate-900">Offers & Placements</h3>
         <div className="flex gap-2">
-          <button type="button" onClick={() => setShowPlace(true)} className={btnDark}>Record joining</button>
-          <button type="button" onClick={() => setShowOffer(true)} className={btnPrimary}>Issue offer</button>
+          <button type="button" onClick={() => { setPlace({ applicationId: '', joinDate: '', feeBasis: '' }); setPlaceApp(null); setFeeMatch(null); setShowPlace(true); }} className={btnDark}>Record joining</button>
+          <button type="button" onClick={() => { resetOffer(); setShowOffer(true); }} className={btnPrimary}>Issue offer</button>
         </div>
       </div>
       {error && <PanelError message={error} onRetry={load} />}
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
-      <Modal open={showOffer} onClose={() => setShowOffer(false)} title="Issue offer" subtitle="Offer CTC becomes the default fee basis at joining">
-        <form onSubmit={issue} className="space-y-3">
-          <Field label="Candidate / application *"><ApplicationPicker value={offer.applicationId} onChange={(v) => setOffer({ ...offer, applicationId: v })} /></Field>
-          <Field label="CTC (annual)"><input className={kitInput} type="number" value={offer.ctc} onChange={(e) => setOffer({ ...offer, ctc: e.target.value })} /></Field>
-          <Field label="Joining date"><DatePicker value={offer.joinDate} onChange={(v) => setOffer({ ...offer, joinDate: v })} /></Field>
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setShowOffer(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
-            <button className={btnPrimary}>Issue offer</button>
+      <Modal open={showOffer} onClose={() => { setShowOffer(false); resetOffer(); }} title="Issue offer" subtitle="3 steps — candidate, compensation, then the offer letter" wide>
+        <div className="space-y-4">
+          <ol className="flex items-center gap-1 text-[11px] font-extrabold" aria-label="Offer progress">
+            {['Candidate', 'Compensation', 'Offer letter'].map((s, i) => {
+              const n = i + 1; const done = offerStep > n; const cur = offerStep === n;
+              return (
+                <li key={s} className="flex items-center gap-1 flex-1">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${done ? 'bg-emerald-600 text-white' : cur ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500'}`}>{done ? '✓' : n}</span>
+                  <span className={cur ? 'text-slate-900' : 'text-slate-500'}>{s}</span>
+                  {n < 3 ? <span className="flex-1 h-px bg-slate-200 mx-1" /> : null}
+                </li>
+              );
+            })}
+          </ol>
+          {offerStep === 1 && (
+            <div className="space-y-3">
+              <Field label="Candidate / application *"><ApplicationPicker value={offer.applicationId} onChange={(v) => { setOffer({ ...offer, applicationId: v }); if (!v.trim()) setOfferApp(null); }} onPick={(a) => { setOfferApp(a); setOffer((o) => ({ ...o, applicationId: a.id || o.applicationId })); }} /></Field>
+              {offerApp ? (
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+                  <div className="font-extrabold text-slate-900">{offerApp.candidateName || offerApp.candidateEmail} <span className="font-mono font-medium text-slate-500">• {offerApp.id}</span></div>
+                  <div className="font-medium text-slate-600">{offerApp.jobTitle || offerApp.jobId || ''}{offerApp.orgId ? ` • ${offerApp.orgId}` : ''}</div>
+                  <div className="flex gap-1.5 flex-wrap pt-0.5">
+                    {(offerApp.source || offerApp.sourceType || '').toLowerCase().includes('agenc') || offerApp.submittedBy
+                      ? <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[10px]">Via agency{offerApp.submittedBy ? ` • ${offerApp.submittedBy}` : ''}</span>
+                      : <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[10px]">Direct hire</span>}
+                    <span className={tonePill(offerApp.stage)}>{offerApp.stage}</span>
+                  </div>
+                </div>
+              ) : <div className="text-[11px] text-slate-500 font-medium">Search and pick the application — agency vs direct is detected automatically.</div>}
+            </div>
+          )}
+          {offerStep === 2 && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Field label="Offered CTC *"><input className={kitInput} type="number" min={0} value={offer.ctc} onChange={(e) => setOffer({ ...offer, ctc: e.target.value })} placeholder="e.g. 1800000" /></Field>
+                <Field label="Pay period"><Select value={offer.payPeriod} onChange={(v) => setOffer({ ...offer, payPeriod: v })} options={[{ value: 'annual', label: 'Annual CTC' }, { value: 'monthly', label: 'Monthly (contract)' }, { value: 'hourly', label: 'Hourly (contract)' }]} /></Field>
+                <Field label="Joining date"><DatePicker value={offer.joinDate} onChange={(v) => setOffer({ ...offer, joinDate: v })} /></Field>
+              </div>
+              <div className="p-3 rounded-2xl bg-blue-50/60 border border-blue-200 text-[11px] font-medium text-blue-900">
+                Full-time → enter <strong>annual</strong> CTC. Contract / contract-to-hire → enter the <strong>monthly</strong> rate and pick Monthly above — the joining fee basis follows the same convention.
+                {offer.ctc && Number(offer.ctc) > 0 ? <span className="block mt-1 font-bold">Preview: ₹{Number(offer.ctc).toLocaleString('en-IN')} {offer.payPeriod === 'annual' ? 'per annum' : `per ${offer.payPeriod}`} {offer.payPeriod === 'annual' ? `(≈ ₹${Math.round(Number(offer.ctc) / 12).toLocaleString('en-IN')}/mo)` : ''}</span> : null}
+              </div>
+            </div>
+          )}
+          {offerStep === 3 && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button type="button" onClick={() => setOffer({ ...offer, letterMode: 'generate' })}
+                  className={`text-left p-3.5 rounded-2xl border-2 transition ${offer.letterMode === 'generate' ? 'border-[#087BFF] bg-blue-50/60' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                  <div className="text-xs font-extrabold text-slate-900">✨ Generate with NexaTalent</div>
+                  <div className="text-[11px] text-slate-600 font-medium mt-1">Full 5-section letter, auto-filled with candidate, role, CTC and terms. Recommended.</div>
+                </button>
+                <button type="button" onClick={() => setOffer({ ...offer, letterMode: 'upload' })}
+                  className={`text-left p-3.5 rounded-2xl border-2 transition ${offer.letterMode === 'upload' ? 'border-[#087BFF] bg-blue-50/60' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                  <div className="text-xs font-extrabold text-slate-900">📎 Upload company letter</div>
+                  <div className="text-[11px] text-slate-600 font-medium mt-1">Direct hires on company letterhead — attach your own PDF/DOC.</div>
+                </button>
+              </div>
+              {offer.letterMode === 'upload' ? (
+                <div className="space-y-2">
+                  <Field label="Letter file (PDF / DOC / DOCX) *">
+                    <input type="file" accept=".pdf,.doc,.docx" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setOfferFile(f.name); setOffer((o) => ({ ...o, letterRef: o.letterRef || f.name })); } }}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-slate-900 file:text-white file:font-bold file:text-[11px]" />
+                  </Field>
+                  <div className="text-[11px] text-slate-500 font-medium">The file stays on your device — we record <strong>{offerLetterRef() || 'the filename'}</strong> as the letter reference on the offer.</div>
+                </div>
+              ) : (
+                <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-[11px] font-medium text-emerald-900">
+                  The generated letter opens after issuing (Print / Save PDF, Download .doc) and stays attached to the placement.
+                </div>
+              )}
+            </div>
+          )}
+          <div className="flex justify-between gap-2 pt-1 border-t border-slate-100">
+            <button type="button" onClick={() => { setShowOffer(false); resetOffer(); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs mt-3">Cancel</button>
+            <div className="flex gap-2 mt-3">
+              {offerStep > 1 ? <button type="button" onClick={() => setOfferStep((s) => s - 1)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">← Back</button> : null}
+              {offerStep < 3
+                ? <button type="button" disabled={offerStep === 1 && !offer.applicationId.trim()} onClick={() => setOfferStep((s) => s + 1)} className={btnPrimary}>Continue →</button>
+                : <button type="button" disabled={!offerValid} onClick={() => issue()} className={btnPrimary}>Issue offer{offer.ctc && Number(offer.ctc) > 0 ? ` — ₹${Number(offer.ctc).toLocaleString('en-IN')}` : ''}</button>}
+            </div>
           </div>
-        </form>
+        </div>
       </Modal>
-      <Modal open={showPlace} onClose={() => { setShowPlace(false); setFeeMatch(null); }} title="Record joining" subtitle="Resolves the agreement, previews the fee, then mints placement + commission">
+      <Modal open={showPlace} onClose={() => { setShowPlace(false); setFeeMatch(null); setPlaceApp(null); }} title="Record joining" subtitle="Resolves the agreement, previews the fee, then mints placement + commission">
         <div className="space-y-3">
-          <Field label="Candidate / application *"><ApplicationPicker value={place.applicationId} onChange={(v) => { setPlace({ ...place, applicationId: v }); setFeeMatch(null); }} /></Field>
+          <Field label="Candidate / application *"><ApplicationPicker value={place.applicationId} onChange={(v) => { setPlace({ ...place, applicationId: v }); setFeeMatch(null); if (!v.trim()) setPlaceApp(null); }} onPick={(a) => { setPlaceApp(a); setPlace((p) => ({ ...p, applicationId: a.id || p.applicationId })); }} /></Field>
+          {placeApp ? (
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+              <div className="font-extrabold text-slate-900">{placeApp.candidateName || placeApp.candidateEmail} <span className="font-mono font-medium text-slate-500">• {placeApp.id}</span></div>
+              <div className="font-medium text-slate-600">{placeApp.jobTitle || placeApp.jobId || ''}</div>
+              <div className="flex gap-1.5 flex-wrap pt-0.5">
+                {(placeApp.source || placeApp.sourceType || '').toLowerCase().includes('agenc') || placeApp.submittedBy
+                  ? <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[10px]">Via agency</span>
+                  : <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[10px]">Direct hire</span>}
+                <span className={tonePill(placeApp.stage)}>{placeApp.stage}</span>
+              </div>
+            </div>
+          ) : null}
           <Field label="Joining date"><DatePicker value={place.joinDate} onChange={(v) => setPlace({ ...place, joinDate: v })} /></Field>
-          <Field label="Fee basis (annual CTC — or monthly CTC for contract hires; auto-filled from offer)">
-            <input className={kitInput} type="number" value={place.feeBasis} onChange={(e) => { setPlace({ ...place, feeBasis: e.target.value }); setFeeMatch(null); }} />
+          <Field label="Fee basis — annual CTC, or monthly CTC for contract hires (auto-filled from offer)">
+            <input className={kitInput} type="number" value={place.feeBasis} onChange={(e) => { setPlace({ ...place, feeBasis: e.target.value }); setFeeMatch(null); }} placeholder="e.g. 1800000 annual • 150000 monthly" />
           </Field>
           <button type="button" disabled={feeBusy} onClick={checkFee} className={btnDark}>{feeBusy ? 'Checking…' : 'Check fee…'}</button>
           {feeMatch?.preview && (
@@ -2127,7 +3627,7 @@ export function OffersPlacementsPanel() {
             </div>
           )}
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => { setShowPlace(false); setFeeMatch(null); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
+            <button type="button" onClick={() => { setShowPlace(false); setFeeMatch(null); setPlaceApp(null); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
             <button type="button" disabled={!place.applicationId.trim()} onClick={() => setPlaceConfirm(true)} className={btnDark}>Review & record joining{feeMatch?.preview ? ` — ₹${Number(feeMatch.preview.total).toLocaleString('en-IN')}` : ''}</button>
           </div>
         </div>
@@ -2200,10 +3700,10 @@ export function OffersPlacementsPanel() {
           </div>
         </DetailDrawer>
       )}
-      <Modal open={offerLetter !== null} onClose={() => setOfferLetter(null)} title={`Offer letter — ${offerLetter?.placement?.id || ''}`} subtitle={`${offerLetter?.candidate?.name || offerLetter?.candidate?.email || ''} • ${offerLetter?.job?.title || ''}`} wide>
+      <Modal open={offerLetter !== null} onClose={() => setOfferLetter(null)} title={`Offer letter — ${offerLetter?.placement?.id || ''}`} subtitle={`${offerLetter?.candidate?.name || offerLetter?.candidate?.email || ''} • ${offerLetter?.job?.title || ''} • ${offerLetter?.offer?.offerLetterMode === 'uploaded' ? `Uploaded: ${offerLetter?.offer?.offerLetterRef || 'company letter'}` : 'NexaTalent generated (5 sections)'}`} wide>
         <div className="space-y-3">
           <div className="p-5 rounded-2xl bg-white border border-slate-200 text-xs leading-relaxed max-h-[52vh] overflow-y-auto" data-lenis-prevent
-            dangerouslySetInnerHTML={{ __html: offerLetter ? offerLetterHtml(offerLetter) : '' }} />
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(offerLetter ? offerLetterHtml(offerLetter) : '') }} />
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => offerLetter && downloadDocFile(`Offer-letter-${offerLetter.placement?.id || 'placement'}`, 'Offer letter', offerLetterHtml(offerLetter))} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Download .doc (Word)</button>
             <button type="button" onClick={() => offerLetter && printHtmlDocument('Offer letter', offerLetterHtml(offerLetter))} className="px-4 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs">Print / Save PDF</button>
@@ -2215,65 +3715,438 @@ export function OffersPlacementsPanel() {
 }
 
 /* ---------------- Phase 3: Outreach ---------------- */
+const OUTREACH_TEMPLATES = [
+  { id: 'role-intro', name: 'Role intro — opportunity', subject: 'Exciting {{role}} opportunity at {{company}}', body: 'Hi {{name}},\n\nWe came across your profile and think you could be a strong fit for a {{role}} role we are hiring for ({{location}} • {{experience}}). Would you be open to a quick intro call this week?\n\n— {{sender}}' },
+  { id: 'followup', name: 'Follow-up nudge', subject: 'Following up — {{role}} role', body: 'Hi {{name}},\n\nJust bumping my last note about the {{role}} opening. Happy to share salary band, stack and interview loop upfront if helpful.\n\n— {{sender}}' },
+  { id: 'interview-invite', name: 'Interview invite', subject: 'Interview invite — {{role}} @ {{company}}', body: 'Hi {{name}},\n\nWe would love to invite you for a first conversation for {{role}}. Please share two slots that work for you and we will lock the calendar.\n\n— {{sender}}' },
+  { id: 'custom', name: 'Custom (free text)', subject: '', body: '' },
+];
+
+const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
+
 export function OutreachPanel() {
   const [camps, setCamps] = useState<any[]>([]);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
-  const [form, setForm] = useState({ name: '', subject: '', template: '', recipients: '' });
+  const [quota, setQuota] = useState<any>(null);
   const [busy, setBusy] = useState(false);
+  const [retryBusy, setRetryBusy] = useState('');
+  // list chrome — same pattern as pools / leads (tabs + search + suggest)
+  const [q, setQ] = useQueryState('out_q');
+  const dq = useDebounced(q);
+  const [statusTab, setStatusTab] = useState<'all' | 'Queued' | 'Sent' | 'failed'>('all');
+  // compose
   const [showCompose, setShowCompose] = useState(false);
+  const [form, setForm] = useState({ name: '', subject: '', template: 'role-intro' });
+  const [templateBody, setTemplateBody] = useState(OUTREACH_TEMPLATES[0].body);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [recQ, setRecQ] = useState('');
+  const [manual, setManual] = useState('');
+  const [pools, setPools] = useState<any[]>([]);
+  const [poolPick, setPoolPick] = useState('');
+  const [contacts, setContacts] = useState<{ email: string; name: string; src: string }[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(false);
+  // detail drawer + tabs
+  const [detail, setDetail] = useState<any>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailTab, setDetailTab] = useState('overview');
+  const [detQ, setDetQ] = useState('');
+  const [detStatus, setDetStatus] = useState('');
+  const dDq = useDebounced(detQ);
+
   const load = async () => {
     try { setCamps(unwrapList(await billingApi.campaigns())); }
     catch (e) { setError(errMsg(e)); }
+    try {
+      const u: any = await billingApi.usage();
+      const usage = (u as { data?: any })?.data?.usage || {};
+      setQuota(usage['outreach.monthly_limit'] || usage['outreach.send'] || usage['outreach'] || null);
+    } catch { /* quota best-effort */ }
   };
-  useEffect(() => { load(); }, []);
-  const send = async (e: React.FormEvent) => {
-    e.preventDefault(); setError(''); setOk('');
-    const recipients = form.recipients.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
-    if (!recipients.length) { setError('Add at least one recipient email.'); return; }
+
+  const loadContacts = async () => {
+    setContactsLoading(true);
+    try {
+      const rows = unwrapList(await talentApi.pools());
+      setPools(rows);
+      if (!poolPick && rows.length > 0) setPoolPick(rows.find((p: any) => p.status !== 'Archived')?.id || rows[0]?.id || '');
+      const byEmail = new Map<string, { email: string; name: string; src: string }>();
+      await Promise.all(rows.slice(0, 20).map(async (p: any) => {
+        try {
+          const ms = unwrapList(await talentApi.poolMembers(p.id));
+          for (const m of ms) {
+            const email = String(m.candidateEmail || m.candidate?.email || '').trim();
+            if (!isEmail(email)) continue;
+            const k = email.toLowerCase();
+            if (!byEmail.has(k)) byEmail.set(k, { email, name: String(m.candidate?.name || m.candidate?.roleTitle || ''), src: `Pool • ${p.name || p.id}` });
+          }
+        } catch { /* pool best-effort */ }
+      }));
+      try {
+        const apps = unwrapList(await applicationsApi.list('?page=1&pageSize=100'));
+        for (const a of apps) {
+          const email = String(a.candidateEmail || '').trim();
+          if (!isEmail(email)) continue;
+          const k = email.toLowerCase();
+          if (!byEmail.has(k)) byEmail.set(k, { email, name: String(a.candidateName || a.jobTitle || ''), src: `Pipeline • ${a.jobTitle || a.jobId || ''}` });
+        }
+      } catch { /* pipeline best-effort */ }
+      setContacts([...byEmail.values()].slice(0, 500));
+    } catch { /* contacts best-effort */ }
+    finally { setContactsLoading(false); }
+  };
+
+  useEffect(() => {
+    load();
+    loadContacts();
+    // Pool handoff: Talent Pools stages recipient emails here, then navigates over.
+    try {
+      const raw = localStorage.getItem('nexa_outreach_recipients');
+      if (raw) {
+        const list = JSON.parse(raw);
+        if (Array.isArray(list) && list.length > 0) {
+          const clean = [...new Set(list.map((s: any) => String(s || '').trim()).filter(isEmail))];
+          setSelected(clean);
+          setOk(`${clean.length} recipient(s) staged from Talent Pools — review and send.`);
+          setShowCompose(true);
+        }
+        localStorage.removeItem('nexa_outreach_recipients');
+      }
+    } catch { /* handoff best-effort */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const applyTemplatePreset = (id: string) => {
+    setForm((f) => ({ ...f, template: id }));
+    const t = OUTREACH_TEMPLATES.find((x) => x.id === id);
+    if (t && id !== 'custom') {
+      if (!form.subject.trim() && t.subject) setForm((f) => ({ ...f, subject: t.subject }));
+      setTemplateBody(t.body);
+    }
+  };
+
+  const addEmails = (emails: string[]) => {
+    const clean = emails.map((s) => String(s || '').trim()).filter(isEmail).map((s) => s.toLowerCase());
+    if (clean.length === 0) return;
+    setSelected((prev) => {
+      const have = new Set(prev.map((s) => s.toLowerCase()));
+      const next = [...prev];
+      for (const e of clean) {
+        if (!have.has(e)) { have.add(e); next.push(emails.find((x) => String(x).trim().toLowerCase() === e) || e); }
+      }
+      return next;
+    });
+  };
+  const removeEmail = (email: string) => setSelected((prev) => prev.filter((s) => s.toLowerCase() !== email.toLowerCase()));
+  const addManual = () => {
+    const bits = manual.split(/[\n,;\s]+/).map((s) => s.trim()).filter(Boolean);
+    const bad = bits.filter((b) => !isEmail(b));
+    if (bad.length > 0) { setError(`Invalid email(s): ${bad.slice(0, 3).join(', ')}.`); return; }
+    addEmails(bits);
+    setManual('');
+  };
+  const addPoolMembers = async () => {
+    if (!poolPick) return;
     setBusy(true);
     try {
-      const c = unwrapObj(await billingApi.outreach({ ...form, recipients }));
+      const ms = unwrapList(await talentApi.poolMembers(poolPick));
+      const emails = ms.map((m: any) => String(m.candidateEmail || m.candidate?.email || '')).filter(isEmail);
+      if (emails.length === 0) { setError('No usable emails in this pool.'); return; }
+      addEmails(emails);
+      setOk(`Added ${emails.length} email(s) from pool.`);
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+
+  const recMatches = (() => {
+    const needle = recQ.trim().toLowerCase();
+    const picked = new Set(selected.map((s) => s.toLowerCase()));
+    const base = contacts.filter((c) => !picked.has(c.email.toLowerCase()));
+    if (!needle) return base.slice(0, 7);
+    return base.filter((c) => `${c.email} ${c.name} ${c.src}`.toLowerCase().includes(needle)).slice(0, 7);
+  })();
+
+  const send = async (e: React.FormEvent) => {
+    e.preventDefault(); setError(''); setOk('');
+    const recipients = [...new Set(selected.map((s) => s.trim()).filter(Boolean))];
+    if (!recipients.length) { setError('Search and select at least one recipient — or paste emails below.'); return; }
+    const bad = recipients.filter((r) => !isEmail(r));
+    if (bad.length > 0) { setError(`Invalid email(s): ${bad.slice(0, 3).join(', ')}.`); return; }
+    if (quota?.remaining !== undefined && recipients.length > quota.remaining) { setError(`Only ${quota.remaining} outreach email(s) left in quota — remove ${recipients.length - quota.remaining} or upgrade.`); return; }
+    setBusy(true);
+    try {
+      const tpl = form.template === 'custom' ? templateBody : `${OUTREACH_TEMPLATES.find((t) => t.id === form.template)?.name || form.template}\n\n${templateBody}`;
+      const c = unwrapObj(await billingApi.outreach({ name: form.name, subject: form.subject, template: tpl, recipients }));
       if (c?.id) setCamps((x) => [c, ...x]);
       setOk(`Campaign queued to ${recipients.length} recipient(s) — quota deducted idempotently.`);
-      setForm({ name: '', subject: '', template: '', recipients: '' });
+      setForm({ name: '', subject: '', template: 'role-intro' });
+      setTemplateBody(OUTREACH_TEMPLATES[0].body);
+      setSelected([]);
+      setRecQ('');
+      setManual('');
       setShowCompose(false);
+      load();
       syncAll();
     } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
   };
+
+  const openDetail = async (id: string) => {
+    setDetail(null); setDetailTab('overview'); setDetQ(''); setDetStatus(''); setDetailLoading(true);
+    try { setDetail(unwrapObj(await billingApi.campaignDetail(id))); }
+    catch (e) { setError(errMsg(e)); }
+    finally { setDetailLoading(false); }
+  };
+  const retry = async (id: string) => {
+    setRetryBusy(id);
+    try {
+      const updated = unwrapObj(await billingApi.retryCampaign(id));
+      if (updated?.id) {
+        setCamps((x) => x.map((c) => (c.id === id ? { ...c, status: updated.status } : c)));
+        if (detail?.id === id) openDetail(id);
+        setOk(`Requeued ${updated.requeued ?? 0} failed recipient(s).`);
+        syncAll();
+      }
+    } catch (e) { setError(errMsg(e)); } finally { setRetryBusy(''); }
+  };
+
+  const totals = {
+    camps: camps.length,
+    recipients: camps.reduce((s, c) => s + Number(c.total || 0), 0),
+    queued: camps.filter((c) => c.status === 'Queued').length,
+    failed: camps.filter((c) => c.status === 'Failed').length,
+  };
+  const visible = camps
+    .filter((c) => (statusTab === 'all' ? true : statusTab === 'failed' ? Number((c as any).failed ?? 0) > 0 || c.status === 'Failed' : c.status === statusTab))
+    .filter((c) => !dq.trim() || `${c.name || ''} ${c.subject || ''} ${c.id || ''} ${c.status || ''}`.toLowerCase().includes(dq.trim().toLowerCase()));
+
+  const detRecipients: any[] = detail?.recipients || [];
+  const detEvents: any[] = detail?.events || [];
+  const detFiltered = detRecipients.filter((r: any) => {
+    if (detStatus && r.status !== detStatus) return false;
+    if (!dDq.trim()) return true;
+    return String(r.email || '').toLowerCase().includes(dDq.trim().toLowerCase());
+  });
+  const detStats = detail?.stats || {};
+
   return (
-    <div className={cardCls}>
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-base font-extrabold text-slate-900">Email Outreach (quota-guarded)</h3>
-        <button type="button" onClick={() => setShowCompose(true)} className={btnPrimary}>+ New campaign</button>
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {([
+          ['Campaigns', totals.camps, 'total sends'],
+          ['Recipients', totals.recipients, 'emails queued'],
+          ['Queued', totals.queued, 'in flight'],
+          ['Need retry', totals.failed, 'failed campaigns'],
+          ['Quota left', quota?.remaining ?? '—', quota ? `used ${quota.used ?? 0}/${quota.limit ?? '—'}` : 'monthly limit'],
+        ] as const).map(([label, value, sub]) => (
+          <div key={label} className="p-4 bg-white rounded-2xl border border-slate-200/90 shadow-sm">
+            <div className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">{label}</div>
+            <div className="text-2xl font-extrabold text-slate-900">{value}</div>
+            <div className="text-[11px] font-bold text-slate-500">{sub}</div>
+          </div>
+        ))}
       </div>
-      {error && <PanelError message={error} onRetry={load} />}
-      {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
-      <Modal open={showCompose} onClose={() => setShowCompose(false)} title="New outreach campaign" subtitle="Quota is checked and deducted idempotently">
+
+      <div className={cardCls}>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="flex rounded-xl bg-slate-100 border border-slate-200 p-0.5 w-fit" role="tablist" aria-label="Campaign status">
+            {([['all', 'All'], ['Queued', 'Queued'], ['Sent', 'Sent'], ['failed', 'Needs retry']] as const).map(([v, label]) => (
+              <button key={v} role="tab" aria-selected={statusTab === v} type="button" onClick={() => setStatusTab(v)}
+                className={`px-3.5 py-1.5 rounded-lg font-bold text-xs cursor-pointer ${statusTab === v ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>{label}</button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            {quota && (
+              <span className="px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 text-[11px] font-extrabold text-slate-700 whitespace-nowrap">
+                {quota.used ?? 0}/{quota.limit ?? '—'}{quota.remaining !== undefined ? ` • ${quota.remaining} left` : ''}
+              </span>
+            )}
+            <ExportButton filename="outreach-campaigns.csv" rows={visible.map((c: any) => ({ id: c.id, name: c.name, subject: c.subject, status: c.status, total: c.total, createdAt: String(c.createdAt || '').slice(0, 10) }))} columns={['id', 'name', 'subject', 'status', 'total', 'createdAt']} />
+            <button type="button" onClick={() => { setShowCompose(true); }} className={btnPrimary}>+ New campaign</button>
+          </div>
+        </div>
+
+        <CrudToolbar
+          search={q} onSearch={setQ} searchPh="Search campaigns by name, subject or ID…"
+          suggest={{ items: camps, getTitle: (c: any) => String(c.name || c.id), getMeta: (c: any) => `${c.id} • ${c.total || 0} recipient(s)`, getStatus: (c: any) => c.status, getQuery: (c: any) => String(c.name || c.id) }}
+        />
+
+        {error && <PanelError message={error} onRetry={load} />}
+        {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
+
+        {visible.length === 0 ? <EmptyState title="No campaigns" message={camps.length === 0 ? 'Compose your first quota-guarded outreach campaign.' : 'Nothing matches this filter — clear search or switch tabs.'} /> : (
+          <div className="space-y-2">{visible.map((c) => (
+            <div key={c.id} className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 transition">
+              <button type="button" onClick={() => openDetail(c.id)} className="flex-1 min-w-0 text-left cursor-pointer" title="Open delivery drawer">
+                <div className="font-extrabold text-slate-900 text-sm truncate">{c.name || 'Untitled campaign'} <span className="font-mono text-[11px] text-slate-400">{c.id}</span></div>
+                <div className="text-[11px] text-slate-500 font-medium truncate">{c.total || 0} recipient(s) • {String(c.createdAt || '').slice(0, 10)} • {String(c.subject || 'no subject').slice(0, 80)}</div>
+              </button>
+              <StatusPill value={c.status} />
+              <RowMenu label={`Manage ${c.id}`} items={[
+                { label: 'Open delivery drawer', onSelect: () => openDetail(c.id) },
+                { label: 'Retry failed', onSelect: () => retry(c.id) },
+              ]} />
+            </div>
+          ))}</div>
+        )}
+      </div>
+
+      <Modal open={showCompose} onClose={() => setShowCompose(false)} title="New outreach campaign" subtitle="Search & select recipients — quota is checked and deducted idempotently" wide>
         <form onSubmit={send} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Campaign name"><input className={kitInput} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
-          <Field label="Subject"><input className={kitInput} value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} /></Field>
-          <div className="sm:col-span-2"><Field label="Template"><input className={kitInput} value={form.template} onChange={(e) => setForm({ ...form, template: e.target.value })} /></Field></div>
-          <div className="sm:col-span-2"><Field label="Recipients" hint="One email per line"><textarea className={kitInput} rows={3} value={form.recipients} onChange={(e) => setForm({ ...form, recipients: e.target.value })} /></Field></div>
+          <Field label="Campaign name *"><input className={kitInput} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Oct outreach 01" /></Field>
+          <Field label="Subject *"><input className={kitInput} value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} placeholder="e.g. Backend role @ Acme" /></Field>
+          <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Template *">
+              <Select value={form.template} onChange={applyTemplatePreset} options={OUTREACH_TEMPLATES.map((t) => ({ value: t.id, label: t.name }))} />
+            </Field>
+            <div className="text-[11px] font-bold text-slate-500 self-end pb-1">Tokens: {'{{name}} {{role}} {{company}} {{location}} {{sender}}'}</div>
+          </div>
+          <div className="sm:col-span-2"><Field label="Template body" hint="Stored with the campaign; personalised per recipient on send"><textarea className={kitInput} rows={4} value={templateBody} onChange={(e) => setTemplateBody(e.target.value)} placeholder="Hi {{name}}, …" /></Field></div>
+
+          <div className="sm:col-span-2 rounded-2xl border border-slate-200 overflow-hidden">
+            <div className="px-3.5 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600">Recipients ({selected.length})</span>
+              <span className="text-[11px] font-bold text-slate-500">{contactsLoading ? 'Loading pools & pipeline…' : `${contacts.length} searchable`}{quota?.remaining !== undefined ? ` • ${quota.remaining} quota left` : ''}</span>
+            </div>
+            <div className="p-3.5 space-y-3">
+              {selected.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {selected.map((s) => (
+                    <span key={s} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-[#0B5FD9] border border-blue-200 font-bold text-[11px]">
+                      {s}
+                      <button type="button" onClick={() => removeEmail(s)} aria-label={`Remove ${s}`} className="hover:text-red-600 font-extrabold">✕</button>
+                    </span>
+                  ))}
+                  <button type="button" onClick={() => setSelected([])} className="px-2.5 py-1 rounded-full bg-white border border-slate-200 text-slate-500 font-bold text-[11px]">Clear all</button>
+                </div>
+              )}
+              <Field label="Search pools & pipeline">
+                <SearchSuggest value={recQ} onChange={setRecQ} placeholder={contacts.length > 0 ? 'Type 2+ letters of name, email or pool…' : 'Loading contacts… type to filter once ready'}
+                  items={contacts.map((c) => ({ key: c.email, query: c.email, title: c.name ? `${c.name} — ${c.email}` : c.email, meta: c.src, status: 'Selected' }))}
+                  onPick={(it) => { addEmails([it.key]); setRecQ(''); }} />
+              </Field>
+              {recQ.trim().length >= 2 && recMatches.length > 0 && (
+                <div className="space-y-1.5">
+                  {recMatches.map((c) => (
+                    <button key={c.email} type="button" onClick={() => addEmails([c.email])}
+                      className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl border border-slate-200 bg-white hover:border-blue-300 text-left transition">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-bold text-slate-900 text-xs truncate">{c.name ? `${c.name} — ` : ''}{c.email}</span>
+                        <span className="block text-[10px] text-slate-500 font-medium truncate">{c.src}</span>
+                      </span>
+                      <span className="text-[11px] font-extrabold text-[#0B5FD9] shrink-0">+ Add</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Field label="Add whole pool">
+                  <div className="flex gap-2">
+                    <div className="flex-1 min-w-0"><Select value={poolPick} onChange={setPoolPick} placeholder="Select pool" options={pools.filter((p: any) => p.status !== 'Archived').map((p: any) => ({ value: p.id, label: `${p.name} (${p.id})` }))} /></div>
+                    <button type="button" onClick={addPoolMembers} disabled={busy || !poolPick} className="px-3 py-2 rounded-xl bg-slate-900 text-white font-bold text-[11px] disabled:opacity-40 shrink-0">Add all</button>
+                  </div>
+                </Field>
+                <Field label="Paste emails manually" hint="Comma / space / newline separated — Enter to add">
+                  <div className="flex gap-2">
+                    <input className={kitInput} value={manual} onChange={(e) => setManual(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addManual(); } }} placeholder="name@company.com, …" />
+                    <button type="button" onClick={addManual} disabled={!manual.trim()} className="px-3 py-2 rounded-xl bg-white border border-slate-200 font-bold text-[11px] disabled:opacity-40 shrink-0">Add</button>
+                  </div>
+                </Field>
+              </div>
+            </div>
+          </div>
+
+          {quota?.remaining !== undefined && (
+            <div className="sm:col-span-2 text-[11px] font-bold text-slate-500">
+              This send will consume {selected.length} of your remaining {quota.remaining} outreach email(s).
+            </div>
+          )}
           <div className="sm:col-span-2 flex justify-end gap-2">
             <button type="button" onClick={() => setShowCompose(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
-            <button className={btnPrimary} disabled={busy}>{busy ? 'Queueing…' : 'Queue campaign'}</button>
+            <button className={btnPrimary} disabled={busy || selected.length === 0}>{busy ? 'Queueing…' : `Queue to ${selected.length} recipient(s)`}</button>
           </div>
         </form>
       </Modal>
-      {camps.length > 0 && <div className="space-y-2">{camps.map((c) => (
-        <div key={c.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold">{c.name} • {c.total} recipient(s) • {c.status}</div>
-      ))}</div>}
+
+      {(detail !== null || detailLoading) && (
+        <DetailDrawer title={detail?.name || 'Campaign'} subtitle={detail ? `${detail.id} • ${detail.status} • ${String(detail.createdAt || '').slice(0, 10)}` : 'Loading…'} onClose={() => setDetail(null)} width="max-w-4xl">
+          {detailLoading ? <InlineLoading message="Loading delivery stats…" /> : detail ? (
+            <div className="space-y-4 text-xs">
+              <DetailTabs tabs={[
+                { key: 'overview', label: 'Overview' },
+                { key: 'recipients', label: 'Recipients', count: detRecipients.length },
+                { key: 'activity', label: 'Activity', count: detEvents.length },
+              ]} active={detailTab} onPick={setDetailTab} />
+              {detailTab === 'overview' && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[['Total', detStats.total ?? detail.total ?? 0], ['Queued', detStats.Queued ?? 0], ['Sent', detStats.Sent ?? 0], ['Failed', detStats.Failed ?? 0]].map(([k, v]) => (
+                      <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                        <div className="text-lg font-extrabold text-slate-900">{String(v)}</div>
+                        <div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <KeyValues data={[
+                    ['Campaign', detail.name || '—'],
+                    ['Status', <StatusPill value={detail.status} />],
+                    ['Subject', detail.subject || '—'],
+                    ['Template', <span className="whitespace-pre-wrap">{String(detail.template || '—').slice(0, 400)}</span>],
+                    ['Queued by', detail.createdBy || '—'],
+                    ['Date', detail.createdAt ? String(detail.createdAt).slice(0, 10) : '—'],
+                  ]} />
+                  <div className="flex justify-end gap-2">
+                    <button type="button" onClick={() => retry(detail.id)} disabled={retryBusy === detail.id} className={btnDark}>{retryBusy === detail.id ? 'Requeueing…' : 'Retry failed'}</button>
+                  </div>
+                </div>
+              )}
+              {detailTab === 'recipients' && (
+                <div className="space-y-2">
+                  <CrudToolbar search={detQ} onSearch={setDetQ} searchPh="Search recipient emails…" status={detStatus} onStatus={setDetStatus} statuses={['Queued', 'Sent', 'Failed']} />
+                  <DrawerList items={detFiltered} empty="No recipients match this filter." label="Delivery"
+                    render={(r: any) => (
+                      <DrawerCard key={r.id} status={r.status} title={r.email} meta={r.retriedAt ? `retried ${String(r.retriedAt).slice(0, 10)}` : r.id} right={<StatusPill value={r.status} />} />
+                    )} />
+                </div>
+              )}
+              {detailTab === 'activity' && (
+                <DrawerList items={detEvents} empty="No delivery events yet." label="Timeline"
+                  render={(ev: any) => (
+                    <DrawerCard key={ev.id} status={ev.event?.includes('fail') ? 'Failed' : ev.event?.includes('retry') ? 'Pending' : 'Sent'}
+                      title={`${ev.event} — ${ev.email}`} meta={`${ev.id} • ${String(ev.createdAt || '').slice(0, 16).replace('T', ' ')}`} />
+                  )} />
+              )}
+            </div>
+          ) : <EmptyState title="Not found" message="This campaign may have been removed." />}
+        </DetailDrawer>
+      )}
     </div>
   );
 }
 
 /** Print only the document: isolated print window with corporate styling. */
 export function printHtmlDocument(title: string, bodyHtml: string) {
+  const safeTitle = String(title || 'Document').replace(/[<>&"]/g, '').slice(0, 160) || 'Document';
+  const safeBody = sanitizeHtml(bodyHtml);
   const w = window.open('', '_blank', 'width=900,height=700');
   if (!w) return;
-  w.document.write(`<!doctype html><html><head><title>${title.replace(/</g, '')}</title><style>body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:32px;max-width:800px;margin:0 auto;}h2{margin:0 0 4px;}h3{margin:18px 0 6px;border-bottom:2px solid #111;padding-bottom:4px;}table{border-collapse:collapse;width:100%;margin:8px 0;}th,td{border:1px solid #999;padding:6px 8px;text-align:left;font-size:13px;}th{background:#f1f5f9;}.totals{float:right;width:280px;margin-top:8px;}.totals div{display:flex;justify-content:space-between;padding:3px 0;font-size:13px;}.terms{clear:both;margin-top:16px;font-size:12px;color:#334155;}@media print{.no-print{display:none;}}</style></head><body>${bodyHtml}<div class="no-print" style="margin-top:24px;"><button onclick="window.print()">Print / Save PDF</button></div></body></html>`);
+  w.document.write(`<!doctype html><html><head><title>${safeTitle}</title><style>body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:32px;max-width:800px;margin:0 auto;}h2{margin:0 0 4px;}h3{margin:18px 0 6px;border-bottom:2px solid #111;padding-bottom:4px;}table{border-collapse:collapse;width:100%;margin:8px 0;}th,td{border:1px solid #999;padding:6px 8px;text-align:left;font-size:13px;}th{background:#f1f5f9;}.totals{float:right;width:280px;margin-top:8px;}.totals div{display:flex;justify-content:space-between;padding:3px 0;font-size:13px;}.terms{clear:both;margin-top:16px;font-size:12px;color:#334155;}@media print{.no-print{display:none;}}</style></head><body>${safeBody}<div class="no-print" style="margin-top:24px;"><button onclick="window.print()">Print / Save PDF</button></div></body></html>`);
   w.document.close();
+}
+
+/** P5: authenticated document download — bearer attached, blob revoked. */
+export async function downloadDocumentFile(id: string, name: string): Promise<void> {
+  const blob = await documentsApi.downloadBlob(id);
+  const url = URL.createObjectURL(blob);
+  try {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = String(name || id).replace(/["\r\n\\/]/g, '').slice(0, 160) || id;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
 }
 
 export const TEMPLATE_TOKENS = ['company_name', 'date', 'hiring_type', 'rate_percent', 'payment_days', 'replacement_days', 'gst_note', 'ownership', 'duplicates', 'cancellation', 'template_name'];
@@ -2281,38 +4154,42 @@ export const TEMPLATE_TOKENS = ['company_name', 'date', 'hiring_type', 'rate_per
 /** Fill {{tokens}} in template HTML with template terms + company context. */
 export function fillTemplate(t: any, companyName?: string): string {
   const map: Record<string, string> = {
-    company_name: companyName || t?.orgId || '[Company Name]',
-    date: new Date().toISOString().slice(0, 10),
-    hiring_type: t?.hiringType || 'Mid-level IT roles',
-    rate_percent: t?.rate !== undefined ? String(t.rate) : (t?.rateMin !== undefined && t?.rateMax !== undefined ? (t.rateMin === t.rateMax ? String(t.rateMin) : `${t.rateMin}–${t.rateMax}`) : '8.33–10'),
-    payment_days: String(t?.paymentTermsDays ?? 30),
-    replacement_days: String(t?.replacementDays ?? 90),
-    gst_note: t?.gstNote || 'GST charged extra as applicable.',
-    ownership: t?.ownershipClause || '',
-    duplicates: t?.duplicatePolicy || '',
-    cancellation: t?.cancellationTerms || '',
-    template_name: t?.name || '',
+    company_name: escHtml(companyName || t?.orgId || '[Company Name]'),
+    date: escHtml(new Date().toISOString().slice(0, 10)),
+    hiring_type: escHtml(t?.hiringType || 'Mid-level IT roles'),
+    rate_percent: escHtml(t?.rate !== undefined ? String(t.rate) : (t?.rateMin !== undefined && t?.rateMax !== undefined ? (t.rateMin === t.rateMax ? String(t.rateMin) : `${t.rateMin}–${t.rateMax}`) : '8.33–10')),
+    payment_days: escHtml(String(t?.paymentTermsDays ?? 30)),
+    replacement_days: escHtml(String(t?.replacementDays ?? 90)),
+    gst_note: escHtml(t?.gstNote || 'GST charged extra as applicable.'),
+    ownership: escHtml(t?.ownershipClause || ''),
+    duplicates: escHtml(t?.duplicatePolicy || ''),
+    cancellation: escHtml(t?.cancellationTerms || ''),
+    template_name: escHtml(t?.name || ''),
   };
   let html = String(t?.bodyHtml || '');
   for (const [k, v] of Object.entries(map)) html = html.split(`{{${k}}}`).join(String(v));
-  return html;
+  // P5: sanitize final HTML (template body is editor-controlled).
+  return sanitizeHtml(html);
 }
 
 /** Open a server-generated PDF blob in a new tab. */
 export async function openPdfBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
-  const w = window.open(url, '_blank');
+  const w = window.open(url, '_blank', 'noopener');
   if (!w) {
     const a = document.createElement('a');
     a.href = url; a.download = filename;
     document.body.appendChild(a); a.click(); a.remove();
   }
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  // P5: revoke promptly so invoice/agreement blobs don't linger in memory.
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
 /** Download an HTML document as a Word-compatible .doc file. */
 export function downloadDocFile(filename: string, title: string, bodyHtml: string) {
-  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${title}</title></head><body>${bodyHtml}</body></html>`;
+  const safeTitle = String(title || 'Document').replace(/[<>&"]/g, '').slice(0, 160);
+  const safeBody = sanitizeHtml(bodyHtml);
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${safeTitle}</title></head><body>${safeBody}</body></html>`;
   const blob = new Blob([html], { type: 'application/msword' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -2505,7 +4382,9 @@ export function InvoicesPanel() {
           </div>
         </div>
         <div className="flex flex-col lg:flex-row gap-2">
-          <input className={`${inputCls} flex-1`} placeholder="Search invoice ID, number, org, agreement…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <SearchSuggest value={q} onChange={setQ} placeholder="Search invoice ID, number, org, agreement…"
+    items={invoices.map((i: any) => ({ key: String(i.id), query: String(i.number || i.id), title: String(i.number || i.id), meta: [i.orgId, i.total != null ? `₹${i.total}` : ''].filter(Boolean).join(' • '), status: i.status }))}
+    onPick={(it) => { setQ(it.query ?? it.key); setInvPage(1); }} />
           <div className="w-full lg:w-44 shrink-0">
             <Select value={statusF} onChange={setStatusF} ariaLabel="Invoice status filter" placeholder="All statuses"
               options={[{ value: '', label: 'All statuses' }, ...INV_STATUSES.map((s) => ({ value: s, label: s }))]} />
@@ -2969,7 +4848,9 @@ export function BillingPanel() {
           </div>
         </div>
         <div className="flex flex-col lg:flex-row gap-2">
-          <input className={`${inputCls} flex-1`} placeholder="Search payment ID, invoice, org, status…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <SearchSuggest value={q} onChange={setQ} placeholder="Search payment ID, invoice, org, status…"
+    items={payments.map((p: any) => ({ key: String(p.id), query: String(p.id), title: String(p.id), meta: [p.invoiceId, p.amount != null ? `₹${p.amount}` : ''].filter(Boolean).join(' • '), status: p.status }))}
+    onPick={(it) => { setQ(it.query ?? it.key); setPayPage(1); }} />
           <div className="flex items-center gap-2">
             <PageSize value={bps} onChange={(n) => setBillPs(String(n))} />
           </div>
@@ -3202,7 +5083,9 @@ export function SubscriptionsPanel() {
             <button type="button" onClick={() => setShowSubscribe(true)} className={btnPrimary}>+ Subscribe org</button>
           </div>
         </div>
-        <input className={inputCls} placeholder="Search subscription ID, org, plan, status…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <SearchSuggest value={q} onChange={setQ} placeholder="Search subscription ID, org, plan, status…"
+          items={subs.map((s: any) => ({ key: String(s.id), query: String(s.id), title: String(s.id), meta: [s.orgId, s.planId].filter(Boolean).join(' • '), status: s.status }))}
+          onPick={(it) => setQ(it.query ?? it.key)} />
       </div>
       {error && <PanelError message={error} onRetry={load} />}
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
@@ -3485,11 +5368,11 @@ export function AgreementTemplatesPanel({ templates, onChanged }: { templates: a
                 <div ref={tplBodyRef} contentEditable suppressContentEditableWarning
                   key={editingTpl || 'new'}
                   className="min-h-[280px] p-4 rounded-xl bg-white border border-slate-200 text-xs leading-relaxed focus:outline-none focus:border-[#087BFF]"
-                  dangerouslySetInnerHTML={{ __html: tplBodySeed }} />
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(tplBodySeed) }} />
               </>
             ) : (
               <div className="p-4 rounded-xl bg-white border border-slate-200 text-xs leading-relaxed max-h-[320px] overflow-y-auto" data-lenis-prevent
-                dangerouslySetInnerHTML={{ __html: fillTemplate({ ...tplForm, rateMin: tplForm.rateMin === '' ? undefined : Number(tplForm.rateMin), rateMax: tplForm.rateMax === '' ? undefined : Number(tplForm.rateMax), bodyHtml: tplBodyRef.current?.innerHTML || tplBodySeed }, tplForm.orgId || undefined) }} />
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(fillTemplate({ ...tplForm, rateMin: tplForm.rateMin === '' ? undefined : Number(tplForm.rateMin), rateMax: tplForm.rateMax === '' ? undefined : Number(tplForm.rateMax), bodyHtml: sanitizeHtml(tplBodyRef.current?.innerHTML || tplBodySeed) }, tplForm.orgId || undefined)) }} />
             )}
           </div>
           <div className="sm:col-span-2 flex justify-end gap-2">
@@ -3503,7 +5386,7 @@ export function AgreementTemplatesPanel({ templates, onChanged }: { templates: a
       <Modal open={tplPreview !== null} onClose={() => setTplPreview(null)} title={tplPreview?.name || ''} subtitle={`${tplPreview?.id || ''} • v${tplPreview?.version || ''} • ${tplPreview?.status || ''}`} wide>
         <div className="space-y-3">
           <div className="p-5 rounded-2xl bg-white border border-slate-200 text-xs leading-relaxed max-h-[52vh] overflow-y-auto" data-lenis-prevent
-            dangerouslySetInnerHTML={{ __html: tplPreview ? fillTemplate(tplPreview) : '' }} />
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(tplPreview ? fillTemplate(tplPreview) : '') }} />
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => tplPreview && downloadDocFile(`${tplPreview.name || 'agreement'}-v${tplPreview.version || 1}`, tplPreview.name || 'Agreement', fillTemplate(tplPreview))} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Download .doc (Word)</button>
             <button type="button" onClick={() => tplPreview && printHtmlDocument(tplPreview.name || 'Agreement', fillTemplate(tplPreview))} className="px-4 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs">Print / Save PDF</button>
@@ -3516,6 +5399,10 @@ export function AgreementTemplatesPanel({ templates, onChanged }: { templates: a
 
 /* ---------------- Phase 3/4: Commissions & payouts ---------------- */
 export function CommissionsPanel() {
+  const { user } = useAuth();
+  const canManageBilling = useCan('manage_billing');
+  // Phase 6: agencies see payable-only ledgers; finance controls stay hidden without a grant.
+  const agencyFinanceView = !!user && ['agency_admin', 'agency_recruiter', 'vendor', 'recruiter'].includes(user.role) && !canManageBilling;
   const [agreements, setAgreements] = useState<any[]>([]);
   const [commissions, setCommissions] = useState<any[]>([]);
   const [payouts, setPayouts] = useState<any[]>([]);
@@ -3568,6 +5455,7 @@ export function CommissionsPanel() {
     } catch (e) { setError(errMsg(e)); setLoadError(errStatus(e)); }
   };
   useEffect(() => { setPage(1); setAgrPage(1); setPayPage(1); }, [dqCq, leg, approvalF, ps]);
+  useEffect(() => { if (agencyFinanceView && !leg) setLeg('payable'); }, []);
   useEffect(() => { load(page, ps, dqCq, leg, approvalF, agrPage, payPage); }, [page, ps, dqCq, leg, approvalF, agrPage, payPage]);
   const slabOf = (hiringType: string) => slabs.find((s: any) => s.hiringType === hiringType);
   const applyTemplate = (id: string) => {
@@ -3647,9 +5535,9 @@ export function CommissionsPanel() {
   const commMenuFor = (c: any) => (
     <RowMenu label={`Commission ${c.id}`} items={[
       { label: 'View detail', onSelect: () => setCommDetail(c) },
-      ...(c.approvalStatus !== 'Approved' ? [{ label: 'Approve commission…', onSelect: () => setApproveFor(c) }] : []),
-      ...(c.approvalStatus === 'Approved' && monthsLeft(c) > 0 ? [{ label: c.basisType === 'monthly_ctc' ? `Generate month invoice (${Number(c.billedMonths || 0) + 1}/${c.contractMonths || 12})…` : 'Generate invoice…', onSelect: () => setInvoiceFor(c) }] : []),
-      ...(c.approvalStatus === 'Approved' && c.paymentStatus !== 'Paid' ? [{ label: 'Process payout…', onSelect: () => setPayoutFor(c) }] : []),
+      ...(!agencyFinanceView && c.approvalStatus !== 'Approved' ? [{ label: 'Approve commission…', onSelect: () => setApproveFor(c) }] : []),
+      ...(!agencyFinanceView && c.approvalStatus === 'Approved' && monthsLeft(c) > 0 ? [{ label: c.basisType === 'monthly_ctc' ? `Generate month invoice (${Number(c.billedMonths || 0) + 1}/${c.contractMonths || 12})…` : 'Generate invoice…', onSelect: () => setInvoiceFor(c) }] : []),
+      ...(!agencyFinanceView && c.approvalStatus === 'Approved' && c.paymentStatus !== 'Paid' ? [{ label: 'Process payout…', onSelect: () => setPayoutFor(c) }] : []),
       { label: 'Verify uniqueness…', onSelect: () => checkDup(c) },
       { label: 'Adjustments…', onSelect: async () => {
         setAdjustFor(c); setAdjustForm({ amount: '', reason: '' });
@@ -3680,7 +5568,7 @@ export function CommissionsPanel() {
           </div>
           <div className="flex gap-2">
             <ExportButton filename="commissions.csv" rows={filteredComms} columns={['id', 'orgId', 'agencyId', 'feeBasis', 'basisType', 'rate', 'gross', 'total', 'approvalStatus', 'paymentStatus', 'invoiceId']} />
-            <button type="button" onClick={() => setShowAgreement(true)} className={btnPrimary}>+ New agreement</button>
+            {!agencyFinanceView && <button type="button" onClick={() => setShowAgreement(true)} className={btnPrimary}>+ New agreement</button>}
           </div>
         </div>
         <div className="flex rounded-xl bg-slate-100 border border-slate-200 p-0.5 w-fit" role="tablist" aria-label="Commercial views">
@@ -3698,7 +5586,9 @@ export function CommissionsPanel() {
           <div className="p-3 rounded-2xl bg-purple-50 border border-purple-200"><div className="text-[10px] font-bold text-purple-700 uppercase">Agency payable</div><div className="text-base font-extrabold">₹{payTotal.toLocaleString('en-IN')}</div></div>
         </div>
         <div className="flex flex-col lg:flex-row gap-2">
-          <input className={`${inputCls} flex-1`} placeholder="Search commission ID, org, agency, candidate…" value={cq} onChange={(e) => setCq(e.target.value)} />
+          <SearchSuggest value={cq} onChange={setCq} placeholder="Search commission ID, org, agency, candidate…"
+    items={commissions.map((c: any) => ({ key: String(c.id), query: String(c.id), title: String(c.id), meta: [c.orgId, c.agencyId].filter(Boolean).join(' • '), status: c.approvalStatus }))}
+    onPick={(it) => { setCq(it.query ?? it.key); setPage(1); }} />
           <div className="w-full lg:w-44 shrink-0">
             <Select value={leg} onChange={setLeg} ariaLabel="Ledger filter" placeholder="Both ledgers"
               options={[{ value: '', label: 'Both ledgers' }, { value: 'receivable', label: 'Receivable only' }, { value: 'payable', label: 'Payable only' }]} />
@@ -3801,13 +5691,13 @@ export function CommissionsPanel() {
             const src = tpl?.bodyHtml
               ? { ...tpl, hiringType: agDetail?.hiringType || tpl.hiringType, rate: agDetail?.rate, paymentTermsDays: agDetail?.paymentTermsDays ?? tpl.paymentTermsDays, replacementDays: agDetail?.replacementDays ?? tpl.replacementDays, gstNote: tpl.gstNote, ownershipClause: agDetail?.ownershipClause || tpl.ownershipClause, duplicatePolicy: agDetail?.duplicatePolicy || tpl.duplicatePolicy, cancellationTerms: agDetail?.cancellationTerms || tpl.cancellationTerms, bodyHtml: tpl.bodyHtml, name: tpl.name }
               : null;
-            const html = src ? fillTemplate(src, agDetail?.orgId)
-              : `<h2>Placement Services Agreement — ${agDetail?.id}</h2><p>Between <strong>NexaTalent IT Solutions</strong> and <strong>${agDetail?.orgId}</strong>.</p><p>Rate: <strong>${agDetail?.rate}%</strong> of ${agDetail?.basisType === 'monthly_ctc' ? `monthly CTC × ${agDetail?.contractMonths || 12} months` : 'annual CTC'} (${agDetail?.hiringType}). Payable within <strong>${agDetail?.paymentTermsDays || 30} days</strong> of joining. GST extra. Replacement within <strong>${agDetail?.replacementDays ?? 90} days</strong>.</p><p>${agDetail?.ownershipClause || ''}</p><p>${agDetail?.duplicatePolicy || ''}</p><p>${agDetail?.cancellationTerms || ''}</p>`;
+            const html = sanitizeHtml(src ? fillTemplate(src, agDetail?.orgId)
+              : `<h2>Placement Services Agreement — ${escHtml(agDetail?.id)}</h2><p>Between <strong>NexaTalent IT Solutions</strong> and <strong>${escHtml(agDetail?.orgId)}</strong>.</p><p>Rate: <strong>${escHtml(agDetail?.rate)}%</strong> of ${agDetail?.basisType === 'monthly_ctc' ? `monthly CTC × ${Number(agDetail?.contractMonths || 12)} months` : 'annual CTC'} (${escHtml(agDetail?.hiringType)}). Payable within <strong>${Number(agDetail?.paymentTermsDays || 30)} days</strong> of joining. GST extra. Replacement within <strong>${Number(agDetail?.replacementDays ?? 90)} days</strong>.</p><p>${escHtml(agDetail?.ownershipClause || '')}</p><p>${escHtml(agDetail?.duplicatePolicy || '')}</p><p>${escHtml(agDetail?.cancellationTerms || '')}</p>`);
             const title = `Agreement ${agDetail?.id}`;
             return (
               <div className="space-y-2">
                 <div className="p-4 rounded-2xl bg-white border border-slate-200 text-xs leading-relaxed max-h-[320px] overflow-y-auto" data-lenis-prevent
-                  dangerouslySetInnerHTML={{ __html: html }} />
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }} />
                 <div className="flex flex-wrap gap-2">
                   {!agDetail?.companyAccepted ? <button type="button" onClick={() => accept(agDetail.id)} className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-xs">Mark accepted</button> : null}
                   <button type="button" onClick={async () => { try { await openPdfBlob(await billingApi.agreementPdf(agDetail.id), `Agreement-${agDetail.id}.pdf`); } catch (e) { setError(errMsg(e)); } }} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">Download PDF (server)</button>
@@ -4061,6 +5951,22 @@ export function LeadsPanel() {
     setDetail(l);
     try { setActivities(unwrapList(await salesApi.activities(l.id))); } catch { setActivities([]); }
   };
+  // Deep-link from Website Leads: /leads?open_lead=LEAD-xxx opens the 360° drawer
+  const [openLeadParam] = useQueryState('open_lead');
+  useEffect(() => {
+    if (!openLeadParam) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res: any = await salesApi.leads(`?page=1&pageSize=200&q=${encodeURIComponent(openLeadParam)}`);
+        const list = unwrapList(res);
+        const found = list.find((l: any) => l.id === openLeadParam) || list[0];
+        if (found && !cancelled) openLeadDetail(found);
+      } catch { /* lead may not exist — ignore */ }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openLeadParam]);
   const dropMove = (l: any, to: string) => {
     if (to === l.stage || l.mergedInto) return;
     if (to === 'Lost' && !reason.trim()) { setError('Type a lost reason in the note box first — it is recorded with the move.'); return; }
@@ -4125,7 +6031,9 @@ export function LeadsPanel() {
           </div>
         </div>
         <div className="flex flex-col lg:flex-row gap-2">
-          <input className={`${inputCls} flex-1`} placeholder="Search contact, company, email, ID…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <SearchSuggest value={q} onChange={setQ} placeholder="Search contact, company, email, ID…"
+    items={rows.map((l: any) => ({ key: String(l.id), query: String(l.id), title: String(l.contactName || l.id), meta: [l.companyName, l.email].filter(Boolean).join(' • '), status: l.stage }))}
+    onPick={(it) => { setQ(it.query ?? it.key); setPage(1); }} />
           <div className="w-full lg:w-44 shrink-0">
             <Select value={stageF} onChange={setStageF} ariaLabel="Stage filter" placeholder="All stages"
               options={[{ value: '', label: 'All stages' }, ...LEAD_STAGES.map((s) => ({ value: s, label: s }))]} />
@@ -4650,12 +6558,20 @@ export function SubmissionsPanel({ canReview = false }: { canReview?: boolean })
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
+  const [search, setSearch] = useState('');
+  const [statusTab, setStatusTab] = useState<'all' | 'review' | 'shortlisted' | 'rejected' | 'duplicates'>('all');
   const [form, setForm] = useState({ jobId: '', candidateEmail: '', consent: '' });
   const [busy, setBusy] = useState(false);
   const [showSubmit, setShowSubmit] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const pageSize = 10;
+  const [detail, setDetail] = useState<any>(null);
+  const [detailTab, setDetailTab] = useState<'overview' | 'candidate' | 'review'>('overview');
+  const [candProfile, setCandProfile] = useState<any>(null);
+  const [candApps, setCandApps] = useState<any[]>([]);
+  const [candLoading, setCandLoading] = useState(false);
+  const pageSize = 20;
   const load = async (p = page) => {
     setLoading(true); setError('');
     try {
@@ -4677,17 +6593,135 @@ export function SubmissionsPanel({ canReview = false }: { canReview?: boolean })
       syncAll();
     } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
   };
-  const review = async (id: string, status: string) => {
-    try { const u = unwrapObj(await salesApi.setSubmission(id, status)); setRows((x) => x.map((s) => (s.id === id ? u : s))); syncAll(); }
-    catch (e) { setError(errMsg(e)); }
+  const [reviewFor, setReviewFor] = useState<{ s: any; to: string } | null>(null);
+  const doReview = async () => {
+    if (!reviewFor) return;
+    setBusy(true);
+    try {
+      const u = unwrapObj(await salesApi.setSubmission(reviewFor.s.id, reviewFor.to));
+      setRows((x) => x.map((s) => (s.id === reviewFor.s.id ? u : s)));
+      if (detail?.id === reviewFor.s.id) setDetail(u);
+      setReviewFor(null); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const doAccept = async (s: any) => {
+    setBusy(true); setError(''); setOk('');
+    try {
+      const out = unwrapObj(await salesApi.acceptSubmission(s.id));
+      const appId = (out as { application?: { id?: string } })?.application?.id;
+      const upd = { ...s, status: 'Shortlisted', applicationId: appId };
+      setRows((x) => x.map((r) => (r.id === s.id ? upd : r)));
+      if (detail?.id === s.id) setDetail(upd);
+      setOk(`Accepted into pipeline — application ${appId || ''} created.`);
+      syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const openDetail = async (s: any) => {
+    setDetail(s); setDetailTab('overview'); setCandProfile(null); setCandApps([]); setCandLoading(true);
+    try {
+      const res: any = await talentApi.search('preview', s.candidateEmail || '');
+      const list = unwrapList(res);
+      setCandProfile(list.find((c: any) => String(c.email || c.id || '').toLowerCase() === String(s.candidateEmail || '').toLowerCase()) || list[0] || null);
+    } catch { setCandProfile(null); }
+    try {
+      const res: any = await apiClient.get(`/api/v1/applications?q=${encodeURIComponent(s.candidateEmail || '')}&page=1&pageSize=50`);
+      setCandApps(unwrapList(res).filter((a: any) => a.jobId === s.jobId));
+    } catch { setCandApps([]); }
+    setCandLoading(false);
+  };
+  const bucket = (s: any) => s.status === 'Shortlisted' ? 'shortlisted' : s.status === 'Rejected' ? 'rejected' : s.status === 'Duplicate-Review' ? 'duplicates' : 'review';
+  const visible = rows.filter((s) => (statusTab === 'all' || bucket(s) === statusTab))
+    .filter((s) => !search.trim() || `${s.candidateEmail} ${s.jobId} ${s.id} ${s.agencyId || ''}`.toLowerCase().includes(search.trim().toLowerCase()));
+  const count = (b: string) => rows.filter((s) => bucket(s) === b).length;
+  const scorecard = (() => {
+    const map = new Map<string, { n: number; acc: number }>();
+    for (const s of rows) {
+      const k = s.agencyId || s.submittedBy || 'direct';
+      const e = map.get(k) || { n: 0, acc: 0 };
+      e.n += 1; if (['Shortlisted'].includes(s.status) || s.applicationId) e.acc += 1;
+      map.set(k, e);
+    }
+    return [...map.entries()].map(([k, v]) => ({ agency: k, ...v, rate: Math.round((v.acc / Math.max(1, v.n)) * 100) })).sort((a, b) => b.n - a.n).slice(0, 5);
+  })();
+  const manageItems = (s: any) => {
+    const items: { label: string; danger?: boolean; disabled?: boolean; hint?: string; onSelect: () => void }[] = [
+      { label: 'View details', onSelect: () => openDetail(s) },
+    ];
+    if (canReview) {
+      for (const x of ['Under Review', 'Shortlisted', 'Rejected', 'Withdrawn'].filter((x) => x !== s.status)) {
+        items.push({ label: `Mark ${x}`, danger: x === 'Rejected', onSelect: () => setReviewFor({ s, to: x }) });
+      }
+      const dead = ['Rejected', 'Withdrawn'].includes(s.status);
+      items.push(dead
+        ? { label: 'Accept — closed', disabled: true, hint: `Submission is ${s.status}.`, onSelect: () => {} }
+        : s.applicationId
+          ? { label: `In pipeline (${s.applicationId})`, disabled: true, hint: 'Application already created.', onSelect: () => {} }
+          : { label: 'Accept to pipeline →', onSelect: () => doAccept(s) });
+    }
+    return items;
   };
   return (
-    <div className={cardCls}>
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-base font-extrabold text-slate-900">Agency Submissions {canReview ? '& Review' : ''}</h3>
-        <button type="button" onClick={() => setShowSubmit(true)} className={btnPrimary}>+ Submit candidate</button>
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {([
+          ['Total', rows.length, `of ${total}`],
+          ['In review', rows.filter((s) => bucket(s) === 'review').length, 'needs decision'],
+          ['Shortlisted', count('shortlisted'), 'accepted so far'],
+          ['Rejected', count('rejected'), 'with reasons'],
+          ['Duplicates', count('duplicates'), '90-day window'],
+        ] as const).map(([label, value, sub]) => (
+          <div key={label} className="p-4 bg-white rounded-2xl border border-slate-200/90 shadow-sm">
+            <div className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">{label}</div>
+            <div className="text-2xl font-extrabold text-slate-900">{value}</div>
+            <div className="text-[11px] font-bold text-slate-500">{sub}</div>
+          </div>
+        ))}
       </div>
-      {error && <PanelError message={error} onRetry={load} />}
+      <div className={cardCls}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex rounded-xl bg-slate-100 border border-slate-200 p-0.5 w-fit max-w-full overflow-x-auto" role="tablist" aria-label="Submission status">
+            {([[ 'all', 'All' ], [ 'review', 'In review' ], [ 'shortlisted', 'Shortlisted' ], [ 'rejected', 'Rejected' ], [ 'duplicates', 'Duplicates' ]] as const).map(([v, label]) => (
+              <button key={v} role="tab" aria-selected={statusTab === v} type="button" onClick={() => setStatusTab(v)}
+                className={`px-3.5 py-1.5 rounded-lg font-bold text-xs cursor-pointer whitespace-nowrap ${statusTab === v ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>{label}</button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search candidate, job, agency…" className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:border-blue-500 w-52" />
+            <button type="button" onClick={() => setShowSubmit(true)} className={btnPrimary}>+ Submit candidate</button>
+          </div>
+        </div>
+        {error && <PanelError message={error} onRetry={load} />}
+        {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
+        {scorecard.length > 1 && (
+          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+            <div className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5">Agency scorecard (current view)</div>
+            <div className="flex flex-wrap gap-2">
+              {scorecard.map((r) => (
+                <span key={r.agency} className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[11px] font-bold text-slate-700">{r.agency} • {r.n} subs • {r.rate}% accepted</span>
+              ))}
+            </div>
+          </div>
+        )}
+        {loading ? <InlineLoading message="Loading submissions…" /> : visible.length === 0 ? (
+          <EmptyState title="No submissions" message="Agency submissions appear here; duplicates route to Duplicate-Review, never auto-reject." />
+        ) : (
+          <div className="space-y-2">{visible.map((s) => (
+            <div key={s.id} className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 transition">
+              <button type="button" onClick={() => openDetail(s)} className="flex-1 min-w-0 text-left cursor-pointer" title="View details">
+                <div className="font-extrabold text-slate-900 text-sm truncate">{s.candidateEmail} <span className="text-slate-400">→</span> {s.jobId}</div>
+                <div className="text-[11px] text-slate-500 font-medium truncate">
+                  <span className="font-mono">{s.id}</span> • {s.agencyId || s.submittedBy || 'direct'}
+                  {s.applicationId && <span className="ml-1.5 px-1.5 py-px rounded-md bg-blue-50 text-[#087BFF] font-bold text-[10px]">in pipeline</span>}
+                  {s.status === 'Duplicate-Review' && <span className="ml-1.5 px-1.5 py-px rounded-md bg-amber-100 text-amber-800 font-bold text-[10px]">duplicate check</span>}
+                </div>
+              </button>
+              <StatusPill value={s.status} />
+              <RowMenu label={`Manage ${s.id}`} items={manageItems(s)} />
+            </div>
+          ))}</div>
+        )}
+        <Pager page={page} total={total} pageSize={pageSize} onPage={setPage} />
+      </div>
       <Modal open={showSubmit} onClose={() => setShowSubmit(false)} title="Submit candidate" subtitle="Duplicates route to review — never auto-rejected">
         <form onSubmit={submit} className="grid grid-cols-1 gap-3">
           <Field label="Job ID *"><input className={kitInput} value={form.jobId} onChange={(e) => setForm({ ...form, jobId: e.target.value })} /></Field>
@@ -4699,22 +6733,69 @@ export function SubmissionsPanel({ canReview = false }: { canReview?: boolean })
           </div>
         </form>
       </Modal>
-      {loading ? <InlineLoading message="Loading submissions…" /> : rows.length === 0 ? (
-        <EmptyState title="No submissions" message="Agency submissions appear here; duplicates route to Duplicate-Review, never auto-reject." />
-      ) : (
-        <div className="space-y-2">{rows.map((s) => (
-          <div key={s.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <div className="font-extrabold text-slate-900 text-sm truncate">{s.candidateEmail} → {s.jobId}</div>
-              <div className="text-xs text-slate-500 font-medium">{s.id} • <strong className={s.status === 'Duplicate-Review' ? 'text-amber-600' : 'text-blue-600'}>{s.status}</strong>{s.duplicateOf ? ` • possible duplicate of ${s.duplicateOf}` : ''}</div>
-            </div>
-            {canReview && (
-              <RowMenu items={['Under Review', 'Shortlisted', 'Rejected', 'Withdrawn'].filter((x) => x !== s.status).map((x) => ({ label: `Mark ${x}`, danger: x === 'Rejected', onSelect: () => review(s.id, x) }))} />
-            )}
+      {detail && (
+        <DetailDrawer title={`${detail.candidateEmail || detail.id}`} subtitle={`${detail.id} • ${detail.jobId} • ${detail.agencyId || detail.submittedBy || ''}`} onClose={() => setDetail(null)}>
+          <div className="flex rounded-xl bg-slate-100 border border-slate-200 p-0.5 w-fit" role="tablist" aria-label="Submission">
+            {([[ 'overview', 'Overview' ], [ 'candidate', 'Candidate' ], [ 'review', 'Review & accept' ]] as const).map(([v, label]) => (
+              <button key={v} role="tab" aria-selected={detailTab === v} type="button" onClick={() => setDetailTab(v)}
+                className={`px-3.5 py-1.5 rounded-lg font-bold text-xs cursor-pointer whitespace-nowrap ${detailTab === v ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>{label}</button>
+            ))}
           </div>
-        ))}        </div>
+          {detailTab === 'overview' && (
+            <KeyValues data={[
+              ['Candidate', detail.candidateEmail || '—'], ['Job', detail.jobId || '—'], ['Agency', detail.agencyId || detail.submittedBy || '—'],
+              ['Status', <StatusPill value={detail.status} />],
+              ['Consent evidence', detail.consentEvidence || detail.consent || '—'],
+              ['Resume', detail.resumeRef || '—'],
+              ['Duplicate of', detail.duplicateOf || '—'],
+              ['Pipeline application', detail.applicationId || '—'],
+              ['Submitted', detail.createdAt ? String(detail.createdAt).slice(0, 10) : '—'],
+            ]} />
+          )}
+          {detailTab === 'candidate' && (
+            candLoading ? <InlineLoading message="Loading candidate…" /> : (
+              <div className="space-y-2">
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
+                  <div className="font-extrabold text-slate-900 text-sm">{candProfile?.name || detail.candidateEmail}</div>
+                  <div className="text-slate-600 font-medium">{candProfile ? `${candProfile.roleTitle || '—'} • ${candProfile.experienceYears ?? '—'}y • ${candProfile.location || '—'}` : 'Limited preview — full profile unlocks on shortlist.'}</div>
+                </div>
+                <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Applications for this job ({candApps.length})</div>
+                {candApps.length === 0 ? <div className="text-[11px] text-slate-500">Not in pipeline yet — accept to create the application.</div> : candApps.map((a: any) => (
+                  <div key={a.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between gap-2">
+                    <span className="font-mono font-bold">{a.id}</span><StatusPill value={a.stage} />
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+          {detailTab === 'review' && (
+            <div className="space-y-2">
+              {!canReview ? <div className="text-[11px] text-slate-500 font-medium">Review actions need an employer reviewer account.</div> : (
+                <>
+                  <button type="button" disabled={busy || !!detail.applicationId || ['Rejected', 'Withdrawn'].includes(detail.status)} onClick={() => doAccept(detail)} className="w-full py-3 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-40 cursor-pointer">
+                    {busy ? 'Accepting…' : detail.applicationId ? `Already in pipeline (${detail.applicationId})` : 'Accept to pipeline →'}
+                  </button>
+                  <div className="flex gap-2 flex-wrap">
+                    {['Under Review', 'Shortlisted', 'Rejected', 'Withdrawn'].filter((x) => x !== detail.status).map((x) => (
+                      <button key={x} type="button" onClick={() => setReviewFor({ s: detail, to: x })} className={`px-3 py-2 rounded-xl font-bold text-[11px] cursor-pointer ${x === 'Rejected' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-white border border-slate-200 text-slate-700'}`}>Mark {x}</button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </DetailDrawer>
       )}
-      <Pager page={page} total={total} pageSize={pageSize} onPage={setPage} />
+      <ActionConfirm
+        open={reviewFor !== null}
+        onCancel={() => setReviewFor(null)}
+        title={`Mark submission ${reviewFor?.s.id || ''} → ${reviewFor?.to || ''}`}
+        subtitle={`${reviewFor?.s.candidateEmail || ''} • ${reviewFor?.s.jobId || ''}`}
+        why={['Status change is audited with actor and timestamp', reviewFor?.to === 'Rejected' ? 'The agency sees the rejection reason on its submission' : 'Duplicate history is preserved either way']}
+        confirmLabel={`Mark ${reviewFor?.to || ''}`}
+        tone={reviewFor?.to === 'Rejected' ? 'danger' : 'primary'}
+        onConfirm={doReview}
+      />
     </div>
   );
 }
@@ -4729,6 +6810,22 @@ export function TimesheetsPanel({ canApprove = false }: { canApprove?: boolean }
   const [showSubmit, setShowSubmit] = useState(false);
   const [review, setReview] = useState<{ id: string; decision: 'approve' | 'reject' } | null>(null);
   const [form, setForm] = useState({ contractorId: '', period: '', hours: '', notes: '' });
+  const [runByTs, setRunByTs] = useState<Record<string, any>>({});
+  const [ownDeployments, setOwnDeployments] = useState<any[]>([]);
+  const [isCandidate, setIsCandidate] = useState(false);
+  const openSubmit = async () => {
+    setForm({ contractorId: '', period: new Date().toISOString().slice(0, 7), hours: '', notes: '' });
+    setShowSubmit(true);
+    try {
+      const { getActiveRole } = await import('../../shared/auth/session');
+      if (getActiveRole() === 'candidate') {
+        setIsCandidate(true);
+        const mine = unwrapList(await workforceApi.contractors());
+        setOwnDeployments(mine);
+        if (mine.length === 1 && mine[0]?.id) setForm((f) => ({ ...f, contractorId: mine[0].id }));
+      }
+    } catch { /* manual entry fallback */ }
+  };
   const pageSize = 10;
   const load = async (p = page) => {
     setLoading(true); setError('');
@@ -4736,6 +6833,13 @@ export function TimesheetsPanel({ canApprove = false }: { canApprove?: boolean }
       const res: any = await workforceApi.timesheets(`?page=${p}&pageSize=${pageSize}`);
       setRows(unwrapList(res));
       setTotal(Number(res?.pagination?.total || 0));
+      try {
+        const { payrollApi } = await import('../../shared/enterprise/phaseApi');
+        const runs = unwrapList(await payrollApi.runs('?page=1&pageSize=100'));
+        const map: Record<string, any> = {};
+        for (const r of runs) for (const id of r.timesheetIds || []) map[id] = r;
+        setRunByTs(map);
+      } catch { setRunByTs({}); }
     } catch (e) { setError(errMsg(e)); }
     finally { setLoading(false); }
   };
@@ -4755,13 +6859,17 @@ export function TimesheetsPanel({ canApprove = false }: { canApprove?: boolean }
     <div className={cardCls}>
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-base font-extrabold text-slate-900">Timesheets</h3>
-        <button type="button" onClick={() => setShowSubmit(true)} className={btnPrimary}>+ Submit timesheet</button>
+        <button type="button" onClick={openSubmit} className={btnPrimary}>+ Submit timesheet</button>
       </div>
       {error && <PanelError message={error} onRetry={load} />}
       <Modal open={showSubmit} onClose={() => setShowSubmit(false)} title="Submit timesheet" subtitle="Submitted → Approved / Rejected, one decision only">
         <form onSubmit={submit} className="space-y-3">
-          <Field label="Contractor ID *"><input className={kitInput} value={form.contractorId} onChange={(e) => setForm({ ...form, contractorId: e.target.value })} /></Field>
-          <Field label="Period *"><input className={kitInput} value={form.period} onChange={(e) => setForm({ ...form, period: e.target.value })} placeholder="e.g. 2026-10-W2" /></Field>
+          {isCandidate && ownDeployments.length > 0 ? (
+            <Field label="Deployment *"><Select value={form.contractorId} onChange={(v) => setForm({ ...form, contractorId: v })} placeholder="Select deployment" options={ownDeployments.map((c) => ({ value: c.id, label: `${c.name || c.id} • ${c.clientName || ''} • ₹${c.hourlyRate || '?'}/h` }))} /></Field>
+          ) : (
+            <Field label="Contractor ID *"><input className={kitInput} value={form.contractorId} onChange={(e) => setForm({ ...form, contractorId: e.target.value })} /></Field>
+          )}
+          <Field label="Period *"><input className={kitInput} value={form.period} onChange={(e) => setForm({ ...form, period: e.target.value })} placeholder="YYYY-MM" /></Field>
           <Field label="Hours *"><input className={kitInput} type="number" min={1} value={form.hours} onChange={(e) => setForm({ ...form, hours: e.target.value })} /></Field>
           <Field label="Notes"><input className={kitInput} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field>
           <div className="flex justify-end gap-2">
@@ -4777,8 +6885,8 @@ export function TimesheetsPanel({ canApprove = false }: { canApprove?: boolean }
           {rows.map((t) => (
             <div key={t.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <div className="font-extrabold text-slate-900 text-sm truncate">{t.contractorName || t.contractorId} • {t.hours}h • {t.period}</div>
-                <div className="text-xs text-slate-500 font-medium">{t.id} • <strong className={t.status === 'Approved' ? 'text-emerald-600' : t.status === 'Rejected' ? 'text-red-600' : 'text-blue-600'}>{t.status}</strong>{t.reviewedBy ? ` • by ${t.reviewedBy}` : ''}</div>
+                <div className="font-extrabold text-slate-900 text-sm truncate">{t.contractorName || t.contractorId} • {t.hours}h • ₹{Number(t.billableAmount ?? Number(t.hours || 0) * Number(t.hourlyRate || 0)).toLocaleString('en-IN')} • {t.period}</div>
+                <div className="text-xs text-slate-500 font-medium">{t.id} • <strong className={t.status === 'Approved' ? 'text-emerald-600' : t.status === 'Rejected' ? 'text-red-600' : 'text-blue-600'}>{t.status}</strong>{t.reviewedBy ? ` • by ${t.reviewedBy}` : ''}{runByTs[t.id] ? <span className="ml-1.5 px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200 font-bold text-[10px]">Billed {runByTs[t.id].id} • {runByTs[t.id].stage || runByTs[t.id].status}</span> : null}</div>
               </div>
               {canApprove && t.status === 'Submitted' && (
                 <RowMenu label="Review timesheet" items={[
@@ -4806,6 +6914,151 @@ export function TimesheetsPanel({ canApprove = false }: { canApprove?: boolean }
         }}
         onCancel={() => setReview(null)}
       />
+    </div>
+  );
+}
+
+/* ---------------- Contract payroll: timesheets → staffing invoice + contractor payouts ---------------- */
+export function PayrollPanel() {
+  const [runs, setRuns] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
+  const [form, setForm] = useState({ orgId: '', period: new Date().toISOString().slice(0, 7) });
+  const [preview, setPreview] = useState<any>(null);
+  const [previewBusy, setPreviewBusy] = useState(false);
+  const [runBusy, setRunBusy] = useState(false);
+  const [detail, setDetail] = useState<any>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [settleBusy, setSettleBusy] = useState(false);
+  // Run/settle are finance-only (superadmin/platform_owner/finance_admin) — everyone else gets read-only runs.
+  const [canManage, setCanManage] = useState(false);
+  useEffect(() => {
+    import('../../shared/auth/session').then((m) => {
+      setCanManage(['superadmin', 'platform_owner', 'finance_admin'].includes(m.getActiveRole() || ''));
+    }).catch(() => {});
+  }, []);
+  const load = async () => {
+    setLoading(true); setError('');
+    try {
+      const { payrollApi } = await import('../../shared/enterprise/phaseApi');
+      setRuns(unwrapList(await payrollApi.runs('?page=1&pageSize=20')));
+    } catch (e) { setError(errMsg(e)); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
+  const doPreview = async () => {
+    if (!form.orgId.trim() || !form.period.trim()) return;
+    setPreviewBusy(true); setError(''); setOk(''); setPreview(null);
+    try {
+      const { payrollApi } = await import('../../shared/enterprise/phaseApi');
+      setPreview(unwrapObj(await payrollApi.preview(form.orgId.trim(), form.period.trim())));
+    } catch (e) { setError(errMsg(e)); } finally { setPreviewBusy(false); }
+  };
+  const doRun = async () => {
+    if (!form.orgId.trim() || !form.period.trim()) return;
+    setRunBusy(true); setError(''); setOk('');
+    try {
+      const { payrollApi } = await import('../../shared/enterprise/phaseApi');
+      const out = unwrapObj(await payrollApi.run(form.orgId.trim(), form.period.trim()));
+      if (out?.run) setRuns((r) => [out.run, ...r.filter((x) => x.id !== out.run.id)]);
+      setOk(out?.deduped ? `Run already existed for ${form.orgId.trim()} ${form.period.trim()} — no double billing.` : `Payroll run ${out?.run?.id} created: invoice + ${out?.payouts ?? 0} payout(s).`);
+      setPreview(null);
+    } catch (e) { setError(errMsg(e)); } finally { setRunBusy(false); }
+  };
+  const openDetail = async (id: string) => {
+    setDetailId(id); setDetail(null); setError('');
+    try {
+      const { payrollApi } = await import('../../shared/enterprise/phaseApi');
+      setDetail(unwrapObj(await payrollApi.detail(id)));
+    } catch (e) { setError(errMsg(e)); }
+  };
+  const doSettle = async () => {
+    if (!detailId) return;
+    setSettleBusy(true); setError(''); setOk('');
+    try {
+      const { payrollApi } = await import('../../shared/enterprise/phaseApi');
+      const out = unwrapObj(await payrollApi.settle(detailId));
+      setOk(`Run settled — ${out?.payoutsSettled ?? 0} contractor payout(s) processed.`);
+      setRuns((rs) => rs.map((x) => (x.id === detailId ? { ...x, status: 'Settled', stage: 'Settled' } : x)));
+      await openDetail(detailId);
+    } catch (e) { setError(errMsg(e)); } finally { setSettleBusy(false); }
+  };
+  const stageTone = (s: string) => s === 'Settled' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : s === 'Paid' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200';
+  return (
+    <div className={cardCls}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h3 className="text-base font-extrabold text-slate-900">Contract payroll — synced billing</h3>
+          <p className="text-xs text-slate-500 font-medium">Approved timesheets → staffing invoice (company pays NexaTalent) + contractor payouts @82% (NexaTalent pays candidate). One run per org + month.</p>
+        </div>
+        <button type="button" onClick={load} className="px-3 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs cursor-pointer">Refresh</button>
+      </div>
+      {error && <PanelError message={error} onRetry={load} />}
+      {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
+      {canManage && (
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200">
+        <input className={kitInput} placeholder="Org ID * e.g. TNT-CMP36" value={form.orgId} onChange={(e) => setForm({ ...form, orgId: e.target.value })} />
+        <input className={kitInput} placeholder="Period * YYYY-MM" value={form.period} onChange={(e) => setForm({ ...form, period: e.target.value })} />
+        <button type="button" disabled={previewBusy || !form.orgId.trim()} onClick={doPreview} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs disabled:opacity-40 cursor-pointer">{previewBusy ? 'Previewing…' : 'Preview'}</button>
+        <button type="button" disabled={runBusy || !form.orgId.trim()} onClick={doRun} className={btnDark}>{runBusy ? 'Running…' : 'Run payroll'}</button>
+      </div>
+      )}
+      {preview && (
+        <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200 text-xs space-y-2">
+          <div className="font-extrabold text-slate-900">Preview {preview.orgId} {preview.period} — {preview.timesheets} approved timesheet(s), {preview.contractors?.length || 0} contractor(s)</div>
+          <div className="text-[11px] font-bold text-slate-600">Rules: {preview.rules?.standardHours ?? 160}h standard • OT ×{preview.rules?.overtimeMultiplier ?? 1.5} • payout {preview.rules?.payoutPercent ?? 82}% • GST {preview.rules?.taxRate ?? 18}%</div>
+          <div className="space-y-1">
+            {(preview.contractors || []).map((c: any) => (
+              <div key={c.contractorId} className="flex items-center justify-between gap-2 text-[11px] font-bold text-slate-700">
+                <span className="truncate">{c.contractorName} • {c.hours}h ({c.regHrs} reg + {c.otHrs} OT)</span>
+                <span>₹{Number(c.amount || 0).toLocaleString('en-IN')}</span>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+            <div className="p-2 rounded-xl bg-white border border-blue-100"><div className="text-[10px] font-extrabold text-slate-500 uppercase">Subtotal</div><div className="font-extrabold">₹{Number(preview.subtotal || 0).toLocaleString('en-IN')}</div></div>
+            <div className="p-2 rounded-xl bg-white border border-blue-100"><div className="text-[10px] font-extrabold text-slate-500 uppercase">GST 18%</div><div className="font-extrabold">₹{Number(preview.tax || 0).toLocaleString('en-IN')}</div></div>
+            <div className="p-2 rounded-xl bg-white border border-blue-100"><div className="text-[10px] font-extrabold text-slate-500 uppercase">Invoice total</div><div className="font-extrabold">₹{Number(preview.total || 0).toLocaleString('en-IN')}</div></div>
+            <div className="p-2 rounded-xl bg-white border border-blue-100"><div className="text-[10px] font-extrabold text-slate-500 uppercase">Payouts 82%</div><div className="font-extrabold">₹{Number(preview.payoutTotal || 0).toLocaleString('en-IN')}</div></div>
+          </div>
+        </div>
+      )}
+      {loading ? <InlineLoading message="Loading payroll runs…" /> : runs.length === 0 ? (
+        <EmptyState title="No payroll runs" message="Run payroll for an org + month to generate the staffing invoice and contractor payouts." />
+      ) : (
+        <div className="space-y-2">
+          {runs.map((r) => (
+            <div key={r.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="min-w-0">
+                  <div className="font-extrabold text-slate-900 text-sm">{r.orgId} • {r.period} <span className={`ml-1 px-2 py-0.5 rounded-full border font-bold text-[11px] ${stageTone(r.stage || r.status)}`}>{r.stage || r.status}</span></div>
+                  <div className="font-mono text-[11px] text-slate-500">{r.id} • invoice ₹{Number(r.total || 0).toLocaleString('en-IN')} • payouts ₹{Number(r.payoutTotal || 0).toLocaleString('en-IN')}</div>
+                </div>
+                <button type="button" onClick={() => openDetail(r.id)} className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] cursor-pointer">Drill down</button>
+              </div>
+              {detailId === r.id && (
+                <div className="mt-3 pt-3 border-t border-slate-200 text-xs space-y-2">
+                  {!detail ? <InlineLoading message="Loading legs…" /> : (<>
+                    <div className="font-bold text-slate-700">{detail.timesheets?.length || 0} timesheet(s) → invoice {detail.invoice ? `${detail.invoice.number} (${detail.invoice.status}, balance ₹${Number(detail.invoice.balance || 0).toLocaleString('en-IN')}, allocated ₹${Number(detail.allocated || 0).toLocaleString('en-IN')})` : 'missing'}</div>
+                    <div className="space-y-1.5">
+                      {(detail.payouts || []).map((p: any) => (
+                        <div key={p.id} className="p-2.5 rounded-xl bg-white border border-slate-200 flex items-center justify-between gap-2">
+                          <span className="font-bold truncate">{p.contractorName} • ₹{Number(p.amount || 0).toLocaleString('en-IN')}</span>
+                          <span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${p.status === 'Processed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>{p.status}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {canManage && (detail.run?.stage === 'Paid' || detail.invoice?.status === 'Paid') && detail.run?.stage !== 'Settled' && (
+                      <button type="button" disabled={settleBusy} onClick={doSettle} className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs disabled:opacity-40 cursor-pointer">{settleBusy ? 'Settling…' : 'Settle — release contractor payouts'}</button>
+                    )}
+                  </>)}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -5170,7 +7423,9 @@ export function CandidatesPanel() {
       {error && <PanelError message={error} onRetry={() => load(params)} />}
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
       <div className="flex flex-col lg:flex-row gap-2">
-        <div className="relative flex-1"><input className={inputCls} placeholder="Search ID, name, email, title…" value={q} onChange={(e) => { setQ(e.target.value); resetPage(); }} /></div>
+        <div className="relative flex-1"><SearchSuggest value={q} onChange={(v) => { setQ(v); resetPage(); }} placeholder="Search ID, name, email, title…"
+    items={rows.map((c: any) => ({ key: String(c.id), query: String(c.email || c.id), title: String(c.name || c.email || c.id), meta: [c.email, c.roleTitle || c.title].filter(Boolean).join(' • '), status: c.status }))}
+    onPick={(it) => { setQ(it.query ?? it.key); resetPage(); }} /></div>
         <div className="flex gap-2">
           <div className="w-36 shrink-0">
             <Select value={status} onChange={(v) => { setStatus(v); resetPage(); }} ariaLabel="Account status" placeholder="All statuses"
@@ -5399,7 +7654,7 @@ export function DocumentsPanel() {
           {rows.map((d) => (
             <div key={d.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
               <span className="truncate">{d.name} • v{d.version} • {(Number(d.size || 0) / 1024).toFixed(0)} KB • {String(d.uploadedAt).slice(0, 10)}</span>
-              <RowMenu label="Document actions" items={[{ label: 'Download', onSelect: () => window.open(`${(import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:5000'}${documentsApi.downloadUrl(d.id)}`, '_blank', 'noopener') }]} />
+              <RowMenu label="Document actions" items={[{ label: 'Download', onSelect: () => downloadDocumentFile(d.id, d.name).catch((e) => setError(errMsg(e))) }]} />
             </div>
           ))}
         </div>
@@ -5554,10 +7809,15 @@ export function AgencyPanel() {
       setEditing(null); setOk(`Agency ${editing.id} updated (audited).`); syncAll();
     } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
   };
-  const doVerify = async (a: any, decision: 'approve' | 'reject') => {
+  const [verifyFor, setVerifyFor] = useState<{ a: any; decision: 'approve' | 'reject' } | null>(null);
+  const doVerify = async (reason?: string) => {
+    if (!verifyFor) return;
+    const { a, decision } = verifyFor;
+    if (decision === 'reject' && !reason?.trim()) return;
     try {
-      const u = unwrapObj(await workforceApi.updateAgency(a.id, { verificationStatus: decision === 'approve' ? 'Approved' : 'Rejected' }));
+      const u = unwrapObj(await workforceApi.updateAgency(a.id, { verificationStatus: decision === 'approve' ? 'Approved' : 'Rejected', reason: reason?.trim() || undefined }));
       setRows((r) => r.map((x) => (x.id === a.id ? { ...x, ...(u?.id ? u : {}) } : x)));
+      setVerifyFor(null);
       setOk(`Agency ${a.id} verification ${decision === 'approve' ? 'approved' : 'rejected'}.`); syncAll();
     } catch (e) { setError(errMsg(e)); }
   };
@@ -5605,8 +7865,8 @@ export function AgencyPanel() {
       { label: 'Edit details', onSelect: () => openEdit(a) },
       { label: 'Invite recruiter…', onSelect: () => { setInviteFor(a); setInviteForm({ name: '', email: '', role: 'agency_recruiter', password: '' }); } },
       ...((a.verificationStatus === 'Pending') ? [
-        { label: 'Verify — Approve', onSelect: () => doVerify(a, 'approve') },
-        { label: 'Verify — Reject', danger: true, onSelect: () => doVerify(a, 'reject') },
+        { label: 'Verify — Approve', onSelect: () => setVerifyFor({ a, decision: 'approve' }) },
+        { label: 'Verify — Reject', danger: true, onSelect: () => setVerifyFor({ a, decision: 'reject' }) },
       ] : []),
       { label: a.accountStatus === 'Suspended' ? 'Reactivate…' : 'Suspend…', danger: a.accountStatus !== 'Suspended', onSelect: () => { setSuspendFor(a); setSuspendForm({ action: a.accountStatus === 'Suspended' ? 'Active' : 'Suspended', reason: '' }); } },
       { label: 'Close / Delete…', danger: true, onSelect: () => { setDeleteFor(a); setDelReason(''); } },
@@ -5621,7 +7881,9 @@ export function AgencyPanel() {
       {error && <PanelError message={error} onRetry={() => load(params)} />}
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
       <div className="flex flex-col lg:flex-row gap-2">
-        <div className="relative flex-1"><input className={inputCls} placeholder="Search ID, name, contact, specialty…" value={q} onChange={(e) => { setQ(e.target.value); resetPage(); }} /></div>
+        <div className="relative flex-1"><SearchSuggest value={q} onChange={(v) => { setQ(v); resetPage(); }} placeholder="Search ID, name, contact, specialty…"
+    items={rows.map((a: any) => ({ key: String(a.id), query: String(a.id), title: String(a.displayName || a.legalName || a.id), meta: [a.contactEmail || a.email, a.specialties].filter(Boolean).join(' • '), status: a.accountStatus }))}
+    onPick={(it) => { setQ(it.query ?? it.key); resetPage(); }} /></div>
         <div className="flex gap-2">
           <button type="button" onClick={() => setShowAdv((v) => !v)} aria-expanded={showAdv} className={`px-4 py-2 rounded-xl border font-bold text-xs whitespace-nowrap ${showAdv || status || verification ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-slate-200 text-slate-700'}`}>
             Filters {(status || verification) ? '•' : ''} {showAdv ? '▴' : '▾'}
@@ -5740,6 +8002,18 @@ export function AgencyPanel() {
           </div>
         </div>
       </Modal>
+      <ActionConfirm
+        open={verifyFor !== null}
+        onCancel={() => setVerifyFor(null)}
+        title={`${verifyFor?.decision === 'approve' ? 'Approve' : 'Reject'} verification — ${verifyFor?.a.displayName || verifyFor?.a.id || ''}`}
+        subtitle="The decision and reason are recorded with actor and timestamp."
+        why={verifyFor?.decision === 'approve' ? ['Agency becomes eligible for job assignments'] : ['Agency is blocked from new assignments with a recorded reason']}
+        requireReason={verifyFor?.decision === 'reject'}
+        reasonLabel="Rejection reason *"
+        confirmLabel={verifyFor?.decision === 'approve' ? 'Approve verification' : 'Reject verification'}
+        tone={verifyFor?.decision === 'approve' ? 'primary' : 'danger'}
+        onConfirm={(reason) => doVerify(reason)}
+      />
       <Modal open={suspendFor !== null} onClose={() => setSuspendFor(null)} title={`${suspendForm.action === 'Active' ? 'Reactivate' : 'Suspend'} — ${suspendFor?.displayName || suspendFor?.id || ''}`} subtitle="Reason is mandatory. Suspending revokes member sessions.">
         <div className="space-y-3">
           <Field label="Action"><Select value={suspendForm.action} onChange={(v) => setSuspendForm({ ...suspendForm, action: v })} options={[{ value: 'Suspended', label: 'Suspend' }, { value: 'Active', label: 'Reactivate' }]} /></Field>
@@ -6132,6 +8406,97 @@ export function SkillsPanel() {
   );
 }
 
+/* ---------------- Login lockouts — superadmin revokes 429 throttles ---------------- */
+export function LoginLockoutsPanel() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
+  const [email, setEmail] = useState('');
+  const [busy, setBusy] = useState('');
+  const [confirmAll, setConfirmAll] = useState(false);
+  const load = async () => {
+    setError('');
+    try {
+      const { lockoutApi } = await import('../../shared/enterprise/phaseApi');
+      setRows(unwrapList(await lockoutApi.list()));
+    } catch (e) { setError(errMsg(e)); } finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
+  const unlock = async (target: string) => {
+    if (!target.trim()) return;
+    setBusy(target); setError(''); setOk('');
+    try {
+      const { lockoutApi } = await import('../../shared/enterprise/phaseApi');
+      const res: any = await lockoutApi.unlock(target.trim());
+      const had = (res as { data?: { hadLock?: boolean } })?.data?.hadLock;
+      setOk(had ? `${target.trim()} unlocked — they can sign in again.` : `${target.trim()} had no lockout record — nothing to clear.`);
+      setEmail('');
+      await load();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(''); }
+  };
+  const unlockAll = async () => {
+    setBusy('__all'); setError(''); setOk('');
+    try {
+      const { lockoutApi } = await import('../../shared/enterprise/phaseApi');
+      const res: any = await lockoutApi.unlockAll();
+      setOk(`Cleared ${(res as { data?: { cleared?: number } })?.data?.cleared ?? 0} lockout record(s).`);
+      setConfirmAll(false);
+      await load();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(''); }
+  };
+  return (
+    <div className={cardCls}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h3 className="text-base font-extrabold text-slate-900">Login lockouts — revoke & restore access</h3>
+          <p className="text-xs text-slate-500 font-medium">10 failed attempts = 15-min 429 lock. Unlock any user of any role so they can sign in again. Every revoke is audited.</p>
+        </div>
+        <div className="flex gap-2">
+          <button type="button" onClick={load} className="px-3 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs cursor-pointer">Refresh</button>
+          <button type="button" disabled={rows.length === 0 || !!busy} onClick={() => setConfirmAll(true)} className="px-3 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs disabled:opacity-40 cursor-pointer">Unlock all</button>
+        </div>
+      </div>
+      {error && <PanelError message={error} onRetry={load} />}
+      {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
+      <form onSubmit={(e) => { e.preventDefault(); unlock(email); }} className="flex flex-col sm:flex-row gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200">
+        <input className={kitInput} placeholder="user@company.com — unlock even if not listed *" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <button disabled={!email.trim() || !!busy} className={btnDark}>{busy && busy !== '__all' ? 'Unlocking…' : 'Unlock login'}</button>
+      </form>
+      {loading ? <InlineLoading message="Checking lockouts…" /> : rows.length === 0 ? (
+        <EmptyState title="No locked accounts" message="Nobody is throttled right now — all users can sign in." />
+      ) : (
+        <div className="overflow-x-auto rounded-2xl border border-slate-200">
+          <table className="w-full text-left text-xs min-w-[820px]">
+            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
+              <th className="px-4 py-3">Account</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Live fails</th><th className="px-4 py-3">Wrong-password history</th><th className="px-4 py-3">Locked until</th><th className="px-4 py-3 text-right">Action</th>
+            </tr></thead>
+            <tbody className="divide-y divide-slate-100 font-medium">
+              {rows.map((r) => (
+                <tr key={r.email} className="hover:bg-slate-50/70">
+                  <td className="px-4 py-3"><div className="font-bold text-slate-900">{r.email}</div><div className="font-mono text-[11px] text-slate-500">{r.tenantId} • {r.status}</div></td>
+                  <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 font-bold text-[11px]">{r.role}</span></td>
+                  <td className="px-4 py-3 font-extrabold text-slate-900">{r.fails}{r.mfaFails > 0 ? <span className="text-slate-500 font-bold"> (+{r.mfaFails} MFA)</span> : null}</td>
+                  <td className="px-4 py-3">{r.recentFails > 0
+                    ? <><div className="font-extrabold text-amber-700">{r.recentFails} failed</div><div className="font-mono text-[10px] text-slate-500">{r.lastFailure} • {r.lastFailedAt ? new Date(r.lastFailedAt).toLocaleString() : ''}</div></>
+                    : <span className="text-slate-400">—</span>}</td>
+                  <td className="px-4 py-3">{r.locked
+                    ? <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 font-bold text-[11px]">{r.unlocksAt ? new Date(r.unlocksAt).toLocaleTimeString() : 'locked'}</span>
+                    : <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-bold text-[11px]">watch</span>}</td>
+                  <td className="px-4 py-3"><div className="flex justify-end"><button type="button" disabled={!!busy} onClick={() => unlock(r.email)} className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] disabled:opacity-40 cursor-pointer">{busy === r.email ? 'Unlocking…' : 'Unlock'}</button></div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <ConfirmDialog open={confirmAll} onCancel={() => setConfirmAll(false)} title="Unlock every throttled account?"
+        body="Clears all login + MFA throttle records at once. Audited as a bulk revoke."
+        confirmLabel="Unlock all" onConfirm={unlockAll} />
+    </div>
+  );
+}
+
 function useDirectoryApi(): any {
   const [api, setApi] = useState<any>(null);
   useEffect(() => { import('../../shared/enterprise/phaseApi').then((m) => setApi(m.directoryApi)); }, []);
@@ -6276,7 +8641,9 @@ export function BranchesPanel() {
             <button type="button" onClick={() => setShowCreate(true)} className={btnPrimary}>+ New branch</button>
           </div>
         </div>
-        <input className={inputCls} placeholder="Search branch, city, org…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <SearchSuggest value={q} onChange={setQ} placeholder="Search branch, city, org…"
+    items={rows.map((b: any) => ({ key: String(b.id), query: String(b.id), title: String(b.name || b.id), meta: [b.city, b.orgId].filter(Boolean).join(' • '), status: b.status }))}
+    onPick={(it) => setQ(it.query ?? it.key)} />
       </div>
       {error && <PanelError message={error} onRetry={load} />}
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
@@ -6366,33 +8733,46 @@ export function JobsPanel() {
   const [q, setQ] = useQueryState('job_q');
   const [statusF, setStatusF] = useQueryState('job_status');
   const [orgF, setOrgF] = useQueryState('job_org');
+  const [reqF, setReqF] = useQueryState('job_req');
   const dqJob = useDebounced(q);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const pageSize = 20;
   const [detail, setDetail] = useState<any>(null);
   const [pipeline, setPipeline] = useState<{ apps: any[]; interviews: any[] }>({ apps: [], interviews: [] });
   const [detailReq, setDetailReq] = useState<any>(null);
+  const [jobTab, setJobTab] = useState('overview');
   const [editing, setEditing] = useState<any>(null);
   const [pubFor, setPubFor] = useState<{ job: any; to: string } | null>(null);
   const [pubReason, setPubReason] = useState('');
   const [pubExpiry, setPubExpiry] = useState('');
   const [moveFor, setMoveFor] = useState<{ job: any; to: string } | null>(null);
   const [view, setView] = useQueryState('job_view');
-  const [showCreateJob, setShowCreateJob] = useState(false);
-  const [jobForm, setJobForm] = useState({ orgId: '', title: '', requisitionId: '', location: '', employmentType: 'Full-time', salaryMin: '', salaryMax: '', expiryDate: '', visibility: 'public', description: '' });
   const [busy, setBusy] = useState(false);
-  const load = async () => {
+  const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkMsg, setBulkMsg] = useState('');
+  const load = async (p = page) => {
     setLoading(true); setError('');
     try {
-      const params = new URLSearchParams({ page: '1', pageSize: '100' });
+      // Phase 2: server is source of truth — filters + paging in query, counts from server.
+      const params = new URLSearchParams({ page: String(p), pageSize: String(pageSize) });
       if (orgF) params.set('orgId', orgF);
-      setRows(unwrapList(await jobsApi.list(`?${params.toString()}`)));
+      if (statusF) params.set('status', statusF);
+      if (reqF.trim()) params.set('requisitionId', reqF.trim());
+      if (dqJob.trim()) params.set('q', dqJob.trim());
+      const res: any = await jobsApi.list(`?${params.toString()}`);
+      setRows(unwrapList(res));
+      setTotal(Number(res?.pagination?.total ?? unwrapList(res).length));
       const { directoryApi } = await import('../../shared/enterprise/phaseApi');
       directoryApi.tenants().then((t: any) => setOrgs(unwrapList(t))).catch(() => { /* company filter best-effort */ });
     }
     catch (e) { setError(errMsg(e)); } finally { setLoading(false); }
   };
-  useEffect(() => { load(); }, [orgF]);
+  useEffect(() => { load(page); }, [orgF, statusF, reqF, dqJob, page]);
+  useEffect(() => { setPage(1); }, [orgF, statusF, reqF, dqJob]);
   const openDetail = async (j: any) => {
-    setDetail(j); setPipeline({ apps: [], interviews: [] }); setDetailReq(null);
+    setDetail(j); setPipeline({ apps: [], interviews: [] }); setDetailReq(null); setJobTab('overview');
     try {
       const [aRes, iRes] = await Promise.all([
         applicationsApi.list(`?jobId=${j.id}&page=1&pageSize=100`).catch(() => null),
@@ -6400,31 +8780,12 @@ export function JobsPanel() {
       ]);
       setPipeline({ apps: unwrapList(aRes), interviews: unwrapList(iRes) });
       if (j.requisitionId) {
-        const rRes: any = await requisitionsApi.list(`?page=1&pageSize=100`).catch(() => null);
-        const req = unwrapList(rRes).find((r: any) => r.id === j.requisitionId);
-        if (req) setDetailReq(req);
+        // Phase 2: single fetch with server rollup — no full-list scan.
+        const rRes: any = await requisitionsApi.get(j.requisitionId).catch(() => null);
+        const req = unwrapObj(rRes);
+        if (req?.id) setDetailReq(req);
       }
     } catch { /* pipeline is best-effort */ }
-  };
-  const doCreateJob = async () => {
-    if (!jobForm.title.trim()) return;
-    setBusy(true); setError('');
-    try {
-      const payload: any = {
-        title: jobForm.title.trim(),
-        requisitionId: jobForm.requisitionId.trim() || undefined,
-        location: jobForm.location.trim() || undefined,
-        employmentType: jobForm.employmentType,
-        salaryMin: jobForm.salaryMin === '' ? undefined : Number(jobForm.salaryMin),
-        salaryMax: jobForm.salaryMax === '' ? undefined : Number(jobForm.salaryMax),
-        expiryDate: jobForm.expiryDate || undefined,
-        visibility: jobForm.visibility,
-        description: jobForm.description.trim() || undefined,
-      };
-      if (jobForm.orgId) payload.tenantId = jobForm.orgId;
-      const created = unwrapObj(await jobsApi.create(payload));
-      if (created?.id) { setRows((r) => [created, ...r]); setShowCreateJob(false); setJobForm({ orgId: '', title: '', requisitionId: '', location: '', employmentType: 'Full-time', salaryMin: '', salaryMax: '', expiryDate: '', visibility: 'public', description: '' }); setOk('Job posting created as Draft.'); syncAll(); }
-    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
   };
   const transition = async (id: string, status: string, reason?: string, expiryDate?: string) => {
     try {
@@ -6453,11 +8814,7 @@ export function JobsPanel() {
       setEditing(null); setOk('Job updated.'); syncAll();
     } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
   };
-  const filtered = rows.filter((j) => {
-    if (statusF && j.status !== statusF) return false;
-    if (!dqJob.trim()) return true;
-    return `${j.id} ${j.title} ${j.orgId} ${j.location}`.toLowerCase().includes(dqJob.toLowerCase());
-  });
+  const filtered = rows;
   const pubNeedsForm = (j: any, to: string) => to === 'Published' || (j.status === 'Published' && to === 'Approved') || (j.status === 'Closed' && (to === 'Published' || to === 'Paused'));
   const dropMove = (j: any, to: string) => {
     if (to === j.status) return;
@@ -6466,10 +8823,35 @@ export function JobsPanel() {
     if (pubNeedsForm(j, to)) { setPubFor({ job: j, to }); setPubReason(''); setPubExpiry(String(j.expiryDate || '').slice(0, 10)); }
     else setMoveFor({ job: j, to });
   };
+  const runBulkPublish = async (ids: string[]) => {
+    if (!ids.length || bulkBusy) return;
+    setBulkBusy(true); setBulkMsg('');
+    const targets = ids.map((id) => rows.find((j) => j.id === id)).filter(Boolean).map((j: any) => ({ id: j.id, status: j.status }));
+    const results = await bulkPublish(targets);
+    const okN = results.filter((r) => r.ok).length;
+    const fail = results.filter((r) => !r.ok);
+    setBulkMsg(`${okN} added to open positions.${fail.length ? ` ${fail.length} failed: ${fail.map((f) => `${f.id} (${f.message})`).join('; ')}` : ''}`);
+    setSelectedJobs(new Set()); setBulkBusy(false); load(page); syncAll();
+  };
+  const runBulkUnpublish = async (ids: string[]) => {
+    if (!ids.length || bulkBusy) return;
+    setBulkBusy(true); setBulkMsg('');
+    const results = [];
+    for (const id of ids) results.push(await unpublishJob(id));
+    const okN = results.filter((r) => r.ok).length;
+    const fail = results.filter((r) => !r.ok);
+    setBulkMsg(`${okN} removed from open positions.${fail.length ? ` ${fail.length} failed: ${fail.map((f) => `${f.id} (${f.message})`).join('; ')}` : ''}`);
+    setSelectedJobs(new Set()); setBulkBusy(false); load(page); syncAll();
+  };
+  const toggleJobSel = (id: string) => {
+    setSelectedJobs((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  };
   const jobMenuFor = (j: any) => (
     <RowMenu items={[
       { label: 'View + pipeline', onSelect: () => openDetail(j) },
       { label: 'Edit…', onSelect: () => setEditing({ ...j, assignedAgencies: (j.assignedAgencies || []).join(', '), assignedVendors: (j.assignedVendors || []).join(', ') }) },
+      ...(j.status !== 'Published' ? [{ label: 'Add to open positions…', onSelect: () => { setSelectedJobs(new Set([j.id])); void runBulkPublish([j.id]); } }] : []),
+      ...(j.status === 'Published' ? [{ label: 'Remove from open positions…', onSelect: () => { setSelectedJobs(new Set([j.id])); void runBulkUnpublish([j.id]); } }] : []),
       ...(JOB_TRANSITIONS[j.status] || []).map((s) => (
         pubNeedsForm(j, s)
           ? { label: `${s === 'Published' ? 'Publish' : s}…`, onSelect: () => { setPubFor({ job: j, to: s }); setPubReason(''); setPubExpiry(String(j.expiryDate || '').slice(0, 10)); } }
@@ -6509,16 +8891,18 @@ export function JobsPanel() {
                   className={`px-3 py-1.5 rounded-lg font-bold text-xs capitalize ${((view || 'table') === v) ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>{v}</button>
               ))}
             </div>
-            <div className="text-xs font-bold text-slate-500">{filtered.length} posting(s) shown</div>
+            <div className="text-xs font-bold text-slate-500">{total || filtered.length} posting(s) • server counts</div>
           </div>
           <div className="flex gap-2">
             <ExportButton filename="jobs.csv" rows={filtered} columns={['id', 'requisitionId', 'title', 'orgId', 'location', 'employmentType', 'status', 'expiryDate']} />
-            <button type="button" onClick={() => navigate(`${portalBase()}/jobs/new`)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Full-page editor →</button>
-            <button type="button" onClick={() => setShowCreateJob(true)} className={btnPrimary}>+ New job</button>
+            <button type="button" onClick={() => navigate(`${portalBase()}/jobs/new`)} className={btnPrimary}>+ New job</button>
           </div>
         </div>
         <div className="flex flex-col lg:flex-row gap-2">
-          <input className={`${inputCls} flex-1`} placeholder="Search ID, title, org, location…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <SearchSuggest value={q} onChange={setQ} placeholder="Search ID, title, org, location…"
+    items={rows.map((j: any) => ({ key: String(j.id), query: String(j.id), title: String(j.title || j.id), meta: [j.orgId || j.companyName, j.location].filter(Boolean).join(' • '), status: j.status }))}
+    onPick={(it) => setQ(it.query ?? it.key)} />
+          <input className={`${inputCls} w-full lg:w-44 shrink-0`} placeholder="Requirement ID (REQ-…)" value={reqF} onChange={(e) => setReqF(e.target.value)} aria-label="Requirement filter" />
           <div className="w-full lg:w-44 shrink-0">
             <Select value={statusF} onChange={setStatusF} ariaLabel="Job status filter" placeholder="All statuses"
               options={[{ value: '', label: 'All statuses' }, ...['Draft', 'Pending Review', 'Approved', 'Published', 'Paused', 'Closed', 'Archived'].map((s) => ({ value: s, label: s }))]} />
@@ -6533,6 +8917,25 @@ export function JobsPanel() {
       </div>
       {error && <PanelError message={error} onRetry={load} />}
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
+      {/* bulk open-positions bar */}
+      {(view || 'table') === 'table' && (
+        <div className={`flex flex-wrap items-center gap-2 rounded-xl border p-2.5 text-xs ${selectedJobs.size > 0 ? 'border-[#0265FF]/30 bg-[#0265FF]/5' : 'border-slate-200 bg-slate-50'}`}>
+          <span className="font-bold text-slate-600">{selectedJobs.size} selected</span>
+          <button type="button" disabled={!selectedJobs.size || bulkBusy} onClick={() => runBulkPublish([...selectedJobs])}
+            className="min-h-[32px] rounded-lg bg-[#0265FF] px-3 font-bold text-white hover:bg-[#0055db] disabled:opacity-40">
+            {bulkBusy ? 'Working…' : 'Add to open positions'}
+          </button>
+          <button type="button" disabled={!selectedJobs.size || bulkBusy} onClick={() => runBulkUnpublish([...selectedJobs])}
+            className="min-h-[32px] rounded-lg border border-red-200 px-3 font-bold text-red-600 hover:bg-red-50 disabled:opacity-40">
+            Remove from board
+          </button>
+          {selectedJobs.size > 0 && (
+            <button type="button" onClick={() => setSelectedJobs(new Set())} className="min-h-[32px] px-2 font-bold text-slate-400 hover:text-slate-600">Clear</button>
+          )}
+          <a href={`${portalBase()}/open-positions`} className="ml-auto font-bold text-[#0265FF] hover:underline">Open Positions page →</a>
+          {bulkMsg && <p className="w-full text-[11px] font-semibold text-slate-600">{bulkMsg}</p>}
+        </div>
+      )}
       {loading ? <InlineLoading message="Loading jobs…" /> : filtered.length === 0 ? (
         <EmptyState title="No jobs" message="Published requisitions become jobs here." />
       ) : (view || 'table') === 'kanban' ? (
@@ -6556,11 +8959,19 @@ export function JobsPanel() {
         <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
           <table className="w-full text-left text-xs min-w-[980px]">
             <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
+              <th className="px-2 py-3 w-8">
+                <input type="checkbox" aria-label="Select all jobs on this page" className="h-4 w-4 accent-[#0265FF]"
+                  checked={filtered.length > 0 && filtered.every((j) => selectedJobs.has(j.id))}
+                  onChange={(e) => setSelectedJobs(e.target.checked ? new Set(filtered.map((j) => j.id)) : new Set())} />
+              </th>
               <th className="px-4 py-3">Job</th><th className="px-4 py-3">Requisition</th><th className="px-4 py-3">Org / Location</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Applicants</th><th className="px-4 py-3">Expiry</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
             </tr></thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.map((j) => (
-                <tr key={j.id} className="hover:bg-slate-50/70">
+                <tr key={j.id} className={`hover:bg-slate-50/70 ${selectedJobs.has(j.id) ? 'bg-[#0265FF]/5' : ''}`}>
+                  <td className="px-2 py-3">
+                    <input type="checkbox" aria-label={`Select ${j.title}`} className="h-4 w-4 accent-[#0265FF]" checked={selectedJobs.has(j.id)} onChange={() => toggleJobSel(j.id)} />
+                  </td>
                   <td className="px-4 py-3"><div className="font-bold text-slate-900">{j.title}</div><div className="font-mono text-[11px] text-slate-500">{j.id}</div></td>
                   <td className="px-4 py-3 font-mono">{j.requisitionId || '—'}</td>
                   <td className="px-4 py-3"><div className="font-mono font-bold text-amber-700">{j.orgId}</div><div className="text-slate-500">{j.location || '—'}</div></td>
@@ -6575,34 +8986,79 @@ export function JobsPanel() {
           </table>
         </div>
       </>)}
+      <div className="flex justify-end pt-1">
+        <Pager page={page} total={total || filtered.length} pageSize={pageSize} onPage={setPage} />
+      </div>
       {detail && (
         <DetailDrawer title={detail.title} subtitle={`${detail.id} • req ${detail.requisitionId || '—'} • ${detail.status}`} onClose={() => setDetail(null)} width="max-w-4xl">
           <JobDrawerActions job={detail} requirement={detailReq} onDone={(u) => { setDetail((d: any) => (d && d.id === u.id ? u : d)); setRows((r) => r.map((x) => (x.id === u.id ? u : x))); }} />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-            {[['Organization', detail.orgId], ['Location', detail.location], ['Employment', detail.employmentType], ['Arrangement', detail.workArrangement], ['Salary', detail.salaryMin ? `₹${detail.salaryMin}–₹${detail.salaryMax}` : (detail.budgetRange || '—')], ['Visibility', detail.visibility], ['Skills', [detail.requiredSkills, detail.preferredSkills].filter(Boolean).join(' • ') || '—'], ['Qualifications', detail.qualifications || '—'], ['Applicants', detail.counts?.applications ?? detail.applicantsCount], ['Hired', detail.counts?.hired ?? '—'], ['Expiry', String(detail.expiryDate || '').slice(0, 10)], ['Accepting applications', detail.counts ? (detail.counts.acceptingApplications ? 'Yes' : 'No') : '—'], ['Status reason', detail.statusReason || '—'], ['Agencies', (detail.assignedAgencies || []).join(', ')], ['Vendors', (detail.assignedVendors || []).join(', ')]].map(([k, v]) => (
-              <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—') || '—'}</div></div>
-            ))}
-            <div className="sm:col-span-2 p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">Description</div><div className="font-medium mt-1 whitespace-pre-wrap">{detail.description || '—'}</div></div>
-            {detailReq && (
-              <div className="sm:col-span-2 p-3 rounded-2xl bg-blue-50/60 border border-blue-200">
-                <div className="text-[10px] font-extrabold text-blue-800 uppercase tracking-wider">Parent requirement</div>
-                <div className="font-bold mt-1">{detailReq.title} <span className="font-mono text-slate-500">• {detailReq.id} • {detailReq.status} • {detailReq.openings || 1} opening(s)</span></div>
-              </div>
-            )}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={tonePill(detail.status)}>{detail.status}</span>
+            <span className="text-[11px] font-mono text-slate-500 bg-slate-100 border border-slate-200 rounded-md px-1.5 py-0.5">{detail.id}</span>
+            <span className="text-[11px] font-bold text-slate-500">{detail.counts?.applications ?? detail.applicantsCount ?? 0} applicants → {detail.counts?.hired ?? 0} hired</span>
           </div>
-          <div className="text-xs font-extrabold pt-2">Pipeline — {pipeline.apps.length} applications, {pipeline.interviews.length} interviews</div>
-          {pipeline.apps.length === 0 ? <div className="text-[11px] text-slate-500">No applications for this job yet.</div> : pipeline.apps.slice(0, 10).map((a: any) => (
-            <div key={a.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">{a.candidateEmail} • <strong>{a.stage}</strong></div>
-          ))}
-          {(detail.history || []).length > 0 && (
-            <>
-              <div className="text-xs font-extrabold pt-2">Status history</div>
-              <div className="space-y-1.5">
-                {detail.history.slice(0, 20).map((h: any, i: number) => (
-                  <div key={i} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium">{h.from} → <strong>{h.to}</strong> • {h.by}{h.reason ? ` • ${h.reason}` : ''} <span className="text-slate-400">• {String(h.at || '').slice(0, 16).replace('T', ' ')}</span></div>
-                ))}
-              </div>
-            </>
+          <DetailTabs tabs={[{ key: 'overview', label: 'Overview' }, { key: 'pipeline', label: 'Pipeline', count: pipeline.apps.length }, { key: 'interviews', label: 'Interviews', count: pipeline.interviews.length }, { key: 'activity', label: 'Activity', count: (detail.history || []).length }]} active={jobTab} onPick={setJobTab} />
+          {jobTab === 'overview' && (
+            <div className="space-y-3">
+              <DetailSection title="Posting">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  {[['Organization', detail.orgId], ['Location', detail.location], ['Employment', detail.employmentType], ['Arrangement', detail.workArrangement], ['Salary', detail.salaryMin ? `₹${Number(detail.salaryMin).toLocaleString('en-IN')}–₹${Number(detail.salaryMax || detail.salaryMin).toLocaleString('en-IN')}` : (detail.budgetRange || '—')], ['Visibility', detail.visibility], ['Skills', [detail.requiredSkills, detail.preferredSkills].filter(Boolean).join(' • ') || '—'], ['Qualifications', detail.qualifications || '—'], ['Expiry', String(detail.expiryDate || '').slice(0, 10) || '—'], ['Accepting applications', detail.counts ? (detail.counts.acceptingApplications ? 'Yes' : 'No') : '—'], ['Status reason', detail.statusReason || '—'], ['Agencies', (detail.assignedAgencies || []).join(', ') || 'Open to all'], ['Vendors', (detail.assignedVendors || []).join(', ') || '—']].map(([k, v]) => (
+                    <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—') || '—'}</div></div>
+                  ))}
+                  <div className="sm:col-span-2 p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">Description</div><div className="font-medium mt-1 whitespace-pre-wrap">{detail.description || '—'}</div></div>
+                </div>
+              </DetailSection>
+              {detailReq && (
+                <DetailSection title="Parent requirement">
+                  <div className="p-3 rounded-2xl bg-blue-50/60 border border-blue-200 text-xs">
+                    <div className="font-bold">{detailReq.title} <span className="font-mono text-slate-500">• {detailReq.id} • {detailReq.openings || 1} opening(s)</span></div>
+                    <div className="mt-1"><span className={tonePill(detailReq.status)}>{detailReq.status}</span></div>
+                  </div>
+                </DetailSection>
+              )}
+            </div>
+          )}
+          {jobTab === 'pipeline' && (
+            <DetailSection title="Applications by stage" count={pipeline.apps.length}>
+              {pipeline.apps.length === 0 ? <div className="text-[11px] text-slate-500 font-medium">No applications for this job yet.</div> : (
+                <div className="flex flex-wrap gap-1.5 pb-1">
+                  {Object.entries(pipeline.apps.reduce((m: Record<string, number>, a: any) => { m[a.stage || 'Unknown'] = (m[a.stage || 'Unknown'] || 0) + 1; return m; }, {})).map(([st, n]) => (
+                    <span key={st} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-[11px] font-bold"><span className={tonePill(st)}>{st}</span> × {String(n)}</span>
+                  ))}
+                </div>
+              )}
+              <DrawerList items={pipeline.apps.slice(0, 50)} empty="" render={(a: any) => (
+                <DrawerCard key={a.id} status={a.stage} title={a.candidateEmail || a.candidateName || a.id}
+                  meta={<><span className="font-mono">{a.id}</span>{a.jobTitle ? ` • ${a.jobTitle}` : ''} • {String(a.updatedAt || a.createdAt || '').slice(0, 10)}</>}
+                  right={<span className={tonePill(a.stage)}>{a.stage}</span>} />
+              )} />
+            </DetailSection>
+          )}
+          {jobTab === 'interviews' && (
+            <DetailSection title="Interviews" count={pipeline.interviews.length}>
+              {pipeline.interviews.length === 0 ? <div className="text-[11px] text-slate-500 font-medium">No interviews scheduled for this job yet.</div> : (
+                <DrawerList items={pipeline.interviews} empty="" render={(iv: any) => (
+                  <DrawerCard key={iv.id} status={iv.status} title={`${iv.round || 'Interview'} — ${iv.candidateName || iv.candidateEmail || ''}`}
+                    meta={<span className="font-mono">{String(iv.scheduledAt || '').slice(0, 16).replace('T', ' ')}{iv.mode ? ` • ${iv.mode}` : ''}</span>}
+                    right={<span className={tonePill(iv.status)}>{iv.status}</span>} />
+                )} />
+              )}
+            </DetailSection>
+          )}
+          {jobTab === 'activity' && (
+            <DetailSection title="Status history" count={(detail.history || []).length}>
+              {(detail.history || []).length === 0 ? <div className="text-[11px] text-slate-500 font-medium">No status moves recorded yet.</div> : (
+                <ol className="relative ml-1.5 border-l-2 border-slate-100 space-y-3">
+                  {(detail.history || []).slice(0, 30).map((h: any, i: number) => (
+                    <li key={i} className="ml-4 relative">
+                      <span className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-slate-900 ring-4 ring-slate-100" />
+                      <div className="text-xs font-bold text-slate-900">{h.from} → {h.to} <span className="font-medium text-slate-500">• {h.by}{h.reason ? ` • ${h.reason}` : ''}</span></div>
+                      <div className="text-[11px] text-slate-400 font-mono">{String(h.at || '').slice(0, 16).replace('T', ' ')}</div>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </DetailSection>
           )}
         </DetailDrawer>
       )}
@@ -6648,21 +9104,6 @@ export function JobsPanel() {
         consequences={(MOVE_COPY[moveFor?.to || '']?.consequences || []).concat(moveFor?.to === 'Closed' ? ['Reopening later needs approval, a reason and a future expiry'] : [])}
         confirmLabel={`Move to ${moveFor?.to || ''}`} tone="dark"
         onConfirm={async () => { if (moveFor) { await transition(moveFor.job.id, moveFor.to); setMoveFor(null); } }} />
-      <GlobalCreateModal open={showCreateJob} onClose={() => setShowCreateJob(false)} title="New job posting" subtitle="Starts as Draft — publish from the board once approved" wide submitLabel="Create job"
-        onSubmit={doCreateJob}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="sm:col-span-2"><Field label="Job title *"><input className={kitInput} value={jobForm.title} onChange={(e) => setJobForm({ ...jobForm, title: e.target.value })} placeholder="e.g. Senior React Developer" /></Field></div>
-          {orgs.length > 0 && <Field label="Organization *"><Select value={jobForm.orgId} onChange={(v) => setJobForm({ ...jobForm, orgId: v })} placeholder="Choose company" options={orgs.map((o: any) => ({ value: o.id, label: `${o.displayName || o.legalName || o.id}` }))} /></Field>}
-          <Field label="Requirement ID (links demand)"><input className={`${kitInput} font-mono`} value={jobForm.requisitionId} onChange={(e) => setJobForm({ ...jobForm, requisitionId: e.target.value })} placeholder="REQ-…" /></Field>
-          <Field label="Location"><input className={kitInput} value={jobForm.location} onChange={(e) => setJobForm({ ...jobForm, location: e.target.value })} /></Field>
-          <Field label="Employment type"><Select value={jobForm.employmentType} onChange={(v) => setJobForm({ ...jobForm, employmentType: v })} options={['Full-time', 'Part-time', 'Contract', 'Internship'].map((t) => ({ value: t, label: t }))} /></Field>
-          <Field label="Min salary (₹)"><input className={kitInput} type="number" min={0} value={jobForm.salaryMin} onChange={(e) => setJobForm({ ...jobForm, salaryMin: e.target.value })} /></Field>
-          <Field label="Max salary (₹)"><input className={kitInput} type="number" min={0} value={jobForm.salaryMax} onChange={(e) => setJobForm({ ...jobForm, salaryMax: e.target.value })} /></Field>
-          <Field label="Expiry date"><DatePicker value={jobForm.expiryDate} onChange={(v) => setJobForm({ ...jobForm, expiryDate: v })} ariaLabel="Expiry date" /></Field>
-          <Field label="Visibility"><Select value={jobForm.visibility} onChange={(v) => setJobForm({ ...jobForm, visibility: v })} options={['public', 'private', 'assigned'].map((v) => ({ value: v, label: v }))} /></Field>
-          <div className="sm:col-span-2"><Field label="Description"><textarea rows={2} className={kitInput} value={jobForm.description} onChange={(e) => setJobForm({ ...jobForm, description: e.target.value })} /></Field></div>
-        </div>
-      </GlobalCreateModal>
     </div>
   );
 }

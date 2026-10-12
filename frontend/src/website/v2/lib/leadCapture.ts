@@ -1,0 +1,61 @@
+export interface LeadCapturePayload {
+  contactName: string;
+  companyName?: string;
+  email: string;
+  phone?: string;
+  /** Short scope line (roles, headcount, tech stack…) */
+  roleOrScope?: string;
+  message: string;
+  formName: string;
+  service?: string;
+  industry?: string;
+  sourcePage: string;
+  enquiryType?: 'employer' | 'candidate' | 'partner';
+  consent?: boolean;
+}
+
+export interface LeadCaptureResult {
+  ok: boolean;
+  id?: string;
+  duplicate?: boolean;
+  error?: string;
+}
+
+const API_BASE =
+  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:5000';
+
+/** POST a website lead to /api/v1/enquiries (public, rate-limited, 24h dedupe). */
+export async function submitLead(p: LeadCapturePayload): Promise<LeadCaptureResult> {
+  const email = (p.email || '').trim();
+  const message = [p.roleOrScope?.trim(), p.message?.trim()].filter(Boolean).join('\n');
+  const body = {
+    contactName: (p.contactName || '').trim(),
+    companyName: (p.companyName || '').trim() || 'Individual',
+    workEmail: email,
+    phone: p.phone?.trim() || undefined,
+    enquiryType: p.enquiryType || 'employer',
+    message:
+      message.length >= 10
+        ? message
+        : `${message}\n[${p.formName} enquiry via ${p.sourcePage}]`.trim(),
+    consent: p.consent === true,
+    service: p.service || undefined,
+    formName: p.formName,
+    sourcePage: p.sourcePage,
+    industry: p.industry || undefined,
+  };
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/enquiries`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const json = (await res.json().catch(() => null)) as
+      | { success?: boolean; code?: string; message?: string; data?: { id?: string } }
+      | null;
+    if (!res.ok) return { ok: false, error: json?.message || 'Could not submit — please try again.' };
+    return { ok: true, id: json?.data?.id, duplicate: json?.code === 'ENQUIRY_DUPLICATE' };
+  } catch {
+    return { ok: false, error: 'Network unavailable — please retry or call +91 70196 96166.' };
+  }
+}

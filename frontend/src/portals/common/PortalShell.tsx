@@ -1,6 +1,5 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { CandidateInspectionDrawer } from './CandidateInspectionDrawer';
 import { Logo } from '../../website/components/Logo';
 import { User, LogOut, ShieldCheck, Building2, Menu, X, ChevronsLeft, ChevronsRight, ChevronDown } from 'lucide-react';
 import { apiClient } from '../../shared/api-client';
@@ -36,6 +35,13 @@ export function PortalShell({ portalTitle, portalRole, navItems, children }: Por
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // P4: Esc closes mobile drawer for keyboard users.
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMobileNavOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [mobileNavOpen]);
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem('nexa:sidebar-collapsed') === '1'; } catch { return false; }
   });
@@ -104,7 +110,8 @@ export function PortalShell({ portalTitle, portalRole, navItems, children }: Por
         reason: 'USER_SIGN_OUT',
       });
     } catch (err) {
-      console.warn('Logout API call notice:', err);
+      // P6: log status only — full err may hold tokens/PII/URLs.
+      console.warn('Logout API call notice:', (err as any)?.response?.status ?? 'network');
     } finally {
       clearSession();
       navigate('/login', { replace: true });
@@ -218,10 +225,11 @@ export function PortalShell({ portalTitle, portalRole, navItems, children }: Por
       <div className="min-h-screen flex bg-[#F4F7FB] text-slate-900 font-sans">
 
         {mobileNavOpen && (
-          <div
-            className="fixed inset-0 z-30 bg-slate-900/40 lg:hidden"
+          <button
+            type="button"
+            aria-label="Close navigation"
+            className="fixed inset-0 z-30 bg-slate-900/40 lg:hidden cursor-default"
             onClick={() => setMobileNavOpen(false)}
-            aria-hidden="true"
           />
         )}
 
@@ -297,7 +305,7 @@ export function PortalShell({ portalTitle, portalRole, navItems, children }: Por
               <span className="hidden sm:inline text-xs font-bold text-slate-500">Workspace</span>
               <span className="hidden sm:inline text-slate-300">/</span>
               <h2 className="text-sm font-extrabold text-slate-900 truncate">{portalTitle}</h2>
-              <span className="ml-2 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 border border-emerald-200 text-emerald-700 hidden md:inline-flex items-center gap-1">
+              <span role="status" className="ml-2 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 border border-emerald-200 text-emerald-700 hidden md:inline-flex items-center gap-1">
                 <ShieldCheck size={12} /> {activeTenantId} Authenticated
               </span>
             </div>
@@ -315,15 +323,12 @@ export function PortalShell({ portalTitle, portalRole, navItems, children }: Por
           </header>
 
           {/* Main Body */}
-          <main className="flex-1 p-6 sm:p-8 w-full">
+          <main className="flex-1 p-3 sm:p-5 w-full">
             <div className="max-w-7xl mx-auto w-full">
               {children}
             </div>
           </main>
         </div>
-
-        {/* Candidate Inspection Drawer Component */}
-        <CandidateInspectionDrawer />
       </div>
   );
 }

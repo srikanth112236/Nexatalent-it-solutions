@@ -1,15 +1,21 @@
-import { useState, useEffect, useRef, useId } from 'react';
+import { useState, useEffect, useRef, useId, Children, cloneElement, isValidElement, type ReactNode, type ReactElement } from 'react';
 import { createPortal } from 'react-dom';
+import { sanitizeHtml } from '../utils';
 import { X, ChevronDown, ChevronLeft, ChevronRight, MoreHorizontal, Check } from 'lucide-react';
 
 /* Compact field wrapper for modal forms */
-export function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
+export function Field({ label, children, hint, htmlFor }: { label: string; children: ReactNode; hint?: string; htmlFor?: string }) {
+  const auto = useId();
+  const id = htmlFor || `fld-${auto}`;
+  // P4: associate label with control for SR; child inputs should accept id.
+  const child = Children.only(children) as ReactElement<any>;
+  const withId = isValidElement(child) ? cloneElement(child, { id: (child.props as any).id || id } as any) : children;
   return (
-    <label className="block">
-      <span className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider mb-1">{label}</span>
-      {children}
+    <div className="block">
+      <label htmlFor={id} className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider mb-1">{label}</label>
+      {withId}
       {hint && <span className="block text-[10px] text-slate-500 font-medium mt-1">{hint}</span>}
-    </label>
+    </div>
   );
 }
 
@@ -180,6 +186,9 @@ export function ActionConfirm({ open, title, subtitle, why, steps, consequences,
 export interface MenuItem {
   label: string;
   danger?: boolean;
+  /** Disabled items render locked with a tooltip — used for lifecycle guards (e.g. edit locked while live). */
+  disabled?: boolean;
+  hint?: string;
   onSelect: () => void;
 }
 
@@ -212,7 +221,7 @@ export function RowMenu({ items, label = 'Row actions' }: { items: MenuItem[]; l
       if (e.key === 'Escape') setOpen(false);
       if (e.key === 'ArrowDown') { e.preventDefault(); setHighlight((h) => (h + 1) % items.length); }
       if (e.key === 'ArrowUp') { e.preventDefault(); setHighlight((h) => (h - 1 + items.length) % items.length); }
-      if (e.key === 'Enter') { e.preventDefault(); const it = items[highlight]; setOpen(false); it?.onSelect(); }
+      if (e.key === 'Enter') { e.preventDefault(); const it = items[highlight]; if (it?.disabled) return; setOpen(false); it?.onSelect(); }
     };
     const onScroll = () => setOpen(false);
     document.addEventListener('mousedown', onDoc);
@@ -242,11 +251,13 @@ export function RowMenu({ items, label = 'Row actions' }: { items: MenuItem[]; l
               key={it.label}
               type="button"
               role="menuitem"
+              disabled={it.disabled}
+              title={it.hint || it.label}
               onMouseEnter={() => setHighlight(i)}
-              onClick={() => { setOpen(false); it.onSelect(); }}
-              className={`w-full text-left px-3.5 py-2 text-xs font-bold transition-colors ${it.danger ? 'text-red-600 hover:bg-red-50' : 'text-slate-700 hover:bg-spec-pale'} ${highlight === i ? (it.danger ? 'bg-red-50' : 'bg-spec-pale') : ''}`}
+              onClick={() => { if (it.disabled) return; setOpen(false); it.onSelect(); }}
+              className={`w-full text-left px-3.5 py-2 text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${it.danger ? 'text-red-600 hover:bg-red-50' : 'text-slate-700 hover:bg-spec-pale'} ${highlight === i && !it.disabled ? (it.danger ? 'bg-red-50' : 'bg-spec-pale') : ''}`}
             >
-              {it.label}
+              {it.label}{it.disabled ? ' 🔒' : ''}
             </button>
           ))}
         </div>,
@@ -259,7 +270,7 @@ export function RowMenu({ items, label = 'Row actions' }: { items: MenuItem[]; l
 /* Lightweight rich-text editor — HTML in, HTML out. Used for long-form fields. */
 export function RichText({ value, onChange, label, minHeight = 120 }: { value: string; onChange: (html: string) => void; label: string; minHeight?: number }) {
   const ref = useRef<HTMLDivElement>(null);
-  const cmd = (c: string, v?: string) => { ref.current?.focus(); document.execCommand(c, false, v); ref.current && onChange(ref.current.innerHTML); };
+  const cmd = (c: string, v?: string) => { ref.current?.focus(); document.execCommand(c, false, v); ref.current && onChange(sanitizeHtml(ref.current.innerHTML)); };
   return (
     <div>
       <span className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider mb-1">{label}</span>
@@ -279,8 +290,8 @@ export function RichText({ value, onChange, label, minHeight = 120 }: { value: s
         <div ref={ref} contentEditable suppressContentEditableWarning aria-label={label}
           className="p-3 bg-white text-xs leading-relaxed focus:outline-none min-h-[120px]"
           style={{ minHeight }}
-          dangerouslySetInnerHTML={{ __html: value }}
-          onInput={(e) => onChange((e.target as HTMLDivElement).innerHTML)} />
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(value) }}
+          onInput={(e) => onChange(sanitizeHtml((e.target as HTMLDivElement).innerHTML))} />
       </div>
     </div>
   );

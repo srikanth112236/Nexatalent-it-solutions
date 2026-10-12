@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { loadDb, persist, uid, nowIso, audit } from '../db/store.js';
+import { loadDb, persist, uid, nowIso, audit, pushHistory } from '../db/store.js';
 import { requireAuth, ctxOf, tenantOf, maskCandidate } from '../middleware/rbac.js';
 import { requisitionSchema, jobSchema, applicationStage, interviewSchema, paginate, paged } from '../validate/schemas.js';
 import { emit } from '../events/bus.js';
@@ -18,6 +18,66 @@ const EXTENDED_JOB_FLOW: Record<string, string[]> = {
   Closed: [...JOB_FLOW.Closed, 'Published', 'Paused'],
 };
 const PLATFORM_ROLES = ['superadmin','platform_owner','operations_admin','employee'];
+const AGENCY_ROLES = ['recruiter','agency_recruiter','agency_admin','vendor'];
+
+/** Agency-scoped application linkage (§9/§10.1): an agency user may act on
+ *  applications their agency submitted (submission match on job + candidate).
+ *  Candidate ownership stays non-blocking — no locks are enforced anywhere. */
+function agencyLinkedAppIds(db: any, ctx: any): Set<string> {
+  const ids = new Set<string>();
+  const subs = (db.submissions as any[]).filter((s: any) =>
+    s.agencyId === ctx.tenantId || String(s.submittedBy || '').toLowerCase() === ctx.email.toLowerCase());
+  if (subs.length === 0) return ids;
+  for (const a of db.applications as any[]) {
+    const hit = subs.some((s: any) => s.jobId === a.jobId &&
+      String(s.candidateEmail || '').toLowerCase() === String(a.candidateEmail || '').toLowerCase());
+    if (hit) ids.add(a.id);
+  }
+  return ids;
+}
+function canSeeApplication(db: any, ctx: any, a: any): boolean {
+  if (['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role)) return true;
+  if (a.orgId === ctx.tenantId) return true;
+  if (AGENCY_ROLES.includes(ctx.role)) return agencyLinkedAppIds(db, ctx).has(a.id);
+  // Phase 5: platform recruiters work what is assigned to them (lead or supporting).
+  if (ctx.role === 'internal_recruiter') return appAssignedTo(db, a, emailOf(ctx));
+  return false;
+}
+
+/** Phase D: plan allowance for numeric entitlements (live counts, not ledger rows). */
+function activeGrant(orgId: string, key: string): number | boolean | undefined {
+  const db = loadDb();
+  const sub = (db.subscriptions as any[]).filter((s: any) => s.orgId === orgId).find((s: any) => s.status === 'Active')
+    || (db.subscriptions as any[]).find((s: any) => s.orgId === orgId);
+  if (!sub) return undefined;
+  const plan = (db.plans as any[]).find((p: any) => p.id === sub.planId);
+  return plan?.entitlements?.[key];
+}
+function emailOf(ctx: any): string {
+  return String(ctx.email || '').toLowerCase();
+}
+function reqAssignedTo(req: any, email: string): boolean {
+  if (!req || !email) return false;
+  if (String(req.recruiter || '').toLowerCase() === email) return true;
+  const sup = (req.supportingRecruiters || []) as unknown[];
+  return sup.some((s) => String(s).toLowerCase() === email);
+}
+function jobAssignedTo(db: any, job: any, email: string): boolean {
+  if (!job || !email) return false;
+  if (!job.requisitionId) return false;
+  const r = (db.requisitions as any[]).find((x: any) => x.id === job.requisitionId);
+  return r ? reqAssignedTo(r, email) : false;
+}
+function appAssignedTo(db: any, app: any, email: string): boolean {
+  if (!app || !email) return false;
+  const job = (db.jobs as any[]).find((j: any) => j.id === app.jobId);
+  if (job && jobAssignedTo(db, job, email)) return true;
+  if (app.requisitionId) {
+    const r = (db.requisitions as any[]).find((x: any) => x.id === app.requisitionId);
+    if (r && reqAssignedTo(r, email)) return true;
+  }
+  return false;
+}
 
 // ---- Requisitions ----
 recruitmentRouter.get('/requisitions', requireAuth(), (req, res) => {
@@ -25,13 +85,30 @@ recruitmentRouter.get('/requisitions', requireAuth(), (req, res) => {
   const t = tenantOf(req); const { page, pageSize, q, status } = paginate.parse(req.query);
   const ctx = ctxOf(req);
   let rows = db.requisitions as any[];
-  if (!PLATFORM_ROLES.includes(ctx.role)) rows = rows.filter((r) => r.orgId === t);
+  if (ctx.role === 'internal_recruiter') {
+    // Phase 5: My Requirements — assigned to me as lead or supporting recruiter.
+    const me = emailOf(ctx);
+    rows = rows.filter((r) => reqAssignedTo(r, me));
+  } else if (!PLATFORM_ROLES.includes(ctx.role)) rows = rows.filter((r) => r.orgId === t);
   else if (req.query.orgId) rows = rows.filter((r) => r.orgId === req.query.orgId);
   if (status) rows = rows.filter((r) => r.status === status);
   if (q) rows = rows.filter((r) => JSON.stringify(r).toLowerCase().includes(String(q).toLowerCase()));
   // Rollups run over the COMPLETE filtered set — pagination slices rows, never math.
   const enriched = rows.map((r) => ({ ...r, rollup: requirementRollup(db, r) }));
   res.json({ success: true, ...paged(enriched, page, pageSize) });
+});
+// Phase 2: single requirement with live rollup — avoids full-list scans from drawers.
+recruitmentRouter.get('/requisitions/:id', requireAuth(), (req, res) => {
+  const db = loadDb(); const r: any = db.requisitions.find((x: any) => x.id === req.params.id);
+  if (!r) return res.status(404).json({ success: false, message: 'Requisition not found.' });
+  const ctx = ctxOf(req);
+  if (!PLATFORM_ROLES.includes(ctx.role) && r.orgId !== ctx.tenantId) {
+    // Phase 5: assigned recruiters may open their own requirements across tenants.
+    if (!(ctx.role === 'internal_recruiter' && reqAssignedTo(r, emailOf(ctx)))) {
+      return res.status(404).json({ success: false, message: 'Requisition not found.' });
+    }
+  }
+  res.json({ success: true, data: { ...r, rollup: requirementRollup(db, r) } });
 });
 recruitmentRouter.post('/requisitions', requireAuth(['employer','superadmin','company_admin','hiring_manager','employee','operations_admin']), (req: Request, res: Response) => {
   const parsed = requisitionSchema.safeParse(req.body);
@@ -52,8 +129,33 @@ recruitmentRouter.put('/requisitions/:id', requireAuth(['employer','superadmin',
   for (const k of ['title','department','category','location','branch','openings','employmentType','priority','description','responsibilities','requiredSkills','preferredSkills','qualifications','benefits','experienceMin','experienceMax','budgetMin','budgetMax','currency','payPeriod','deadline','hiringManager','recruiter']) {
     if (b[k] !== undefined) r[k] = b[k];
   }
+  if (b.supportingRecruiters !== undefined && Array.isArray(b.supportingRecruiters)) {
+    r.supportingRecruiters = b.supportingRecruiters.map((x: unknown) => String(x)).filter(Boolean).slice(0, 10);
+  }
   r.updatedAt = nowIso();
   audit(ctx.email, `REQUISITION_EDITED:${r.id}`, r.orgId, 'requisition', r.id, req.ip); persist();
+  res.json({ success: true, data: r });
+});
+// Assign lead + supporting recruiters (§10.1) — no status gate (assignment is not an edit).
+// Records owner, date and reassignment history; candidate ownership elsewhere stays non-blocking.
+recruitmentRouter.post('/requisitions/:id/assign', requireAuth(['employer','superadmin','platform_owner','company_admin','hiring_manager','employee','operations_admin']), (req: Request, res: Response) => {
+  const db = loadDb(); const r: any = db.requisitions.find((x: any) => x.id === req.params.id);
+  if (!r) return res.status(404).json({ success: false, message: 'Requisition not found.' });
+  const ctx = ctxOf(req);
+  if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && r.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Requisition not found.' });
+  const b: any = req.body || {};
+  const to = b.recruiter !== undefined ? String(b.recruiter) : r.recruiter;
+  const supporting = Array.isArray(b.supportingRecruiters)
+    ? b.supportingRecruiters.map((x: unknown) => String(x)).filter(Boolean).slice(0, 10)
+    : r.supportingRecruiters || [];
+  const from = r.recruiter || null;
+  r.recruiter = to; r.supportingRecruiters = supporting;
+  r.assignedAt = nowIso();
+  if (from !== to || JSON.stringify(r.supportingRecruiters) !== JSON.stringify(supporting)) {
+    r.assignmentHistory = [...(r.assignmentHistory || []), { from, to, supporting, by: ctx.email, at: nowIso() }];
+  }
+  r.updatedAt = nowIso();
+  audit(ctx.email, `REQUISITION_ASSIGNED:${r.id} ${from || '-'}->${to || '-'}`, r.orgId, 'requisition', r.id, req.ip); persist();
   res.json({ success: true, data: r });
 });
 recruitmentRouter.delete('/requisitions/:id', requireAuth(['employer','superadmin','platform_owner','company_admin','employee','operations_admin']), (req: Request, res: Response) => {
@@ -73,13 +175,25 @@ recruitmentRouter.patch('/requisitions/:id/status', requireAuth(), (req: Request
   const db = loadDb(); const r: any = db.requisitions.find((x: any) => x.id === req.params.id);
   if (!r) return res.status(404).json({ success: false, message: 'Requisition not found.' });
   const ctx = ctxOf(req);
-  if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && r.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Requisition not found.' });
+  if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && r.orgId !== ctx.tenantId) {
+    if (!(ctx.role === 'internal_recruiter' && reqAssignedTo(r, emailOf(ctx)))) {
+      return res.status(404).json({ success: false, message: 'Requisition not found.' });
+    }
+  }
   const next = String(req.body.status);
-  if (!(REQ_FLOW[r.status] || []).includes(next)) return res.status(422).json({ success: false, message: `Invalid transition ${r.status} → ${next}. Allowed: ${(REQ_FLOW[r.status] || []).join(', ') || 'none'}` });
+  if (!(REQ_FLOW[r.status] || []).includes(next)) return res.status(422).json({ success: false, code: 'INVALID_TRANSITION', message: `Invalid transition ${r.status} → ${next}. Allowed: ${(REQ_FLOW[r.status] || []).join(', ') || 'none'}` });
+  if (next === 'Filled') {
+    // Phase 2: Filled = confirmed hires assigned to openings, not merely "selected".
+    const rollup = requirementRollup(db, r);
+    if (rollup.openingsFilled < Number(r.openings || 0)) {
+      return res.status(422).json({ success: false, code: 'OPENINGS_NOT_FILLED', message: `Cannot mark Filled: ${rollup.openingsFilled}/${r.openings} openings have confirmed joined placements. Record joining first.` });
+    }
+  }
   const from = r.status;
   r.status = next; r.updatedAt = nowIso();
   if (req.body.reason) r.statusReason = String(req.body.reason).slice(0, 1000);
   r.history = [...(r.history || []), { from, to: next, by: ctx.email, reason: req.body.reason || '', at: nowIso() }];
+  if (r.history.length > 200) r.history = r.history.slice(-200);
   audit(ctx.email, `REQUISITION_STATUS:${r.id} ${from}->${next}`, r.orgId, 'requisition', r.id, req.ip, { before: from, after: next, reason: req.body.reason || '' }); persist();
   res.json({ success: true, data: r });
 });
@@ -92,8 +206,18 @@ recruitmentRouter.get('/jobs', requireAuth(), (req, res) => {
   const ctx = ctxOf(req);
   let rows = db.jobs as any[];
   const mine = String(req.query.mine || '');
-  if (mine) { const t = tenantOf(req); rows = rows.filter((j) => j.orgId === t); }
-  else if (!PLATFORM_ROLES.includes(ctx.role)) {
+  if (mine && ctx.role === 'internal_recruiter') {
+    // Phase 5: My Jobs — explicitly assigned via the parent requirement.
+    const me = emailOf(ctx);
+    rows = rows.filter((j) => jobAssignedTo(db, j, me));
+  } else if (mine) { const t = tenantOf(req); rows = rows.filter((j) => j.orgId === t); }
+  else if (ctx.role === 'internal_recruiter') {
+    // Assigned mandates first-class; all published stay discoverable for sourcing.
+    const me = emailOf(ctx);
+    rows = rows
+      .filter((j) => jobAssignedTo(db, j, me) || (j.status === 'Published' && j.visibility !== 'private'))
+      .map((j) => ({ ...j, assignedToMe: jobAssignedTo(db, j, me) }));
+  } else if (!PLATFORM_ROLES.includes(ctx.role)) {
     // Non-platform roles discover only published, non-private jobs (drafts stay hidden).
     rows = rows.filter((j) => j.status === 'Published' && j.visibility !== 'private');
   } else if (req.query.orgId) rows = rows.filter((j) => j.orgId === req.query.orgId);
@@ -141,13 +265,27 @@ recruitmentRouter.get('/jobs-public', (req, res) => {
   const enriched = rows.map((j) => ({ ...publicJob(j), counts: jobCounts(db, j), acceptingApplications: true }));
   res.json({ success: true, ...paged(enriched, page, pageSize) });
 });
+// Phase 7: public job detail — eligible published/non-expired only, allowlisted, non-disclosing.
+recruitmentRouter.get('/jobs-public/:id', (req, res) => {
+  const now = new Date();
+  const db = loadDb();
+  const j: any = (db.jobs as any[]).find((x: any) => x.id === req.params.id);
+  if (!j || j.status !== 'Published' || j.visibility === 'private' || (j.expiryDate && new Date(j.expiryDate) <= now)) {
+    return res.status(404).json({ success: false, message: 'Job not found.' });
+  }
+  res.json({ success: true, data: { ...publicJob(j), counts: jobCounts(db, j), acceptingApplications: true } });
+});
 recruitmentRouter.post('/jobs', requireAuth(['employer','superadmin','company_admin','hiring_manager']), (req: Request, res: Response) => {
   const parsed = jobSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'Validation failed.', errors: parsed.error.flatten() });
   const ctx = ctxOf(req); const t = tenantOf(req);
   try { evaluate(t, 'jobs.create'); } catch (e: any) { return res.status(e.status || 403).json({ success: false, message: e.message, code: e.code }); }
-  const active = (loadDb().jobs as any[]).filter((j) => j.orgId === t && ['Published','Approved'].includes(j.status)).length;
-  try { evaluate(t, 'jobs.active_limit', active + 1 > 0 ? 0 : 0); } catch (e: any) { return res.status(e.status || 403).json({ success: false, message: e.message }); }
+  // Phase D: the active-job cap counts live postings, not ledger rows.
+  const active = loadDb().jobs.filter((j: any) => j.orgId === t && ['Published','Approved'].includes(j.status)).length;
+  const grant = activeGrant(t, 'jobs.active_limit');
+  if (typeof grant === 'number' && active >= grant) {
+    return res.status(429).json({ success: false, code: 'QUOTA_EXHAUSTED', message: `'jobs.active_limit': ${active}/${grant} live postings used. Close or archive one first.` });
+  }
   const job = { id: uid('JOB'), orgId: t, applicantsCount: 0, ...parsed.data, createdAt: nowIso(), createdBy: ctx.email };
   loadDb().jobs.unshift(job);
   consumeQuota(t, ctx.email, 'jobs.create', 0, job.id, `job-create:${job.id}`);
@@ -169,6 +307,7 @@ recruitmentRouter.post('/requisitions/:id/request-changes', requireAuth(['employ
   r.changeRequests = [...(r.changeRequests || []), { note: note.slice(0, 2000), by: ctx.email, at: nowIso() }];
   r.changeNote = note.slice(0, 2000);
   if (r.hiringManager) notify(db, r.hiringManager, 'requisition', `Changes requested on ${r.id} (${r.title}): ${note.slice(0, 140)}`, r.orgId);
+  if (r.recruiter) notify(db, r.recruiter, 'requisition', `Changes requested on ${r.id} (${r.title}): ${note.slice(0, 140)}`, r.orgId);
   audit(ctx.email, `REQUISITION_CHANGES_REQUESTED:${r.id}`, r.orgId, 'requisition', r.id, req.ip); persist();
   res.json({ success: true, data: r });
 });
@@ -178,6 +317,30 @@ recruitmentRouter.put('/jobs/:id', requireAuth(['employer','superadmin','platfor
   const ctx = ctxOf(req);
   if (!['superadmin','platform_owner'].includes(ctx.role) && j.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Job not found.' });
   const b: any = req.body || {};
+  // Live edit lock: once Published, field edits are frozen for company roles —
+  // pause (stops pipeline) or close the posting instead. Platform may correct with audit.
+  if (j.status === 'Published' && !['superadmin','platform_owner'].includes(ctx.role)) {
+    return res.status(422).json({ success: false, code: 'EDIT_LOCKED', message: `Job is live (Published) — editing is locked. Pause it to stop the pipeline, or close it.` });
+  }
+  if (b.visibility !== undefined && b.visibility !== j.visibility && !['Draft'].includes(j.status) && !['superadmin','platform_owner'].includes(ctx.role)) {
+    return res.status(422).json({ success: false, code: 'VISIBILITY_LOCKED', message: `Visibility cannot be edited while ${j.status}. Pause or close the posting instead.` });
+  }
+  // Phase B: assignments must name real agencies/vendors — typos previously orphaned mandates.
+  for (const k of ['assignedAgencies','assignedVendors']) {
+    if (b[k] !== undefined) {
+      const names = (Array.isArray(b[k]) ? b[k] : String(b[k]).split(',')).map((x: unknown) => String(x).trim()).filter(Boolean);
+      const known = new Set([
+        ...(db.agencyProfiles as any[]).flatMap((a: any) => [a.tenantId, a.displayName, a.legalName, a.contactEmail].filter(Boolean).map((s: string) => String(s).toLowerCase())),
+        ...(db.users as any[]).filter((u: any) => ['agency_admin','agency_recruiter','recruiter','vendor'].includes(u.role)).map((u: any) => String(u.email).toLowerCase()),
+      ]);
+      const bad = names.filter((n: string) => {
+        const nl = n.toLowerCase();
+        return ![...known].some((k: string) => k === nl || (k.length >= 4 && nl.length >= 4 && (k.includes(nl) || nl.includes(k))));
+      });
+      if (bad.length > 0) return res.status(422).json({ success: false, code: 'UNKNOWN_AGENCY', message: `Unknown agency/vendor: ${bad.join(', ')}. Use a verified agency name, tenant or email.` });
+      b[k] = names;
+    }
+  }
   for (const k of ['title','description','location','employmentType','workArrangement','salaryMin','salaryMax','visibility','expiryDate','requiredSkills','preferredSkills','qualifications','assignedAgencies','assignedVendors']) {
     if (b[k] !== undefined) j[k] = b[k];
   }
@@ -210,12 +373,14 @@ recruitmentRouter.patch('/jobs/:id/status', requireAuth(['employer','superadmin'
     }
     if (next === 'Published') {
       // Publish guards: approved parent, real openings, future expiry.
-      if (j.requisitionId) {
-        const r: any = db.requisitions.find((x: any) => x.id === j.requisitionId);
-        if (!r) return res.status(422).json({ success: false, message: `Cannot publish: linked requirement ${j.requisitionId} was not found.`, code: 'REQUIREMENT_MISSING' });
-        if (!['Approved','Sourcing'].includes(r.status)) return res.status(422).json({ success: false, message: `Cannot publish: parent requirement ${r.id} is ${r.status}. Approve it first.`, code: 'REQUIREMENT_NOT_APPROVED' });
-        if (!(Number(r.openings) > 0)) return res.status(422).json({ success: false, message: `Cannot publish: parent requirement ${r.id} has no openings.`, code: 'NO_OPENINGS' });
-      }
+      // Phase 2: requisitionId is mandatory — a Job must link to a Requirement.
+      const reqId = j.requisitionId || req.body.requisitionId;
+      if (!reqId) return res.status(422).json({ success: false, message: `Cannot publish: job ${j.id} has no linked requirement (requisitionId). Link it first.`, code: 'REQUIREMENT_MISSING' });
+      if (req.body.requisitionId && !j.requisitionId) j.requisitionId = String(req.body.requisitionId);
+      const r: any = db.requisitions.find((x: any) => x.id === j.requisitionId);
+      if (!r) return res.status(422).json({ success: false, message: `Cannot publish: linked requirement ${j.requisitionId} was not found.`, code: 'REQUIREMENT_MISSING' });
+      if (!['Approved','Sourcing'].includes(r.status)) return res.status(422).json({ success: false, message: `Cannot publish: parent requirement ${r.id} is ${r.status}. Approve it first.`, code: 'REQUIREMENT_NOT_APPROVED' });
+      if (!(Number(r.openings) > 0)) return res.status(422).json({ success: false, message: `Cannot publish: parent requirement ${r.id} has no openings.`, code: 'NO_OPENINGS' });
       const exp = req.body.expiryDate ?? j.expiryDate;
       if (exp && !(new Date(exp) > new Date())) return res.status(422).json({ success: false, message: 'Cannot publish: expiry date is in the past. Set a future date.', code: 'EXPIRY_PAST' });
       if (req.body.expiryDate) j.expiryDate = req.body.expiryDate;
@@ -223,13 +388,47 @@ recruitmentRouter.patch('/jobs/:id/status', requireAuth(['employer','superadmin'
   } catch (e: any) {
     return res.status(e.status || 422).json({ success: false, message: e.message, code: e.code });
   }
+  // Pause / Close change the pipeline for everyone — a reason is mandatory and audited.
+  if ((next === 'Paused' || next === 'Closed') && !String(reason || '').trim()) {
+    return res.status(400).json({ success: false, code: 'REASON_REQUIRED', message: `A reason is required to ${next.toLowerCase()} this job and is recorded in the audit log.` });
+  }
   const from = j.status;
   j.status = next; j.updatedAt = nowIso();
+  j.acceptingApplications = (next === 'Published');
   if (reason) j.statusReason = String(reason).slice(0, 1000);
   j.history = [...(j.history || []), { from, to: next, by: ctx.email, reason: reason ? String(reason).slice(0, 1000) : '', at: nowIso() }];
-  audit(ctx.email, `JOB_STATUS:${j.id} ${from}->${next}`, j.orgId, 'job', j.id, req.ip, { before: from, after: next, reason: reason ? String(reason).slice(0, 1000) : '' }); persist();
+  if (j.history.length > 200) j.history = j.history.slice(-200);
+  audit(ctx.email, `JOB_STATUS:${j.id} ${from}->${next}`, j.orgId, 'job', j.id, req.ip, { before: from, after: next, reason: reason ? String(reason).slice(0, 1000) : '' });
+  const note = (recipient: string, body: string) => notify(db, recipient, 'job', body, j.orgId);
+  note(`company:${j.orgId}`, `Job ${j.id} (${j.title}) ${from} → ${next}${reason ? ` — ${String(reason).slice(0, 200)}` : ''}.`);
+  note('superadmin', `Job ${j.id} ${from} → ${next} by ${ctx.email}.`);
+  // Close cascade: every open application ends as Job Closed (candidates notified).
+  let closedApps = 0;
+  if (next === 'Closed') {
+    for (const a of (db.applications as any[]).filter((x: any) => x.jobId === j.id && !TERMINAL_STAGES.includes(x.stage))) {
+      const prev = a.stage;
+      a.stage = 'Job Closed'; a.updatedAt = nowIso(); a.stageReason = String(reason || 'Requirement closed');
+      pushHistory(db.stageHistory, { id: uid('STG'), applicationId: a.id, from: prev, to: 'Job Closed', actor: ctx.email, reason: String(reason || 'Requirement closed'), createdAt: nowIso() });
+      if (a.candidateEmail) notify(db, a.candidateEmail, 'application', `Your application for ${j.title} is closed: ${String(reason || 'requirement closed').slice(0, 200)}.`, j.orgId);
+      closedApps += 1;
+    }
+    if (closedApps > 0) audit(ctx.email, `JOB_CLOSE_CASCADE:${j.id}:${closedApps}`, j.orgId, 'application', j.id, req.ip);
+  }
+  // Requisition sync: publishing sources the parent; closing the last live job closes it.
+  if (j.requisitionId) {
+    const parent: any = db.requisitions.find((x: any) => x.id === j.requisitionId);
+    if (parent) {
+      if (next === 'Published' && parent.status === 'Approved') { parent.status = 'Sourcing'; parent.updatedAt = nowIso(); }
+      if (next === 'Closed' || next === 'Archived') {
+        const siblings = (db.jobs as any[]).filter((x: any) => x.requisitionId === parent.id && x.id !== j.id && ['Published', 'Paused', 'Approved'].includes(x.status));
+        if (siblings.length === 0 && parent.status !== 'Closed') { parent.status = 'Closed'; parent.updatedAt = nowIso(); parent.closeReason = `Last live job ${j.id} ${next.toLowerCase()}`; }
+      }
+      if (from === 'Closed' && next === 'Published' && parent.status === 'Closed') { parent.status = 'Sourcing'; parent.updatedAt = nowIso(); }
+    }
+  }
+  persist();
   if (next === 'Published') emit('job.published', j, j.orgId, ctx.email);
-  res.json({ success: true, data: j });
+  res.json({ success: true, data: { ...j, closedApplications: next === 'Closed' ? closedApps : undefined } });
 });
 
 // ---- Candidate search (tiered disclosure §8.5) ----
@@ -242,11 +441,35 @@ recruitmentRouter.get('/candidates/search', requireAuth(['employer','superadmin'
     try { evaluate(t, tier === 'contact' ? 'candidates.contact_unlock' : 'candidates.profile_view'); } catch (e: any) { return res.status(e.status || 403).json({ success: false, message: e.message, code: e.code, upgrade: true }); }
   }
   let rows = loadDb().candidateProfiles as any[];
-  if (q) { const s = String(q).toLowerCase(); rows = rows.filter((c) => `${c.name} ${c.roleTitle} ${c.location}`.toLowerCase().includes(s)); }
+  // Keyword search: every whitespace-separated token must match somewhere in
+  // name / title / location / skills — only genuinely matching candidates return.
+  if (q) {
+    const toks = String(q).toLowerCase().split(/\s+/).map((t) => t.trim()).filter(Boolean);
+    rows = rows.filter((c) => {
+      const hay = `${c.name || ''} ${c.roleTitle || ''} ${c.location || ''} ${c.skills || ''} ${(c as any).primaryTechStack || ''}`.toLowerCase();
+      return toks.every((t) => hay.includes(t));
+    });
+  }
+  // §8.5 structured filters (all optional, AND-combined).
+  const has = (v: unknown) => v !== undefined && String(v).trim() !== '';
+  const anyOf = (v: unknown): string[] => String(v).toLowerCase().split(',').map((x) => x.trim()).filter(Boolean);
+  // Multi-select sends comma-joined values — a candidate matches ANY of them.
+  if (has(req.query.designation)) { const want = anyOf(req.query.designation); rows = rows.filter((c) => { const h = `${c.roleTitle || ''}`.toLowerCase(); return want.some((w) => h.includes(w)); }); }
+  if (has(req.query.skills)) {
+    const want = String(req.query.skills).toLowerCase().split(',').map((x) => x.trim()).filter(Boolean);
+    rows = rows.filter((c) => { const hay = `${c.skills || ''} ${(c as any).primaryTechStack || ''}`.toLowerCase(); return want.every((w) => hay.includes(w)); });
+  }
+  if (has(req.query.expMin)) { const n = Number(req.query.expMin); if (Number.isFinite(n)) rows = rows.filter((c) => Number(c.experienceYears ?? 0) >= n); }
+  if (has(req.query.expMax)) { const n = Number(req.query.expMax); if (Number.isFinite(n)) rows = rows.filter((c) => Number(c.experienceYears ?? 99) <= n); }
+  if (has(req.query.location)) { const want = anyOf(req.query.location); rows = rows.filter((c) => { const h = `${c.location || ''} ${c.country || ''}`.toLowerCase(); return want.some((w) => h.includes(w)); }); }
+  if (has(req.query.availability)) { const s = String(req.query.availability).toLowerCase(); rows = rows.filter((c) => `${c.availability || ''} ${c.noticePeriod || ''}`.toLowerCase().includes(s)); }
+  if (has(req.query.resume)) rows = rows.filter((c) => !!(c as any).resumeRef === (String(req.query.resume) !== 'no'));
   const canSee = ctx.permissions.includes('view_sensitive_fields');
   rows = rows.map((c) => {
-    if (tier === 'preview') { const { phone, currentCtc, email, ...rest } = c; return { ...rest, email: undefined, contactLocked: true }; }
+    if (tier === 'preview') { const { phone, currentCtc, expectedCtc, noticePeriod, email, skills, ...rest } = c; return { ...rest, email: undefined, contactLocked: true }; }
     if (tier === 'full') return maskCandidate(c, canSee);
+    // P1-5: contact tier requires explicit sensitive grant — quota alone is not enough.
+    if (!canSee) return maskCandidate(c, false);
     consumeQuota(t, ctx.email, 'candidates.contact_unlock', 1, c.id, `unlock:${t}:${c.id}:${ctx.email}`);
     return c;
   });
@@ -256,8 +479,11 @@ recruitmentRouter.get('/candidates/search', requireAuth(['employer','superadmin'
 // ---- Applications (ATS §8.8) ----
 recruitmentRouter.get('/applications', requireAuth(), (req, res) => {
   const ctx = ctxOf(req);
-  let rows = loadDb().applications as any[];
+  const db = loadDb();
+  let rows = db.applications as any[];
   if (ctx.role === 'candidate') rows = rows.filter((a) => String(a.candidateEmail).toLowerCase() === ctx.email.toLowerCase());
+  else if (ctx.role === 'internal_recruiter') rows = rows.filter((a) => appAssignedTo(db, a, emailOf(ctx)));
+  else if (AGENCY_ROLES.includes(ctx.role)) { const ids = agencyLinkedAppIds(db, ctx); rows = rows.filter((a) => ids.has(a.id)); }
   else if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role)) rows = rows.filter((a) => a.orgId === ctx.tenantId);
   const { page, pageSize, status, q } = paginate.parse(req.query);
   if (status) rows = rows.filter((a) => a.stage === status);
@@ -266,35 +492,70 @@ recruitmentRouter.get('/applications', requireAuth(), (req, res) => {
   if (req.query.requisitionId) rows = rows.filter((a) => a.requisitionId === req.query.requisitionId);
   res.json({ success: true, ...paged(rows, page, pageSize) });
 });
-recruitmentRouter.post('/applications', requireAuth(['candidate','superadmin','agency_recruiter','agency_admin','recruiter','vendor']), (req: Request, res: Response) => {
+recruitmentRouter.post('/applications', requireAuth(['candidate','superadmin','agency_recruiter','agency_admin','recruiter','vendor','internal_recruiter','employee']), (req: Request, res: Response) => {
   const { jobId, candidateEmail } = req.body || {};
   if (!jobId || !candidateEmail) return res.status(400).json({ success: false, message: 'jobId + candidateEmail required.' });
   const db = loadDb();
   const job: any = db.jobs.find((j: any) => j.id === jobId);
   if (!job || job.status !== 'Published' || (job.expiryDate && new Date(job.expiryDate) <= new Date())) return res.status(422).json({ success: false, message: 'Job is not accepting applications.' });
   const key = `${jobId}::${String(candidateEmail).toLowerCase()}`;
-  if (db.applications.find((a: any) => a.key === key)) return res.status(409).json({ success: false, message: 'Already applied to this job.' });
+  if (db.applications.find((a: any) => a.key === key)) return res.status(409).json({ success: false, code: 'APPLICATION_ALREADY_EXISTS', message: 'Already applied to this job.' });
   const ctx = ctxOf(req);
   if (ctx.role === 'candidate' && String(candidateEmail).toLowerCase() !== ctx.email.toLowerCase()) return res.status(403).json({ success: false, message: 'Apply as yourself only.' });
+  // Phase 5: platform recruiters attach only to assigned mandates.
+  if (ctx.role === 'internal_recruiter' && !jobAssignedTo(db, job, emailOf(ctx))) {
+    return res.status(403).json({ success: false, code: 'JOB_NOT_ASSIGNED', message: 'Attach candidates only to requirements assigned to you.' });
+  }
   const app = { id: uid('APP'), key, jobId, jobTitle: job.title, orgId: job.orgId, requisitionId: job.requisitionId, candidateEmail, stage: 'Applied', source: ctx.role, createdAt: nowIso(), updatedAt: nowIso() };
   db.applications.unshift(app);
-  db.stageHistory.unshift({ id: uid('STG'), applicationId: app.id, from: '-', to: 'Applied', actor: ctx.email, createdAt: nowIso() });
+  pushHistory(db.stageHistory, { id: uid('STG'), applicationId: app.id, from: '-', to: 'Applied', actor: ctx.email, createdAt: nowIso() });
   job.applicantsCount = (job.applicantsCount || 0) + 1;
   audit(ctx.email, `APPLICATION_SUBMITTED:${app.id}`, job.orgId, 'application', app.id, req.ip); persist();
   emit('application.stage', { ...app }, job.orgId, ctx.email);
   const { key: _k, ...pub } = app;
   res.status(201).json({ success: true, data: pub });
 });
-recruitmentRouter.patch('/applications/:id/stage', requireAuth(['employer','superadmin','company_admin','hiring_manager','company_recruiter','employee','operations_admin']), (req: Request, res: Response) => {
+// Phase 3: explicit application flow — no arbitrary writes, terminal states locked.
+// Hired is placement-only (POST /placements mints it). Rejected/Withdrawn/On Hold/Job Closed need a reason.
+const APPLICATION_FLOW: Record<string, string[]> = {
+  New: ['Applied', 'Under Review', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Offer', 'Selected', 'Rejected', 'Withdrawn', 'On Hold'],
+  Applied: ['Under Review', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Offer', 'Selected', 'Rejected', 'Withdrawn', 'On Hold'],
+  'Under Review': ['Screening', 'Shortlisted', 'Interview Scheduled', 'Offer', 'Selected', 'Rejected', 'Withdrawn', 'On Hold'],
+  Screening: ['Shortlisted', 'Interview Scheduled', 'Offer', 'Selected', 'Rejected', 'Withdrawn', 'On Hold'],
+  Shortlisted: ['Interview Scheduled', 'Interview Completed', 'Offer', 'Selected', 'Rejected', 'Withdrawn', 'On Hold'],
+  'Interview Scheduled': ['Interview Completed', 'Rejected', 'Withdrawn', 'On Hold'],
+  'Interview Completed': ['Selected', 'Offer', 'Shortlisted', 'Rejected', 'Withdrawn', 'On Hold'],
+  Selected: ['Offer', 'Rejected', 'Withdrawn', 'On Hold'],
+  Offer: ['Selected', 'Rejected', 'Withdrawn', 'On Hold'],
+  'On Hold': ['Applied', 'Under Review', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Rejected', 'Withdrawn'],
+  Hired: [],
+  Withdrawn: [],
+  Rejected: [],
+  'Job Closed': [],
+};
+const TERMINAL_STAGES = ['Hired', 'Withdrawn', 'Rejected', 'Job Closed'];
+const REASON_REQUIRED_STAGES = ['Rejected', 'Withdrawn', 'On Hold', 'Job Closed'];
+recruitmentRouter.patch('/applications/:id/stage', requireAuth(['employer','superadmin','company_admin','hiring_manager','company_recruiter','employee','operations_admin','internal_recruiter','recruiter','agency_recruiter','agency_admin','vendor']), (req: Request, res: Response) => {
   const db = loadDb(); const a: any = db.applications.find((x: any) => x.id === req.params.id);
   if (!a) return res.status(404).json({ success: false, message: 'Application not found.' });
   const ctx = ctxOf(req);
-  if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && a.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Application not found.' });
+  if (!canSeeApplication(db, ctx, a)) return res.status(404).json({ success: false, message: 'Application not found.' });
   const parsed = applicationStage.safeParse(req.body.stage);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'Invalid stage.' });
-  const from = a.stage; a.stage = parsed.data; a.updatedAt = nowIso();
+  const from = a.stage; const to = parsed.data;
+  if (to === 'Hired') return res.status(422).json({ success: false, code: 'HIRE_VIA_PLACEMENT', message: 'Hired comes only from Record joining (POST /placements) with an accepted agreement and fee basis — it cannot be set directly.' });
+  if (TERMINAL_STAGES.includes(from)) return res.status(422).json({ success: false, code: 'TERMINAL_STAGE', message: `${from} applications are terminal — reopen explicitly to continue.` });
+  // Pipeline freeze: paused/closed jobs stop all movement except candidate withdrawal.
+  const frozenJob = a.jobId ? db.jobs.find((x: any) => x.id === a.jobId) : null;
+  if (frozenJob && ['Paused', 'Closed'].includes(frozenJob.status) && !['Withdrawn', 'Job Closed'].includes(to)) {
+    return res.status(422).json({ success: false, code: 'PIPELINE_FROZEN', message: `Pipeline is frozen — job ${frozenJob.id} is ${frozenJob.status}. Resume it to continue, or withdraw.` });
+  }
+  if (from === to) return res.status(422).json({ success: false, code: 'INVALID_TRANSITION', message: `Already in stage ${from}.` });
+  if (!(APPLICATION_FLOW[from] || []).includes(to)) return res.status(422).json({ success: false, code: 'INVALID_TRANSITION', message: `Invalid transition ${from} → ${to}. Allowed: ${(APPLICATION_FLOW[from] || []).join(', ') || 'none'}.` });
+  if (REASON_REQUIRED_STAGES.includes(to) && !String(req.body.reason || '').trim()) return res.status(400).json({ success: false, code: 'REASON_REQUIRED', message: `A reason is required to move to ${to} and is recorded in the audit log.` });
+  a.stage = to; a.updatedAt = nowIso();
   if (req.body.reason) a.stageReason = String(req.body.reason);
-  db.stageHistory.unshift({ id: uid('STG'), applicationId: a.id, from, to: a.stage, actor: ctx.email, reason: req.body.reason || '', createdAt: nowIso() });
+  pushHistory(db.stageHistory, { id: uid('STG'), applicationId: a.id, from, to: a.stage, actor: ctx.email, reason: req.body.reason || '', createdAt: nowIso() });
   audit(ctx.email, `APPLICATION_STAGE:${a.id} ${from}->${a.stage}`, a.orgId, 'application', a.id, req.ip, { before: from, after: a.stage, reason: req.body.reason || '' }); persist();
   emit('application.stage', { ...a }, a.orgId, ctx.email);
   res.json({ success: true, data: a });
@@ -303,69 +564,225 @@ recruitmentRouter.patch('/applications/:id/stage', requireAuth(['employer','supe
 // ---- Interviews + feedback ----
 recruitmentRouter.get('/interviews', requireAuth(), (req, res) => {
   const db = loadDb();
-  const ctx = ctxOf(req); let rows = db.interviews as any[];
-  if (ctx.role === 'candidate') rows = rows.filter((i) => String(i.candidateEmail).toLowerCase() === ctx.email.toLowerCase());
+  const ctx = ctxOf(req);   let rows = db.interviews as any[];
+  if (ctx.role === 'candidate') {
+    rows = rows.filter((i) => String(i.candidateEmail).toLowerCase() === ctx.email.toLowerCase());
+    // Phase C: candidate-safe projection — logistics for them, never panel identities.
+    rows = rows.map((i: any) => ({
+      id: i.id, applicationId: i.applicationId, jobId: i.jobId,
+      round: i.round, scheduledAt: i.scheduledAt, timezone: i.timezone, mode: i.mode,
+      meetingLink: i.meetingLink || i.meetLink, venue: i.venue, instructions: i.instructions,
+      status: i.status, confirmationStatus: i.confirmationStatus,
+      candidateName: i.candidateName, jobTitle: i.jobTitle,
+    }));
+  }
+  else if (ctx.role === 'internal_recruiter') {
+    const me = emailOf(ctx);
+    const ids = new Set((db.applications as any[]).filter((a) => appAssignedTo(db, a, me)).map((a) => a.id));
+    rows = rows.filter((i) => ids.has(i.applicationId));
+  }
+  else if (AGENCY_ROLES.includes(ctx.role)) { const ids = agencyLinkedAppIds(db, ctx); rows = rows.filter((i) => ids.has(i.applicationId)); }
   else if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role)) rows = rows.filter((i) => i.companyId === ctx.tenantId || i.orgId === ctx.tenantId);
   if (req.query.requisitionId) {
     const appReq = new Map((db.applications as any[]).map((a: any) => [a.id, a.requisitionId]));
     rows = rows.filter((i) => appReq.get(i.applicationId) === req.query.requisitionId);
   }
   if (req.query.jobId) rows = rows.filter((i) => i.jobId === req.query.jobId);
-  res.json({ success: true, data: rows });
+  // Phase E: server paging (was: full-array dump, client-sliced).
+  const { page, pageSize } = paginate.parse(req.query);
+  res.json({ success: true, ...paged(rows, page, pageSize) });
 });
-recruitmentRouter.post('/interviews', requireAuth(['employer','superadmin','company_admin','hiring_manager','employee','operations_admin']), (req: Request, res: Response) => {
+// Phase E: single-query overdue-feedback count (replaces per-row N+1 fan-outs).
+recruitmentRouter.get('/interviews/feedback-pending', requireAuth(), (req, res) => {
+  const db = loadDb(); const ctx = ctxOf(req);
+  let rows = db.interviews as any[];
+  if (ctx.role === 'candidate') rows = rows.filter((i) => String(i.candidateEmail).toLowerCase() === ctx.email.toLowerCase());
+  else if (ctx.role === 'internal_recruiter') {
+    const me = emailOf(ctx);
+    const ids = new Set((db.applications as any[]).filter((a) => appAssignedTo(db, a, me)).map((a) => a.id));
+    rows = rows.filter((i) => ids.has(i.applicationId));
+  }
+  else if (AGENCY_ROLES.includes(ctx.role)) { const ids = agencyLinkedAppIds(db, ctx); rows = rows.filter((i) => ids.has(i.applicationId)); }
+  else if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role)) rows = rows.filter((i) => i.companyId === ctx.tenantId || i.orgId === ctx.tenantId);
+  const done = rows.filter((i) => i.status === 'Completed');
+  const fbIds = new Set((db.feedback as any[]).map((f: any) => f.interviewId));
+  res.json({ success: true, data: { pending: done.filter((i) => !fbIds.has(i.id)).length, completed: done.length } });
+});
+recruitmentRouter.post('/interviews', requireAuth(['employer','superadmin','company_admin','hiring_manager','employee','operations_admin','internal_recruiter','recruiter','agency_recruiter','agency_admin','vendor']), (req: Request, res: Response) => {
   const parsed = interviewSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'Validation failed.', errors: parsed.error.flatten() });
   const db = loadDb(); const ctx = ctxOf(req);
   const app: any = db.applications.find((a: any) => a.id === parsed.data.applicationId);
   if (!app) return res.status(404).json({ success: false, message: 'Application not found.' });
-  if (!['superadmin','platform_owner'].includes(ctx.role) && app.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Application not found.' });
+  if (!canSeeApplication(db, ctx, app)) return res.status(404).json({ success: false, message: 'Application not found.' });
+  // Phase D: the interview must belong to the application's own job.
+  if (parsed.data.jobId !== app.jobId) {
+    return res.status(422).json({ success: false, code: 'INTERVIEW_JOB_MISMATCH', message: `Interview job ${parsed.data.jobId} does not match application job ${app.jobId}.` });
+  }
+  // Frozen pipeline: no new interviews while the job is paused/closed.
+  const ivJob: any = db.jobs.find((x: any) => x.id === app.jobId);
+  if (ivJob && ivJob.status !== 'Published') {
+    return res.status(422).json({ success: false, code: 'PIPELINE_FROZEN', message: `Cannot schedule — job ${ivJob.id} is ${ivJob.status}. Resume it first.` });
+  }
+  // Phase 3: timezone-safe scheduling — start must be in the future.
+  const at = new Date(parsed.data.scheduledAt).getTime();
+  if (!Number.isFinite(at) || at <= Date.now() - 60 * 1000) return res.status(422).json({ success: false, code: 'INTERVIEW_PAST', message: 'Interview must be scheduled in the future.' });
   const iv = { id: uid('INT'), ...parsed.data, candidateEmail: app.candidateEmail, candidateName: app.candidateName || app.candidateEmail, companyId: app.orgId, orgId: app.orgId, status: 'Scheduled', createdAt: nowIso() };
   db.interviews.unshift(iv);
   app.stage = 'Interview Scheduled'; app.updatedAt = nowIso();
-  db.stageHistory.unshift({ id: uid('STG'), applicationId: app.id, from: 'Shortlisted', to: 'Interview Scheduled', actor: ctx.email, createdAt: nowIso() });
+  pushHistory(db.stageHistory, { id: uid('STG'), applicationId: app.id, from: 'Shortlisted', to: 'Interview Scheduled', actor: ctx.email, createdAt: nowIso() });
   audit(ctx.email, `INTERVIEW_SCHEDULED:${iv.id}`, app.orgId, 'interview', iv.id, req.ip); persist();
   emit('interview.scheduled', { ...iv, applicationId: app.id }, app.orgId, ctx.email);
   res.status(201).json({ success: true, data: iv });
 });
-recruitmentRouter.post('/interviews/:id/feedback', requireAuth(['employer','superadmin','company_admin','hiring_manager','employee']), (req: Request, res: Response) => {
+recruitmentRouter.post('/interviews/:id/feedback', requireAuth(['employer','superadmin','company_admin','hiring_manager','employee','operations_admin','internal_recruiter','recruiter','agency_recruiter','agency_admin','vendor']), (req: Request, res: Response) => {
   const db = loadDb(); const iv: any = db.interviews.find((x: any) => x.id === req.params.id);
   if (!iv) return res.status(404).json({ success: false, message: 'Interview not found.' });
   const ctx = ctxOf(req);
-  if (!['superadmin','platform_owner','employee','operations_admin'].includes(ctx.role) && iv.companyId !== ctx.tenantId && iv.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Interview not found.' });
+  if (!['superadmin','platform_owner','employee','operations_admin'].includes(ctx.role) && iv.companyId !== ctx.tenantId && iv.orgId !== ctx.tenantId) {
+    if (ctx.role === 'internal_recruiter') {
+      const app: any = db.applications.find((a: any) => a.id === iv.applicationId);
+      if (!app || !appAssignedTo(db, app, emailOf(ctx))) return res.status(404).json({ success: false, message: 'Interview not found.' });
+    } else if (!(AGENCY_ROLES.includes(ctx.role) && agencyLinkedAppIds(db, ctx).has(iv.applicationId))) {
+      return res.status(404).json({ success: false, message: 'Interview not found.' });
+    }
+  }
   const rating = Number(req.body.rating);
   if (req.body.rating !== undefined && !(rating >= 1 && rating <= 5)) return res.status(400).json({ success: false, message: 'rating must be 1-5.' });
-  const fb = { id: uid('FB'), interviewId: iv.id, rating: req.body.rating === undefined ? undefined : rating, notes: String(req.body.notes || '').slice(0, 2000), by: ctx.email, createdAt: nowIso() };
+  // Enterprise scorecard: per-dimension 1-5 scores + hiring recommendation + strengths/gaps.
+  let dimensions: Record<string, number> | undefined;
+  if (req.body.dimensions !== undefined) {
+    if (typeof req.body.dimensions !== 'object' || Array.isArray(req.body.dimensions)) return res.status(400).json({ success: false, message: 'dimensions must be an object of criterion to 1-5.' });
+    const entries = Object.entries(req.body.dimensions).slice(0, 6);
+    dimensions = {};
+    for (const [k, v] of entries) {
+      const n = Number(v);
+      if (String(k).length > 40 || !(n >= 1 && n <= 5)) return res.status(400).json({ success: false, message: `dimension "${String(k).slice(0, 40)}" must be 1-5.` });
+      dimensions[String(k).slice(0, 40)] = n;
+    }
+  }
+  const recommendation = req.body.recommendation === undefined || req.body.recommendation === '' ? undefined : String(req.body.recommendation);
+  if (recommendation && !['Strong hire', 'Hire', 'Hold', 'No hire'].includes(recommendation)) return res.status(400).json({ success: false, message: 'recommendation must be Strong hire|Hire|Hold|No hire.' });
+  const fb = {
+    id: uid('FB'), interviewId: iv.id, rating: req.body.rating === undefined ? undefined : rating,
+    dimensions, recommendation,
+    strengths: String(req.body.strengths || '').slice(0, 1000) || undefined,
+    gaps: String(req.body.gaps || '').slice(0, 1000) || undefined,
+    notes: String(req.body.notes || '').slice(0, 2000), by: ctx.email, createdAt: nowIso(),
+  };
   db.feedback.unshift(fb);
   audit(ctx.email, `INTERVIEW_FEEDBACK:${iv.id}`, iv.companyId || iv.orgId, 'interview', iv.id, req.ip); persist();
   res.status(201).json({ success: true, data: fb });
 });
-recruitmentRouter.get('/interviews/:id/feedback', requireAuth(['employer','superadmin','company_admin','hiring_manager','employee','operations_admin']), (req, res) => {
+recruitmentRouter.get('/interviews/:id/feedback', requireAuth(['employer','superadmin','company_admin','hiring_manager','employee','operations_admin','internal_recruiter','recruiter','agency_recruiter','agency_admin','vendor']), (req, res) => {
   const db = loadDb(); const ctx = ctxOf(req);
   const iv: any = db.interviews.find((x: any) => x.id === req.params.id);
   if (!iv) return res.status(404).json({ success: false, message: 'Interview not found.' });
-  if (!['superadmin','platform_owner','employee','operations_admin'].includes(ctx.role) && iv.companyId !== ctx.tenantId && iv.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Interview not found.' });
+  if (!['superadmin','platform_owner','employee','operations_admin'].includes(ctx.role) && iv.companyId !== ctx.tenantId && iv.orgId !== ctx.tenantId) {
+    if (ctx.role === 'internal_recruiter') {
+      const app: any = db.applications.find((a: any) => a.id === iv.applicationId);
+      if (!app || !appAssignedTo(db, app, emailOf(ctx))) return res.status(404).json({ success: false, message: 'Interview not found.' });
+    } else if (!(AGENCY_ROLES.includes(ctx.role) && agencyLinkedAppIds(db, ctx).has(iv.applicationId))) {
+      return res.status(404).json({ success: false, message: 'Interview not found.' });
+    }
+  }
   res.json({ success: true, data: db.feedback.filter((f: any) => f.interviewId === iv.id) });
 });
 
 // ---- Offers & placements ----
+// Candidate-scoped offer inbox (§7 offers): own offers enriched with job + placement status.
+recruitmentRouter.get('/offers/mine', requireAuth(['candidate','superadmin']), (req, res) => {
+  const db = loadDb(); const ctx = ctxOf(req);
+  let rows = db.offers as any[];
+  if (ctx.role === 'candidate') {
+    rows = rows.filter((o: any) => String(o.candidateEmail || '').toLowerCase() === ctx.email.toLowerCase());
+  }
+  const data = rows.map((o: any) => {
+    const job: any = (db.jobs as any[]).find((j) => j.id === o.jobId) || null;
+    const app: any = (db.applications as any[]).find((a) => a.id === o.applicationId) || null;
+    const placement: any = (db.placements as any[]).find((p) => p.applicationId === o.applicationId) || null;
+    return {
+      ...o,
+      job: job
+        ? { id: job.id, title: job.title, companyName: job.companyName, location: job.location, employmentType: job.employmentType }
+        : { id: o.jobId, title: app?.jobTitle || '', companyName: '', location: '', employmentType: '' },
+      application: app ? { id: app.id, stage: app.stage, jobTitle: app.jobTitle } : null,
+      placement: placement ? { id: placement.id, status: placement.status, joinDate: placement.joinDate } : null,
+    };
+  }).sort((a: any, b: any) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  res.json({ success: true, data });
+});
+// Candidate accept / decline an offer (audited, notified; history preserved).
+recruitmentRouter.post('/offers/:id/respond', requireAuth(['candidate','superadmin']), (req: Request, res: Response) => {
+  const db = loadDb(); const ctx = ctxOf(req);
+  const offer: any = db.offers.find((o: any) => o.id === req.params.id);
+  if (!offer) return res.status(404).json({ success: false, message: 'Offer not found.' });
+  if (ctx.role === 'candidate' && String(offer.candidateEmail || '').toLowerCase() !== ctx.email.toLowerCase()) {
+    return res.status(404).json({ success: false, message: 'Offer not found.' });
+  }
+  const decision = String(req.body?.decision || '').toLowerCase();
+  if (!['accepted','declined'].includes(decision)) {
+    return res.status(400).json({ success: false, message: "decision must be 'accepted' or 'declined'." });
+  }
+  if (['Accepted','Declined'].includes(offer.status)) {
+    return res.status(409).json({ success: false, message: `Offer already ${offer.status}.` });
+  }
+  const reason = String(req.body?.reason || '').slice(0, 1000);
+  offer.status = decision === 'accepted' ? 'Accepted' : 'Declined';
+  offer.respondedAt = nowIso();
+  if (reason) offer.responseReason = reason;
+  const app: any = db.applications.find((a: any) => a.id === offer.applicationId);
+  if (app && decision === 'accepted' && app.stage !== 'Hired') {
+    const from = app.stage;
+    app.stage = 'Selected'; app.updatedAt = nowIso();
+    app.history = [...(app.history || []), { from, to: 'Selected', by: ctx.email, reason: 'Offer accepted by candidate', at: nowIso() }];
+    emit('application.stage', { ...app, stage: 'Selected' }, app.orgId, ctx.email);
+  }
+  db.notifications.unshift({ id: uid('NOTIF'), recipient: `company:${offer.orgId}`, kind: 'offer', body: `Offer ${offer.id} ${offer.status.toLowerCase()} by ${offer.candidateEmail}${reason ? `: ${reason}` : ''}`, channel: 'in-app', status: 'queued', createdAt: nowIso(), tenantId: offer.orgId });
+  db.notifications.unshift({ id: uid('NOTIF'), recipient: offer.candidateEmail, kind: 'offer', body: `You ${offer.status.toLowerCase()} offer ${offer.id}${app?.jobTitle ? ` (${app.jobTitle})` : ''}.`, channel: 'in-app', status: 'queued', createdAt: nowIso(), tenantId: offer.orgId });
+  audit(ctx.email, `OFFER_${offer.status.toUpperCase()}:${offer.id}`, offer.orgId, 'offer', offer.id, req.ip); persist();
+  res.json({ success: true, data: offer });
+});
 recruitmentRouter.post('/offers', requireAuth(['employer','superadmin','company_admin','hiring_manager']), (req: Request, res: Response) => {
-  const db = loadDb(); const { applicationId, ctc, currency, joinDate } = req.body || {};
+  const db = loadDb(); const { applicationId, ctc, currency, joinDate, offerLetterMode, offerLetterRef, payPeriod } = req.body || {};
   const app: any = db.applications.find((a: any) => a.id === applicationId);
   if (!app) return res.status(404).json({ success: false, message: 'Application not found.' });
   if (!['superadmin','platform_owner'].includes(ctxOf(req).role) && app.orgId !== ctxOf(req).tenantId) return res.status(404).json({ success: false, message: 'Application not found.' });
-  const offer = { id: uid('OFF'), applicationId, jobId: app.jobId, orgId: app.orgId, candidateEmail: app.candidateEmail, ctc: Number(ctc || 0), currency: currency || 'INR', joinDate, status: 'Issued', createdAt: nowIso() };
+  // Frozen pipeline: no new offers while the job is paused/closed.
+  const offJob: any = db.jobs.find((x: any) => x.id === app.jobId);
+  if (offJob && offJob.status !== 'Published') {
+    return res.status(422).json({ success: false, code: 'PIPELINE_FROZEN', message: `Cannot offer — job ${offJob.id} is ${offJob.status}. Resume it first.` });
+  }
+  // Phase D: one open offer at a time, real money, real dates.
+  if (ctc !== undefined && !(Number(ctc) >= 0)) return res.status(400).json({ success: false, message: 'CTC must be zero or a positive amount.' });
+  if (joinDate !== undefined && Number.isNaN(Date.parse(joinDate))) return res.status(400).json({ success: false, message: 'Invalid joinDate.' });
+  // Guided offer-letter flow: generated (NexaTalent template) or uploaded (company letterhead).
+  const mode = offerLetterMode === 'uploaded' ? 'uploaded' : 'generated';
+  if (mode === 'uploaded' && !String(offerLetterRef || '').trim()) return res.status(400).json({ success: false, message: 'Uploaded letter needs a file reference (filename).' });
+  const open = (db.offers as any[]).find((o: any) => o.applicationId === applicationId && o.status === 'Issued');
+  if (open) return res.status(409).json({ success: false, code: 'OFFER_EXISTS', message: `An open offer (${open.id}) already exists for this application. Withdraw it first.` });
+  const offer = { id: uid('OFF'), applicationId, jobId: app.jobId, orgId: app.orgId, candidateEmail: app.candidateEmail, ctc: Number(ctc || 0), currency: currency || 'INR', payPeriod: String(payPeriod || 'annual').slice(0, 20), joinDate, status: 'Issued', offerLetterMode: mode, offerLetterRef: mode === 'uploaded' ? String(offerLetterRef).slice(0, 300) : null, createdAt: nowIso() };
   db.offers.unshift(offer); app.stage = 'Offer'; app.updatedAt = nowIso();
   audit(ctxOf(req).email, `OFFER_ISSUED:${offer.id}`, app.orgId, 'offer', offer.id, req.ip); persist();
   emit('application.stage', { ...app, stage: 'Offer' }, app.orgId, ctxOf(req).email);
   res.status(201).json({ success: true, data: offer });
 });
-recruitmentRouter.post('/placements', requireAuth(['employer','superadmin','company_admin','employee','operations_admin']), async (req: Request, res: Response) => {
+recruitmentRouter.post('/placements', requireAuth(['employer','superadmin','company_admin','employee','operations_admin','internal_recruiter']), async (req: Request, res: Response) => {
   const db = loadDb(); const { applicationId, joinDate, feeBasis } = req.body || {};
   const app: any = db.applications.find((a: any) => a.id === applicationId);
   if (!app) return res.status(404).json({ success: false, message: 'Application not found.' });
-  if (!['superadmin','platform_owner'].includes(ctxOf(req).role) && app.orgId !== ctxOf(req).tenantId) return res.status(404).json({ success: false, message: 'Application not found.' });
+  if (!['superadmin','platform_owner'].includes(ctxOf(req).role) && app.orgId !== ctxOf(req).tenantId) {
+    // Phase 5: assigned recruiters coordinate joining on their own mandates.
+    if (!(ctxOf(req).role === 'internal_recruiter' && appAssignedTo(db, app, emailOf(ctxOf(req))))) {
+      return res.status(404).json({ success: false, message: 'Application not found.' });
+    }
+  }
   if (db.placements.find((p: any) => p.applicationId === applicationId)) return res.status(409).json({ success: false, message: 'Placement already recorded.' });
+  // Frozen pipeline: joining completes only on live jobs.
+  const plcJob: any = db.jobs.find((x: any) => x.id === app.jobId);
+  if (plcJob && plcJob.status !== 'Published') {
+    return res.status(422).json({ success: false, code: 'PIPELINE_FROZEN', message: `Cannot place — job ${plcJob.id} is ${plcJob.status}. Resume it first.` });
+  }
   const { matchAgreement } = await import('./commercial.js');
   const agreement = matchAgreement(db, app);
   if (!agreement) return res.status(422).json({ success: false, code: 'NO_AGREEMENT', message: 'No accepted commercial agreement covers this hire. Ask your NexaTalent manager to activate one before recording the joining.' });
@@ -377,8 +794,13 @@ recruitmentRouter.post('/placements', requireAuth(['employer','superadmin','comp
   audit(ctxOf(req).email, `PLACEMENT_JOINED:${pl.id}`, app.orgId, 'placement', pl.id, req.ip); persist();
   emit('placement.joined', { placementId: pl.id, applicationId, jobId: app.jobId, orgId: app.orgId, candidateEmail: app.candidateEmail, feeBasis: basis, stage: 'Hired' }, app.orgId, ctxOf(req).email);
   // Straight-through billing for trusted agreements: approve + first invoice immediately.
+  // P0-2: auto-approve is a finance side-effect — only runs when the agreement
+  // explicitly opts in AND the caller is finance-privileged. Employers without
+  // manage_billing leave commissions Pending for finance review.
   let autoInvoice: any = null;
-  if (agreement.autoApprove) {
+  const callerRole = ctxOf(req).role;
+  const canAutoBill = ['superadmin', 'platform_owner', 'finance_admin'].includes(callerRole);
+  if (agreement.autoApprove && canAutoBill) {
     const { invoiceForCommission } = await import('./commercial.js');
     for (const com of (db.commissions as any[]).filter((x: any) => x.applicationId === applicationId && x.approvalStatus === 'Pending')) {
       com.approvalStatus = 'Approved'; com.approvedAt = nowIso(); com.approvedBy = 'system:auto-approve';
@@ -402,27 +824,48 @@ recruitmentRouter.get('/placements/:id/offer-letter', requireAuth(), (req, res) 
   const pl: any = db.placements.find((x: any) => x.id === req.params.id);
   if (!pl) return res.status(404).json({ success: false, message: 'Placement not found.' });
   const ctx = ctxOf(req);
-  if (!['superadmin','platform_owner','operations_admin','employee','finance_admin'].includes(ctx.role) && pl.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Placement not found.' });
+  if (!['superadmin','platform_owner','operations_admin','employee','finance_admin'].includes(ctx.role) && pl.orgId !== ctx.tenantId) {
+    // Candidates may view their own joining letter; everyone else needs org scope.
+    if (!(ctx.role === 'candidate' && String(pl.candidateEmail || '').toLowerCase() === ctx.email.toLowerCase())) {
+      return res.status(404).json({ success: false, message: 'Placement not found.' });
+    }
+  }
   const app: any = db.applications.find((a: any) => a.id === pl.applicationId) || null;
   const job: any = db.jobs.find((j: any) => j.id === pl.jobId) || null;
   const org: any = db.organizations.find((o: any) => o.id === pl.orgId) || null;
   const offer: any = db.offers.filter((o: any) => o.applicationId === pl.applicationId).sort((x: any, y: any) => String(y.createdAt).localeCompare(String(x.createdAt)))[0] || null;
   const cand: any = db.candidateProfiles.find((c: any) => String(c.email || '').toLowerCase() === String(pl.candidateEmail || '').toLowerCase()) || null;
   const ag: any = pl.agreementId ? db.commissionAgreements.find((a: any) => a.id === pl.agreementId) : null;
+  // Phase C: candidates get their joining letter, never the commercial rate card.
+  const forCandidate = ctx.role === 'candidate';
   res.json({ success: true, data: {
     placement: pl,
     candidate: cand ? { name: cand.name, email: cand.email, roleTitle: cand.roleTitle } : { name: '', email: pl.candidateEmail, roleTitle: '' },
     job: job ? { id: job.id, title: job.title, location: job.location, employmentType: job.employmentType } : { id: pl.jobId, title: app?.jobTitle || '', location: '', employmentType: '' },
     organization: org ? { id: org.id, legalName: org.legalName, displayName: org.displayName } : { id: pl.orgId, legalName: pl.orgId, displayName: pl.orgId },
-    offer: offer ? { id: offer.id, ctc: offer.ctc, currency: offer.currency || 'INR', joinDate: offer.joinDate, status: offer.status } : null,
-    terms: { paymentTermsDays: ag?.paymentTermsDays ?? 30, replacementDays: ag?.replacementDays ?? 90, hiringType: ag?.hiringType || '', rate: ag?.rate ?? null },
+    offer: offer ? { id: offer.id, ctc: offer.ctc, currency: offer.currency || 'INR', payPeriod: offer.payPeriod || 'annual', joinDate: offer.joinDate, status: offer.status, offerLetterMode: offer.offerLetterMode || 'generated', offerLetterRef: offer.offerLetterRef || null } : null,
+    terms: forCandidate
+      ? { paymentTermsDays: ag?.paymentTermsDays ?? 30, replacementDays: ag?.replacementDays ?? 90, hiringType: '', rate: null }
+      : { paymentTermsDays: ag?.paymentTermsDays ?? 30, replacementDays: ag?.replacementDays ?? 90, hiringType: ag?.hiringType || '', rate: ag?.rate ?? null },
     generatedAt: nowIso(),
   } });
 });
 recruitmentRouter.get('/placements', requireAuth(), (req, res) => {
-  const ctx = ctxOf(req); let rows = loadDb().placements as any[];
-  if (!['superadmin','platform_owner','operations_admin','employee','finance_admin'].includes(ctx.role)) rows = rows.filter((p) => p.orgId === ctx.tenantId);
-  res.json({ success: true, data: rows });
+  const ctx = ctxOf(req); const db = loadDb(); let rows = db.placements as any[];
+  if (!['superadmin','platform_owner','operations_admin','employee','finance_admin'].includes(ctx.role)) {
+    if (['agency_admin','agency_recruiter','recruiter','vendor'].includes(ctx.role)) {
+      // Phase C: agencies see placements attributed to their own submissions.
+      const keys = new Set(((db as any).submissions as any[] || [])
+        .filter((s: any) => s.agencyId === ctx.tenantId || String(s.submittedBy || '').toLowerCase() === ctx.email.toLowerCase())
+        .map((s: any) => `${s.jobId}::${String(s.candidateEmail || '').toLowerCase()}`));
+      rows = rows.filter((p: any) => keys.has(`${p.jobId}::${String(p.candidateEmail || '').toLowerCase()}`));
+    } else {
+      rows = rows.filter((p) => p.orgId === ctx.tenantId);
+    }
+  }
+  // Phase E: server paging (was: unbounded array).
+  const { page, pageSize } = paginate.parse(req.query);
+  res.json({ success: true, ...paged(rows, page, pageSize) });
 });
 
 // ---- Talent pools + saved jobs ----
@@ -449,9 +892,63 @@ recruitmentRouter.post('/talent-pools/:id/members', requireAuth(['employer','sup
   const m = { id: uid('TPM'), poolId: req.params.id, candidateId: req.body.candidateId, addedBy: ctx.email, createdAt: nowIso() };
   db.talentPoolMembers.unshift(m); persist(); res.status(201).json({ success: true, data: m });
 });
+// Shortlist a pool member into the ATS pipeline: creates the application (Applied)
+// on a live job and links it back to the member. Frozen jobs refuse.
+recruitmentRouter.post('/talent-pools/:id/members/:memberId/shortlist', requireAuth(['employer','superadmin','platform_owner','company_admin','hiring_manager','company_recruiter','employee','operations_admin']), (req, res) => {
+  const db = loadDb(); const ctx = ctxOf(req);
+  const pool: any = poolOf(db, req, ctx);
+  if (!pool) return res.status(404).json({ success: false, message: 'Pool not found.' });
+  const m: any = db.talentPoolMembers.find((x: any) => x.id === req.params.memberId && x.poolId === req.params.id);
+  if (!m) return res.status(404).json({ success: false, message: 'Member not found.' });
+  const jobId = String(req.body?.jobId || '');
+  if (!jobId) return res.status(400).json({ success: false, message: 'jobId required.' });
+  const job: any = db.jobs.find((j: any) => j.id === jobId);
+  if (!job || (!['superadmin','platform_owner','employee','operations_admin'].includes(ctx.role) && job.orgId !== ctx.tenantId)) {
+    return res.status(404).json({ success: false, message: 'Job not found.' });
+  }
+  if (job.status !== 'Published' || (job.expiryDate && new Date(job.expiryDate) <= new Date())) {
+    return res.status(422).json({ success: false, code: 'PIPELINE_FROZEN', message: `Job ${job.id} is ${job.status} — resume it to shortlist.` });
+  }
+  const key = String(m.candidateId || m.candidateEmail || '').toLowerCase();
+  const cand: any = db.candidateProfiles.find((x: any) => x.id === m.candidateId || String(x.email || '').toLowerCase() === key);
+  if (!cand) return res.status(422).json({ success: false, code: 'PROFILE_MISSING', message: 'Member profile is no longer on file — cannot shortlist.' });
+  const appKey = `${jobId}::${String(cand.email).toLowerCase()}`;
+  const dup: any = db.applications.find((a: any) => a.key === appKey);
+  if (dup) return res.status(409).json({ success: false, code: 'APPLICATION_EXISTS', message: 'Candidate already in pipeline for this job.', applicationId: dup.id });
+  const app = { id: uid('APP'), key: appKey, jobId, jobTitle: job.title, orgId: job.orgId, requisitionId: job.requisitionId, candidateEmail: cand.email, candidateName: cand.name, stage: 'Applied', source: `pool:${pool.id}:${m.id}`, poolId: pool.id, createdAt: nowIso(), updatedAt: nowIso() };
+  db.applications.unshift(app);
+  pushHistory(db.stageHistory, { id: uid('STG'), applicationId: app.id, from: '-', to: 'Applied', actor: ctx.email, reason: `Shortlisted from pool ${pool.id}`, createdAt: nowIso() });
+  job.applicantsCount = (job.applicantsCount || 0) + 1;
+  m.applicationId = app.id; m.updatedAt = nowIso();
+  audit(ctx.email, `POOL_SHORTLISTED:${m.id}->${app.id}`, pool.orgId, 'talent-pool', m.id, req.ip);
+  notify(db, `company:${pool.orgId}`, 'talent-pool', `Pool member ${cand.name} shortlisted to ${jobId} (${app.id}).`, pool.orgId);
+  persist();
+  const { key: _k, ...pub } = app;
+  res.status(201).json({ success: true, data: { application: pub, member: m } });
+});
 recruitmentRouter.get('/saved-jobs', requireAuth(['candidate','superadmin']), (req, res) => {
   const ctx = ctxOf(req);
-  res.json({ success: true, data: (loadDb().savedJobs as any[]).filter((s) => s.candidateEmail === ctx.email || ctx.role === 'superadmin') });
+  const db = loadDb();
+  const rows = (db.savedJobs as any[]).filter((s) => s.candidateEmail === ctx.email || ctx.role === 'superadmin');
+  const now = new Date();
+  const data = rows.map((s) => {
+    const job: any = (db.jobs as any[]).find((j) => j.id === s.jobId) || null;
+    const counts = job ? jobCounts(db, job) : null;
+    const closed = job
+      ? job.status === 'Closed' || (job.expiryDate ? new Date(job.expiryDate) <= now : false)
+      : false;
+    const applied = (db.applications as any[]).some(
+      (a) => a.jobId === s.jobId && String(a.candidateEmail || '').toLowerCase() === String(s.candidateEmail || '').toLowerCase(),
+    );
+    return {
+      ...s,
+      job: job ? { ...publicJob(job), counts, acceptingApplications: counts?.acceptingApplications ?? false } : null,
+      jobMissing: !job,
+      closed,
+      applied,
+    };
+  });
+  res.json({ success: true, data });
 });
 recruitmentRouter.post('/saved-jobs', requireAuth(['candidate','superadmin']), (req: Request, res: Response) => {
   const db = loadDb(); const ctx = ctxOf(req);
@@ -474,7 +971,8 @@ recruitmentRouter.get('/jobs/:id', requireAuth(), (req, res) => {
   const j: any = db.jobs.find((x: any) => x.id === req.params.id);
   if (!j) return res.status(404).json({ success: false, message: 'Job not found.' });
   const ctx = ctxOf(req);
-  const owner = ['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) || j.orgId === ctx.tenantId;
+  const assigned = ctx.role === 'internal_recruiter' && jobAssignedTo(db, j, emailOf(ctx));
+  const owner = ['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) || j.orgId === ctx.tenantId || assigned;
   if (!owner && !(j.status === 'Published' && j.visibility !== 'private')) return res.status(404).json({ success: false, message: 'Job not found.' });
   const counts = jobCounts(db, j);
   if (!owner) return res.json({ success: true, data: { ...publicJob(j), counts, acceptingApplications: counts.acceptingApplications } });
@@ -482,21 +980,50 @@ recruitmentRouter.get('/jobs/:id', requireAuth(), (req, res) => {
 });
 
 // ---- Interview reschedule / cancel (history preserved, §11) ----
-recruitmentRouter.patch('/interviews/:id', requireAuth(['employer','superadmin','company_admin','hiring_manager','employee','operations_admin','candidate']), (req: Request, res: Response) => {
+recruitmentRouter.patch('/interviews/:id', requireAuth(['employer','superadmin','company_admin','hiring_manager','employee','operations_admin','internal_recruiter','candidate','recruiter','agency_recruiter','agency_admin','vendor']), (req: Request, res: Response) => {
   const db = loadDb(); const iv: any = db.interviews.find((x: any) => x.id === req.params.id);
   if (!iv) return res.status(404).json({ success: false, message: 'Interview not found.' });
   const ctx = ctxOf(req);
   if (ctx.role === 'candidate' && String(iv.candidateEmail).toLowerCase() !== ctx.email.toLowerCase()) return res.status(404).json({ success: false, message: 'Interview not found.' });
+  if (ctx.role === 'internal_recruiter') {
+    const app: any = db.applications.find((a: any) => a.id === iv.applicationId);
+    if (!app || !appAssignedTo(db, app, emailOf(ctx))) return res.status(404).json({ success: false, message: 'Interview not found.' });
+  }
   if (['employer','company_admin','hiring_manager'].includes(ctx.role) && iv.companyId !== ctx.tenantId && iv.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Interview not found.' });
+  if (AGENCY_ROLES.includes(ctx.role) && !agencyLinkedAppIds(db, ctx).has(iv.applicationId)) return res.status(404).json({ success: false, message: 'Interview not found.' });
   const { scheduledAt, status, reason } = req.body || {};
-  if (status && !['Scheduled', 'Rescheduled', 'Completed', 'Cancelled'].includes(status)) return res.status(400).json({ success: false, message: 'Invalid status.' });
+  if (status && !['Scheduled', 'Rescheduled', 'Completed', 'Cancelled', 'No-show'].includes(status)) return res.status(400).json({ success: false, message: 'Invalid status.' });
+  // Phase 3: candidates may only confirm/decline or propose a new time — never close out interviews or edit logistics.
+  if (ctx.role === 'candidate') {
+    const staffOnly = ['round', 'roundName', 'mode', 'interviewer', 'panel', 'meetingLink', 'meetLink', 'venue', 'instructions', 'notes'];
+    if (staffOnly.some((k) => req.body[k] !== undefined)) return res.status(403).json({ success: false, code: 'INTERVIEW_FORBIDDEN', message: 'Candidates can only confirm attendance or propose a new time.' });
+    if (status && ['Completed', 'Cancelled', 'No-show'].includes(status)) return res.status(403).json({ success: false, code: 'INTERVIEW_FORBIDDEN', message: 'Only hiring staff can mark interviews completed, cancelled or no-show.' });
+  }
+  if (scheduledAt) {
+    const at = new Date(scheduledAt).getTime();
+    if (!Number.isFinite(at) || at <= Date.now() - 60 * 1000) return res.status(422).json({ success: false, code: 'INTERVIEW_PAST', message: 'Rescheduled time must be in the future.' });
+  }
   const prev = iv.status;
   if (scheduledAt) iv.scheduledAt = scheduledAt;
   if (status) iv.status = status;
   else if (scheduledAt) iv.status = 'Rescheduled';
+  // Editable logistics (§8.8): panel, link, venue, mode, round, instructions, confirmation.
+  // meetLink/meetingLink are mirrored — readers accept either field.
+  for (const k of ['round', 'roundName', 'mode', 'interviewer', 'panel', 'meetingLink', 'meetLink', 'venue', 'instructions', 'notes', 'timezone', 'confirmationStatus', 'cancellationReason']) {
+    if (req.body[k] !== undefined) iv[k] = req.body[k];
+  }
+  if (iv.meetingLink && !iv.meetLink) iv.meetLink = iv.meetingLink;
+  if (iv.meetLink && !iv.meetingLink) iv.meetingLink = iv.meetLink;
+  if (status === 'Cancelled' && reason) iv.cancellationReason = String(reason).slice(0, 1000);
   iv.history = [...(iv.history || []), { from: prev, to: iv.status, at: nowIso(), by: ctx.email, reason: reason || '' }];
+  if (iv.history.length > 200) iv.history = iv.history.slice(-200);
   db.notifications.unshift({ id: uid('NOTIF'), recipient: ctx.role === 'candidate' ? `company:${iv.companyId}` : iv.candidateEmail, kind: 'interview', body: `Interview ${iv.id} ${prev} → ${iv.status}${reason ? `: ${reason}` : ''}`, channel: 'in-app', status: 'queued', createdAt: nowIso(), tenantId: iv.companyId || iv.orgId });
   audit(ctx.email, `INTERVIEW_${iv.status.toUpperCase()}:${iv.id}`, iv.companyId || iv.orgId, 'interview', iv.id, req.ip); persist();
+  // P6: candidate-safe projection on PATCH (was full iv with panel/interviewer internals).
+  if (ctx.role === 'candidate') {
+    const { id, applicationId, jobId, round, scheduledAt, timezone, mode, venue, instructions, status: st, confirmationStatus, candidateName, jobTitle } = iv;
+    return res.json({ success: true, data: { id, applicationId, jobId, round, scheduledAt, timezone, mode, meetingLink: iv.meetingLink || iv.meetLink, venue, instructions, status: st, confirmationStatus, candidateName, jobTitle } });
+  }
   res.json({ success: true, data: iv });
 });
 
@@ -506,7 +1033,7 @@ recruitmentRouter.get('/applications/:id', requireAuth(), (req, res) => {
   const a: any = db.applications.find((x: any) => x.id === req.params.id);
   if (!a) return res.status(404).json({ success: false, message: 'Application not found.' });
   if (ctx.role === 'candidate' && String(a.candidateEmail).toLowerCase() !== ctx.email.toLowerCase()) return res.status(404).json({ success: false, message: 'Application not found.' });
-  if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && ctx.role !== 'candidate' && a.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Application not found.' });
+  if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && ctx.role !== 'candidate' && a.orgId !== ctx.tenantId && !(AGENCY_ROLES.includes(ctx.role) && agencyLinkedAppIds(db, ctx).has(a.id))) return res.status(404).json({ success: false, message: 'Application not found.' });
   const history = db.stageHistory.filter((h: any) => h.applicationId === a.id);
   const interviews = (db.interviews as any[]).filter((i: any) => i.applicationId === a.id);
   const nextInterview = interviews.filter((i: any) => ['Scheduled','Rescheduled'].includes(i.status)).sort((x: any, y: any) => String(x.scheduledAt || '').localeCompare(String(y.scheduledAt || '')))[0] || null;
@@ -521,7 +1048,7 @@ recruitmentRouter.get('/applications/:id/history', requireAuth(), (req, res) => 
   const a: any = db.applications.find((x: any) => x.id === req.params.id);
   if (!a) return res.status(404).json({ success: false, message: 'Application not found.' });
   if (ctx.role === 'candidate' && String(a.candidateEmail).toLowerCase() !== ctx.email.toLowerCase()) return res.status(404).json({ success: false, message: 'Application not found.' });
-  if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && a.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Application not found.' });
+  if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && a.orgId !== ctx.tenantId && !(AGENCY_ROLES.includes(ctx.role) && agencyLinkedAppIds(db, ctx).has(a.id))) return res.status(404).json({ success: false, message: 'Application not found.' });
   res.json({ success: true, data: db.stageHistory.filter((h: any) => h.applicationId === a.id) });
 });
 
@@ -537,7 +1064,7 @@ recruitmentRouter.post('/applications/:id/reopen', requireAuth(['employer','supe
   const reason = String(req.body?.reason || '').trim();
   if (!reason) return res.status(400).json({ success: false, message: 'A reopen reason is required and is recorded in the audit log.' });
   const from = a.stage; a.stage = target; a.updatedAt = nowIso();
-  db.stageHistory.unshift({ id: uid('STG'), applicationId: a.id, from, to: target, actor: ctx.email, reason, createdAt: nowIso() });
+  pushHistory(db.stageHistory, { id: uid('STG'), applicationId: a.id, from, to: target, actor: ctx.email, reason, createdAt: nowIso() });
   const conv: any = db.conversations.find((c: any) => c.applicationId === a.id);
   if (conv && conv.status === 'closed') { conv.status = 'active'; conv.closedReason = ''; conv.reopenedAt = nowIso(); }
   audit(ctx.email, `APPLICATION_REOPENED:${a.id} ${from}->${target}`, a.orgId, 'application', a.id, req.ip); persist();
@@ -552,7 +1079,7 @@ recruitmentRouter.post('/applications/:id/withdraw', requireAuth(['candidate','s
   if (ctx.role === 'candidate' && String(a.candidateEmail).toLowerCase() !== ctx.email.toLowerCase()) return res.status(404).json({ success: false, message: 'Application not found.' });
   if (['Hired', 'Withdrawn'].includes(a.stage)) return res.status(422).json({ success: false, message: `Cannot withdraw from stage ${a.stage}.` });
   const from = a.stage; a.stage = 'Withdrawn'; a.updatedAt = nowIso();
-  db.stageHistory.unshift({ id: uid('STG'), applicationId: a.id, from, to: 'Withdrawn', actor: ctx.email, reason: req.body?.reason || '', createdAt: nowIso() });
+  pushHistory(db.stageHistory, { id: uid('STG'), applicationId: a.id, from, to: 'Withdrawn', actor: ctx.email, reason: req.body?.reason || '', createdAt: nowIso() });
   const conv: any = db.conversations.find((c: any) => c.applicationId === a.id);
   if (conv) { conv.status = 'closed'; conv.closedReason = 'candidate_withdrew'; }
   audit(ctx.email, `APPLICATION_WITHDRAWN:${a.id}`, a.orgId, 'application', a.id, req.ip); persist();
@@ -583,6 +1110,16 @@ recruitmentRouter.delete('/talent-pools/:id/members/:memberId', requireAuth(['em
   res.json({ success: true, message: 'Member removed.' });
 });
 recruitmentRouter.get('/talent-pools/:id/members', requireAuth(['employer','superadmin','company_admin','company_recruiter']), (req, res) => {
-  if (!poolOf(loadDb(), req, ctxOf(req))) return res.status(404).json({ success: false, message: 'Pool not found.' });
-  res.json({ success: true, data: loadDb().talentPoolMembers.filter((m: any) => m.poolId === req.params.id) });
+  const db = loadDb();
+  if (!poolOf(db, req, ctxOf(req))) return res.status(404).json({ success: false, message: 'Pool not found.' });
+  // Enrich with a tier-safe candidate snapshot so pool rows render names/roles
+  // even when only an ID was stored (no contact fields — tier model applies).
+  const data = db.talentPoolMembers.filter((m: any) => m.poolId === req.params.id).map((m: any) => {
+    const key = String(m.candidateId || m.candidateEmail || '').toLowerCase();
+    const c: any = (db.candidateProfiles as any[]).find((x: any) => x.id === m.candidateId ||
+      String(x.email || '').toLowerCase() === String(m.candidateId || '').toLowerCase() ||
+      (key && String(x.email || '').toLowerCase() === key)) || null;
+    return { ...m, candidate: c ? { id: c.id, name: c.name, roleTitle: c.roleTitle, experienceYears: c.experienceYears ?? null, location: c.location || null, skills: c.skills || null, stage: c.stage || null } : null };
+  });
+  res.json({ success: true, data });
 });

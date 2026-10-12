@@ -9,8 +9,10 @@ import { apiClient } from '../api-client';
 // Phase 1 — core
 export const requisitionsApi = {
   list: (params = '') => apiClient.get<unknown[]>(`/api/v1/requisitions${params}`),
+  get: (id: string) => apiClient.get(`/api/v1/requisitions/${id}`),
   create: (body: unknown) => apiClient.post('/api/v1/requisitions', body),
   update: (id: string, body: unknown) => apiClient.put(`/api/v1/requisitions/${id}`, body),
+  assign: (id: string, body: unknown) => apiClient.post(`/api/v1/requisitions/${id}/assign`, body),
   remove: (id: string) => apiClient.delete(`/api/v1/requisitions/${id}`),
   setStatus: (id: string, status: string, reason?: string) => apiClient.patch(`/api/v1/requisitions/${id}/status`, { status, reason }),
   requestChanges: (id: string, note: string) => apiClient.post(`/api/v1/requisitions/${id}/request-changes`, { note }),
@@ -22,6 +24,18 @@ export const jobsApi = {
   create: (body: unknown) => apiClient.post('/api/v1/jobs', body),
   update: (id: string, body: unknown) => apiClient.put(`/api/v1/jobs/${id}`, body),
   setStatus: (id: string, status: string, reason?: string, expiryDate?: string) => apiClient.patch(`/api/v1/jobs/${id}/status`, { status, reason, expiryDate }),
+};
+export const lockoutApi = {
+  list: () => apiClient.get('/api/v1/auth/lockouts'),
+  unlock: (email: string) => apiClient.post('/api/v1/auth/unlock', { email }),
+  unlockAll: () => apiClient.post('/api/v1/auth/unlock-all', {}),
+};
+export const payrollApi = {
+  preview: (orgId: string, period: string) => apiClient.get(`/api/v1/payroll/preview?orgId=${encodeURIComponent(orgId)}&period=${encodeURIComponent(period)}`),
+  run: (orgId: string, period: string) => apiClient.post('/api/v1/payroll/run', { orgId, period }),
+  runs: (params = '') => apiClient.get(`/api/v1/payroll${params}`),
+  detail: (id: string) => apiClient.get(`/api/v1/payroll/${id}`),
+  settle: (id: string) => apiClient.post(`/api/v1/payroll/${id}/settle`, {}),
 };
 export const mfaApi = {
   status: () => apiClient.get('/api/v1/auth/mfa/status'),
@@ -45,7 +59,7 @@ export const permissionsApi = {
   all: (email?: string) => apiClient.get(`/api/v1/permissions${email ? `?email=${encodeURIComponent(email)}` : ''}`),
   grant: (email: string, permission: string, effect: 'grant' | 'revoke') => apiClient.post('/api/v1/permissions', { email, permission, effect }),
   clear: (email: string, permission: string) => apiClient.delete('/api/v1/permissions', { data: { email, permission } }),
-  logExport: (resource: string, count: number) => apiClient.post('/api/v1/exports/log', { resource, count }),
+  logExport: (resource: string, count: number, extra?: { filters?: unknown; columns?: string[] }) => apiClient.post('/api/v1/exports/log', { resource, count, ...extra }),
 };
 export const directoryApi = {
   roles: () => apiClient.get('/api/v1/roles'),
@@ -98,29 +112,35 @@ export const interviewsApi = {
   schedule: (body: unknown) => apiClient.post('/api/v1/interviews', body),
   reschedule: (id: string, body: unknown) => apiClient.patch(`/api/v1/interviews/${id}`, body),
   feedback: (id: string, body: unknown) => apiClient.post(`/api/v1/interviews/${id}/feedback`, body),
+  feedbackList: (id: string) => apiClient.get(`/api/v1/interviews/${id}/feedback`),
 };
 export const chatApi = {
   conversations: (applicationId?: string) => apiClient.get(`/api/v1/conversations${applicationId ? `?applicationId=${applicationId}` : ''}`),
   thread: (id: string) => apiClient.get(`/api/v1/conversations/${id}/messages`),
-  send: (conversationId: string, body: string) => apiClient.post('/api/v1/messages', { conversationId, body }),
+  send: (conversationId: string, body: string, attachment?: { docId: string; name: string; mime: string; size: number }) => apiClient.post('/api/v1/messages', attachment ? { conversationId, body, type: 'attachment', attachment } : { conversationId, body }),
+  edit: (id: string, body: string) => apiClient.patch(`/api/v1/messages/${id}`, { body }),
   close: (id: string, reason?: string) => apiClient.patch(`/api/v1/conversations/${id}/close`, { reason }),
 };
 export const talentApi = {
   search: (tier = 'preview', q = '') => apiClient.get(`/api/v1/candidates/search?tier=${tier}&q=${encodeURIComponent(q)}`),
+  searchFull: (params = '') => apiClient.get(`/api/v1/candidates/search${params}`),
   pools: () => apiClient.get('/api/v1/talent-pools'),
   createPool: (body: unknown) => apiClient.post('/api/v1/talent-pools', body),
   editPool: (id: string, body: unknown) => apiClient.patch(`/api/v1/talent-pools/${id}`, body),
   addMember: (poolId: string, candidateId: string) => apiClient.post(`/api/v1/talent-pools/${poolId}/members`, { candidateId }),
   poolMembers: (poolId: string) => apiClient.get(`/api/v1/talent-pools/${poolId}/members`),
   removeMember: (poolId: string, memberId: string) => apiClient.delete(`/api/v1/talent-pools/${poolId}/members/${memberId}`),
+  shortlistMember: (poolId: string, memberId: string, jobId: string) => apiClient.post(`/api/v1/talent-pools/${poolId}/members/${memberId}/shortlist`, { jobId }),
   saved: () => apiClient.get('/api/v1/saved-jobs'),
   save: (jobId: string) => apiClient.post('/api/v1/saved-jobs', { jobId }),
   unsave: (jobId: string) => apiClient.delete(`/api/v1/saved-jobs/${jobId}`),
 };
 export const offersPlacementsApi = {
   offer: (body: unknown) => apiClient.post('/api/v1/offers', body),
+  mine: () => apiClient.get('/api/v1/offers/mine'),
+  respond: (id: string, decision: 'accepted' | 'declined', reason?: string) => apiClient.post(`/api/v1/offers/${id}/respond`, { decision, reason }),
   place: (applicationId: string, joinDate?: string, feeBasis?: number) => apiClient.post('/api/v1/placements', { applicationId, joinDate, feeBasis }),
-  placements: () => apiClient.get('/api/v1/placements'),
+  placements: () => apiClient.get('/api/v1/placements?page=1&pageSize=100'),
   offerLetter: (id: string) => apiClient.get(`/api/v1/placements/${id}/offer-letter`),
   matchFee: (applicationId: string, feeBasis?: number) => apiClient.get(`/api/v1/commission-agreements/match?applicationId=${encodeURIComponent(applicationId)}${feeBasis ? `&feeBasis=${feeBasis}` : ''}`),
 };
@@ -140,6 +160,8 @@ export const billingApi = {
   usage: () => apiClient.get('/api/v1/usage'),
   outreach: (body: unknown) => apiClient.post('/api/v1/outreach', body),
   campaigns: () => apiClient.get('/api/v1/outreach'),
+  campaignDetail: (id: string) => apiClient.get(`/api/v1/outreach/${id}`),
+  retryCampaign: (id: string) => apiClient.post(`/api/v1/outreach/${id}/retry`, {}),
   invoices: (params = '') => apiClient.get(`/api/v1/invoices${params}`),
   createInvoice: (body: unknown) => apiClient.post('/api/v1/invoices', body),
   createSeries: (body: unknown) => apiClient.post('/api/v1/invoices/series', body),
@@ -188,6 +210,7 @@ export const salesApi = {
   logActivity: (id: string, body: unknown) => apiClient.post(`/api/v1/leads/${id}/activities`, body),
   activities: (id: string) => apiClient.get(`/api/v1/leads/${id}/activities`),
   convert: (id: string) => apiClient.post(`/api/v1/leads/${id}/convert`, {}),
+  activitiesFeed: (params = '') => apiClient.get(`/api/v1/activities${params}`),
   targets: () => apiClient.get('/api/v1/targets'),
   createTarget: (body: unknown) => apiClient.post('/api/v1/targets', body),
   updateTarget: (id: string, body: unknown) => apiClient.put(`/api/v1/targets/${id}`, body),
@@ -196,6 +219,7 @@ export const salesApi = {
   submissions: (params = '') => apiClient.get(`/api/v1/submissions${params}`),
   submit: (body: unknown) => apiClient.post('/api/v1/submissions', body),
   setSubmission: (id: string, status: string) => apiClient.patch(`/api/v1/submissions/${id}/status`, { status }),
+  acceptSubmission: (id: string) => apiClient.post(`/api/v1/submissions/${id}/accept`, {}),
   opportunities: (params = '') => apiClient.get(`/api/v1/opportunities${params}`),
   createOpportunity: (body: unknown) => apiClient.post('/api/v1/opportunities', body),
   setOpportunityStage: (id: string, stage: string) => apiClient.patch(`/api/v1/opportunities/${id}/stage`, { stage }),
@@ -216,10 +240,12 @@ export const documentsApi = {
     return apiClient.get(`/api/v1/skills${qs ? `?${qs}` : ''}`);
   },
   skillsPaged: (params = '') => apiClient.get(`/api/v1/skills${params}`),
-  createSkill: (body: unknown) => apiClient.post('/api/v1/skills', body),
+  createSkill: (body: unknown) => apiClient.post('/api/v1/documents', body),
   upload: (body: unknown) => apiClient.post('/api/v1/documents', body),
   list: () => apiClient.get('/api/v1/documents'),
   downloadUrl: (id: string) => `/api/v1/documents/${id}/download`,
+  // P5: authenticated blob download (replaces window.open direct URL with no bearer).
+  downloadBlob: (id: string) => apiClient.getBlob(`/api/v1/documents/${id}/download`),
   consents: () => apiClient.get('/api/v1/consents'),
   saveConsents: (body: unknown) => apiClient.put('/api/v1/consents', body),
   withdrawConsents: (email?: string) => apiClient.post('/api/v1/consents/withdraw', { email }),
@@ -227,6 +253,7 @@ export const documentsApi = {
 };
 
 export const workforceApi = {
+  contractors: () => apiClient.get('/api/v1/contractors'),
   timesheets: (params = '') => apiClient.get(`/api/v1/timesheets${params}`),
   submitTimesheet: (body: unknown) => apiClient.post('/api/v1/timesheets', body),
   reviewTimesheet: (id: string, decision: 'approve' | 'reject', note?: string) => apiClient.patch(`/api/v1/timesheets/${id}/approve`, { decision, note }),
@@ -251,5 +278,6 @@ export const platformApi = {
   settings: () => apiClient.get('/api/v1/settings'),
   saveSettings: (body: unknown) => apiClient.post('/api/v1/settings', body),
   tasks: () => apiClient.get('/api/v1/tasks'),
+  createTask: (body: unknown) => apiClient.post('/api/v1/tasks', body),
   setTask: (id: string, status: string) => apiClient.patch(`/api/v1/tasks/${id}`, { status }),
 };

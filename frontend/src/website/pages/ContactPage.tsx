@@ -27,7 +27,7 @@ const LOCATION_DETAILS = [
     address: '4th and 7th Floor, Skyline Icon, Andheri - Kurla Rd, Chimatpada, Marol, Andheri East, Mumbai, Maharashtra 400059',
     phone: '+91 70196 96166',
     email: 'info@nexatalentitsolutions.com',
-    talentPool: '280,000+ Active Vetted Devs',
+    talentPool: 'Enterprise delivery center',
     hours: '09:00 - 19:00 IST',
     mapQuery: 'Skyline+Icon+Marol+Andheri+East+Mumbai',
     director: 'Executive Office (Nexa Talent IT Solutions)'
@@ -39,7 +39,7 @@ const LOCATION_DETAILS = [
     address: 'Level 7, Prestige Tech Park IV, Outer Ring Road, Bellandur, Bengaluru, Karnataka 560103',
     phone: '+91 70196 96166',
     email: 'info@nexatalentitsolutions.com',
-    talentPool: '240,000+ Active Vetted Devs',
+    talentPool: 'Enterprise delivery center',
     hours: '09:00 - 19:00 IST',
     mapQuery: 'Prestige+Tech+Park+Bengaluru',
     director: 'Anand Vardhan (Senior Practice Director)'
@@ -51,7 +51,7 @@ const LOCATION_DETAILS = [
     address: 'HITEC City, Phase II, Madhapur, Hyderabad, Telangana 500081',
     phone: '+91 70196 96166',
     email: 'info@nexatalentitsolutions.com',
-    talentPool: '185,000+ Active Vetted Devs',
+    talentPool: 'Enterprise delivery center',
     hours: '09:00 - 19:00 IST',
     mapQuery: 'HITEC+City+Hyderabad',
     director: 'Rajesh K. (Cloud & DevOps Lead)'
@@ -63,7 +63,7 @@ const LOCATION_DETAILS = [
     address: 'Cybercity Tower 4, Magarpatta City, Hadapsar, Pune, Maharashtra 411028',
     phone: '+91 70196 96166',
     email: 'info@nexatalentitsolutions.com',
-    talentPool: '130,000+ Active Vetted Devs',
+    talentPool: 'Enterprise delivery center',
     hours: '09:00 - 19:00 IST',
     mapQuery: 'Magarpatta+Cybercity+Pune',
     director: 'Priya N. (Embedded & IoT Lead)'
@@ -75,7 +75,7 @@ const LOCATION_DETAILS = [
     address: 'DLF Cyber City, Building 10, Phase II, Gurugram, Haryana 122002',
     phone: '+91 70196 96166',
     email: 'info@nexatalentitsolutions.com',
-    talentPool: '160,000+ Active Vetted Devs',
+    talentPool: 'Enterprise delivery center',
     hours: '09:00 - 19:00 IST',
     mapQuery: 'DLF+Cyber+City+Gurugram',
     director: 'Siddharth M. (FinTech Practice Lead)'
@@ -87,7 +87,7 @@ const LOCATION_DETAILS = [
     address: 'Silicon Park Tower B2, Dubai Silicon Oasis, Dubai, United Arab Emirates',
     phone: '+91 70196 96166',
     email: 'info@nexatalentitsolutions.com',
-    talentPool: '95,000+ Regional Talent Network',
+    talentPool: 'Regional delivery network',
     hours: '09:00 - 18:00 GST',
     mapQuery: 'Dubai+Silicon+Oasis',
     director: 'Tariq Al-Mansoor (MENA Regional Lead)'
@@ -124,6 +124,8 @@ export function ContactPage() {
   const [inquiryType, setInquiryType] = useState<'employer' | 'candidate' | 'partner'>('employer');
   const [activeCitySlug, setActiveCitySlug] = useState('bengaluru');
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState('');
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
   const [formData, setFormData] = useState({
     name: '',
@@ -159,9 +161,39 @@ export function ContactPage() {
 
   const selectedLocation = LOCATION_DETAILS.find((l) => l.slug === activeCitySlug) || LOCATION_DETAILS[0];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setSendError('');
+    // Phase 7: real enquiry → lead. Server validates, dedupes and sets owner/status.
+    if (formData.message.trim().length < 10) {
+      setSendError('Please add a few more details (at least 10 characters) so we can route your inquiry.');
+      return;
+    }
+    setSending(true);
+    try {
+      const base =
+        (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) ||
+        'http://localhost:5000';
+      const res = await fetch(`${base}/api/v1/enquiries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contactName: formData.name.trim(),
+          companyName: formData.company.trim(),
+          workEmail: formData.workEmail.trim(),
+          phone: formData.phone.trim() || undefined,
+          enquiryType: inquiryType,
+          message: `${formData.roleOrHeadcount.trim() ? formData.roleOrHeadcount.trim() + '\n' : ''}${formData.message.trim()}`,
+        }),
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(body?.message || 'Could not send your inquiry. Please try again.');
+      setSubmitted(true);
+    } catch (err: any) {
+      setSendError(err?.message || 'Could not send your inquiry. Please try again.');
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -269,6 +301,11 @@ export function ContactPage() {
               </motion.div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
+                {sendError && (
+                  <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold" role="alert">
+                    {sendError}
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">Full Name *</label>
@@ -345,9 +382,10 @@ export function ContactPage() {
 
                 <button
                   type="submit"
-                  className="w-full py-4 rounded-full bg-[#0265FF] hover:bg-[#004FBF] text-white font-bold text-sm shadow-lg transition-all flex items-center justify-center gap-2"
+                  disabled={sending}
+                  className="w-full py-4 rounded-full bg-[#0265FF] hover:bg-[#004FBF] text-white font-bold text-sm shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-60"
                 >
-                  <span>Submit Message to Director</span>
+                  <span>{sending ? 'Sending…' : 'Submit Message to Director'}</span>
                   <Send size={16} />
                 </button>
 

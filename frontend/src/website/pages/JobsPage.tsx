@@ -29,6 +29,7 @@ import {
   SignatureExecutivePledgeShield,
   LightDirectContactSection
 } from '../components/light-motion';
+import { LiveOpenings } from '../components/LiveOpenings';
 
 export function JobsPage() {
   const [searchParams] = useSearchParams();
@@ -74,6 +75,9 @@ export function JobsPage() {
 
       {/* 3. Horizontal Mandates Showcase */}
       <HorizontalMandateShowcase />
+
+      {/* 3b. Live verified openings (Phase 7: published, non-expired only) */}
+      <LiveOpenings />
 
       {/* 4. Interactive Search & Multi-Filter Deck (Real-time Filtered) */}
       <JobsInteractiveSearchFilterDeck searchQueryProp={activeQuery} />

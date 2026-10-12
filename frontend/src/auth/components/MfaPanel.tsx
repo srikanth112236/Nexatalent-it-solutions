@@ -108,9 +108,12 @@ export function MfaPanel({ admin = false }: { admin?: boolean }) {
       )}
       {backupCodes.length > 0 && (
         <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-2">
-          <div className="text-xs font-extrabold text-amber-900">Backup codes — shown once. Store them somewhere safe.</div>
+          <div className="text-xs font-extrabold text-amber-900">Backup codes — shown once. Store them somewhere safe, then dismiss.</div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {backupCodes.map((c) => <code key={c} className="p-2 rounded-lg bg-white border border-amber-200 font-mono font-bold text-[11px] text-center">{c}</code>)}
+          </div>
+          <div className="flex justify-end">
+            <button type="button" onClick={() => { setBackupCodes([]); setOk('Backup codes dismissed from this screen. Keep your saved copy.'); }} className="px-4 py-2 rounded-xl bg-amber-600 text-white font-bold text-xs">I've saved them — clear screen</button>
           </div>
         </div>
       )}

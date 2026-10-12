@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'fs';
+import { randomBytes } from 'crypto';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -25,7 +26,7 @@ export interface DbShape {
   refunds: any[]; creditNotes: any[];
   commissionAgreements: any[]; commissions: any[]; commissionAdjustments: any[];
   feeSlabs: any[]; agreementTemplates: any[]; invoiceReminders: any[];
-  payouts: any[]; reconciliations: any[];
+  payouts: any[]; reconciliations: any[]; payrollRuns: any[];
   leads: any[]; leadActivities: any[]; opportunities: any[]; targets: any[];
   tasks: any[]; proposals: any[]; meetings: any[]; timesheets: any[]; submissions: any[];
   notifications: any[]; notificationPrefs: any[]; mailOutbox: any[];
@@ -61,8 +62,8 @@ function seed(): DbShape {
     ],
     companyProfiles: [],
     agencyProfiles: [
-      { id: 'AGC-101', legalName: 'Apex Tech Search Pvt Ltd', displayName: 'Apex Tech Search', type: 'Recruitment Agency', specialties: 'Engineering, Product', locations: 'Bengaluru, Mumbai', status: 'Verified Partner', verificationStatus: 'Approved', accountStatus: 'Active', tenantId: 'TNT-AGENCY-01', contactName: 'Vikram Malhotra', contactEmail: 'vikram@apextechsearch.com', commercialModel: 'percentage', agreementStatus: 'Signed', recruiterCount: 1, createdAt: now },
-      { id: 'VND-201', legalName: 'Global TechSolutions Staffing Ltd', displayName: 'Global TechSolutions Vendor', type: 'Contingent Staffing Vendor', specialties: 'Cloud, Security', locations: 'Hyderabad, Remote', status: 'Active SOW', verificationStatus: 'Approved', accountStatus: 'Active', tenantId: 'TNT-VENDOR-05', contactName: 'Rajesh Verma', contactEmail: 'rajesh@techsolutionsvendor.com', commercialModel: 'percentage', agreementStatus: 'Signed', recruiterCount: 1, createdAt: now },
+      { id: 'AGC-101', legalName: 'Apex Tech Search Pvt Ltd', displayName: 'Apex Tech Search', type: 'Recruitment Agency', entityType: 'Private Limited', specialties: 'Engineering, Product', locations: 'Bengaluru, Mumbai', status: 'Verified Partner', verificationStatus: 'Approved', accountStatus: 'Active', tenantId: 'TNT-AGENCY-01', contactName: 'Vikram Malhotra', contactEmail: 'vikram@apextechsearch.com', contactPhone: '+91-80-41120011', country: 'India', registrationNumber: 'CIN-U74999KA2019PTC121101', taxIds: '29AABCT1011A1Z5 / PAN-AABCT1011F', website: 'https://apextechsearch.example.com', address: 'Prestige Towers, Residency Rd, Bengaluru 560025', commercialModel: 'percentage', agreementStatus: 'Signed', recruiterCount: 1, accountManager: 'operations@nexatalent.com', verificationHistory: [{ from: 'Pending', to: 'Approved', at: now, by: 'superadmin@nexatalent.com', reason: 'GSTIN + CIN verified; MSA signed.' }], createdAt: now },
+      { id: 'VND-201', legalName: 'Global TechSolutions Staffing Ltd', displayName: 'Global TechSolutions Vendor', type: 'Contingent Staffing Vendor', entityType: 'Private Limited', specialties: 'Cloud, Security', locations: 'Hyderabad, Remote - India', status: 'Active SOW', verificationStatus: 'Approved', accountStatus: 'Active', tenantId: 'TNT-VENDOR-05', contactName: 'Rajesh Verma', contactEmail: 'rajesh@techsolutionsvendor.com', contactPhone: '+91-40-41120311', country: 'India', registrationNumber: 'CIN-U74999TG2020PTC130101', taxIds: '36AABCS2011F1Z5 / PAN-AABCS2011F', website: 'https://techsolutionsvendor.example.com', address: 'HITEC City, Hyderabad 500081', commercialModel: 'percentage', agreementStatus: 'Signed', recruiterCount: 1, accountManager: 'operations@nexatalent.com', verificationHistory: [{ from: 'Pending', to: 'Approved', at: now, by: 'superadmin@nexatalent.com', reason: 'SOW + GSTIN verified.' }], createdAt: now },
     ],
     branches: [
       { id: 'BR-01', orgId: 'TNT-9011', name: 'Bengaluru HQ', city: 'Bengaluru', status: 'Active' },
@@ -70,13 +71,38 @@ function seed(): DbShape {
     ],
     memberships: [], verifications: [],
     candidateProfiles: [
-      { id: 'CND-9041', name: 'Siddharth Nair', email: 'siddharth.nair@devtech.io', roleTitle: 'Senior Fullstack Systems Architect', experienceYears: 8, location: 'Bengaluru, Karnataka', currentCtc: 2800000, expectedCtc: 3800000, noticePeriod: '15 Days', matchScore: 96, stage: 'Ops Vetted', jobId: 'REQ-9901', submittedBy: 'Apex Tech Search', sourceType: 'Agency', status: 'Active', visibility: 'standard', createdAt: now },
-      { id: 'CND-9042', name: 'Ananya Deshpande', email: 'ananya.d@cloudsec.net', roleTitle: 'AWS Cloud Security Architect', experienceYears: 9, location: 'Hyderabad, Telangana', currentCtc: 3200000, expectedCtc: 4200000, noticePeriod: '30 Days', matchScore: 94, stage: 'Tech Round', jobId: 'REQ-8890', submittedBy: 'Global TechSolutions Vendor', sourceType: 'Vendor', status: 'Active', visibility: 'standard', createdAt: now },
+      { id: 'CND-9041', name: 'Siddharth Nair', email: 'siddharth.nair@devtech.io', phone: '+91-9820011223', headline: 'Senior Fullstack Systems Architect | 8y | React/Node | Bengaluru', roleTitle: 'Senior Fullstack Systems Architect', experienceYears: 8, location: 'Bengaluru, Karnataka', preferredLocation: 'Bengaluru / Remote - India', country: 'India', contactPrefs: 'Email + phone, 10am-7pm IST', currentCtc: 2800000, expectedCtc: 3800000, payPeriod: 'annual', noticePeriod: '15 Days', availability: 'Employed — serving 15-day notice', source: 'agency', sourceType: 'Agency', submittedBy: 'Apex Tech Search', assignedRecruiter: 'vikram@apextechsearch.com', summary: 'Fullstack architect, 8y across fintech. Leads React/Node platform squads; 96/100 role fit.', objectives: 'Next: staff/principal scope in Bengaluru / remote.', education: 'B.Tech (Computer Science), IIT Delhi — 2016', skills: 'React, Node.js, AWS', matchScore: 96, stage: 'Ops Vetted', jobId: 'REQ-9901', status: 'Active', visibility: 'standard', resumeRef: 'resumes/CND-9041.pdf', resumeVersion: 2, createdAt: now, updatedAt: now },
+      { id: 'CND-9042', name: 'Ananya Deshpande', email: 'ananya.d@cloudsec.net', phone: '+91-9820022334', headline: 'AWS Cloud Security Architect | 9y | Cloud Security | Hyderabad', roleTitle: 'AWS Cloud Security Architect', experienceYears: 9, location: 'Hyderabad, Telangana', preferredLocation: 'Hyderabad / Remote - India', country: 'India', contactPrefs: 'Email preferred', currentCtc: 3200000, expectedCtc: 4200000, payPeriod: 'annual', noticePeriod: '30 Days', availability: 'Employed — serving 30-day notice', source: 'vendor', sourceType: 'Vendor', submittedBy: 'Global TechSolutions Vendor', assignedRecruiter: 'rajesh@techsolutionsvendor.com', summary: 'Cloud security architect, 9y across infra. Zero-trust AWS estates; 94/100 role fit.', objectives: 'Next: security lead scope, contract-friendly.', education: 'M.Tech (Security), IIIT Hyderabad — 2015', skills: 'AWS, Cloud Security, Terraform', matchScore: 94, stage: 'Tech Round', jobId: 'REQ-8890', status: 'Active', visibility: 'standard', resumeRef: 'resumes/CND-9042.pdf', resumeVersion: 1, createdAt: now, updatedAt: now },
     ],
-    experiences: [], educations: [],
+    experiences: [
+      { id: 'EXP-9041-1', candidateEmail: 'siddharth.nair@devtech.io', employer: 'Fintech ScaleOps', designation: 'Senior Fullstack Systems Architect', years: 5, startDate: '2021-04-01', endDate: null, current: true, createdAt: now },
+      { id: 'EXP-9041-0', candidateEmail: 'siddharth.nair@devtech.io', employer: 'Devtech Labs', designation: 'Fullstack Engineer', years: 3, startDate: '2018-06-01', endDate: '2021-03-31', current: false, createdAt: now },
+      { id: 'EXP-9042-1', candidateEmail: 'ananya.d@cloudsec.net', employer: 'CloudSec Systems', designation: 'AWS Cloud Security Architect', years: 6, startDate: '2020-02-01', endDate: null, current: true, createdAt: now },
+    ],
+    educations: [
+      { id: 'EDU-9041', candidateEmail: 'siddharth.nair@devtech.io', institution: 'IIT Delhi', qualification: 'B.Tech', field: 'Computer Science', year: '2016', score: '8.4 CGPA', createdAt: now },
+      { id: 'EDU-9042', candidateEmail: 'ananya.d@cloudsec.net', institution: 'IIIT Hyderabad', qualification: 'M.Tech', field: 'Security', year: '2015', score: '8.9 CGPA', createdAt: now },
+    ],
     skills: seedSkills(now),
-    candidateSkills: [], certifications: [],
-    documents: [], consents: [],
+    candidateSkills: [
+      { id: 'CSK-9041-0', candidateEmail: 'siddharth.nair@devtech.io', skill: 'React', level: 'Expert' },
+      { id: 'CSK-9041-1', candidateEmail: 'siddharth.nair@devtech.io', skill: 'Node.js', level: 'Expert' },
+      { id: 'CSK-9041-2', candidateEmail: 'siddharth.nair@devtech.io', skill: 'AWS', level: 'Advanced' },
+      { id: 'CSK-9042-0', candidateEmail: 'ananya.d@cloudsec.net', skill: 'AWS', level: 'Expert' },
+      { id: 'CSK-9042-1', candidateEmail: 'ananya.d@cloudsec.net', skill: 'Cloud Security', level: 'Expert' },
+    ],
+    certifications: [
+      { id: 'CERT-9041', candidateEmail: 'siddharth.nair@devtech.io', name: 'AWS Solutions Architect', issuer: 'Amazon', year: '2023', createdAt: now },
+      { id: 'CERT-9042', candidateEmail: 'ananya.d@cloudsec.net', name: 'AWS Solutions Architect', issuer: 'Amazon', year: '2022', createdAt: now },
+    ],
+    documents: [
+      { id: 'DOC-9041', candidateEmail: 'siddharth.nair@devtech.io', ownerEmail: 'siddharth.nair@devtech.io', name: 'CND-9041-resume.pdf', kind: 'resume', mime: 'application/pdf', ref: 'resumes/CND-9041.pdf', version: 2, uploadedAt: now, createdAt: now },
+      { id: 'DOC-9042', candidateEmail: 'ananya.d@cloudsec.net', ownerEmail: 'ananya.d@cloudsec.net', name: 'CND-9042-resume.pdf', kind: 'resume', mime: 'application/pdf', ref: 'resumes/CND-9042.pdf', version: 1, uploadedAt: now, createdAt: now },
+    ],
+    consents: [
+      { id: 'CON-9041', candidateEmail: 'siddharth.nair@devtech.io', email: 'siddharth.nair@devtech.io', purpose: 'placement-processing', status: 'granted', marketing: true, visibility: 'standard', withdrawn: false, createdAt: now },
+      { id: 'CON-9042', candidateEmail: 'ananya.d@cloudsec.net', email: 'ananya.d@cloudsec.net', purpose: 'placement-processing', status: 'granted', marketing: false, visibility: 'standard', withdrawn: false, createdAt: now },
+    ],
     requisitions: [
       { id: 'REQ-9901', orgId: 'TNT-9011', title: 'Senior React / Node Fullstack Architect', department: 'Core Engineering', status: 'Sourcing', openings: 3, employmentType: 'Full-time', location: 'Bengaluru / Hybrid', branch: 'Bengaluru HQ', hiringManager: 'aditi@fintechscaleops.io', recruiter: 'kiran@nexatalent.com', experienceMin: 6, experienceMax: 10, deadline: '2027-02-01T00:00:00.000Z', budgetMin: 3500000, budgetMax: 4500000, currency: 'INR', createdAt: now },
       { id: 'REQ-8890', orgId: 'TNT-9011', title: 'Senior AWS Cloud Security Lead', department: 'Infra Security', status: 'Sourcing', openings: 2, employmentType: 'Contract', location: 'Bengaluru / Hybrid', branch: 'Bengaluru HQ', hiringManager: 'aditi@fintechscaleops.io', recruiter: 'kiran@nexatalent.com', experienceMin: 7, experienceMax: 12, deadline: '2027-02-01T00:00:00.000Z', budgetMin: 3000, budgetMax: 3500, currency: 'INR', payPeriod: 'hourly', createdAt: now },
@@ -114,7 +140,7 @@ function seed(): DbShape {
       { hiringType: 'Bulk hiring', rateMin: 0, rateMax: 0, note: 'Negotiated rate based on volume', negotiated: true, updatedAt: now, updatedBy: 'seed' },
     ],
     agreementTemplates: [standardTemplate(now)], invoiceReminders: [],
-    payouts: [], reconciliations: [],
+    payouts: [], reconciliations: [], payrollRuns: [],
     leads: [
       { id: 'LEAD-001', contactName: 'Rohit Shetty', companyName: 'AutoLogistics AI Global', email: 'careers@autologistics.ai', stage: 'Qualified', owner: 'kiran@nexatalent.com', value: 850000, currency: 'INR', nextFollowUp: '2026-10-12', createdAt: now },
     ],
@@ -134,7 +160,7 @@ function seed(): DbShape {
       { id: 'AUD-1001', timestamp: now, actor: 'system', action: 'SYSTEM_BOOTSTRAP', resource: 'system', recordId: '-', tenantId: 'TNT-GLOBAL', ipAddress: '127.0.0.1' },
     ],
     sessions: [], passwordResets: [],
-    settings: { jwtAccessTokenTtl: '15m', jwtRefreshTokenTtl: '7d', rateLimitingPolicy: '100/min', tenantIsolation: 'strict', cors: 'enabled', encryption: 'AES-256-GCM' },
+    settings: { jwtAccessTokenTtl: '15m', jwtRefreshTokenTtl: '7d', rateLimitingPolicy: '100/min', tenantIsolation: 'strict', cors: 'enabled', encryption: 'AES-256-GCM', payrollRules: { standardHours: 160, overtimeMultiplier: 1.5, payoutPercent: 82, taxRate: 18 } },
     jobsLegacy: [], candidatesLegacy: [], tenantsLegacy: [],
     contractors: [
       { id: 'CTR-801', name: 'Rajesh Verma', skillset: 'Senior Java Microservices Architect', clientName: 'Fintech ScaleOps Technologies Ltd', hourlyRate: 2800, currency: 'INR', startDate: '2025-11-01', status: 'Active Deployed', slaScore: '99.4%' },
@@ -262,6 +288,10 @@ export function loadDb(): DbShape {
       if (Array.isArray((db as any).agreementTemplates) && !(db as any).agreementTemplates.find((t: any) => t.id === 'AGT-STD-001')) {
         (db as any).agreementTemplates.unshift(standardTemplate(new Date().toISOString()));
       }
+      // Backfill platform payroll rules (timesheet → payroll math) for older DBs.
+      if (db && typeof (db as any).settings === 'object' && !(db as any).settings.payrollRules) {
+        (db as any).settings.payrollRules = { standardHours: 160, overtimeMultiplier: 1.5, payoutPercent: 82, taxRate: 18 };
+      }
       // Backfill filterable requirement fields on older requisitions.
       for (const r of (db!.requisitions as any[])) {
         const ref = (fresh.requisitions as any[]).find((f) => f.id === r.id);
@@ -300,7 +330,11 @@ export function loadDb(): DbShape {
       return db!;
     }
   } catch { /* fall through to seed */ }
-  db = process.env.DEMO_SEED === 'off' ? emptyDb() : seed();
+  // P0-1: production defaults to EMPTY (no demo PII/superadmin). Seed only when
+  // explicitly requested with DEMO_SEED=on (dev: DEMO_SEED unset still seeds).
+  const isProd = (process.env.NODE_ENV || 'development') === 'production';
+  const demoOff = process.env.DEMO_SEED === 'off' || (isProd && process.env.DEMO_SEED !== 'on');
+  db = demoOff ? emptyDb() : seed();
   persist();
   return db!;
 }
@@ -309,7 +343,10 @@ export function persist(): void {
   try {
     if (!db) return;
     if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
-    writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8');
+    // P2-9: atomic write (tmp + rename) so concurrent/crash never leaves half JSON.
+    const tmp = `${DB_FILE}.tmp-${process.pid}`;
+    writeFileSync(tmp, JSON.stringify(db, null, 2), 'utf8');
+    renameSync(tmp, DB_FILE);
   } catch { /* never crash on persist */ }
 }
 
@@ -321,7 +358,15 @@ export function collection<T = any>(name: keyof DbShape): T[] {
 }
 
 export function uid(prefix: string): string {
-  return `${prefix}-${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 1296).toString(36).toUpperCase().padEnd(2, 'X')}`;
+  // P2-9: crypto-random suffix (was Math.random predictable).
+  return `${prefix}-${Date.now().toString(36).toUpperCase()}${randomBytes(2).toString('hex').toUpperCase()}`;
+}
+
+/** Phase B: bounded history — per-record timelines keep the newest 200 entries. */
+export function pushHistory(arr: any[], entry: any, cap = 200): any[] {
+  arr.unshift(entry);
+  if (arr.length > cap) arr.length = cap;
+  return arr;
 }
 
 export function nowIso(): string { return new Date().toISOString(); }

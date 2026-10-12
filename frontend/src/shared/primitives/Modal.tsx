@@ -1,4 +1,4 @@
-import React, { ReactNode, useEffect } from 'react';
+import React, { ReactNode, useEffect, useId, useRef } from 'react';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -19,6 +19,8 @@ export const Modal: React.FC<ModalProps> = ({
   footer,
   maxWidth = '540px',
 }) => {
+  const uid = useId();
+  const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -28,6 +30,8 @@ export const Modal: React.FC<ModalProps> = ({
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       window.addEventListener('keydown', handleKeyDown);
+      // P4: move focus into dialog for keyboard/SR users.
+      setTimeout(() => closeRef.current?.focus(), 0);
     }
     return () => {
       document.body.style.overflow = 'unset';
@@ -36,11 +40,15 @@ export const Modal: React.FC<ModalProps> = ({
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
+  const titleId = `modal-title-${uid}`;
+  const descId = description ? `modal-desc-${uid}` : undefined;
 
   return (
     <div
       role="dialog"
       aria-modal="true"
+      aria-labelledby={titleId}
+      aria-describedby={descId}
       style={{
         position: 'fixed',
         inset: 0,
@@ -87,16 +95,17 @@ export const Modal: React.FC<ModalProps> = ({
           }}
         >
           <div>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-text)' }}>
+            <h3 id={titleId} style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-text)' }}>
               {title}
             </h3>
             {description && (
-              <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
+              <p id={descId} style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
                 {description}
               </p>
             )}
           </div>
           <button
+            ref={closeRef}
             onClick={onClose}
             aria-label="Close dialog"
             style={{
@@ -105,7 +114,9 @@ export const Modal: React.FC<ModalProps> = ({
               color: 'var(--color-text-muted)',
               fontSize: '1.25rem',
               cursor: 'pointer',
-              padding: '0.25rem',
+              padding: '0.75rem',
+              minWidth: '44px',
+              minHeight: '44px',
               lineHeight: 1,
             }}
           >

@@ -283,10 +283,26 @@ export function JobDetailPage() {
   const [expectedCtc, setExpectedCtc] = useState('');
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [appReferenceId, setAppReferenceId] = useState('');
+  const [applyError, setApplyError] = useState('');
 
   // Lookup target job mandate or fallback to j1
   const lookupKey = (jobSlug && JOBS_DATABASE[jobSlug.toLowerCase()]) ? jobSlug.toLowerCase() : 'j1';
   const job = JOBS_DATABASE[lookupKey];
+
+  // Phase 7: live listings (JOB-ids) resolve against eligible public postings.
+  const [liveJob, setLiveJob] = useState<any>(null);
+  useEffect(() => {
+    if (!jobSlug || !/^JOB-/i.test(jobSlug)) return;
+    let live = true;
+    const base =
+      (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) ||
+      'http://localhost:5000';
+    fetch(`${base}/api/v1/jobs-public/${encodeURIComponent(jobSlug)}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('not found'))))
+      .then((body) => { if (live) setLiveJob(body?.data || null); })
+      .catch(() => { if (live) setLiveJob(null); });
+    return () => { live = false; };
+  }, [jobSlug]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -298,15 +314,43 @@ export function JobDetailPage() {
     }
   };
 
-  const handleApplicationSubmit = (e: React.FormEvent) => {
+  // Phase 7: the website captures interest as a real enquiry lead (server-validated,
+  // deduped). Tracked applications live in the candidate portal — no fake references.
+  const handleApplicationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setApplyError('');
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      const randomRef = `NEXA-APP-${Math.floor(10000 + Math.random() * 90000)}`;
-      setAppReferenceId(randomRef);
+    try {
+      const base =
+        (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) ||
+        'http://localhost:5000';
+      const res = await fetch(`${base}/api/v1/enquiries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contactName: fullName.trim(),
+          companyName: `Candidate interest — ${liveJob?.title || job.title} (${liveJob?.id || job.id})`,
+          workEmail: email.trim(),
+          phone: phone.trim() || undefined,
+          enquiryType: 'candidate',
+          message: [
+            `Interest in ${liveJob?.title || job.title} (${liveJob?.id || job.id}).`,
+            `Notice: ${noticePeriod}.`,
+            currentCtc.trim() ? `Current CTC: ${currentCtc.trim()}.` : '',
+            expectedCtc.trim() ? `Expected CTC: ${expectedCtc.trim()}.` : '',
+            resumeFile ? `Resume attached by candidate at submit: ${resumeFile.name}.` : '',
+          ].filter(Boolean).join('\n'),
+        }),
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(body?.message || 'Could not send your request. Please try again.');
+      setAppReferenceId(body?.data?.id || '');
       setSubmitted(true);
-    }, 700);
+    } catch (err: any) {
+      setApplyError(err?.message || 'Could not send your request. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const currentVetting = job.vettingPhases[activeVettingPhase] || job.vettingPhases[0];
@@ -326,6 +370,27 @@ export function JobDetailPage() {
 
       {/* Global Navbar */}
       <SiteNavbar />
+
+      {/* Phase 7: verified live posting (eligible only) with a real apply path */}
+      {liveJob && (
+        <section className="px-6 lg:px-16 bg-emerald-50/70 border-b border-emerald-200">
+          <div className="max-w-6xl mx-auto py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="text-[11px] font-extrabold text-emerald-700 uppercase tracking-wider">Verified live opening • {liveJob.id}</div>
+              <div className="text-lg font-extrabold text-slate-900">{liveJob.title}</div>
+              <div className="text-xs text-slate-600 font-medium">
+                {[liveJob.companyName, liveJob.location, liveJob.employmentType].filter(Boolean).join(' • ')}
+              </div>
+            </div>
+            <Link
+              to={`/candidate/jobs/${encodeURIComponent(liveJob.id)}`}
+              className="px-6 py-3 rounded-xl bg-emerald-700 text-white font-bold text-sm text-center hover:bg-emerald-800"
+            >
+              View & Apply →
+            </Link>
+          </div>
+        </section>
+      )}
 
       {/* Hero Header */}
       <section className="relative pt-32 pb-16 px-6 lg:px-16 bg-[#FAF8F5] border-b border-slate-200">
@@ -712,20 +777,29 @@ export function JobDetailPage() {
 
                   <div className="space-y-2">
                     <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 uppercase tracking-wider">
-                      ● APPLICATION DISPATCHED & VERIFIED
+                      ● REQUEST RECEIVED
                     </span>
-                    <h3 className="text-2xl font-black text-slate-900">Application Received!</h3>
-                    <div className="text-xs font-mono font-bold text-[#0265FF] bg-blue-50 py-1 px-3 rounded-lg inline-block border border-blue-200">
-                      Ref ID: {appReferenceId}
-                    </div>
+                    <h3 className="text-2xl font-black text-slate-900">Interest noted!</h3>
+                    {appReferenceId && (
+                      <div className="text-xs font-mono font-bold text-[#0265FF] bg-blue-50 py-1 px-3 rounded-lg inline-block border border-blue-200">
+                        Enquiry ID: {appReferenceId}
+                      </div>
+                    )}
                   </div>
 
                   <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-slate-200 text-left text-xs text-slate-700 space-y-2">
                     <p className="font-semibold text-slate-900">What happens next?</p>
-                    <p>1. Our senior practice recruiters will review your resume for <strong>{job.title}</strong>.</p>
-                    <p>2. If shortlisted, you will receive an invitation for Stage-1 technical calibration within 24 to 48 hours.</p>
+                    <p>1. Our practice team will review your interest in <strong>{liveJob?.title || job.title}</strong> and reach out on your email.</p>
+                    <p>2. For a tracked application with status updates, sign in to the candidate portal and apply directly.</p>
                     <p className="text-slate-500 pt-1 border-t border-slate-200">Direct Desk: <strong className="text-slate-900">info@nexatalentitsolutions.com</strong> | Phone: <strong className="text-slate-900">+91 70196 96166</strong></p>
                   </div>
+
+                  <Link
+                    to={liveJob ? `/candidate/jobs/${encodeURIComponent(liveJob.id)}` : '/candidate/jobs'}
+                    className="w-full py-3.5 rounded-2xl bg-emerald-700 text-white font-bold text-sm shadow-md cursor-pointer text-center block hover:bg-emerald-800"
+                  >
+                    Sign in & apply with tracking →
+                  </Link>
 
                   <button
                     type="button"
@@ -760,6 +834,11 @@ export function JobDetailPage() {
 
                   {/* Candidate Form */}
                   <form onSubmit={handleApplicationSubmit} className="space-y-4 text-xs">
+                    {applyError && (
+                      <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 font-bold" role="alert">
+                        {applyError}
+                      </div>
+                    )}
                     
                     <div>
                       <label className="block font-bold text-slate-800 mb-1 flex items-center gap-1">

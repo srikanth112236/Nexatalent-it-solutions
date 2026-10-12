@@ -2,8 +2,12 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
 
-const ACCESS_TTL = process.env.JWT_ACCESS_TTL || '15m';
-const REFRESH_TTL = process.env.JWT_REFRESH_TTL || '7d';
+const ACCESS_TTL = /^(\d+)(m|h|d)$/.test(process.env.JWT_ACCESS_TTL || '15m')
+  ? (process.env.JWT_ACCESS_TTL || '15m')
+  : '15m';
+const REFRESH_TTL = /^(\d+)(m|h|d)$/.test(process.env.JWT_REFRESH_TTL || '7d')
+  ? (process.env.JWT_REFRESH_TTL || '7d')
+  : '7d';
 
 export async function hashPassword(password: string): Promise<string> {
   const salt = await bcrypt.genSalt(12);
@@ -38,9 +42,9 @@ export function signRefresh(user: { id: string; email: string }, jti: string): s
 }
 
 export function verifyAccess(token: string): AccessClaims {
-  return jwt.verify(token, config.jwt.secret) as unknown as AccessClaims;
+  return jwt.verify(token, config.jwt.secret, { algorithms: ['HS256'] }) as unknown as AccessClaims;
 }
 
 export function verifyRefresh(token: string): RefreshClaims {
-  return jwt.verify(token, process.env.REFRESH_TOKEN_SECRET || config.jwt.secret + ':refresh') as unknown as RefreshClaims;
+  return jwt.verify(token, process.env.REFRESH_TOKEN_SECRET || config.jwt.secret + ':refresh', { algorithms: ['HS256'] }) as unknown as RefreshClaims;
 }

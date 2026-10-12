@@ -3,6 +3,10 @@ import { z } from 'zod';
 export const email = z.string().email().max(160);
 export const money = z.number().nonnegative().max(1_000_000_000);
 export const currency = z.string().default('INR');
+// Phase D: date strings must actually parse — 'junk' previously sailed through
+// and silently broke every downstream comparison.
+export const dateStr = z.string().refine((s) => !Number.isNaN(Date.parse(s)), { message: 'Invalid date.' });
+export const optDate = dateStr.optional();
 
 export const registerSchema = z.object({
   name: z.string().min(1).max(120).optional(),
@@ -10,6 +14,10 @@ export const registerSchema = z.object({
   password: z.string().min(8).max(128),
   companyName: z.string().max(160).optional(),
   phone: z.string().max(30).optional(),
+  country: z.string().max(80).optional(),
+  authMethod: z.enum(['password', 'otp', 'sso']).optional(),
+  termsAccepted: z.boolean().optional(),
+  marketing: z.boolean().optional(),
 });
 
 /* ---------- §7.3 Candidate profile (12 sections) ---------- */
@@ -128,16 +136,24 @@ export const requisitionSchema = z.object({
   benefits: z.string().max(2000).optional(),
   disclosure: z.string().max(60).optional(),
   priority: z.enum(['Low', 'Medium', 'High', 'Critical']).optional(),
-  targetHireDate: z.string().optional(),
-  deadline: z.string().optional(),
+  targetHireDate: optDate,
+  deadline: optDate,
   interviewRounds: z.number().int().min(1).max(12).optional(),
   assessments: z.string().max(1000).optional(),
-  joiningTarget: z.string().optional(),
+  joiningTarget: optDate,
   budgetApproval: z.string().max(60).optional(),
   agencyPartners: z.array(z.string()).optional(),
   submissionRules: z.string().max(1000).optional(),
   panel: z.string().max(500).optional(),
   status: z.enum(['Draft', 'Pending Approval', 'Approved', 'Sourcing', 'Filled', 'On Hold', 'Cancelled']).default('Draft'),
+}).superRefine((v, ctx) => {
+  // Phase D: range sanity — min above max is always a caller bug, never intent.
+  if (v.experienceMin !== undefined && v.experienceMax !== undefined && v.experienceMin > v.experienceMax) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['experienceMax'], message: 'experienceMax must be >= experienceMin.' });
+  }
+  if (v.budgetMin !== undefined && v.budgetMax !== undefined && v.budgetMin > v.budgetMax) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['budgetMax'], message: 'budgetMax must be >= budgetMin.' });
+  }
 });
 
 /* ---------- §8.4 Job posting ---------- */
@@ -159,8 +175,8 @@ export const jobSchema = z.object({
   currency: currency.optional(),
   salaryDisclosure: z.string().max(60).optional(),
   visibility: z.enum(['public', 'private', 'assigned']).default('public'),
-  startDate: z.string().optional(),
-  expiryDate: z.string().optional(),
+  startDate: optDate,
+  expiryDate: optDate,
   applicationQuestions: z.string().max(3000).optional(),
   requiredDocs: z.string().max(1000).optional(),
   applicationSettings: z.string().max(1000).optional(),
@@ -172,19 +188,37 @@ export const jobSchema = z.object({
   companyName: z.string().max(200).optional(),
   budgetRange: z.string().max(120).optional(),
   experienceRequired: z.string().max(120).optional(),
+}).superRefine((v, ctx) => {
+  if (v.experienceMin !== undefined && v.experienceMax !== undefined && v.experienceMin > v.experienceMax) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['experienceMax'], message: 'experienceMax must be >= experienceMin.' });
+  }
+  if (v.salaryMin !== undefined && v.salaryMax !== undefined && v.salaryMin > v.salaryMax) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['salaryMax'], message: 'salaryMax must be >= salaryMin.' });
+  }
 });
 
 export const applicationStage = z.enum(['New', 'Applied', 'Under Review', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interview Completed', 'Selected', 'Offer', 'Hired', 'Rejected', 'Withdrawn', 'On Hold', 'Job Closed']);
 
 /* ---------- §7.7 Interview ---------- */
+const safeUrl = z.string().max(500).optional().refine(
+  (v) => {
+    if (!v) return true;
+    const s = String(v).trim();
+    if (/^(javascript|data|file|vbscript):/i.test(s)) return false;
+    if (/[<>"\s]/.test(s)) return false;
+    // Allow https/http meeting links and plain venue text without scheme abuse.
+    return /^(https?:\/\/|meet\.|teams\.|zoom\.|[\w\- .#,/()&]+$)/i.test(s);
+  },
+  { message: 'meetingLink must be a safe https URL.' },
+);
 export const interviewSchema = z.object({
   applicationId: z.string().min(1),
   jobId: z.string().min(1),
   round: z.string().min(1).max(120),
-  scheduledAt: z.string().min(1),
+  scheduledAt: dateStr,
   timezone: z.string().default('Asia/Kolkata'),
   mode: z.enum(['video', 'phone', 'onsite']).default('video'),
-  meetingLink: z.string().max(500).optional(),
+  meetingLink: safeUrl,
   venue: z.string().max(300).optional(),
   interviewer: z.string().max(160).optional(),
   panel: z.string().max(500).optional(),
@@ -198,6 +232,12 @@ export const messageSchema = z.object({
   conversationId: z.string().min(1),
   body: z.string().min(1).max(4000),
   type: z.enum(['text', 'attachment', 'system']).default('text'),
+  attachment: z.object({
+    docId: z.string().min(1).max(40),
+    name: z.string().min(1).max(160),
+    mime: z.string().min(1).max(120),
+    size: z.number().int().min(1).max(5 * 1024 * 1024),
+  }).optional(),
 });
 
 /* ---------- §6.12 Lead ---------- */
@@ -218,12 +258,12 @@ export const leadSchema = z.object({
   value: money.optional(),
   budget: money.optional(),
   currency: currency.optional(),
-  closeDate: z.string().optional(),
+  closeDate: optDate,
   priority: z.enum(['Low', 'Medium', 'High']).optional(),
   owner: z.string().optional(),
   team: z.string().max(120).optional(),
   branch: z.string().max(120).optional(),
-  nextFollowUp: z.string().optional(),
+  nextFollowUp: optDate,
   notes: z.string().max(4000).optional(),
   consent: z.string().max(200).optional(),
   stage: z.enum(['New', 'Contacted', 'Qualified', 'Discovery Scheduled', 'Proposal Sent', 'Negotiation', 'Won', 'Lost', 'Nurture']).default('New'),
@@ -248,6 +288,12 @@ export const invoiceSchema = z.object({
   recurrenceId: z.string().optional(),
   recurrenceIndex: z.number().int().min(1).optional(),
   recurrenceTotal: z.number().int().min(1).optional(),
+}).superRefine((v, ctx) => {
+  // Phase D: money sanity at the boundary — nonsense totals never reach the ledger.
+  const subtotal = v.lines.reduce((a, l) => a + l.qty * l.unit, 0);
+  if (v.discount > subtotal) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['discount'], message: 'discount cannot exceed the lines subtotal.' });
+  }
 });
 
 export const invoiceSeriesSchema = z.object({
@@ -265,7 +311,7 @@ export const invoiceSeriesSchema = z.object({
 
 export const paymentSchema = z.object({
   invoiceId: z.string().min(1),
-  amount: money,
+  amount: z.number().positive().max(1_000_000_000),
   method: z.string().default('upi'),
   provider: z.string().default('manual'),
   reference: z.string().optional(),
@@ -297,6 +343,11 @@ export const commissionAgreementSchema = z.object({
   duplicatePolicy: z.string().max(1000).optional(),
   cancellationTerms: z.string().max(1000).optional(),
   templateId: z.string().optional(),
+}).superRefine((v, ctx) => {
+  // Phase D: fixed-fee agreements need a real fixed fee.
+  if (v.feeModel === 'fixed' && !(Number(v.fixedFee) > 0)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['fixedFee'], message: 'fixedFee must be greater than 0 for fixed-fee agreements.' });
+  }
 });
 
 export const agreementTemplateSchema = z.object({
@@ -325,9 +376,23 @@ export const feeSlabSchema = z.object({
   negotiated: z.boolean().default(false),
 });
 
+// Pagination inputs come straight from the URL query string — possibly missing,
+// empty (?page=), or hand-edited (?page=abc). Coerce-then-clamp so a malformed
+// value falls back to defaults instead of throwing a 500 (was: z.coerce.number()
+// yields NaN → invalid_type 500 with a raw zod dump).
+function sanePage(v: unknown): number {
+  const n = typeof v === 'number' ? v : Number(String(v ?? '').trim());
+  if (!Number.isFinite(n)) return 1;
+  return Math.max(1, Math.floor(n));
+}
+function sanePageSize(v: unknown): number {
+  const n = typeof v === 'number' ? v : Number(String(v ?? '').trim());
+  if (!Number.isFinite(n)) return 20;
+  return Math.min(100, Math.max(1, Math.floor(n)));
+}
 export const paginate = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  page: z.unknown().transform(sanePage).default(1),
+  pageSize: z.unknown().transform(sanePageSize).default(20),
   q: z.string().max(160).optional(),
   status: z.string().max(60).optional(),
 });

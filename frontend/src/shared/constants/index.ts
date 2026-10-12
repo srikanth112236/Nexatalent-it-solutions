@@ -11,9 +11,23 @@ export const USER_ROLES: Record<string, UserRole> = {
 
 export const ROLE_DEFAULT_REDIRECTS: Record<UserRole, string> = {
   superadmin: '/superadmin',
+  platform_owner: '/superadmin',
   employee: '/employee',
+  operations_admin: '/employee',
+  internal_recruiter: '/employee',
+  finance_admin: '/employee',
+  finance_staff: '/employee',
+  sales_admin: '/employee',
+  sales_manager: '/employee',
+  support_admin: '/superadmin',
+  bda: '/employee',
   recruiter: '/recruiter',
+  agency_admin: '/recruiter',
+  agency_recruiter: '/recruiter',
   employer: '/employer',
+  company_admin: '/employer',
+  hiring_manager: '/employer',
+  company_recruiter: '/employer',
   vendor: '/vendor',
   candidate: '/candidate',
 };
