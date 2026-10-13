@@ -1,5 +1,8 @@
 import { Router, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { loadDb, persist, uid, nowIso, audit, pushHistory } from '../db/store.js';
 import { notify } from '../domain/pipeline.js';
 import { requireAuth, ctxOf } from '../middleware/rbac.js';
@@ -8,6 +11,11 @@ import { leadSchema, paginate, paged } from '../validate/schemas.js';
 export const salesRouter = Router();
 // Phase 7: public enquiries are rate-limited and never trust client owner/status.
 const enquiryLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
+
+// Careers / candidate resumes land in the shared uploads dir (same as documents).
+const UPLOAD_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'data', 'uploads');
+function ensureUploadDir() { if (!existsSync(UPLOAD_DIR)) mkdirSync(UPLOAD_DIR, { recursive: true }); }
+const MAX_RESUME_BYTES = 5 * 1024 * 1024;
 
 // ---- Public business enquiry → lead (no auth; server sets owner/status) ----
 salesRouter.post('/enquiries', enquiryLimiter, (req: Request, res: Response) => {
@@ -28,6 +36,29 @@ salesRouter.post('/enquiries', enquiryLimiter, (req: Request, res: Response) => 
     String(l.companyName || '').toLowerCase() === companyName.toLowerCase() &&
     new Date(l.createdAt || 0).getTime() > dayAgo);
   if (dup) return res.status(200).json({ success: true, code: 'ENQUIRY_DUPLICATE', message: 'Enquiry already received — our team will follow up.', data: { id: dup.id } });
+  // Optional public resume (Careers / candidate applications): validated like documents,
+  // stored server-side and linked onto the lead for the hiring desk.
+  let resumeRef: string | null = null;
+  let resumeName = '';
+  let resumeSize = 0;
+  if (b.resumeBase64) {
+    const name = String(b.resumeName || 'resume').slice(0, 160);
+    const ext = (name.split('.').pop() || '').toLowerCase();
+    if (!['pdf', 'doc', 'docx'].includes(ext)) return res.status(400).json({ success: false, message: 'Resume must be a PDF, DOC or DOCX file.' });
+    let buf: Buffer;
+    try { buf = Buffer.from(String(b.resumeBase64), 'base64'); } catch { return res.status(400).json({ success: false, message: 'Invalid resume file.' }); }
+    if (buf.length === 0 || buf.length > MAX_RESUME_BYTES) return res.status(413).json({ success: false, message: 'Resume must be under 5 MB.' });
+    const magicOk =
+      (buf[0] === 0x25 && buf[1] === 0x50 && buf[2] === 0x44 && buf[3] === 0x46) ||
+      (buf[0] === 0xd0 && buf[1] === 0xcf) ||
+      (buf[0] === 0x50 && buf[1] === 0x4b);
+    if (!magicOk) return res.status(415).json({ success: false, message: 'Resume file content does not match its type.' });
+    ensureUploadDir();
+    resumeRef = uid('RES');
+    writeFileSync(join(UPLOAD_DIR, `${resumeRef}.bin`), buf);
+    resumeName = name;
+    resumeSize = buf.length;
+  }
   const lead = {
     id: uid('LEAD'), contactName, companyName, email: workEmail,
     phone: String(b.phone || '').slice(0, 30),
@@ -35,15 +66,20 @@ salesRouter.post('/enquiries', enquiryLimiter, (req: Request, res: Response) => 
     industry: String(b.industry || '').slice(0, 80),
     enquiryType: ['employer', 'candidate', 'partner'].includes(b.enquiryType) ? b.enquiryType : 'employer',
     service: String(b.service || '').slice(0, 120),
+    enquiryTopic: String(b.enquiryTopic || b.topic || '').slice(0, 120),
+    preferredOffice: String(b.preferredOffice || b.office || '').slice(0, 120),
+    budgetRange: String(b.budgetRange || b.budget || '').slice(0, 80),
+    timeline: String(b.timeline || '').slice(0, 80),
     formName: String(b.formName || '').slice(0, 80),
     sourcePage: String(b.sourcePage || '').slice(0, 200),
+    resumeRef, resumeName, resumeSize,
     notes: message.slice(0, 4000),
     consent: b.consent === true,
     source: 'Website', stage: 'New', priority: 'Medium', owner: '',
     createdAt: nowIso(), history: [{ stage: 'New', at: nowIso() }],
   };
   db.leads.unshift(lead);
-  db.leadActivities.unshift({ id: uid('LACT'), leadId: lead.id, type: 'enquiry', outcome: 'received', notes: `Website enquiry from ${contactName} @ ${companyName}.`, owner: '', createdAt: nowIso() });
+  db.leadActivities.unshift({ id: uid('LACT'), leadId: lead.id, type: 'enquiry', outcome: 'received', notes: `Website enquiry from ${contactName} @ ${companyName}.${resumeRef ? ` Resume: ${resumeName}.` : ''}`, owner: '', createdAt: nowIso() });
   audit('website', `ENQUIRY_RECEIVED:${lead.id}`, 'TNT-GLOBAL', 'lead', lead.id, req.ip); persist();
   res.status(201).json({ success: true, data: { id: lead.id } });
 });
@@ -76,7 +112,7 @@ salesRouter.put('/leads/:id', requireAuth(['superadmin','platform_owner','sales_
   const b: any = req.body || {};
   // P2-8: BDA/employee cannot reassign ownership to hide/transfer pipeline.
   const BLOCK_REASSIGN = ['bda', 'employee'].includes(ctx.role) ? ['owner', 'team', 'branch'] : [];
-  for (const k of ['contactName','designation','email','phone','companyName','website','industry','companySize','location','source','service','hiringNeed','openings','value','budget','closeDate','priority','owner','team','branch','nextFollowUp','notes']) {
+  for (const k of ['contactName','designation','email','phone','companyName','website','industry','companySize','location','source','service','enquiryTopic','preferredOffice','budgetRange','timeline','hiringNeed','openings','value','budget','closeDate','priority','owner','team','branch','nextFollowUp','notes']) {
     if (b[k] !== undefined && !BLOCK_REASSIGN.includes(k)) l[k] = b[k];
   }
   l.updatedAt = nowIso();
@@ -120,6 +156,25 @@ salesRouter.post('/leads/:id/activities', requireAuth(['superadmin','platform_ow
 });
 salesRouter.get('/leads/:id/activities', requireAuth(['superadmin','platform_owner','sales_admin','sales_manager','employee','bda']), (req, res) => {
   res.json({ success: true, data: loadDb().leadActivities.filter((a: any) => a.leadId === req.params.id) });
+});
+// ---- Lead resume download (Careers / candidate applications; hiring desk only) ----
+salesRouter.get('/leads/:id/resume', requireAuth(['superadmin','platform_owner','sales_admin','sales_manager','employee','bda','operations_admin']), (req, res) => {
+  const l: any = loadDb().leads.find((x: any) => x.id === req.params.id);
+  if (!l || !l.resumeRef) return res.status(404).json({ success: false, message: 'No resume on this lead.' });
+  const ctx = ctxOf(req);
+  if (['bda','employee'].includes(ctx.role) && l.owner && l.owner !== ctx.email) {
+    return res.status(404).json({ success: false, message: 'Lead not found.' });
+  }
+  try {
+    const buf = readFileSync(join(UPLOAD_DIR, `${l.resumeRef}.bin`));
+    const ext = (String(l.resumeName || '').split('.').pop() || 'pdf').toLowerCase();
+    const mime = ext === 'doc' ? 'application/msword' : ext === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/pdf';
+    res.setHeader('Content-Type', mime);
+    const safeName = String(l.resumeName || 'resume').replace(/["\r\n\\]/g, '').slice(0, 160) || 'resume';
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.send(buf);
+  } catch { res.status(410).json({ success: false, message: 'Resume file no longer available.' }); }
 });
 salesRouter.post('/leads/:id/merge', requireAuth(['superadmin','platform_owner','sales_admin','sales_manager']), (req: Request, res: Response) => {
   const db = loadDb();

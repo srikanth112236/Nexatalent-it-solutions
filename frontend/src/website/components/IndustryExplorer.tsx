@@ -129,7 +129,7 @@ export const IndustryExplorer: React.FC<IndustryExplorerProps> = ({
   };
 
   return (
-    <section style={{ padding: '5rem 2rem', position: 'relative' }}>
+    <section className="font-sans" style={{ padding: '5rem 2rem', position: 'relative', backgroundColor: '#ffffff' }}>
       <motion.div 
         style={{ maxWidth: '1200px', margin: '0 auto' }}
         initial="hidden"
@@ -142,17 +142,17 @@ export const IndustryExplorer: React.FC<IndustryExplorerProps> = ({
             style={{
               fontSize: '0.8125rem',
               fontWeight: 700,
-              color: 'var(--color-primary-400)',
+              color: '#000000',
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
             }}
           >
             {badge}
           </motion.span>
-          <motion.h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: 'var(--color-text)', marginTop: '0.5rem' }}>
+          <motion.h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: '#000000', marginTop: '0.5rem' }}>
             {title}
           </motion.h2>
-          <motion.p style={{ color: 'var(--color-text-secondary)', maxWidth: '640px', margin: '0.75rem auto 0 auto' }}>
+          <motion.p style={{ color: '#000000', maxWidth: '640px', margin: '0.75rem auto 0 auto' }}>
             {subtitle}
           </motion.p>
         </motion.div>
@@ -176,8 +176,8 @@ export const IndustryExplorer: React.FC<IndustryExplorerProps> = ({
                 whileHover={{ y: -8, scale: 1.02, transition: motionTokens.spring.snappy }}
                 style={{
                   borderRadius: 'var(--radius-xl)',
-                  backgroundColor: 'var(--color-surface)',
-                  border: '1px solid var(--color-border)',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e5e5e5',
                   padding: '2rem',
                   display: 'flex',
                   flexDirection: 'column',
@@ -197,16 +197,16 @@ export const IndustryExplorer: React.FC<IndustryExplorerProps> = ({
                       position: 'absolute',
                       inset: 0,
                       borderRadius: 'var(--radius-xl)',
-                      backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                      backgroundColor: 'rgba(0, 0, 0, 0.04)',
                       zIndex: -1,
-                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                      border: '1px solid #000000',
                     }}
                   />
                 )}
                 
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text)', lineHeight: 1.3 }}>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#000000', lineHeight: 1.3 }}>
                       {ind.name}
                     </h3>
                     <motion.span
@@ -215,8 +215,8 @@ export const IndustryExplorer: React.FC<IndustryExplorerProps> = ({
                       style={{
                         fontSize: '0.75rem',
                         fontWeight: 700,
-                        color: 'var(--color-primary-400)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        color: '#ffffff',
+                        backgroundColor: '#000000',
                         padding: '0.2rem 0.5rem',
                         borderRadius: 'var(--radius-sm)',
                         display: 'flex',
@@ -227,18 +227,18 @@ export const IndustryExplorer: React.FC<IndustryExplorerProps> = ({
                     </motion.span>
                   </div>
 
-                  <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+                  <p style={{ fontSize: '0.875rem', color: '#000000', lineHeight: 1.5, marginBottom: '1.25rem' }}>
                     {ind.description}
                   </p>
 
                   {/* Key Roles */}
                   <div style={{ marginBottom: '1.5rem' }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#000000', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
                       Frequent Placements
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                       {ind.highlightRoles.map((role, rIdx) => (
-                        <div key={rIdx} style={{ fontSize: '0.8125rem', color: 'var(--color-text)' }}>
+                        <div key={rIdx} style={{ fontSize: '0.8125rem', color: '#000000' }}>
                           • {role}
                         </div>
                       ))}
@@ -253,10 +253,10 @@ export const IndustryExplorer: React.FC<IndustryExplorerProps> = ({
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     paddingTop: '1rem',
-                    borderTop: '1px solid var(--color-border)',
+                    borderTop: '1px solid #e5e5e5',
                   }}
                 >
-                  <span style={{ fontSize: '0.75rem', color: 'var(--color-success)', fontWeight: 600, display: 'flex', gap: '0.25rem' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#000000', fontWeight: 600, display: 'flex', gap: '0.25rem' }}>
                     Avg <AnimatedCounter value={ind.avgClosureDays} />-Day SLA
                   </span>
                   <Link
@@ -267,7 +267,7 @@ export const IndustryExplorer: React.FC<IndustryExplorerProps> = ({
                       gap: '0.35rem',
                       fontSize: '0.8125rem',
                       fontWeight: 600,
-                      color: 'var(--color-primary-400)',
+                      color: '#000000',
                       textDecoration: 'none',
                     }}
                   >

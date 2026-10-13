@@ -54,9 +54,9 @@ const TiltCard = ({ children, to }: { children: React.ReactNode; to: string }) =
           onMouseLeave={handleMouseLeave}
           style={{
             padding: '2rem',
-            backgroundColor: 'var(--color-surface)',
+            backgroundColor: '#ffffff',
             borderRadius: 'var(--radius-xl)',
-            border: '1px solid var(--color-border)',
+            border: '1px solid #e5e5e5',
             textDecoration: 'none',
             display: 'block',
             height: '100%',
@@ -72,7 +72,7 @@ const TiltCard = ({ children, to }: { children: React.ReactNode; to: string }) =
 
 export const IndustryCardGrid: React.FC = () => {
   return (
-    <section style={{ maxWidth: '1280px', margin: '5rem auto', padding: '0 2rem', overflow: 'hidden' }}>
+    <section className="font-sans" style={{ maxWidth: '1280px', margin: '5rem auto', padding: '0 2rem', overflow: 'hidden', backgroundColor: '#ffffff' }}>
       <motion.div 
         initial="hidden"
         whileInView="visible"
@@ -85,21 +85,21 @@ export const IndustryCardGrid: React.FC = () => {
       >
         <motion.span 
           variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
-          style={{ display: 'inline-block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+          style={{ display: 'inline-block', fontSize: '0.85rem', fontWeight: 700, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.05em' }}
         >
           Sector Specialization
         </motion.span>
         <motion.h2 
           variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }}
           transition={{ duration: motionTokens.duration.standard, ease: motionTokens.ease.outQuart }}
-          style={{ fontSize: 'clamp(2rem, 3.5vw, 2.75rem)', fontWeight: 800, margin: '0.5rem 0 1rem 0' }}
+          style={{ fontSize: 'clamp(2rem, 3.5vw, 2.75rem)', fontWeight: 800, margin: '0.5rem 0 1rem 0', color: '#000000' }}
         >
           Deep Domain Expertise Across Key Verticals
         </motion.h2>
         <motion.p 
           variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }}
           transition={{ duration: motionTokens.duration.standard, ease: motionTokens.ease.outQuart }}
-          style={{ color: 'var(--color-text-muted)', fontSize: '1.05rem', maxWidth: '600px', margin: '0 auto' }}
+          style={{ color: '#000000', fontSize: '1.05rem', maxWidth: '600px', margin: '0 auto' }}
         >
           Our specialist recruiters speak your technology stack and understand your industry's specific compliance constraints.
         </motion.p>
@@ -121,15 +121,15 @@ export const IndustryCardGrid: React.FC = () => {
                 whileInView={{ scale: 1, opacity: 1 }}
                 viewport={{ once: true }}
                 transition={{ ...motionTokens.spring.bouncy, delay: 0.2 + (idx * motionTokens.stagger.small) }}
-                style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'rgba(var(--color-accent-rgb), 0.1)', marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#000000', marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                <div style={{ width: '20px', height: '20px', backgroundColor: 'var(--color-accent)', borderRadius: '4px' }} />
+                <div style={{ width: '20px', height: '20px', backgroundColor: '#ffffff', borderRadius: '4px' }} />
               </motion.div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.5rem', transform: 'translateZ(20px)' }}>
+              <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#000000', marginBottom: '0.5rem', transform: 'translateZ(20px)' }}>
                 {ind.name}
               </div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', lineHeight: 1.5, transform: 'translateZ(10px)' }}>
-                Key Mandates: <span style={{ color: 'var(--color-text)' }}>{ind.roles}</span>
+              <div style={{ fontSize: '0.875rem', color: '#000000', lineHeight: 1.5, transform: 'translateZ(10px)' }}>
+                Key Mandates: <span style={{ color: '#000000' }}>{ind.roles}</span>
               </div>
             </TiltCard>
           </motion.div>

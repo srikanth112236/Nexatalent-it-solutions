@@ -54,7 +54,7 @@ const COLUMNS: FooterColumn[] = [
 
 export const MinimalOutlineFooter: React.FC = () => {
   return (
-    <footer className="relative bg-[#FAF8F5] text-slate-900 border-t border-slate-200 overflow-hidden">
+    <footer className="relative bg-white text-black border-t border-neutral-200 overflow-hidden">
       <div className="max-w-7xl mx-auto px-6 pt-14 pb-8 relative z-10">
         
         {/* Main Footer Grid */}
@@ -66,33 +66,33 @@ export const MinimalOutlineFooter: React.FC = () => {
               <Logo height={38} />
             </span>
             
-            <p className="text-xs text-slate-600 leading-relaxed font-normal">
+            <p className="text-xs text-black leading-relaxed font-normal">
               <strong>NEXA TALENT IT SOLUTIONS PRIVATE LIMITED</strong> is a technology recruitment and staffing partner connecting organizations with IT, contract, and executive talent.
             </p>
 
             {/* Official Contact Badges */}
-            <div className="space-y-2 text-xs text-slate-700 font-medium pt-2">
+            <div className="space-y-2 text-xs text-black font-medium pt-2">
               <div className="flex items-start gap-2">
-                <MapPin size={15} className="text-[#0265FF] shrink-0 mt-0.5" />
+                <MapPin size={15} className="text-black shrink-0 mt-0.5" />
                 <span><strong>Corporate HQ:</strong> 4th and 7th Floor, Skyline Icon, Andheri - Kurla Rd, Chimatpada, Marol, Andheri East, Mumbai, Maharashtra 400059</span>
               </div>
               <div className="flex items-center gap-2">
-                <PhoneCall size={15} className="text-[#0265FF] shrink-0" />
-                <span><strong>Direct Line:</strong> <a href="tel:+917019696166" className="text-[#0265FF] font-bold hover:underline">+91 70196 96166</a></span>
+                <PhoneCall size={15} className="text-black shrink-0" />
+                <span><strong>Direct Line:</strong> <a href="tel:+917019696166" className="text-black font-bold hover:underline">+91 70196 96166</a></span>
               </div>
               <div className="flex items-center gap-2">
-                <Mail size={15} className="text-[#0265FF] shrink-0" />
-                <span><strong>Executive Email:</strong> <a href="mailto:info@nexatalentitsolutions.com" className="text-[#0265FF] font-bold hover:underline">info@nexatalentitsolutions.com</a></span>
+                <Mail size={15} className="text-black shrink-0" />
+                <span><strong>Executive Email:</strong> <a href="mailto:info@nexatalentitsolutions.com" className="text-black font-bold hover:underline">info@nexatalentitsolutions.com</a></span>
               </div>
             </div>
 
-            <div className="pt-2 flex items-center gap-3 text-slate-500 text-xs font-semibold">
-              <span className="flex items-center gap-1 text-slate-700">
-                <ShieldCheck size={14} className="text-[#0265FF]" /> Enterprise Governance
+            <div className="pt-2 flex items-center gap-3 text-black text-xs font-semibold">
+              <span className="flex items-center gap-1 text-black">
+                <ShieldCheck size={14} className="text-black" /> Enterprise Governance
               </span>
               <span>•</span>
-              <span className="flex items-center gap-1 text-slate-700">
-                <Lock size={14} className="text-emerald-600" /> DPDP Act 2023 Compliant
+              <span className="flex items-center gap-1 text-black">
+                <Lock size={14} className="text-black" /> DPDP Act 2023 Compliant
               </span>
             </div>
           </div>
@@ -101,11 +101,11 @@ export const MinimalOutlineFooter: React.FC = () => {
           <div className="md:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-6">
             {COLUMNS.map((col) => (
               <nav key={col.title} aria-label={col.title}>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-4">{col.title}</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-black mb-4">{col.title}</h4>
                 <ul className="space-y-2.5">
                   {col.links.map((l) => (
                     <li key={`${col.title}-${l.label}`}>
-                      <Link to={l.to} className="text-xs font-medium text-slate-600 hover:text-[#0265FF] transition-colors">
+                      <Link to={l.to} className="text-xs font-medium text-black hover:text-black transition-colors">
                         {l.label}
                       </Link>
                     </li>
@@ -118,36 +118,36 @@ export const MinimalOutlineFooter: React.FC = () => {
         </div>
 
         {/* Dedicated One-Row Legal Navigation Strip */}
-        <div className="mt-10 pt-6 border-t border-slate-200/80 flex flex-wrap items-center justify-between gap-4 text-xs font-bold text-slate-600">
+        <div className="mt-10 pt-6 border-t border-neutral-200 flex flex-wrap items-center justify-between gap-4 text-xs font-bold text-black">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <Link to="/privacy-policy" className="hover:text-[#0265FF] transition-colors">
+            <Link to="/privacy-policy" className="hover:text-black transition-colors">
               Privacy Policy (DPDP)
             </Link>
-            <Link to="/terms" className="hover:text-[#0265FF] transition-colors">
+            <Link to="/terms" className="hover:text-black transition-colors">
               Terms of Service
             </Link>
-            <Link to="/cookie-policy" className="hover:text-[#0265FF] transition-colors">
+            <Link to="/cookie-policy" className="hover:text-black transition-colors">
               Cookie Policy
             </Link>
-            <Link to="/accessibility" className="hover:text-[#0265FF] transition-colors">
+            <Link to="/accessibility" className="hover:text-black transition-colors">
               Accessibility Statement
             </Link>
-            <Link to="/data-protection" className="hover:text-[#0265FF] transition-colors">
+            <Link to="/data-protection" className="hover:text-black transition-colors">
               IP & Anti-Poaching
             </Link>
-            <Link to="/disclaimer" className="hover:text-[#0265FF] transition-colors">
+            <Link to="/disclaimer" className="hover:text-black transition-colors">
               Legal Disclaimer & Zero Fee Guarantee
             </Link>
-            <Link to="/contact" className="hover:text-[#0265FF] transition-colors">
+            <Link to="/contact" className="hover:text-black transition-colors">
               Contact Us
             </Link>
           </div>
         </div>
 
         {/* Copyright & SLA Bottom Bar */}
-        <div className="mt-4 pt-4 border-t border-slate-200/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 font-medium">
+        <div className="mt-4 pt-4 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-black font-medium">
           <span>© 2026 <strong>NEXA TALENT IT SOLUTIONS PRIVATE LIMITED</strong>. All rights reserved.</span>
-          <span className="font-mono text-slate-600">Technology Recruitment · Staffing Solutions · Talent Delivery</span>
+          <span className="font-mono text-black">Technology Recruitment · Staffing Solutions · Talent Delivery</span>
         </div>
 
       </div>
@@ -167,7 +167,7 @@ export const MinimalOutlineFooter: React.FC = () => {
             textAlign: 'center',
             whiteSpace: 'nowrap',
             color: 'transparent',
-            WebkitTextStroke: '1.5px rgba(2, 101, 255, 0.25)',
+            WebkitTextStroke: '1.5px rgba(0, 0, 0, 0.25)',
             paddingBottom: '0.08em',
             marginBottom: '-0.12em',
           }}

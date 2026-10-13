@@ -161,6 +161,7 @@ export function LegalPage() {
 
   return (
     <div
+      className="font-sans"
       style={{
         position: 'relative',
         display: 'block',
@@ -186,17 +187,17 @@ export function LegalPage() {
         position: 'relative', 
         paddingTop: '7.5rem', 
         paddingBottom: '3.5rem', 
-        background: 'linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%)',
+        background: '#ffffff',
         borderBottom: '1px solid #E2E8F0'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem' }}>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#64748B', marginBottom: '1.5rem' }}>
-            <Link to="/" style={{ color: '#64748B', textDecoration: 'none' }}>Home</Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#000000', marginBottom: '1.5rem' }}>
+            <Link to="/" style={{ color: '#000000', textDecoration: 'none' }}>Home</Link>
             <ChevronRight size={14} />
             <span>Legal & Governance</span>
             <ChevronRight size={14} />
-            <span style={{ color: '#4361EE', fontWeight: 600 }}>{activeDoc.title}</span>
+            <span style={{ color: '#000000', fontWeight: 600 }}>{activeDoc.title}</span>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem' }}>
@@ -207,8 +208,8 @@ export function LegalPage() {
                 gap: '0.4rem',
                 padding: '0.3rem 0.8rem',
                 borderRadius: '6px',
-                backgroundColor: '#ECFDF5',
-                color: '#059669',
+                backgroundColor: '#000000',
+                color: '#ffffff',
                 fontSize: '0.8rem',
                 fontWeight: 700,
                 marginBottom: '0.75rem'
@@ -219,13 +220,13 @@ export function LegalPage() {
               <h1 style={{
                 fontSize: 'clamp(2rem, 4vw, 3rem)',
                 fontWeight: 800,
-                color: '#0B132B',
+                color: '#000000',
                 lineHeight: 1.2,
                 marginBottom: '0.5rem'
               }}>
                 {activeDoc.title}
               </h1>
-              <p style={{ color: '#64748B', fontSize: '0.95rem' }}>
+              <p style={{ color: '#000000', fontSize: '0.95rem' }}>
                 Governing Entity: NexaTalent IT Solutions Pvt. Ltd. (CIN: U72200KA2021PTC145678) • Last Revised: September 2026
               </p>
             </div>
@@ -239,9 +240,9 @@ export function LegalPage() {
                 gap: '0.4rem',
                 padding: '0.65rem 1.25rem',
                 borderRadius: '10px',
-                border: '1px solid #CBD5E1',
+                border: '1px solid #000000',
                 backgroundColor: '#ffffff',
-                color: '#334155',
+                color: '#000000',
                 fontWeight: 700,
                 fontSize: '0.85rem',
                 cursor: 'pointer'
@@ -261,14 +262,14 @@ export function LegalPage() {
           
           {/* Left Sidebar Menu */}
           <div style={{
-            backgroundColor: '#F8FAFC',
+            backgroundColor: '#ffffff',
             padding: '1.5rem',
             borderRadius: '20px',
             border: '1px solid #E2E8F0',
             position: 'sticky',
             top: '6rem'
           }}>
-            <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1rem', paddingLeft: '0.5rem' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1rem', paddingLeft: '0.5rem' }}>
               Statutory Documentation Suite
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
@@ -286,15 +287,15 @@ export function LegalPage() {
                       gap: '0.75rem',
                       padding: '0.75rem 1rem',
                       borderRadius: '12px',
-                      backgroundColor: isActive ? '#EEF2FF' : 'transparent',
-                      color: isActive ? '#4361EE' : '#334155',
+                      backgroundColor: isActive ? '#000000' : 'transparent',
+                      color: isActive ? '#ffffff' : '#000000',
                       fontWeight: isActive ? 700 : 500,
                       fontSize: '0.9rem',
                       textDecoration: 'none',
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    <Icon size={16} color={isActive ? '#4361EE' : '#64748B'} />
+                    <Icon size={16} color={isActive ? '#ffffff' : '#000000'} />
                     <span>{sec.title}</span>
                   </Link>
                 );
@@ -303,7 +304,7 @@ export function LegalPage() {
 
             {/* Quick Clause TOC Jump Links */}
             <div style={{ marginTop: '1.5rem', borderTop: '1px solid #E2E8F0', paddingTop: '1rem' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#000000', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
                 On This Page Clauses:
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
@@ -311,7 +312,7 @@ export function LegalPage() {
                   <a
                     key={idx}
                     href={`#clause-${idx}`}
-                    style={{ fontSize: '0.75rem', color: '#4361EE', textDecoration: 'none', fontWeight: 600 }}
+                    style={{ fontSize: '0.75rem', color: '#000000', textDecoration: 'none', fontWeight: 600 }}
                   >
                     • {item.heading.split('.')[0]}. {item.heading.split('.')[1] || item.heading}
                   </a>
@@ -321,11 +322,11 @@ export function LegalPage() {
 
             {/* Entity Verification Card */}
             <div style={{ marginTop: '2rem', padding: '1.25rem', borderRadius: '14px', backgroundColor: '#ffffff', border: '1px solid #E2E8F0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 700, color: '#0B132B', marginBottom: '0.5rem' }}>
-                <Building2 size={16} color="#0265FF" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 700, color: '#000000', marginBottom: '0.5rem' }}>
+                <Building2 size={16} color="#000000" />
                 <span>Corporate Verification</span>
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#64748B', lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <div style={{ fontSize: '0.75rem', color: '#000000', lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                 <div><strong>Entity:</strong> NEXA TALENT IT SOLUTIONS PRIVATE LIMITED</div>
                 <div><strong>CIN:</strong> U72200MH2021PTC145678</div>
                 <div><strong>Location:</strong> Skyline Icon, Marol, Mumbai 400059</div>
@@ -345,10 +346,10 @@ export function LegalPage() {
             <div style={{
               padding: '1.25rem',
               borderRadius: '14px',
-              backgroundColor: '#EEF2FF',
-              border: '1px solid #C7D2FE',
+              backgroundColor: '#ffffff',
+              border: '1px solid #000000',
               marginBottom: '2.5rem',
-              color: '#1E1B4B',
+              color: '#000000',
               fontSize: '0.95rem',
               fontWeight: 500,
               lineHeight: 1.6
@@ -359,10 +360,10 @@ export function LegalPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
               {activeDoc.content.map((sec, idx) => (
                 <div key={sec.heading} id={`clause-${idx}`} style={{ scrollMarginTop: '6rem' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0B132B', marginBottom: '0.75rem' }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#000000', marginBottom: '0.75rem' }}>
                     {sec.heading}
                   </h2>
-                  <p style={{ fontSize: '1rem', color: '#475569', lineHeight: 1.8 }}>
+                  <p style={{ fontSize: '1rem', color: '#000000', lineHeight: 1.8 }}>
                     {sec.text}
                   </p>
                 </div>
@@ -372,14 +373,14 @@ export function LegalPage() {
             <div style={{
               marginTop: '3.5rem',
               paddingTop: '2rem',
-              borderTop: '1px solid #F1F5F9',
+              borderTop: '1px solid #E2E8F0',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
               flexWrap: 'wrap',
               gap: '1rem'
             }}>
-              <div style={{ fontSize: '0.8rem', color: '#64748B' }}>
+              <div style={{ fontSize: '0.8rem', color: '#000000' }}>
                 Jurisdiction: High Court of Karnataka, Bengaluru, India. Governed under the laws of the Republic of India.
               </div>
               <Link
@@ -387,7 +388,7 @@ export function LegalPage() {
                 style={{
                   fontSize: '0.85rem',
                   fontWeight: 700,
-                  color: '#4361EE',
+                  color: '#000000',
                   textDecoration: 'none'
                 }}
               >

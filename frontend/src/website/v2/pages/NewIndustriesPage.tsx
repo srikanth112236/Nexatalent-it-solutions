@@ -79,7 +79,7 @@ export function NewIndustriesPage() {
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
   const activeDetail = activeSlug ? getServiceDetail('industry', activeSlug) : undefined;
   return (
-    <div className="min-h-screen bg-white font-sans text-slate-900 antialiased">
+    <div className="min-h-screen bg-white font-sans text-black antialiased">
       <SeoHead
         title="Industries We Serve — NexaTalent"
         description="NexaTalent partners with organizations across every major vertical — tailoring hiring, engineering and platform talent to the rhythms of each industry."
@@ -88,13 +88,13 @@ export function NewIndustriesPage() {
       <V2Navbar />
       <main id="main-content">
         {/* LIGHT BANNER */}
-        <section className="border-b border-slate-100 bg-white px-4 pb-14 pt-14 sm:px-6" aria-label="Industries banner">
+        <section className="border-b border-neutral-200 bg-white px-4 pb-14 pt-14 sm:px-6" aria-label="Industries banner">
           <div className="mx-auto max-w-4xl text-center">
-            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#0265FF]">Industries</p>
-            <h1 className="mt-3 text-3xl font-extrabold leading-[1.1] tracking-tight text-slate-950 sm:text-5xl">
+            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-black">Industries</p>
+            <h1 className="mt-3 text-3xl font-extrabold leading-[1.1] tracking-tight text-black sm:text-5xl">
               Industries we serve in
             </h1>
-            <p className="mx-auto mt-5 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
+            <p className="mx-auto mt-5 max-w-2xl text-sm leading-relaxed text-black sm:text-base">
               NexaTalent partners with organizations across every major vertical — tailoring hiring, engineering and
               platform talent to the rhythms of each industry.
             </p>
@@ -107,7 +107,7 @@ export function NewIndustriesPage() {
 
         {/* EIGHT INDUSTRIES — editorial rows */}
         <section aria-label="Industries list" className="bg-white px-4 py-12 sm:px-6 sm:py-16">
-          <div className="mx-auto max-w-6xl divide-y divide-slate-100 border-y border-slate-100">
+          <div className="mx-auto max-w-6xl divide-y divide-neutral-200 border-y border-neutral-200">
             {EIGHT_INDUSTRIES.map((ind) => (
               <article key={ind.slug} className="grid grid-cols-1 items-center gap-6 py-8 md:grid-cols-12 md:gap-8">
                 <div className="md:col-span-5">
@@ -116,19 +116,19 @@ export function NewIndustriesPage() {
                     alt={ind.alt}
                     loading="lazy"
                     decoding="async"
-                    className="h-52 w-full rounded-2xl border border-slate-200 object-cover sm:h-56"
+                    className="aspect-[4/3] w-full rounded-2xl border border-neutral-200 object-cover object-center"
                   />
                 </div>
                 <div className="md:col-span-7">
-                  <span className="inline-flex items-center rounded-full border border-[#0265FF]/25 bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-[#0265FF]">
+                  <span className="inline-flex items-center rounded-full border border-black/25 bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-black">
                     {ind.metric}
                   </span>
-                  <h2 className="mt-3 text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">{ind.label}</h2>
-                  <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-600">{ind.desc}</p>
+                  <h2 className="mt-3 text-xl font-extrabold tracking-tight text-black sm:text-2xl">{ind.label}</h2>
+                  <p className="mt-2 max-w-xl text-sm leading-relaxed text-black">{ind.desc}</p>
                   <button
                     type="button"
                     onClick={() => setActiveSlug(ind.slug)}
-                    className="mt-3 inline-flex min-h-[44px] items-center gap-1 text-xs font-bold text-[#0265FF] focus-visible:outline-2 focus-visible:outline-[#0265FF]"
+                    className="mt-3 inline-flex min-h-[44px] items-center gap-1 text-xs font-bold text-black focus-visible:outline-2 focus-visible:outline-black"
                   >
                     View hiring practice <ArrowRight size={14} aria-hidden />
                   </button>
@@ -137,9 +137,9 @@ export function NewIndustriesPage() {
             ))}
           </div>
 
-          <div className="mx-auto mt-14 max-w-3xl rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-            <h2 className="text-xl font-extrabold text-slate-950 sm:text-2xl">Don’t see your vertical?</h2>
-            <p className="mx-auto mt-2 max-w-xl text-sm text-slate-600">
+          <div className="mx-auto mt-14 max-w-3xl rounded-3xl border border-neutral-200 bg-white p-8 text-center shadow-sm">
+            <h2 className="text-xl font-extrabold text-black sm:text-2xl">Don’t see your vertical?</h2>
+            <p className="mx-auto mt-2 max-w-xl text-sm text-black">
               Our domain pods cover 16+ practice areas — tell us your sector and we’ll assemble the right team.
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-3">

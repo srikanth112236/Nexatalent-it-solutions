@@ -73,7 +73,7 @@ export const CandidateProfileCTA: React.FC<CandidateProfileCTAProps> = ({
   };
 
   return (
-    <section style={{ padding: '5rem 2rem', position: 'relative', overflow: 'hidden' }}>
+    <section className="font-sans" style={{ padding: '5rem 2rem', position: 'relative', overflow: 'hidden', backgroundColor: '#ffffff' }}>
       {/* Decorative Blobs */}
       <motion.div
         animate={{ rotate: 360 }}
@@ -85,7 +85,7 @@ export const CandidateProfileCTA: React.FC<CandidateProfileCTAProps> = ({
           width: '600px',
           height: '600px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(59, 130, 246, 0.05) 0%, rgba(0,0,0,0) 70%)',
+          background: 'none',
           zIndex: 0,
           pointerEvents: 'none',
         }}
@@ -102,15 +102,14 @@ export const CandidateProfileCTA: React.FC<CandidateProfileCTAProps> = ({
           maxWidth: '1100px',
           margin: '0 auto',
           borderRadius: 'var(--radius-2xl)',
-          backgroundColor: 'var(--color-surface)',
-          border: '1px solid var(--color-border)',
+          backgroundColor: '#ffffff',
+          border: '1px solid #000000',
           padding: '3.5rem 3rem',
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
           gap: '3rem',
           alignItems: 'center',
           boxShadow: 'var(--shadow-xl)',
-          background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.8) 100%)',
         }}
       >
         {/* Left Side: Copy and Perks */}
@@ -123,15 +122,15 @@ export const CandidateProfileCTA: React.FC<CandidateProfileCTAProps> = ({
                 gap: '0.4rem',
                 padding: '0.35rem 0.875rem',
                 borderRadius: '9999px',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                border: '1px solid rgba(59, 130, 246, 0.25)',
+                backgroundColor: '#000000',
+                border: '1px solid #000000',
                 fontSize: '0.8125rem',
                 fontWeight: 600,
-                color: 'var(--color-primary-400)',
+                color: '#ffffff',
                 marginBottom: '1rem',
               }}
             >
-              <Sparkles size={14} />
+              <Sparkles size={14} color="#ffffff" />
               {badge}
             </div>
           </motion.div>
@@ -141,7 +140,7 @@ export const CandidateProfileCTA: React.FC<CandidateProfileCTAProps> = ({
             style={{
               fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)',
               fontWeight: 800,
-              color: 'var(--color-text)',
+              color: '#000000',
               lineHeight: 1.25,
               marginBottom: '1rem',
             }}
@@ -152,7 +151,7 @@ export const CandidateProfileCTA: React.FC<CandidateProfileCTAProps> = ({
           <motion.p
             variants={itemVariants}
             style={{
-              color: 'var(--color-text-secondary)',
+              color: '#000000',
               fontSize: '1rem',
               lineHeight: 1.6,
               marginBottom: '2rem',
@@ -171,8 +170,8 @@ export const CandidateProfileCTA: React.FC<CandidateProfileCTAProps> = ({
                 transition={{ delay: 0.4 + idx * 0.1, ...motionTokens.spring.snappy }}
                 style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem' }}
               >
-                <CheckCircle2 size={16} color="var(--color-primary-400)" style={{ flexShrink: 0, marginTop: '3px' }} />
-                <span style={{ fontSize: '0.9375rem', color: 'var(--color-text)' }}>{perk}</span>
+                <CheckCircle2 size={16} color="#000000" style={{ flexShrink: 0, marginTop: '3px' }} />
+                <span style={{ fontSize: '0.9375rem', color: '#000000' }}>{perk}</span>
               </motion.div>
             ))}
           </motion.div>
@@ -183,19 +182,19 @@ export const CandidateProfileCTA: React.FC<CandidateProfileCTAProps> = ({
               style={{ textDecoration: 'none' }}
             >
               <motion.div
-                whileHover={{ scale: 1.05, boxShadow: '0 8px 30px rgba(59, 130, 246, 0.6)' }}
+                whileHover={{ scale: 1.05, boxShadow: '0 8px 30px rgba(0, 0, 0, 0.4)' }}
                 whileTap={{ scale: 0.95 }}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.5rem',
-                  backgroundColor: 'var(--color-primary)',
+                  backgroundColor: '#000000',
                   color: '#ffffff',
                   padding: '0.875rem 1.75rem',
                   borderRadius: 'var(--radius-lg)',
                   fontWeight: 700,
                   fontSize: '1rem',
-                  boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)',
+                  boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)',
                 }}
               >
                 <span>Create Candidate Passport</span>
@@ -206,16 +205,16 @@ export const CandidateProfileCTA: React.FC<CandidateProfileCTAProps> = ({
 
           <motion.div variants={itemVariants} style={{ marginTop: '2rem', display: 'flex', gap: '2rem' }}>
             <div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-text)' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#000000' }}>
                 <AnimatedCounter value={500} />+
               </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>Placements</div>
+              <div style={{ fontSize: '0.75rem', color: '#000000' }}>Placements</div>
             </div>
             <div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-text)' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#000000' }}>
                 $<AnimatedCounter value={120} duration={1.5} />M+
               </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>Salaries Negotiated</div>
+              <div style={{ fontSize: '0.75rem', color: '#000000' }}>Salaries Negotiated</div>
             </div>
           </motion.div>
         </div>
@@ -231,13 +230,13 @@ export const CandidateProfileCTA: React.FC<CandidateProfileCTAProps> = ({
           onDrop={handleDrop}
           animate={{
             scale: dragOver ? 1.02 : 1,
-            borderColor: dragOver ? 'var(--color-primary)' : 'var(--color-border)',
-            backgroundColor: dragOver ? 'rgba(59, 130, 246, 0.08)' : 'rgba(15, 23, 42, 0.5)',
+            borderColor: dragOver ? '#000000' : '#000000',
+            backgroundColor: dragOver ? 'rgba(0, 0, 0, 0.04)' : '#ffffff',
           }}
           transition={motionTokens.spring.snappy}
           style={{
             borderRadius: 'var(--radius-xl)',
-            border: '2px dashed var(--color-border)',
+            border: '2px dashed #000000',
             padding: '2.5rem 2rem',
             textAlign: 'center',
           }}
@@ -256,8 +255,8 @@ export const CandidateProfileCTA: React.FC<CandidateProfileCTAProps> = ({
                     width: '56px',
                     height: '56px',
                     borderRadius: '50%',
-                    backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                    color: 'var(--color-primary-400)',
+                    backgroundColor: '#000000',
+                    color: '#ffffff',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -267,11 +266,11 @@ export const CandidateProfileCTA: React.FC<CandidateProfileCTAProps> = ({
                   <UploadCloud size={28} />
                 </div>
 
-                <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#000000', marginBottom: '0.5rem' }}>
                   Fast-Track Evaluation
                 </h3>
 
-                <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+                <p style={{ fontSize: '0.875rem', color: '#000000', marginBottom: '1.5rem', lineHeight: 1.5 }}>
                   Drag & drop your CV / GitHub / LinkedIn profile for instant AI skill parsing and recruiter review.
                 </p>
 
@@ -283,14 +282,14 @@ export const CandidateProfileCTA: React.FC<CandidateProfileCTAProps> = ({
                   }}
                 >
                   <motion.div
-                    whileHover={{ scale: 1.05, backgroundColor: 'rgba(255,255,255,0.1)' }}
+                    whileHover={{ scale: 1.05, backgroundColor: 'rgba(0,0,0,0.05)' }}
                     whileTap={{ scale: 0.95 }}
                     style={{
                       padding: '0.625rem 1.25rem',
                       borderRadius: 'var(--radius-md)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                      border: '1px solid var(--color-border)',
-                      color: 'var(--color-text)',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #000000',
+                      color: '#000000',
                       fontSize: '0.875rem',
                       fontWeight: 600,
                     }}
@@ -321,8 +320,8 @@ export const CandidateProfileCTA: React.FC<CandidateProfileCTAProps> = ({
                     width: '56px',
                     height: '56px',
                     borderRadius: '50%',
-                    backgroundColor: 'rgba(34, 197, 94, 0.15)',
-                    color: 'var(--color-success)',
+                    backgroundColor: '#000000',
+                    color: '#ffffff',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -331,10 +330,10 @@ export const CandidateProfileCTA: React.FC<CandidateProfileCTAProps> = ({
                 >
                   <CheckCircle2 size={28} />
                 </div>
-                <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#000000', marginBottom: '0.5rem' }}>
                   Resume Attached
                 </h3>
-                <p style={{ color: 'var(--color-success)', fontWeight: 600, fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+                <p style={{ color: '#000000', fontWeight: 600, fontSize: '0.875rem', marginBottom: '1.5rem' }}>
                   {uploadedFile}
                 </p>
                 <motion.button
@@ -344,9 +343,9 @@ export const CandidateProfileCTA: React.FC<CandidateProfileCTAProps> = ({
                   style={{
                     padding: '0.5rem 1rem',
                     borderRadius: 'var(--radius-md)',
-                    backgroundColor: 'transparent',
-                    border: '1px solid var(--color-border)',
-                    color: 'var(--color-text-secondary)',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #000000',
+                    color: '#000000',
                     fontSize: '0.75rem',
                     cursor: 'pointer',
                   }}
@@ -364,11 +363,11 @@ export const CandidateProfileCTA: React.FC<CandidateProfileCTAProps> = ({
               justifyContent: 'center',
               gap: '0.4rem',
               fontSize: '0.75rem',
-              color: 'var(--color-text-tertiary)',
+              color: '#000000',
               marginTop: '1.5rem'
             }}
           >
-            <Lock size={12} color="var(--color-success)" />
+            <Lock size={12} color="#000000" />
             <span>Strict Privacy Guaranteed · Zero unsolicited contacts</span>
           </div>
         </motion.div>

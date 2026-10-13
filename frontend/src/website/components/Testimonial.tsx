@@ -96,7 +96,7 @@ export const Testimonial: React.FC<TestimonialProps> = ({
   };
 
   return (
-    <section style={{ padding: '5rem 2rem', position: 'relative' }}>
+    <section className="font-sans" style={{ padding: '5rem 2rem', position: 'relative', backgroundColor: '#ffffff' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         <motion.div 
           variants={headerVariants}
@@ -110,7 +110,7 @@ export const Testimonial: React.FC<TestimonialProps> = ({
             style={{
               fontSize: '0.8125rem',
               fontWeight: 600,
-              color: 'var(--color-primary-400)',
+              color: '#000000',
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
               display: 'inline-block'
@@ -123,7 +123,7 @@ export const Testimonial: React.FC<TestimonialProps> = ({
             style={{
               fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)',
               fontWeight: 800,
-              color: 'var(--color-text)',
+              color: '#000000',
               marginTop: '0.5rem',
               marginBottom: '1rem',
             }}
@@ -132,7 +132,7 @@ export const Testimonial: React.FC<TestimonialProps> = ({
           </motion.h2>
           <motion.p 
             variants={headerVariants}
-            style={{ color: 'var(--color-text-secondary)', maxWidth: '640px', margin: '0 auto' }}
+            style={{ color: '#000000', maxWidth: '640px', margin: '0 auto' }}
           >
             {subtitle}
           </motion.p>
@@ -154,11 +154,11 @@ export const Testimonial: React.FC<TestimonialProps> = ({
             <motion.div
               key={t.id}
               variants={cardVariants}
-              whileHover={{ y: -8, boxShadow: '0 10px 30px -10px rgba(59, 130, 246, 0.2)' }}
+              whileHover={{ y: -8, boxShadow: '0 10px 30px -10px rgba(0, 0, 0, 0.25)' }}
               style={{
                 borderRadius: 'var(--radius-xl)',
-                backgroundColor: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
+                backgroundColor: '#ffffff',
+                border: '1px solid #e5e5e5',
                 padding: '2rem',
                 display: 'flex',
                 flexDirection: 'column',
@@ -168,16 +168,16 @@ export const Testimonial: React.FC<TestimonialProps> = ({
                 transition: 'border-color 0.3s ease',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+                e.currentTarget.style.borderColor = '#000000';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-border)';
+                e.currentTarget.style.borderColor = '#e5e5e5';
               }}
             >
               <div>
                 {/* Rating Stars & Stat Badge */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                  <div style={{ display: 'flex', gap: '0.25rem', color: '#fbbf24' }}>
+                  <div style={{ display: 'flex', gap: '0.25rem', color: '#000000' }}>
                     {Array.from({ length: t.rating || 5 }).map((_, i) => (
                       <motion.div
                         key={i}
@@ -202,9 +202,9 @@ export const Testimonial: React.FC<TestimonialProps> = ({
                         fontWeight: 700,
                         padding: '0.2rem 0.6rem',
                         borderRadius: '9999px',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        color: 'var(--color-primary-400)',
-                        border: '1px solid rgba(59, 130, 246, 0.2)',
+                        backgroundColor: '#000000',
+                        color: '#ffffff',
+                        border: '1px solid #000000',
                       }}
                     >
                       {t.highlightStat}
@@ -215,7 +215,7 @@ export const Testimonial: React.FC<TestimonialProps> = ({
                 {/* Quote Text */}
                 <div
                   style={{
-                    color: 'var(--color-text)',
+                    color: '#000000',
                     fontSize: '1rem',
                     lineHeight: 1.6,
                     fontStyle: 'italic',
@@ -233,7 +233,7 @@ export const Testimonial: React.FC<TestimonialProps> = ({
                   alignItems: 'center',
                   gap: '0.875rem',
                   paddingTop: '1rem',
-                  borderTop: '1px solid var(--color-border)',
+                  borderTop: '1px solid #e5e5e5',
                 }}
               >
                 <motion.div
@@ -245,11 +245,11 @@ export const Testimonial: React.FC<TestimonialProps> = ({
                     width: '42px',
                     height: '42px',
                     borderRadius: '50%',
-                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    backgroundColor: '#000000',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: 'var(--color-primary-400)',
+                    color: '#ffffff',
                     fontWeight: 700,
                     fontSize: '1rem',
                   }}
@@ -258,14 +258,14 @@ export const Testimonial: React.FC<TestimonialProps> = ({
                 </motion.div>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <span style={{ fontWeight: 700, color: 'var(--color-text)', fontSize: '0.9375rem' }}>
+                    <span style={{ fontWeight: 700, color: '#000000', fontSize: '0.9375rem' }}>
                       {t.name}
                     </span>
                     {t.verified && (
-                      <ShieldCheck size={15} color="var(--color-success)" />
+                      <ShieldCheck size={15} color="#000000" />
                     )}
                   </div>
-                  <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+                  <div style={{ fontSize: '0.8125rem', color: '#000000' }}>
                     {t.role} · {t.company}
                   </div>
                 </div>

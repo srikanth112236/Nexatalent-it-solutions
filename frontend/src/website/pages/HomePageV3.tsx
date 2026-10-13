@@ -91,6 +91,7 @@ export function HomePageV3() {
   return (
     <div
       id="main-content"
+      className="font-sans"
       style={{
         position: 'relative',
         display: 'block',

@@ -146,7 +146,7 @@ export const FeaturedJobsCarousel: React.FC<FeaturedJobsCarouselProps> = ({
   };
 
   return (
-    <section style={{ padding: '5rem 2rem', backgroundColor: 'rgba(15, 23, 42, 0.3)', overflow: 'hidden' }}>
+    <section className="font-sans" style={{ padding: '5rem 2rem', backgroundColor: '#ffffff', overflow: 'hidden' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         {/* Section Header */}
         <motion.div
@@ -172,22 +172,22 @@ export const FeaturedJobsCarousel: React.FC<FeaturedJobsCarouselProps> = ({
                 gap: '0.4rem',
                 fontSize: '0.8125rem',
                 fontWeight: 600,
-                color: 'var(--color-primary-400)',
+                color: '#000000',
                 marginBottom: '0.75rem',
               }}
             >
-              <Sparkles size={14} />
+              <Sparkles size={14} color="#000000" />
               {badge}
             </motion.div>
             <motion.h2 
               variants={fadeUpVariant}
-              style={{ fontSize: 'clamp(1.75rem, 3vw, 2.5rem)', fontWeight: 800, color: 'var(--color-text)' }}
+              style={{ fontSize: 'clamp(1.75rem, 3vw, 2.5rem)', fontWeight: 800, color: '#000000' }}
             >
               {title}
             </motion.h2>
             <motion.p 
               variants={fadeUpVariant}
-              style={{ color: 'var(--color-text-secondary)', marginTop: '0.5rem', maxWidth: '600px' }}
+              style={{ color: '#000000', marginTop: '0.5rem', maxWidth: '600px' }}
             >
               {subtitle}
             </motion.p>
@@ -204,9 +204,9 @@ export const FeaturedJobsCarousel: React.FC<FeaturedJobsCarouselProps> = ({
                 width: '42px',
                 height: '42px',
                 borderRadius: '50%',
-                backgroundColor: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
-                color: 'var(--color-text)',
+                backgroundColor: '#ffffff',
+                border: '1px solid #000000',
+                color: '#000000',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -224,9 +224,9 @@ export const FeaturedJobsCarousel: React.FC<FeaturedJobsCarouselProps> = ({
                 width: '42px',
                 height: '42px',
                 borderRadius: '50%',
-                backgroundColor: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
-                color: 'var(--color-text)',
+                backgroundColor: '#ffffff',
+                border: '1px solid #000000',
+                color: '#000000',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -267,9 +267,9 @@ export const FeaturedJobsCarousel: React.FC<FeaturedJobsCarouselProps> = ({
                   position: 'relative',
                   padding: '0.5rem 1rem',
                   borderRadius: '9999px',
-                  border: isSelected ? '1px solid var(--color-primary)' : '1px solid var(--color-border)',
-                  backgroundColor: 'transparent',
-                  color: isSelected ? 'var(--color-primary-400)' : 'var(--color-text-secondary)',
+                  border: isSelected ? '1px solid #000000' : '1px solid #000000',
+                  backgroundColor: isSelected ? '#000000' : 'transparent',
+                  color: isSelected ? '#ffffff' : '#000000',
                   fontSize: '0.8125rem',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -285,7 +285,7 @@ export const FeaturedJobsCarousel: React.FC<FeaturedJobsCarouselProps> = ({
                       position: 'absolute',
                       inset: 0,
                       borderRadius: '9999px',
-                      backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                      backgroundColor: '#000000',
                       zIndex: -1
                     }}
                     transition={motionTokens.spring.snappy}
@@ -330,7 +330,7 @@ export const FeaturedJobsCarousel: React.FC<FeaturedJobsCarouselProps> = ({
                 style={{
                   padding: '3rem',
                   textAlign: 'center',
-                  color: 'var(--color-text-tertiary)',
+                  color: '#000000',
                 }}
               >
                 No roles currently listed in this category. Check back soon or view all jobs.
@@ -353,7 +353,7 @@ export const FeaturedJobsCarousel: React.FC<FeaturedJobsCarouselProps> = ({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.5rem',
-              color: 'var(--color-primary-400)',
+              color: '#000000',
               fontWeight: 600,
               fontSize: '0.9375rem',
               textDecoration: 'none',

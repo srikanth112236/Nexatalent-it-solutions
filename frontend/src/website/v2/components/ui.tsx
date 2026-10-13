@@ -13,7 +13,7 @@ export function SectionLabel({ children, className = '' }: { children: React.Rea
     <p
       role="heading"
       aria-level={2}
-      className={`text-[13px] font-extrabold uppercase tracking-wider text-slate-900 ${className}`}
+      className={`text-[13px] font-extrabold uppercase tracking-wider text-black ${className}`}
     >
       {children}
     </p>
@@ -26,14 +26,14 @@ export function SectionHead({ eyebrow, title, sub, dark = false }: { eyebrow?: s
       {eyebrow ? (
         <span
           className={`mb-3 inline-block rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-widest ${
-            dark ? 'border-white/20 bg-white/10 text-white' : 'border-[#0265FF]/25 bg-[#0265FF]/5 text-[#0265FF]'
+            dark ? 'border-white/20 bg-white/10 text-white' : 'border-black/25 bg-white text-black'
           }`}
         >
           {eyebrow}
         </span>
       ) : null}
-      <h2 className={`text-2xl font-extrabold tracking-tight sm:text-4xl ${dark ? 'text-white' : 'text-slate-900'}`}>{title}</h2>
-      {sub ? <p className={`mt-3 text-sm leading-relaxed ${dark ? 'text-slate-300' : 'text-slate-600'}`}>{sub}</p> : null}
+      <h2 className={`text-2xl font-extrabold tracking-tight sm:text-4xl ${dark ? 'text-white' : 'text-black'}`}>{title}</h2>
+      {sub ? <p className={`mt-3 text-sm leading-relaxed ${dark ? 'text-slate-300' : 'text-black'}`}>{sub}</p> : null}
     </div>
   );
 }
@@ -41,14 +41,14 @@ export function SectionHead({ eyebrow, title, sub, dark = false }: { eyebrow?: s
 export function PillButton({ to, label, variant = 'dark' }: { to: string; label: string; variant?: 'dark' | 'light' | 'outline' }) {
   const cls =
     variant === 'dark'
-      ? 'bg-slate-950 text-white hover:bg-slate-800'
+      ? 'bg-black text-white hover:bg-neutral-800'
       : variant === 'light'
-        ? 'bg-white text-slate-950 hover:bg-slate-100'
-        : 'border border-slate-300 bg-white text-slate-800 hover:bg-slate-100';
+        ? 'bg-white text-black hover:bg-neutral-100'
+        : 'border border-slate-300 bg-white text-black hover:bg-neutral-100';
   return (
     <Link
       to={to}
-      className={`inline-flex min-h-[44px] items-center justify-center rounded-full px-6 py-2.5 text-xs font-bold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0265FF] ${cls}`}
+      className={`inline-flex min-h-[44px] items-center justify-center rounded-full px-6 py-2.5 text-xs font-bold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${cls}`}
     >
       {label}
     </Link>

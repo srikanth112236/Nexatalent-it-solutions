@@ -37,29 +37,29 @@ import {
 const PILLARS = [
   {
     icon: DollarSign,
-    color: '#10B981',
-    bg: '#ECFDF5',
+    color: '#ffffff',
+    bg: '#000000',
     title: 'Transparent Commercial Terms',
     desc: 'Flexible commercial structures—percentage of CTC, contract staffing markups, and executive search retainers with zero hidden fees.'
   },
   {
     icon: FileCheck2,
-    color: '#0060E6',
-    bg: '#EEF2FF',
+    color: '#ffffff',
+    bg: '#000000',
     title: 'Structured Technical Candidate Screening',
     desc: 'Never receive raw resumes. Every candidate undergoes role-specific technical evaluation, experience verification, and soft skills screening.'
   },
   {
     icon: ShieldCheck,
-    color: '#8B5CF6',
-    bg: '#F5F3FF',
+    color: '#ffffff',
+    bg: '#000000',
     title: '90-Day Replacement Support',
     desc: 'Every permanent lateral hire is backed by a 90-day replacement commitment to ensure long-term candidate success.'
   },
   {
     icon: Clock,
-    color: '#F59E0B',
-    bg: '#FFFBEB',
+    color: '#ffffff',
+    bg: '#000000',
     title: 'Targeted Shortlist SLAs',
     desc: 'Our recruiters pre-screen tech talent across major India hubs—delivering qualified candidate shortlists rapidly for urgent requisitions.'
   }
@@ -93,6 +93,7 @@ export function WhyNexaPage() {
 
   return (
     <div
+      className="font-sans"
       style={{
         position: 'relative',
         display: 'block',
@@ -123,7 +124,7 @@ export function WhyNexaPage() {
         position: 'relative', 
         paddingTop: '5rem', 
         paddingBottom: '4.5rem', 
-        background: 'linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%)',
+        background: '#ffffff',
         borderBottom: '1px solid #E2E8F0'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem', textAlign: 'center' }}>
@@ -137,9 +138,9 @@ export function WhyNexaPage() {
               gap: '0.5rem',
               padding: '0.4rem 1rem',
               borderRadius: '9999px',
-              backgroundColor: '#EEF2FF',
-              border: '1px solid #C7D2FE',
-              color: '#002559',
+              backgroundColor: '#ffffff',
+              border: '1px solid #000000',
+              color: '#000000',
               fontSize: '0.85rem',
               fontWeight: 600,
               marginBottom: '1.25rem'
@@ -153,7 +154,7 @@ export function WhyNexaPage() {
             fontSize: 'clamp(2rem, 4vw, 3rem)',
             fontWeight: 800,
             letterSpacing: '-0.03em',
-            color: '#002559',
+            color: '#000000',
             lineHeight: 1.2,
             marginBottom: '1rem'
           }}>
@@ -162,7 +163,7 @@ export function WhyNexaPage() {
 
           <p style={{
             fontSize: '1.1rem',
-            color: '#475569',
+            color: '#000000',
             maxWidth: '750px',
             margin: '0 auto 3rem',
             lineHeight: 1.6
@@ -192,7 +193,7 @@ export function WhyNexaPage() {
                   padding: '2rem',
                   borderRadius: '20px',
                   border: '1px solid #E2E8F0',
-                  boxShadow: '0 10px 30px rgba(0, 37, 89, 0.04)',
+                  boxShadow: '0 10px 30px rgba(0, 0, 0, 0.06)',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between'
@@ -211,10 +212,10 @@ export function WhyNexaPage() {
                   }}>
                     <Icon size={24} color={p.color} />
                   </div>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#002559', marginBottom: '0.75rem' }}>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#000000', marginBottom: '0.75rem' }}>
                     {p.title}
                   </h3>
-                  <p style={{ fontSize: '0.9rem', color: '#475569', lineHeight: 1.6 }}>
+                  <p style={{ fontSize: '0.9rem', color: '#000000', lineHeight: 1.6 }}>
                     {p.desc}
                   </p>
                 </div>

@@ -126,14 +126,13 @@ export const HiringRequirementForm: React.FC<HiringRequirementFormProps> = ({
       transition={{ duration: motionTokens.duration.slow, ease: motionTokens.ease.standard }}
       style={{
         borderRadius: 'var(--radius-2xl)',
-        backgroundColor: 'var(--color-surface)',
-        border: '1px solid var(--color-border)',
+        backgroundColor: '#ffffff',
+        border: '1px solid #e5e5e5',
         padding: '3rem 2.5rem',
         maxWidth: '850px',
         margin: '0 auto',
         boxShadow: 'var(--shadow-xl)',
         position: 'relative',
-        background: 'linear-gradient(180deg, rgba(30, 41, 59, 0.4) 0%, rgba(17, 23, 38, 0.9) 100%)',
         overflow: 'hidden'
       }}
     >
@@ -148,37 +147,37 @@ export const HiringRequirementForm: React.FC<HiringRequirementFormProps> = ({
             gap: '0.4rem',
             padding: '0.35rem 0.875rem',
             borderRadius: '9999px',
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-            border: '1px solid rgba(59, 130, 246, 0.3)',
+            backgroundColor: '#000000',
+            border: '1px solid #000000',
             fontSize: '0.8125rem',
-            color: 'var(--color-primary-400)',
+            color: '#ffffff',
             fontWeight: 600,
             marginBottom: '0.75rem',
           }}
         >
-          <Zap size={14} />
+          <Zap size={14} color="#ffffff" />
           Fast-Track Client Intake
         </motion.div>
-        <h2 style={{ fontSize: 'clamp(1.75rem, 3vw, 2.25rem)', fontWeight: 800, color: 'var(--color-text)' }}>
+        <h2 style={{ fontSize: 'clamp(1.75rem, 3vw, 2.25rem)', fontWeight: 800, color: '#000000' }}>
           {title}
         </h2>
-        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9375rem', marginTop: '0.5rem' }}>
+        <p style={{ color: '#000000', fontSize: '0.9375rem', marginTop: '0.5rem' }}>
           {subtitle}
         </p>
       </div>
 
       {!isSubmitted && (
         <div style={{ marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.8125rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.8125rem', color: '#000000', fontWeight: 600 }}>
             <span>Step {step} of {totalSteps}</span>
             <span>{Math.round((step / totalSteps) * 100)}% Completed</span>
           </div>
-          <div style={{ height: '4px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+          <div style={{ height: '4px', backgroundColor: '#e5e5e5', borderRadius: '2px', overflow: 'hidden' }}>
             <motion.div 
               initial={{ width: 0 }}
               animate={{ width: `${(step / totalSteps) * 100}%` }}
               transition={motionTokens.spring.gentle}
-              style={{ height: '100%', backgroundColor: 'var(--color-primary)' }}
+              style={{ height: '100%', backgroundColor: '#000000' }}
             />
           </div>
         </div>
@@ -192,9 +191,9 @@ export const HiringRequirementForm: React.FC<HiringRequirementFormProps> = ({
           style={{
             padding: '3rem 2rem',
             textAlign: 'center',
-            backgroundColor: 'rgba(34, 197, 94, 0.08)',
+            backgroundColor: '#ffffff',
             borderRadius: 'var(--radius-xl)',
-            border: '1px solid rgba(34, 197, 94, 0.3)',
+            border: '1px solid #000000',
           }}
         >
           <motion.div
@@ -202,13 +201,13 @@ export const HiringRequirementForm: React.FC<HiringRequirementFormProps> = ({
             animate={{ scale: 1 }}
             transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.2 }}
           >
-            <FileCheck size={48} color="var(--color-success)" style={{ margin: '0 auto 1.25rem auto' }} />
+            <FileCheck size={48} color="#000000" style={{ margin: '0 auto 1.25rem auto' }} />
           </motion.div>
-          <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-text)', marginBottom: '0.5rem' }}>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#000000', marginBottom: '0.5rem' }}>
             Mandate Intake Registered
           </h3>
-          <p style={{ color: 'var(--color-text-secondary)', maxWidth: '540px', margin: '0 auto 1.5rem auto' }}>
-            Your mandate for <strong style={{ color: 'var(--color-text)' }}>{roleTitle || 'Senior Technical Talent'}</strong> has been assigned to our Specialized Engineering Squad. We have sent the confirmation packet and SLA guarantee to <strong style={{ color: 'var(--color-text)' }}>{contactEmail}</strong>.
+          <p style={{ color: '#000000', maxWidth: '540px', margin: '0 auto 1.5rem auto' }}>
+            Your mandate for <strong style={{ color: '#000000' }}>{roleTitle || 'Senior Technical Talent'}</strong> has been assigned to our Specialized Engineering Squad. We have sent the confirmation packet and SLA guarantee to <strong style={{ color: '#000000' }}>{contactEmail}</strong>.
           </p>
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -218,15 +217,15 @@ export const HiringRequirementForm: React.FC<HiringRequirementFormProps> = ({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.5rem',
-              backgroundColor: 'rgba(59, 130, 246, 0.15)',
+              backgroundColor: '#000000',
               padding: '0.5rem 1rem',
               borderRadius: 'var(--radius-md)',
-              color: 'var(--color-primary-400)',
+              color: '#ffffff',
               fontSize: '0.875rem',
               fontWeight: 600,
             }}
           >
-            <Sparkles size={16} />
+            <Sparkles size={16} color="#ffffff" />
             Shortlist Delivery Target: Within 48 Hours
           </motion.div>
         </motion.div>
@@ -245,7 +244,7 @@ export const HiringRequirementForm: React.FC<HiringRequirementFormProps> = ({
               >
                 <motion.div variants={staggerContainer} initial="hidden" animate="show" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
                   <motion.div variants={staggerItem}>
-                    <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.375rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#000000', marginBottom: '0.375rem' }}>
                       Target Role Title *
                     </label>
                     <input
@@ -256,13 +255,13 @@ export const HiringRequirementForm: React.FC<HiringRequirementFormProps> = ({
                       onChange={(e) => setRoleTitle(e.target.value)}
                       style={{
                         width: '100%', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)',
-                        backgroundColor: 'rgba(15, 23, 42, 0.8)', border: '1px solid var(--color-border)',
-                        color: 'var(--color-text)', fontSize: '0.9375rem', outline: 'none',
+                        backgroundColor: '#ffffff', border: '1px solid #000000',
+                        color: '#000000', fontSize: '0.9375rem', outline: 'none',
                       }}
                     />
                   </motion.div>
                   <motion.div variants={staggerItem}>
-                    <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.375rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#000000', marginBottom: '0.375rem' }}>
                       Seniority Level
                     </label>
                     <select
@@ -270,8 +269,8 @@ export const HiringRequirementForm: React.FC<HiringRequirementFormProps> = ({
                       onChange={(e) => setSeniority(e.target.value)}
                       style={{
                         width: '100%', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)',
-                        backgroundColor: 'rgba(15, 23, 42, 0.8)', border: '1px solid var(--color-border)',
-                        color: 'var(--color-text)', fontSize: '0.9375rem', outline: 'none',
+                        backgroundColor: '#ffffff', border: '1px solid #000000',
+                        color: '#000000', fontSize: '0.9375rem', outline: 'none',
                       }}
                     >
                       <option value="Senior Engineer (4-7 yrs)">Senior Engineer (4-7 yrs)</option>
@@ -282,7 +281,7 @@ export const HiringRequirementForm: React.FC<HiringRequirementFormProps> = ({
                     </select>
                   </motion.div>
                   <motion.div variants={staggerItem}>
-                    <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.375rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#000000', marginBottom: '0.375rem' }}>
                       Headcount Needed
                     </label>
                     <select
@@ -290,8 +289,8 @@ export const HiringRequirementForm: React.FC<HiringRequirementFormProps> = ({
                       onChange={(e) => setHeadcount(e.target.value)}
                       style={{
                         width: '100%', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)',
-                        backgroundColor: 'rgba(15, 23, 42, 0.8)', border: '1px solid var(--color-border)',
-                        color: 'var(--color-text)', fontSize: '0.9375rem', outline: 'none',
+                        backgroundColor: '#ffffff', border: '1px solid #000000',
+                        color: '#000000', fontSize: '0.9375rem', outline: 'none',
                       }}
                     >
                       <option value="1 Engineer">1 Engineer</option>
@@ -315,7 +314,7 @@ export const HiringRequirementForm: React.FC<HiringRequirementFormProps> = ({
               >
                 <motion.div variants={staggerContainer} initial="hidden" animate="show">
                   <motion.div variants={staggerItem} style={{ marginBottom: '1.75rem' }}>
-                    <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.75rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#000000', marginBottom: '0.75rem' }}>
                       Required Core Technologies & Domains
                     </label>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
@@ -334,9 +333,9 @@ export const HiringRequirementForm: React.FC<HiringRequirementFormProps> = ({
                             style={{
                               padding: '0.5rem 1rem',
                               borderRadius: '9999px',
-                              border: selected ? '1px solid var(--color-primary)' : '1px solid var(--color-border)',
-                              backgroundColor: selected ? 'rgba(59, 130, 246, 0.2)' : 'rgba(15, 23, 42, 0.6)',
-                              color: selected ? 'var(--color-primary-400)' : 'var(--color-text-secondary)',
+                              border: selected ? '1px solid #000000' : '1px solid #000000',
+                              backgroundColor: selected ? '#000000' : '#ffffff',
+                              color: selected ? '#ffffff' : '#000000',
                               fontSize: '0.8125rem',
                               fontWeight: 600,
                               cursor: 'pointer',
@@ -364,7 +363,7 @@ export const HiringRequirementForm: React.FC<HiringRequirementFormProps> = ({
                   </motion.div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
                     <motion.div variants={staggerItem}>
-                      <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.375rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#000000', marginBottom: '0.375rem' }}>
                         Location / Hub
                       </label>
                       <select
@@ -372,8 +371,8 @@ export const HiringRequirementForm: React.FC<HiringRequirementFormProps> = ({
                         onChange={(e) => setLocation(e.target.value)}
                         style={{
                           width: '100%', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)',
-                          backgroundColor: 'rgba(15, 23, 42, 0.8)', border: '1px solid var(--color-border)',
-                          color: 'var(--color-text)', fontSize: '0.9375rem', outline: 'none',
+                          backgroundColor: '#ffffff', border: '1px solid #000000',
+                          color: '#000000', fontSize: '0.9375rem', outline: 'none',
                         }}
                       >
                         <option value="Bangalore / Hybrid">Bangalore / Hybrid</option>
@@ -387,7 +386,7 @@ export const HiringRequirementForm: React.FC<HiringRequirementFormProps> = ({
                     </motion.div>
 
                     <motion.div variants={staggerItem}>
-                      <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.375rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#000000', marginBottom: '0.375rem' }}>
                         Target Budget / Band
                       </label>
                       <input
@@ -397,8 +396,8 @@ export const HiringRequirementForm: React.FC<HiringRequirementFormProps> = ({
                         onChange={(e) => setBudget(e.target.value)}
                         style={{
                           width: '100%', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)',
-                          backgroundColor: 'rgba(15, 23, 42, 0.8)', border: '1px solid var(--color-border)',
-                          color: 'var(--color-text)', fontSize: '0.9375rem', outline: 'none',
+                          backgroundColor: '#ffffff', border: '1px solid #000000',
+                          color: '#000000', fontSize: '0.9375rem', outline: 'none',
                         }}
                       />
                     </motion.div>
@@ -419,7 +418,7 @@ export const HiringRequirementForm: React.FC<HiringRequirementFormProps> = ({
               >
                 <motion.div variants={staggerContainer} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                   <motion.div variants={staggerItem}>
-                    <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.375rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#000000', marginBottom: '0.375rem' }}>
                       Hiring Velocity Urgency
                     </label>
                     <select
@@ -427,8 +426,8 @@ export const HiringRequirementForm: React.FC<HiringRequirementFormProps> = ({
                       onChange={(e) => setUrgency(e.target.value)}
                       style={{
                         width: '100%', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)',
-                        backgroundColor: 'rgba(15, 23, 42, 0.8)', border: '1px solid var(--color-border)',
-                        color: 'var(--color-text)', fontSize: '0.9375rem', outline: 'none',
+                        backgroundColor: '#ffffff', border: '1px solid #000000',
+                        color: '#000000', fontSize: '0.9375rem', outline: 'none',
                       }}
                     >
                       <option value="Immediate SLA (72-hour delivery)">Immediate SLA (72-hour delivery)</option>
@@ -439,7 +438,7 @@ export const HiringRequirementForm: React.FC<HiringRequirementFormProps> = ({
                   </motion.div>
 
                   <motion.div variants={staggerItem}>
-                    <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.375rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#000000', marginBottom: '0.375rem' }}>
                       Your Enterprise Email (For Shortlist Delivery) *
                     </label>
                     <input
@@ -450,8 +449,8 @@ export const HiringRequirementForm: React.FC<HiringRequirementFormProps> = ({
                       onChange={(e) => setContactEmail(e.target.value)}
                       style={{
                         width: '100%', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)',
-                        backgroundColor: 'rgba(15, 23, 42, 0.8)', border: '1px solid var(--color-border)',
-                        color: 'var(--color-text)', fontSize: '0.9375rem', outline: 'none',
+                        backgroundColor: '#ffffff', border: '1px solid #000000',
+                        color: '#000000', fontSize: '0.9375rem', outline: 'none',
                       }}
                     />
                   </motion.div>
@@ -469,8 +468,8 @@ export const HiringRequirementForm: React.FC<HiringRequirementFormProps> = ({
                   padding: '0.875rem 1.5rem',
                   borderRadius: 'var(--radius-lg)',
                   backgroundColor: 'transparent',
-                  color: 'var(--color-text)',
-                  border: '1px solid var(--color-border)',
+                  color: '#000000',
+                  border: '1px solid #000000',
                   fontSize: '0.9375rem',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -488,18 +487,18 @@ export const HiringRequirementForm: React.FC<HiringRequirementFormProps> = ({
               type="submit"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              animate={step === totalSteps && contactEmail ? { boxShadow: ['0 4px 15px rgba(59, 130, 246, 0.4)', '0 4px 25px rgba(59, 130, 246, 0.8)', '0 4px 15px rgba(59, 130, 246, 0.4)'] } : {}}
+              animate={step === totalSteps && contactEmail ? { boxShadow: ['0 4px 15px rgba(0, 0, 0, 0.3)', '0 4px 25px rgba(0, 0, 0, 0.55)', '0 4px 15px rgba(0, 0, 0, 0.3)'] } : {}}
               transition={step === totalSteps && contactEmail ? { duration: 1.5, repeat: Infinity } : undefined}
               style={{
                 padding: '0.875rem 2rem',
                 borderRadius: 'var(--radius-lg)',
-                backgroundColor: 'var(--color-primary)',
+                backgroundColor: '#000000',
                 color: '#ffffff',
-                border: 'none',
+                border: '1px solid #000000',
                 fontSize: '1rem',
                 fontWeight: 700,
                 cursor: 'pointer',
-                boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)',
+                boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

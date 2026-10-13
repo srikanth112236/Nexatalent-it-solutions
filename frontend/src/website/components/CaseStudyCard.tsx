@@ -37,18 +37,18 @@ export const CaseStudyCard: React.FC<CaseStudyCardProps> = ({
       whileInView={{ y: 0, opacity: 1, scale: 1 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={{ duration: motionTokens.duration.standard, ease: motionTokens.ease.outQuart }}
-      whileHover={{ y: -6, scale: 1.015, boxShadow: featured ? '0 15px 35px rgba(59, 130, 246, 0.25)' : 'var(--shadow-lg)', borderColor: 'rgba(59, 130, 246, 0.5)' }}
+      whileHover={{ y: -6, scale: 1.015, boxShadow: featured ? '0 15px 35px rgba(0, 0, 0, 0.25)' : 'var(--shadow-lg)', borderColor: '#000000' }}
       style={{
         borderRadius: 'var(--radius-xl)',
-        backgroundColor: 'var(--color-surface)',
-        border: featured ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid var(--color-border)',
+        backgroundColor: '#ffffff',
+        border: featured ? '1px solid #000000' : '1px solid #e5e5e5',
         padding: '2rem',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
         position: 'relative',
         overflow: 'hidden',
-        boxShadow: featured ? '0 12px 30px rgba(59, 130, 246, 0.15)' : 'var(--shadow-md)',
+        boxShadow: featured ? '0 12px 30px rgba(0, 0, 0, 0.15)' : 'var(--shadow-md)',
       }}
       className="group"
     >
@@ -61,13 +61,13 @@ export const CaseStudyCard: React.FC<CaseStudyCardProps> = ({
             position: 'absolute',
             top: '1rem',
             right: '1rem',
-            backgroundColor: 'rgba(59, 130, 246, 0.15)',
-            border: '1px solid rgba(59, 130, 246, 0.3)',
+            backgroundColor: '#000000',
+            border: '1px solid #000000',
             borderRadius: '9999px',
             padding: '0.25rem 0.75rem',
             fontSize: '0.75rem',
             fontWeight: 700,
-            color: 'var(--color-primary-400)',
+            color: '#ffffff',
           }}
         >
           Featured Story
@@ -82,16 +82,16 @@ export const CaseStudyCard: React.FC<CaseStudyCardProps> = ({
               fontWeight: 700,
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
-              color: 'var(--color-primary-400)',
+              color: '#000000',
             }}
           >
             {industry}
           </span>
-          <span style={{ color: 'var(--color-text-tertiary)' }}>•</span>
+          <span style={{ color: '#000000' }}>•</span>
           <span
             style={{
               fontSize: '0.8125rem',
-              color: 'var(--color-text-secondary)',
+              color: '#000000',
               display: 'flex',
               alignItems: 'center',
               gap: '0.25rem',
@@ -106,7 +106,7 @@ export const CaseStudyCard: React.FC<CaseStudyCardProps> = ({
           style={{
             fontSize: '1.25rem',
             fontWeight: 700,
-            color: 'var(--color-text)',
+            color: '#000000',
             lineHeight: 1.4,
             marginBottom: '1rem',
           }}
@@ -114,8 +114,8 @@ export const CaseStudyCard: React.FC<CaseStudyCardProps> = ({
           {headline}
         </h3>
 
-        <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
-          Client: <strong style={{ color: 'var(--color-text)' }}>{client}</strong>
+        <div style={{ fontSize: '0.875rem', color: '#000000', marginBottom: '1.5rem' }}>
+          Client: <strong style={{ color: '#000000' }}>{client}</strong>
         </div>
 
         {/* Metrics Grid */}
@@ -125,9 +125,9 @@ export const CaseStudyCard: React.FC<CaseStudyCardProps> = ({
             gridTemplateColumns: 'repeat(3, 1fr)',
             gap: '0.75rem',
             padding: '1rem',
-            backgroundColor: 'rgba(15, 23, 42, 0.6)',
+            backgroundColor: '#ffffff',
             borderRadius: 'var(--radius-lg)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
+            border: '1px solid #000000',
             marginBottom: '1.5rem',
           }}
         >
@@ -144,7 +144,7 @@ export const CaseStudyCard: React.FC<CaseStudyCardProps> = ({
                 style={{
                   fontSize: '1.25rem',
                   fontWeight: 800,
-                  color: 'var(--color-primary-400)',
+                  color: '#000000',
                   lineHeight: 1.2,
                 }}
               >
@@ -153,7 +153,7 @@ export const CaseStudyCard: React.FC<CaseStudyCardProps> = ({
               <div
                 style={{
                   fontSize: '0.6875rem',
-                  color: 'var(--color-text-tertiary)',
+                  color: '#000000',
                   marginTop: '0.25rem',
                   lineHeight: 1.2,
                 }}
@@ -177,9 +177,9 @@ export const CaseStudyCard: React.FC<CaseStudyCardProps> = ({
                 fontSize: '0.6875rem',
                 padding: '0.2rem 0.5rem',
                 borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                color: 'var(--color-text-secondary)',
-                border: '1px solid rgba(255, 255, 255, 0.05)',
+                backgroundColor: '#ffffff',
+                color: '#000000',
+                border: '1px solid #000000',
               }}
             >
               {tag}
@@ -196,10 +196,10 @@ export const CaseStudyCard: React.FC<CaseStudyCardProps> = ({
           gap: '0.5rem',
           fontSize: '0.875rem',
           fontWeight: 600,
-          color: 'var(--color-primary-400)',
+          color: '#000000',
           textDecoration: 'none',
           paddingTop: '0.75rem',
-          borderTop: '1px solid var(--color-border)',
+          borderTop: '1px solid #e5e5e5',
         }}
       >
         <span>Read Full Case Study</span>

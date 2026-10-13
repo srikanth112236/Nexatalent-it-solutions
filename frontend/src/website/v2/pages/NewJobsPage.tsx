@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, Search, Clock, Wallet, ArrowRight, Briefcase, ArrowUpRight, Radio } from 'lucide-react';
 import { V2Navbar } from '../components/V2Navbar';
 import { V2Footer } from '../components/V2Footer';
@@ -11,11 +11,12 @@ const LOCATIONS = [
   { city: 'Bengaluru', note: 'SaaS, AI & GCC pods', openings: 12 },
   { city: 'Hyderabad', note: 'GCC & platform teams', openings: 8 },
   { city: 'Mumbai', note: 'BFSI, HFT & media', openings: 6 },
+  { city: 'Chennai', note: 'GCC, SaaS & manufacturing', openings: 7 },
   { city: 'Pune', note: 'Automotive & manufacturing', openings: 5 },
 ];
 
 const CATEGORIES = ['All Roles', 'Engineering', 'Data & AI', 'Leadership', 'Operations'];
-const LOCATIONS_FILTER = ['Anywhere', 'Bengaluru', 'Hyderabad', 'Mumbai', 'Pune', 'Remote'];
+const LOCATIONS_FILTER = ['Anywhere', 'Bengaluru', 'Hyderabad', 'Mumbai', 'Chennai', 'Pune', 'Remote'];
 
 /** Live open positions (Published in superadmin) merged ahead of curated showcase roles. */
 function useAllJobs(): V2Job[] {
@@ -34,11 +35,42 @@ function useAllJobs(): V2Job[] {
 }
 
 export function NewJobsPage() {
+  const navigate = useNavigate();
   const [q, setQ] = useState('');
   const [loc, setLoc] = useState('Anywhere');
   const [category, setCategory] = useState('All Roles');
   const [tab, setTab] = useState<'latest' | 'premium'>('latest');
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
   const allJobs = useAllJobs();
+
+  // Close suggestions on outside click / Escape
+  useEffect(() => {
+    if (!suggestOpen) return;
+    const onPointer = (e: PointerEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setSuggestOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSuggestOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [suggestOpen]);
+
+  // Suggestions appear after 2+ letters — title / skill / domain matches
+  const suggestions = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    if (term.length < 2) return [];
+    return allJobs
+      .filter((r) =>
+        `${r.title} ${r.domain} ${r.location} ${r.skills.join(' ')}`.toLowerCase().includes(term),
+      )
+      .slice(0, 6);
+  }, [allJobs, q]);
 
   const counts = useMemo(() => {
     const m: Record<string, number> = { 'All Roles': allJobs.length };
@@ -58,7 +90,7 @@ export function NewJobsPage() {
   }, [allJobs, q, loc, category, tab]);
 
   return (
-    <div className="min-h-screen bg-white font-sans text-slate-900 antialiased">
+    <div className="min-h-screen bg-white font-sans text-black antialiased">
       <SeoHead
         title="Jobs — NexaTalent"
         description="Verified technology mandates across SaaS, BFSI, GCC and more. Free candidate registration."
@@ -67,47 +99,54 @@ export function NewJobsPage() {
       <V2Navbar />
       <main id="main-content">
         {/* ============ HERO + SEARCH ============ */}
-        <section className="relative overflow-hidden px-4 pb-14 pt-16 sm:px-6 sm:pt-20" aria-label="Job search">
+        {/* overflow-x-clip (not hidden) so the suggestion dropdown can float over the next section */}
+        <section className="relative overflow-x-clip px-4 pb-14 pt-16 sm:px-6 sm:pt-20" aria-label="Job search">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-x-0 -top-40 h-[440px]"
             style={{
               background:
-                'radial-gradient(55% 100% at 50% 0%, rgba(2,101,255,0.12) 0%, rgba(2,101,255,0.04) 50%, rgba(255,255,255,0) 78%)',
+                'transparent',
             }}
           />
           <div className="relative mx-auto max-w-3xl text-center">
-            <h1 className="text-3xl font-extrabold leading-[1.1] tracking-tight text-slate-950 sm:text-5xl">
-              Find your{' '}
-              <span className="rounded-lg bg-[#0265FF] px-3 py-0.5 text-white">dream jobs</span> in India
+            <h1 className="text-3xl font-extrabold leading-[1.1] tracking-tight text-black sm:text-5xl">
+              Find your dream jobs in India
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-slate-600 sm:text-base">
+            <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-black sm:text-base">
               Verified mandates from enterprises, GCCs and high-growth product teams. Free registration, zero
               spam — only roles matched to your profile.
             </p>
 
-            {/* search bar */}
+            {/* search bar with live suggestions (2+ letters) */}
+            <div ref={searchRef} className="relative mx-auto mt-8 max-w-xl">
             <form
               role="search"
-              onSubmit={(e) => e.preventDefault()}
-              className="mx-auto mt-8 flex max-w-xl items-center gap-2 rounded-full border border-slate-200 bg-white p-1.5 pl-4 shadow-lg shadow-slate-900/5"
+              onSubmit={(e) => { e.preventDefault(); setSuggestOpen(false); }}
+              className="flex items-center gap-2 rounded-full border border-neutral-200 bg-white p-1.5 pl-4 shadow-lg shadow-black/5"
             >
-              <Search size={17} className="shrink-0 text-slate-400" aria-hidden />
+              <Search size={17} className="shrink-0 text-black" aria-hidden />
               <label htmlFor="job-q" className="sr-only">Job title or keyword</label>
               <input
                 id="job-q"
                 value={q}
-                onChange={(e) => setQ(e.target.value)}
+                onChange={(e) => { setQ(e.target.value); setSuggestOpen(true); }}
+                onFocus={() => setSuggestOpen(true)}
                 placeholder="Job title or keyword"
-                className="min-h-[42px] w-full min-w-0 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
+                autoComplete="off"
+                role="combobox"
+                aria-expanded={suggestOpen && suggestions.length > 0}
+                aria-controls="job-suggestions"
+                aria-autocomplete="list"
+                className="min-h-[42px] w-full min-w-0 bg-transparent text-sm text-black outline-none placeholder:text-black/50"
               />
-              <span className="hidden h-6 w-px bg-slate-200 sm:block" aria-hidden />
+              <span className="hidden h-6 w-px bg-neutral-200 sm:block" aria-hidden />
               <label htmlFor="job-loc" className="sr-only">Location</label>
               <select
                 id="job-loc"
                 value={loc}
                 onChange={(e) => setLoc(e.target.value)}
-                className="hidden min-h-[42px] w-40 shrink-0 cursor-pointer rounded-full bg-transparent pr-2 text-sm text-slate-600 outline-none sm:block"
+                className="hidden min-h-[42px] w-40 shrink-0 cursor-pointer rounded-full bg-transparent pr-2 text-sm text-black outline-none sm:block"
               >
                 {LOCATIONS_FILTER.map((l) => (
                   <option key={l}>{l}</option>
@@ -116,28 +155,61 @@ export function NewJobsPage() {
               <button
                 type="submit"
                 aria-label="Search jobs"
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#0265FF] text-white transition-colors hover:bg-[#0055db] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0265FF]"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black text-white transition-colors hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
               >
                 <Search size={17} aria-hidden />
               </button>
             </form>
+            {suggestOpen && q.trim().length >= 2 && (
+              <div className="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xl shadow-black/10">
+                {suggestions.length > 0 ? (
+                  <ul id="job-suggestions" role="listbox" aria-label="Matching jobs" className="max-h-72 overflow-y-auto py-1.5">
+                    {suggestions.map((s) => (
+                      <li key={s.slug} role="option" aria-selected={false}>
+                        <button
+                          type="button"
+                          onClick={() => { setSuggestOpen(false); navigate(`/jobs/${s.slug}`); }}
+                          className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-neutral-50 focus-visible:bg-neutral-50 focus-visible:outline-none"
+                        >
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-black text-white">
+                            <Briefcase size={13} aria-hidden />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate text-[13px] font-extrabold text-black">{s.title}</span>
+                            <span className="block truncate text-[11px] font-semibold text-black/60">
+                              {s.location} · {s.type} · {s.salary}
+                            </span>
+                          </span>
+                          <ArrowUpRight size={14} className="ml-auto shrink-0 text-black/40" aria-hidden />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="px-4 py-3.5 text-[12.5px] font-semibold text-black/60">
+                    No quick matches — press Enter to filter the full list below.
+                  </p>
+                )}
+              </div>
+            )}
+            </div>
           </div>
         </section>
 
         {/* ============ RECOMMENDED JOBS ============ */}
-        <section aria-label="Recommended jobs" className="border-t border-slate-100 bg-slate-50/60 px-4 py-14 sm:px-6 sm:py-16">
+        <section aria-label="Recommended jobs" className="border-t border-neutral-200 bg-white px-4 py-14 sm:px-6 sm:py-16">
           <div className="mx-auto max-w-6xl">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl">Recommended Jobs</h2>
-                <p className="mt-1 text-sm text-slate-500">Explore suggested job searches matched to open mandates</p>
+                <h2 className="text-2xl font-extrabold tracking-tight text-black sm:text-3xl">Recommended Jobs</h2>
+                <p className="mt-1 text-sm text-black">Explore suggested job searches matched to open mandates</p>
               </div>
               <div className="flex gap-2" role="group" aria-label="Job feed filter">
                 <button
                   onClick={() => setTab('latest')}
                   aria-pressed={tab === 'latest'}
-                  className={`min-h-[40px] rounded-full px-5 text-xs font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0265FF] ${
-                    tab === 'latest' ? 'bg-[#0265FF] text-white shadow-md shadow-[#0265FF]/25' : 'border border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                  className={`min-h-[40px] rounded-full px-5 text-xs font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${
+                    tab === 'latest' ? 'bg-black text-white shadow-md shadow-black/10' : 'border border-neutral-200 bg-white text-black hover:border-neutral-300'
                   }`}
                 >
                   Latest Jobs
@@ -145,8 +217,8 @@ export function NewJobsPage() {
                 <button
                   onClick={() => setTab('premium')}
                   aria-pressed={tab === 'premium'}
-                  className={`min-h-[40px] rounded-full px-5 text-xs font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0265FF] ${
-                    tab === 'premium' ? 'bg-[#0265FF] text-white shadow-md shadow-[#0265FF]/25' : 'border border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                  className={`min-h-[40px] rounded-full px-5 text-xs font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${
+                    tab === 'premium' ? 'bg-black text-white shadow-md shadow-black/10' : 'border border-neutral-200 bg-white text-black hover:border-neutral-300'
                   }`}
                 >
                   Premium Jobs
@@ -154,11 +226,11 @@ export function NewJobsPage() {
               </div>
             </div>
 
-            <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr]">
-              {/* categories sidebar */}
-              <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-label="Job categories">
-                <h3 className="text-base font-extrabold tracking-tight text-slate-900">Job Categories</h3>
-                <ul className="mt-4 divide-y divide-slate-100">
+            <div className="mt-8 grid grid-cols-1 items-start gap-6 lg:grid-cols-[300px_1fr]">
+              {/* categories sidebar — sticky, filters stay put */}
+              <aside className="h-fit rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto" aria-label="Job categories">
+                <h3 className="text-base font-extrabold tracking-tight text-black">Job Categories</h3>
+                <ul className="mt-4 divide-y divide-neutral-200">
                   {CATEGORIES.map((c) => {
                     const active = category === c;
                     return (
@@ -166,17 +238,17 @@ export function NewJobsPage() {
                         <button
                           onClick={() => setCategory(c)}
                           aria-pressed={active}
-                          className={`flex min-h-[48px] w-full items-center justify-between gap-3 text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-[#0265FF] ${
-                            active ? 'font-extrabold text-[#0265FF]' : 'font-semibold text-slate-600 hover:text-slate-900'
+                          className={`flex min-h-[48px] w-full items-center justify-between gap-3 text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-black ${
+                            active ? 'font-extrabold text-black' : 'font-semibold text-black hover:text-black'
                           }`}
                         >
                           <span className="flex items-center gap-2.5">
-                            <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${active ? 'bg-[#0265FF]/10 text-[#0265FF]' : 'bg-slate-100 text-slate-500'}`}>
+                            <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${active ? 'bg-black text-white' : 'bg-white text-black ring-1 ring-neutral-200'}`}>
                               <Briefcase size={13} aria-hidden />
                             </span>
                             {c}
                           </span>
-                          <span className={`text-xs font-bold ${active ? 'text-[#0265FF]' : 'text-slate-400'}`}>
+                          <span className={`text-xs font-bold ${active ? 'text-black' : 'text-black'}`}>
                             {counts[c] || 0} Opening{(counts[c] || 0) === 1 ? '' : 's'}
                           </span>
                         </button>
@@ -184,78 +256,81 @@ export function NewJobsPage() {
                     );
                   })}
                 </ul>
-                <div className="mt-5 rounded-xl bg-[#0265FF]/5 p-4">
-                  <p className="text-xs font-bold text-slate-700">Not seeing your role?</p>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                <div className="mt-5 rounded-xl bg-white p-4">
+                  <p className="text-xs font-bold text-black">Not seeing your role?</p>
+                  <p className="mt-1 text-xs leading-relaxed text-black">
                     Register your profile — we’ll match you against new mandates daily.
                   </p>
                   <Link
                     to="/candidate/register"
-                    className="mt-3 inline-flex min-h-[40px] items-center gap-1.5 rounded-full bg-[#0265FF] px-4 text-xs font-bold text-white hover:bg-[#0055db] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0265FF]"
+                    className="mt-3 inline-flex min-h-[40px] items-center gap-1.5 rounded-full bg-black px-4 text-xs font-bold text-white hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
                   >
                     Register free <ArrowRight size={13} aria-hidden />
                   </Link>
                 </div>
               </aside>
 
-              {/* job cards */}
-              <div>
+              {/* job cards — independently scrollable on desktop */}
+              <div className="min-w-0 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pr-1 lg:pb-2">
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-black/50" aria-live="polite">
+                  {list.length} opening{list.length === 1 ? '' : 's'}
+                </p>
                 <ul className="space-y-4">
                   {list.map((r) => (
                     <li
                       key={r.slug}
                       className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md ${
-                        r.premium ? 'border-amber-200' : 'border-slate-200'
+                        r.premium ? 'border-black' : 'border-neutral-200'
                       }`}
                     >
-                      <div className={`h-1 w-full ${r.premium ? 'bg-amber-400' : 'bg-[#0265FF]'}`} aria-hidden />
+                      <div className="h-1 w-full bg-black" aria-hidden />
                       <div className="p-5">
-                        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[11px] font-semibold text-slate-500">
+                        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[11px] font-semibold text-black">
                           <span>
-                            Type: <strong className="text-slate-700">{r.type}</strong>
+                            Type: <strong className="text-black">{r.type}</strong>
                           </span>
                           <span className="flex items-center gap-1">
-                            <Clock size={12} aria-hidden /> Posted: <strong className="text-slate-700">{r.posted}</strong>
+                            <Clock size={12} aria-hidden /> Posted: <strong className="text-black">{r.posted}</strong>
                           </span>
                           {r.slug.startsWith('JOB-') ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-emerald-600">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-black px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white">
                               <Radio size={10} aria-hidden /> Live
                             </span>
                           ) : null}
                           {r.premium ? (
-                            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-amber-600">
+                            <span className="rounded-full bg-black px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white">
                               Premium
                             </span>
                           ) : null}
                         </div>
                         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
                           <div>
-                            <h3 className="text-lg font-extrabold tracking-tight text-slate-900">
+                            <h3 className="text-lg font-extrabold tracking-tight text-black">
                               <Link
                                 to={`/jobs/${r.slug}`}
-                                className="hover:text-[#0265FF] hover:underline focus-visible:outline-2 focus-visible:outline-[#0265FF]"
+                                className="hover:text-black hover:underline focus-visible:outline-2 focus-visible:outline-black"
                               >
                                 {r.title}
                               </Link>
                             </h3>
-                            <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-slate-600">
-                              <Wallet size={14} className="text-[#0265FF]" aria-hidden /> {r.salary}
+                            <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-black">
+                              <Wallet size={14} className="text-black" aria-hidden /> {r.salary}
                             </p>
                           </div>
                           <Link
                             to={`/jobs/${r.slug}`}
-                            className="inline-flex min-h-[42px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-5 text-xs font-bold text-slate-700 transition-colors hover:border-[#0265FF] hover:bg-[#0265FF]/5 hover:text-[#0265FF] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0265FF]"
+                            className="inline-flex min-h-[42px] items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-5 text-xs font-bold text-black transition-colors hover:border-black hover:bg-neutral-100 hover:text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
                           >
                             View Details <ArrowUpRight size={13} aria-hidden />
                           </Link>
                         </div>
                       </div>
-                      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-slate-100 bg-slate-50 px-5 py-3 text-xs font-semibold text-slate-500">
+                      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-neutral-200 bg-white px-5 py-3 text-xs font-semibold text-black">
                         <span className="flex items-center gap-1.5">
-                          <MapPin size={13} className="text-[#0265FF]" aria-hidden /> {r.location}
+                          <MapPin size={13} className="text-black" aria-hidden /> {r.location}
                         </span>
                         <span className="flex items-center gap-1.5">
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#0265FF]" aria-hidden />
+                          <span className="h-1.5 w-1.5 rounded-full bg-black" aria-hidden />
                           {r.domain}
                         </span>
                       </div>
@@ -264,11 +339,11 @@ export function NewJobsPage() {
                 </ul>
 
                 {list.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
-                    <p className="text-sm font-semibold text-slate-600">No matches for this search yet.</p>
-                    <p className="mt-1 text-sm text-slate-500">
+                  <div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-10 text-center">
+                    <p className="text-sm font-semibold text-black">No matches for this search yet.</p>
+                    <p className="mt-1 text-sm text-black">
                       Try “Java”, “remote” or{' '}
-                      <button onClick={() => { setQ(''); setLoc('Anywhere'); setCategory('All Roles'); setTab('latest'); }} className="font-bold text-[#0265FF] hover:underline">
+                      <button onClick={() => { setQ(''); setLoc('Anywhere'); setCategory('All Roles'); setTab('latest'); }} className="font-bold text-black hover:underline">
                         reset all filters
                       </button>
                       .
@@ -285,30 +360,30 @@ export function NewJobsPage() {
           <div className="mx-auto max-w-6xl">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl">Top Hiring Locations</h2>
-                <p className="mt-1 text-sm text-slate-500">Know your market — find the roles that fit your city</p>
+                <h2 className="text-2xl font-extrabold tracking-tight text-black sm:text-3xl">Top Hiring Locations</h2>
+                <p className="mt-1 text-sm text-black">Know your market — find the roles that fit your city</p>
               </div>
               <Link
                 to="/candidate/register"
-                className="inline-flex min-h-[42px] w-fit items-center gap-2 rounded-full bg-[#0265FF] px-5 text-xs font-bold text-white shadow-md shadow-[#0265FF]/25 hover:bg-[#0055db] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0265FF]"
+                className="inline-flex min-h-[42px] w-fit items-center gap-2 rounded-full bg-black px-5 text-xs font-bold text-white shadow-md shadow-black/10 hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
               >
                 Browse all jobs <ArrowRight size={13} aria-hidden />
               </Link>
             </div>
 
-            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {LOCATIONS.map((l) => (
                 <button
                   key={l.city}
                   onClick={() => { setLoc(l.city); setTab('latest'); document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth' }); }}
-                  className="group rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0265FF]/40 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0265FF]"
+                  className="group rounded-2xl border border-neutral-200 bg-white p-6 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-black hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
                 >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0265FF]/10 text-[#0265FF] transition-colors group-hover:bg-[#0265FF] group-hover:text-white">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-black text-white transition-colors group-hover:bg-black group-hover:text-white">
                     <MapPin size={18} aria-hidden />
                   </span>
-                  <h3 className="mt-4 text-base font-extrabold text-slate-900">{l.city}</h3>
-                  <p className="mt-1 text-xs text-slate-500">{l.note}</p>
-                  <p className="mt-3 text-xs font-bold text-[#0265FF]">{l.openings} openings →</p>
+                  <h3 className="mt-4 text-base font-extrabold text-black">{l.city}</h3>
+                  <p className="mt-1 text-xs text-black">{l.note}</p>
+                  <p className="mt-3 text-xs font-bold text-black">{l.openings} openings →</p>
                 </button>
               ))}
             </div>

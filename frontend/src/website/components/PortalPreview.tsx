@@ -55,11 +55,12 @@ export const PortalPreview: React.FC = () => {
 
   return (
     <motion.section 
+      className="font-sans"
       initial={{ opacity: 0, y: 40 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-100px" }}
       transition={{ duration: motionTokens.duration.slow, ease: motionTokens.ease.standard }}
-      style={{ maxWidth: '1280px', margin: '5rem auto', padding: '0 2rem' }}
+      style={{ maxWidth: '1280px', margin: '5rem auto', padding: '0 2rem', backgroundColor: '#ffffff' }}
     >
       <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
         <motion.div
@@ -68,7 +69,7 @@ export const PortalPreview: React.FC = () => {
           viewport={{ once: true }}
           transition={{ ...motionTokens.spring.snappy, delay: 0.1 }}
         >
-          <Badge variant="primary" style={{ marginBottom: '1rem' }}>Platform Technology</Badge>
+          <Badge variant="default" style={{ marginBottom: '1rem' }}>Platform Technology</Badge>
         </motion.div>
         
         <motion.h2 
@@ -76,7 +77,7 @@ export const PortalPreview: React.FC = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: motionTokens.duration.standard, delay: 0.2 }}
-          style={{ fontSize: 'clamp(2rem, 3.5vw, 2.75rem)', fontWeight: 800 }}
+          style={{ fontSize: 'clamp(2rem, 3.5vw, 2.75rem)', fontWeight: 800, color: '#000000' }}
         >
           Purpose-Built Portals for Every Stakeholder
         </motion.h2>
@@ -91,7 +92,7 @@ export const PortalPreview: React.FC = () => {
                 style={{
                   position: 'absolute',
                   inset: 0,
-                  backgroundColor: 'var(--color-primary)',
+                  backgroundColor: '#000000',
                   borderRadius: 'var(--radius-pill)',
                   zIndex: 0
                 }}
@@ -106,9 +107,9 @@ export const PortalPreview: React.FC = () => {
                 zIndex: 1,
                 padding: '0.625rem 1.25rem',
                 borderRadius: 'var(--radius-pill)',
-                border: activePortal === p ? '1px solid transparent' : '1px solid var(--color-border)',
-                backgroundColor: 'transparent',
-                color: activePortal === p ? 'var(--nt-surface, #ffffff)' : 'var(--color-text-muted)',
+                border: activePortal === p ? '1px solid #000000' : '1px solid #000000',
+                backgroundColor: activePortal === p ? '#000000' : '#ffffff',
+                color: activePortal === p ? '#ffffff' : '#000000',
                 fontWeight: 600,
                 fontSize: '0.9rem',
                 cursor: 'pointer',
@@ -130,9 +131,9 @@ export const PortalPreview: React.FC = () => {
           exit={{ opacity: 0, y: -20, filter: 'blur(8px)' }}
           transition={{ duration: motionTokens.duration.standard, ease: motionTokens.ease.outQuart }}
           style={{
-            backgroundColor: 'var(--color-surface)',
+            backgroundColor: '#ffffff',
             borderRadius: 'var(--radius-2xl)',
-            border: '1px solid var(--color-border)',
+            border: '1px solid #e5e5e5',
             padding: '3rem',
             boxShadow: 'var(--shadow-xl)',
             display: 'flex',
@@ -148,14 +149,14 @@ export const PortalPreview: React.FC = () => {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ ...motionTokens.spring.bouncy, delay: 0.1 }}
             >
-              <Badge variant="accent" style={{ marginBottom: '1rem' }}>{curr.stats}</Badge>
+              <Badge variant="default" style={{ marginBottom: '1rem' }}>{curr.stats}</Badge>
             </motion.div>
             
             <motion.h3 
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: motionTokens.duration.standard, delay: 0.2 }}
-              style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.75rem', color: '#ffffff' }}
+              style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.75rem', color: '#000000' }}
             >
               {curr.title}
             </motion.h3>
@@ -164,7 +165,7 @@ export const PortalPreview: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: motionTokens.duration.slow, delay: 0.3 }}
-              style={{ color: 'var(--color-text-muted)', lineHeight: 1.6, marginBottom: '1.75rem' }}
+              style={{ color: '#000000', lineHeight: 1.6, marginBottom: '1.75rem' }}
             >
               {curr.desc}
             </motion.p>
@@ -181,8 +182,8 @@ export const PortalPreview: React.FC = () => {
             </motion.div>
           </div>
 
-          <div style={{ flex: 1, minWidth: '300px', backgroundColor: 'var(--color-surface-raised)', borderRadius: 'var(--radius-xl)', padding: '2rem', border: '1px solid var(--color-border-subtle)' }}>
-            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-primary)', textTransform: 'uppercase', marginBottom: '1rem' }}>
+          <div style={{ flex: 1, minWidth: '300px', backgroundColor: '#ffffff', borderRadius: 'var(--radius-xl)', padding: '2rem', border: '1px solid #000000' }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#000000', textTransform: 'uppercase', marginBottom: '1rem' }}>
               Live Portal Interface Mock
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -196,7 +197,7 @@ export const PortalPreview: React.FC = () => {
                     delay: 0.3 + idx * motionTokens.stagger.medium,
                     ease: motionTokens.ease.outQuart
                   }}
-                  style={{ height: '40px', backgroundColor: 'var(--color-bg)', borderRadius: '6px' }} 
+                  style={{ height: '40px', backgroundColor: '#e5e5e5', borderRadius: '6px' }} 
                 />
               ))}
             </div>

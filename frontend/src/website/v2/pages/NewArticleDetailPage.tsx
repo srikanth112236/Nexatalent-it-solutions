@@ -73,19 +73,19 @@ export function NewArticleDetailPage() {
   const sections = bodySections(article);
 
   const card = (p: V2Post) => (
-    <article key={p.slug} className="flex flex-col rounded-2xl border border-slate-200 bg-white p-5 transition-shadow hover:shadow-md">
-      <span className="w-fit rounded-full bg-[#0265FF]/8 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#0265FF]">
+    <article key={p.slug} className="flex flex-col rounded-2xl border border-neutral-200 bg-white p-5 transition-shadow hover:shadow-md">
+      <span className="w-fit rounded-full bg-black px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
         {p.category}
       </span>
-      <h3 className="mt-3 text-sm font-extrabold leading-snug tracking-tight text-slate-900">
-        <Link to={`/insights/${p.slug}`} className="hover:text-[#0265FF] hover:underline focus-visible:outline-2 focus-visible:outline-[#0265FF]">
+      <h3 className="mt-3 text-sm font-extrabold leading-snug tracking-tight text-black">
+        <Link to={`/insights/${p.slug}`} className="hover:text-black hover:underline focus-visible:outline-2 focus-visible:outline-black">
           {p.title}
         </Link>
       </h3>
-      <p className="mt-2 flex-1 text-xs leading-relaxed text-slate-600 line-clamp-3">{p.excerpt}</p>
-      <div className="mt-4 flex items-center justify-between text-[11px] text-slate-500">
+      <p className="mt-2 flex-1 text-xs leading-relaxed text-black line-clamp-3">{p.excerpt}</p>
+      <div className="mt-4 flex items-center justify-between text-[11px] text-black">
         <time>{p.date}</time>
-        <span className="inline-flex items-center gap-1 font-bold text-[#0265FF]">
+        <span className="inline-flex items-center gap-1 font-bold text-black">
           Read <ArrowRight size={12} aria-hidden />
         </span>
       </div>
@@ -93,7 +93,7 @@ export function NewArticleDetailPage() {
   );
 
   return (
-    <div className="min-h-screen bg-white font-sans text-slate-900 antialiased">
+    <div className="min-h-screen bg-white font-sans text-black antialiased">
       <SeoHead
         title={`${article.title} | NexaTalent Insights`}
         description={article.excerpt}
@@ -104,36 +104,36 @@ export function NewArticleDetailPage() {
       <main id="main-content">
         {/* ===== ARTICLE HEADER ===== */}
         <article>
-          <header className="border-b border-slate-100 px-4 pb-10 pt-10 sm:px-6 sm:pt-12">
+          <header className="border-b border-neutral-200 px-4 pb-10 pt-10 sm:px-6 sm:pt-12">
             <div className="mx-auto max-w-3xl">
               {/* breadcrumb */}
-              <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
-                <Link to="/" className="hover:text-[#0265FF]">Home</Link>
+              <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-xs text-black">
+                <Link to="/" className="hover:text-black">Home</Link>
                 <ChevronRight size={12} aria-hidden />
-                <Link to="/insights" className="hover:text-[#0265FF]">Insights</Link>
+                <Link to="/insights" className="hover:text-black">Insights</Link>
                 <ChevronRight size={12} aria-hidden />
-                <span className="font-bold text-[#0265FF]">{article.category}</span>
+                <span className="font-bold text-black">{article.category}</span>
               </nav>
 
               {/* tags */}
               <div className="mt-5 flex flex-wrap gap-2">
-                <span className="rounded-full bg-[#0265FF] px-3 py-1 text-[11px] font-bold text-white">{article.tag}</span>
-                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-bold text-slate-600">
+                <span className="rounded-full bg-black px-3 py-1 text-[11px] font-bold text-white">{article.tag}</span>
+                <span className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-[11px] font-bold text-black">
                   {article.category}
                 </span>
               </div>
 
-              <h1 className="mt-4 text-2xl font-extrabold leading-[1.15] tracking-tight text-slate-950 sm:text-4xl">
+              <h1 className="mt-4 text-2xl font-extrabold leading-[1.15] tracking-tight text-black sm:text-4xl">
                 {article.title}
               </h1>
 
-              <p className="mt-4 text-base leading-relaxed text-slate-600">{article.excerpt}</p>
+              <p className="mt-4 text-base leading-relaxed text-black">{article.excerpt}</p>
 
               {/* meta */}
-              <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-500">
+              <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-black">
                 <span className="flex items-center gap-1.5">
-                  <User size={14} className="text-[#0265FF]" aria-hidden />
-                  <span className="font-semibold text-slate-700">{article.author}</span>
+                  <User size={14} className="text-black" aria-hidden />
+                  <span className="font-semibold text-black">{article.author}</span>
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Calendar size={14} aria-hidden /> <time>{article.date}</time>
@@ -147,12 +147,12 @@ export function NewArticleDetailPage() {
 
           {/* cover */}
           <div className="px-4 pt-8 sm:px-6">
-            <div className="mx-auto max-w-3xl overflow-hidden rounded-2xl border border-slate-100">
+            <div className="mx-auto max-w-3xl overflow-hidden rounded-2xl border border-neutral-200">
               <img
                 src={coverOf(article)}
                 alt=""
                 aria-hidden
-                className="h-56 w-full object-cover sm:h-72"
+                className="aspect-[16/10] w-full object-cover object-center"
                 loading="eager"
                 decoding="async"
               />
@@ -161,12 +161,12 @@ export function NewArticleDetailPage() {
 
           {/* takeaways */}
           <div className="px-4 pt-8 sm:px-6">
-            <div className="mx-auto max-w-3xl rounded-2xl border border-[#0265FF]/20 bg-[#0265FF]/5 p-6">
-              <h2 className="text-sm font-extrabold uppercase tracking-wider text-[#0265FF]">Key takeaways</h2>
+            <div className="mx-auto max-w-3xl rounded-2xl border border-black/20 bg-white p-6">
+              <h2 className="text-sm font-extrabold uppercase tracking-wider text-black">Key takeaways</h2>
               <ul className="mt-4 space-y-3">
                 {article.highlights.map((h) => (
-                  <li key={h} className="flex items-start gap-2.5 text-sm font-semibold leading-relaxed text-slate-700">
-                    <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-[#0265FF]" aria-hidden />
+                  <li key={h} className="flex items-start gap-2.5 text-sm font-semibold leading-relaxed text-black">
+                    <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-black" aria-hidden />
                     {h}
                   </li>
                 ))}
@@ -179,9 +179,9 @@ export function NewArticleDetailPage() {
             <div className="mx-auto max-w-3xl space-y-10">
               {sections.map((s) => (
                 <section key={s.heading}>
-                  <h2 className="text-xl font-extrabold tracking-tight text-slate-950 sm:text-2xl">{s.heading}</h2>
+                  <h2 className="text-xl font-extrabold tracking-tight text-black sm:text-2xl">{s.heading}</h2>
                   {s.paras.map((p, i) => (
-                    <p key={i} className="mt-4 text-[15px] leading-[1.8] text-slate-600">{p}</p>
+                    <p key={i} className="mt-4 text-[15px] leading-[1.8] text-black">{p}</p>
                   ))}
                 </section>
               ))}
@@ -190,21 +190,21 @@ export function NewArticleDetailPage() {
 
           {/* CTA */}
           <div className="px-4 py-10 sm:px-6">
-            <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center sm:flex-row sm:justify-between sm:text-left">
+            <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 rounded-2xl border border-neutral-200 bg-white p-8 text-center sm:flex-row sm:justify-between sm:text-left">
               <div>
-                <h2 className="text-base font-extrabold text-slate-900">Hiring against this market?</h2>
-                <p className="mt-1 text-sm text-slate-600">Get a free mandate review with a practice lead.</p>
+                <h2 className="text-base font-extrabold text-black">Hiring against this market?</h2>
+                <p className="mt-1 text-sm text-black">Get a free mandate review with a practice lead.</p>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-3">
                 <Link
                   to="/employers"
-                  className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-[#0265FF] px-5 text-xs font-bold text-white hover:bg-[#0055db] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0265FF]"
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-black px-5 text-xs font-bold text-white hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
                 >
                   Start your mandate <ArrowRight size={13} aria-hidden />
                 </Link>
                 <Link
                   to="/contact"
-                  className="inline-flex min-h-[44px] items-center rounded-full border border-slate-300 bg-white px-5 text-xs font-bold text-slate-700 hover:border-slate-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0265FF]"
+                  className="inline-flex min-h-[44px] items-center rounded-full border border-neutral-300 bg-white px-5 text-xs font-bold text-black hover:border-neutral-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
                 >
                   Talk to an expert
                 </Link>
@@ -215,11 +215,11 @@ export function NewArticleDetailPage() {
 
         {/* ===== RELATED INSIGHTS ===== */}
         {related.length > 0 ? (
-          <section aria-label="Related insights" className="border-t border-slate-100 px-4 py-12 sm:px-6">
+          <section aria-label="Related insights" className="border-t border-neutral-200 px-4 py-12 sm:px-6">
             <div className="mx-auto max-w-5xl">
               <div className="flex items-center justify-between gap-4">
-                <h2 className="text-lg font-extrabold tracking-tight text-slate-950 sm:text-xl">Related insights</h2>
-                <Link to="/insights" className="text-xs font-bold text-[#0265FF] hover:underline">
+                <h2 className="text-lg font-extrabold tracking-tight text-black sm:text-xl">Related insights</h2>
+                <Link to="/insights" className="text-xs font-bold text-black hover:underline">
                   View all →
                 </Link>
               </div>
@@ -229,11 +229,11 @@ export function NewArticleDetailPage() {
         ) : null}
 
         {/* ===== RECENT INSIGHTS ===== */}
-        <section aria-label="Recent insights" className="border-t border-slate-100 px-4 py-12 sm:px-6">
+        <section aria-label="Recent insights" className="border-t border-neutral-200 px-4 py-12 sm:px-6">
           <div className="mx-auto max-w-5xl">
             <div className="flex items-center justify-between gap-4">
-              <h2 className="text-lg font-extrabold tracking-tight text-slate-950 sm:text-xl">Recent insights</h2>
-              <Link to="/insights" className="text-xs font-bold text-[#0265FF] hover:underline">
+              <h2 className="text-lg font-extrabold tracking-tight text-black sm:text-xl">Recent insights</h2>
+              <Link to="/insights" className="text-xs font-bold text-black hover:underline">
                 View all →
               </Link>
             </div>
@@ -242,10 +242,10 @@ export function NewArticleDetailPage() {
         </section>
 
         {/* back */}
-        <div className="border-t border-slate-100 px-4 py-8 text-center sm:px-6">
+        <div className="border-t border-neutral-200 px-4 py-8 text-center sm:px-6">
           <Link
             to="/insights"
-            className="inline-flex min-h-[44px] items-center gap-2 text-sm font-bold text-slate-600 hover:text-[#0265FF] focus-visible:outline-2 focus-visible:outline-[#0265FF]"
+            className="inline-flex min-h-[44px] items-center gap-2 text-sm font-bold text-black hover:text-black focus-visible:outline-2 focus-visible:outline-black"
           >
             <ArrowLeft size={15} aria-hidden /> Back to all insights
           </Link>

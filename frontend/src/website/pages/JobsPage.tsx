@@ -58,7 +58,7 @@ export function JobsPage() {
   }, []);
 
   return (
-    <div className="bg-white min-h-screen text-slate-900 font-sans relative overflow-x-clip">
+    <div className="bg-white min-h-screen text-black font-sans relative overflow-x-clip">
       {/* SEO & Meta Tags */}
       <SeoHead
         title="Explore Tech, GCC & AI Leadership Jobs | Nexa Talent IT Solutions"

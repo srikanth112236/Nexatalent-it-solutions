@@ -20,14 +20,14 @@ export const VideoHero: React.FC<VideoHeroProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
 
   return (
-    <section style={{ maxWidth: '1280px', margin: '0 auto', padding: '5rem 2rem', textAlign: 'center' }}>
+    <section className="font-sans" style={{ maxWidth: '1280px', margin: '0 auto', padding: '5rem 2rem', textAlign: 'center', backgroundColor: '#ffffff' }}>
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.4 }}
       >
-        <Badge variant="primary" style={{ marginBottom: '1.25rem' }}>{badge}</Badge>
+        <Badge variant="default" style={{ marginBottom: '1.25rem' }}>{badge}</Badge>
       </motion.div>
 
       <motion.h2
@@ -35,7 +35,7 @@ export const VideoHero: React.FC<VideoHeroProps> = ({
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6, delay: 0.1, ease: motionTokens.ease.standard }}
-        style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)', fontWeight: 800, letterSpacing: '-0.03em', maxWidth: '840px', margin: '0 auto 1.25rem auto', color: '#ffffff' }}
+        style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)', fontWeight: 800, letterSpacing: '-0.03em', maxWidth: '840px', margin: '0 auto 1.25rem auto', color: '#000000' }}
       >
         {title}
       </motion.h2>
@@ -45,7 +45,7 @@ export const VideoHero: React.FC<VideoHeroProps> = ({
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6, delay: 0.2, ease: motionTokens.ease.standard }}
-        style={{ color: 'var(--color-text-muted)', fontSize: '1.1rem', maxWidth: '640px', margin: '0 auto 3rem auto', lineHeight: 1.6 }}
+        style={{ color: '#000000', fontSize: '1.1rem', maxWidth: '640px', margin: '0 auto 3rem auto', lineHeight: 1.6 }}
       >
         {description}
       </motion.p>
@@ -63,8 +63,8 @@ export const VideoHero: React.FC<VideoHeroProps> = ({
           margin: '0 auto',
           borderRadius: 'var(--radius-2xl)',
           overflow: 'hidden',
-          border: '1px solid rgba(59, 130, 246, 0.4)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 35px rgba(59, 130, 246, 0.2)',
+          border: '1px solid #e5e5e5',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
           cursor: 'pointer',
         }}
         onClick={() => setIsPlaying(true)}
@@ -103,7 +103,7 @@ export const VideoHero: React.FC<VideoHeroProps> = ({
                 width: '76px',
                 height: '76px',
                 borderRadius: '50%',
-                border: '2px solid rgba(59, 130, 246, 0.6)',
+                border: '2px solid rgba(0, 0, 0, 0.5)',
               }}
             />
 
@@ -114,11 +114,11 @@ export const VideoHero: React.FC<VideoHeroProps> = ({
                 width: '76px',
                 height: '76px',
                 borderRadius: '50%',
-                backgroundColor: 'var(--color-primary)',
+                backgroundColor: '#000000',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 0 30px rgba(59, 130, 246, 0.7)',
+                boxShadow: '0 0 30px rgba(0, 0, 0, 0.5)',
                 position: 'relative',
                 zIndex: 2,
               }}
@@ -135,12 +135,12 @@ export const VideoHero: React.FC<VideoHeroProps> = ({
         title="NexaTalent IT Solutions Platform Overview & Workflow"
         maxWidth="840px"
       >
-        <div style={{ aspectRatio: '16/9', backgroundColor: '#090d16', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--color-border)' }}>
+        <div style={{ aspectRatio: '16/9', backgroundColor: '#ffffff', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #000000' }}>
           <div style={{ textAlign: 'center', padding: '2rem' }}>
-            <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.5rem' }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#000000', marginBottom: '0.5rem' }}>
               Platform Video Tour Activated
             </div>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+            <p style={{ color: '#000000', fontSize: '0.875rem' }}>
               Demonstrating the real-time client pipeline, candidate verification checks, and SLA clock.
             </p>
           </div>

@@ -30,12 +30,13 @@ export const MegaFooter: React.FC = () => {
 
   return (
     <footer
+      className="font-sans"
       style={{
-        backgroundColor: '#090d16',
-        borderTop: '1px solid var(--color-border)',
+        backgroundColor: '#ffffff',
+        borderTop: '1px solid #000000',
         padding: '5rem 2rem 3rem 2rem',
         position: 'relative',
-        color: 'var(--color-text-secondary)',
+        color: '#000000',
         overflow: 'hidden'
       }}
     >
@@ -52,8 +53,8 @@ export const MegaFooter: React.FC = () => {
           style={{
             padding: '2.5rem',
             borderRadius: 'var(--radius-2xl)',
-            backgroundColor: 'var(--color-surface)',
-            border: '1px solid var(--color-border)',
+            backgroundColor: '#ffffff',
+            border: '1px solid #000000',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -64,10 +65,10 @@ export const MegaFooter: React.FC = () => {
           }}
         >
           <div>
-            <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--color-text)', marginBottom: '0.4rem' }}>
+            <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#000000', marginBottom: '0.4rem' }}>
               Subscribe to the Engineering Talent Index
             </h3>
-            <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', maxWidth: '500px' }}>
+            <p style={{ fontSize: '0.875rem', color: '#000000', maxWidth: '500px' }}>
               Bi-weekly technical compensation benchmarks, GCC scaling analysis, and hiring velocity reports read by 14,000+ engineering leaders.
             </p>
           </div>
@@ -81,18 +82,18 @@ export const MegaFooter: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                color: 'var(--color-success)',
+                color: '#000000',
                 fontWeight: 600,
                 fontSize: '0.9375rem',
               }}
             >
-              <CheckCircle2 size={20} />
+              <CheckCircle2 size={20} color="#000000" />
               <span>Subscription Confirmed. Welcome to the Index.</span>
             </motion.div>
           ) : (
             <form onSubmit={handleSubscribe} style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <motion.input
-                whileFocus={{ scale: 1.02, borderColor: 'var(--color-primary-400)' }}
+                whileFocus={{ scale: 1.02, borderColor: '#000000' }}
                 type="email"
                 required
                 placeholder="engineering.leader@company.com"
@@ -101,9 +102,9 @@ export const MegaFooter: React.FC = () => {
                 style={{
                   padding: '0.75rem 1.25rem',
                   borderRadius: 'var(--radius-lg)',
-                  backgroundColor: 'rgba(15, 23, 42, 0.8)',
-                  border: '1px solid var(--color-border)',
-                  color: 'var(--color-text)',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #000000',
+                  color: '#000000',
                   fontSize: '0.875rem',
                   minWidth: '280px',
                   outline: 'none',
@@ -120,9 +121,9 @@ export const MegaFooter: React.FC = () => {
                   gap: '0.4rem',
                   padding: '0.75rem 1.5rem',
                   borderRadius: 'var(--radius-lg)',
-                  backgroundColor: 'var(--color-primary)',
+                  backgroundColor: '#000000',
                   color: '#ffffff',
-                  border: 'none',
+                  border: '1px solid #000000',
                   fontSize: '0.875rem',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -146,7 +147,7 @@ export const MegaFooter: React.FC = () => {
         >
           {/* Col 1: Solutions */}
           <motion.div variants={itemVariants}>
-            <h4 style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--color-text)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1.25rem' }}>
+            <h4 style={{ fontSize: '0.875rem', fontWeight: 800, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1.25rem' }}>
               Solutions
             </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
@@ -158,7 +159,7 @@ export const MegaFooter: React.FC = () => {
                 { to: '/solutions/executive-search', label: 'Executive CXO Search' },
                 { to: '/solutions/volume-hiring', label: 'Volume Hiring Drives' }
               ].map((item, i) => (
-                <motion.li key={i} whileHover={{ x: 5, color: 'var(--color-primary-400)' }} transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}>
+                <motion.li key={i} whileHover={{ x: 5, color: '#000000' }} transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}>
                   <Link to={item.to} style={{ color: 'inherit', textDecoration: 'none' }}>{item.label}</Link>
                 </motion.li>
               ))}
@@ -167,7 +168,7 @@ export const MegaFooter: React.FC = () => {
 
           {/* Col 2: Verticals */}
           <motion.div variants={itemVariants}>
-            <h4 style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--color-text)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1.25rem' }}>
+            <h4 style={{ fontSize: '0.875rem', fontWeight: 800, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1.25rem' }}>
               Practices
             </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
@@ -179,7 +180,7 @@ export const MegaFooter: React.FC = () => {
                 { to: '/industries/manufacturing', label: 'Manufacturing & IoT' },
                 { to: '/industries/gcc', label: 'Global Capability Centers' }
               ].map((item, i) => (
-                <motion.li key={i} whileHover={{ x: 5, color: 'var(--color-primary-400)' }} transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}>
+                <motion.li key={i} whileHover={{ x: 5, color: '#000000' }} transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}>
                   <Link to={item.to} style={{ color: 'inherit', textDecoration: 'none' }}>{item.label}</Link>
                 </motion.li>
               ))}
@@ -188,7 +189,7 @@ export const MegaFooter: React.FC = () => {
 
           {/* Col 3: Hub Locations */}
           <motion.div variants={itemVariants}>
-            <h4 style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--color-text)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1.25rem' }}>
+            <h4 style={{ fontSize: '0.875rem', fontWeight: 800, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1.25rem' }}>
               Locations
             </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
@@ -199,7 +200,7 @@ export const MegaFooter: React.FC = () => {
                 { to: '/contact', label: 'Mumbai Financial Center' },
                 { to: '/contact', label: 'Contact Global Hubs' }
               ].map((item, i) => (
-                <motion.li key={i} whileHover={{ x: 5, color: 'var(--color-primary-400)' }} transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}>
+                <motion.li key={i} whileHover={{ x: 5, color: '#000000' }} transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}>
                   <Link to={item.to} style={{ color: 'inherit', textDecoration: 'none' }}>{item.label}</Link>
                 </motion.li>
               ))}
@@ -208,7 +209,7 @@ export const MegaFooter: React.FC = () => {
 
           {/* Col 4: Platform & Portals */}
           <motion.div variants={itemVariants}>
-            <h4 style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--color-text)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1.25rem' }}>
+            <h4 style={{ fontSize: '0.875rem', fontWeight: 800, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1.25rem' }}>
               Platform Portals
             </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
@@ -219,7 +220,7 @@ export const MegaFooter: React.FC = () => {
                 { to: '/jobs', label: 'Job Board & Open Mandates' },
                 { to: '/login', label: 'Unified Sign In' }
               ].map((item, i) => (
-                <motion.li key={i} whileHover={{ x: 5, color: 'var(--color-primary-400)' }} transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}>
+                <motion.li key={i} whileHover={{ x: 5, color: '#000000' }} transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}>
                   <Link to={item.to} style={{ color: 'inherit', textDecoration: 'none' }}>{item.label}</Link>
                 </motion.li>
               ))}
@@ -228,7 +229,7 @@ export const MegaFooter: React.FC = () => {
 
           {/* Col 5: Company & Compliance */}
           <motion.div variants={itemVariants}>
-            <h4 style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--color-text)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1.25rem' }}>
+            <h4 style={{ fontSize: '0.875rem', fontWeight: 800, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1.25rem' }}>
               Trust & Legal
             </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
@@ -241,7 +242,7 @@ export const MegaFooter: React.FC = () => {
                 { to: '/data-protection', label: 'IP & Non-Solicitation' },
                 { to: '/contact', label: 'Contact & Office SLA' }
               ].map((item, i) => (
-                <motion.li key={i} whileHover={{ x: 5, color: 'var(--color-primary-400)' }} transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}>
+                <motion.li key={i} whileHover={{ x: 5, color: '#000000' }} transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}>
                   <Link to={item.to} style={{ color: 'inherit', textDecoration: 'none' }}>{item.label}</Link>
                 </motion.li>
               ))}
@@ -254,34 +255,34 @@ export const MegaFooter: React.FC = () => {
           variants={itemVariants}
           style={{
             paddingTop: '2rem',
-            borderTop: '1px solid var(--color-border)',
+            borderTop: '1px solid #e5e5e5',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
             flexWrap: 'wrap',
             gap: '1.5rem',
             fontSize: '0.8125rem',
-            color: 'var(--color-text-tertiary)',
+            color: '#000000',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <span style={{ fontWeight: 700, color: 'var(--color-text)' }}>
+            <span style={{ fontWeight: 700, color: '#000000' }}>
               NexaTalent IT Solutions Operating System
             </span>
             <span>© {new Date().getFullYear()} NexaTalent IT Solutions Inc. All rights reserved.</span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--color-success)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#000000' }}>
               <motion.div 
                 animate={{ opacity: [1, 0.4, 1] }} 
                 transition={{ duration: 2, repeat: Infinity }}
-                style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--color-success)', boxShadow: '0 0 8px var(--color-success)' }} 
+                style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#000000' }} 
               />
               <span>SLA Core Systems Operational (99.98%)</span>
             </div>
             <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              <ShieldCheck size={14} color="var(--color-primary-400)" />
+              <ShieldCheck size={14} color="#000000" />
               ISO 27001 Certified
             </span>
           </div>

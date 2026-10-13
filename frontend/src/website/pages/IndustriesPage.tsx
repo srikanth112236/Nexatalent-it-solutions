@@ -57,8 +57,8 @@ export const INDUSTRIES_DATA = [
     title: 'Technology & SaaS',
     tagline: 'Hyper-scale engineering, distributed systems & AI/ML architecture',
     icon: Cpu,
-    color: '#0265FF',
-    bgLight: '#EFF6FF',
+    color: '#000000',
+    bgLight: '#ffffff',
     metrics: { placed: '4,800+ Hires', avgSla: '12 Days', retention: '96.2%' },
     description: 'We recruit core engineering leaders and individual contributors across backend infrastructure, cloud-native architecture, LLM engineering, and platform scale.',
     roles: ['Staff Backend Engineer (Go / Java / Rust)', 'Distributed Systems Architect', 'Principal AI/ML Scientist', 'Head of Engineering (SaaS)', 'Cloud DevOps / SRE Lead'],
@@ -70,8 +70,8 @@ export const INDUSTRIES_DATA = [
     title: 'BFSI & FinTech',
     tagline: 'Ultra-low latency trading, core banking modernization & regulatory compliance',
     icon: Landmark,
-    color: '#0265FF',
-    bgLight: '#EFF6FF',
+    color: '#000000',
+    bgLight: '#ffffff',
     metrics: { placed: '2,900+ Hires', avgSla: '14 Days', retention: '94.8%' },
     description: 'Specialized hiring for high-frequency trading (HFT) firms, global investment banks, payment gateways, and neo-banking platforms.',
     roles: ['Low-Latency C++ Trading Systems Dev', 'Payment Gateway Security Architect', 'Quantitative Risk Analyst', 'Core Banking (Temenos/Finacle) Specialist', 'FinTech Chief Technology Officer'],
@@ -83,8 +83,8 @@ export const INDUSTRIES_DATA = [
     title: 'Healthcare & Life Sciences',
     tagline: 'HIPAA-compliant platforms, clinical AI, and medical device software',
     icon: Stethoscope,
-    color: '#0265FF',
-    bgLight: '#EFF6FF',
+    color: '#000000',
+    bgLight: '#ffffff',
     metrics: { placed: '1,750+ Hires', avgSla: '16 Days', retention: '95.4%' },
     description: 'Placing specialized software engineering and data science professionals within digital health platforms, genomics, and telemedicine leaders.',
     roles: ['Health Informatics Director', 'FHIR / HL7 Integration Engineer', 'Bioinformatics Data Scientist', 'Medical Device Firmware Lead', 'HIPAA Cloud Security Architect'],
@@ -96,8 +96,8 @@ export const INDUSTRIES_DATA = [
     title: 'Manufacturing & Industrial IoT',
     tagline: 'Industry 4.0, embedded firmware, SCADA, and smart robotics automation',
     icon: Factory,
-    color: '#0265FF',
-    bgLight: '#EFF6FF',
+    color: '#000000',
+    bgLight: '#ffffff',
     metrics: { placed: '1,400+ Hires', avgSla: '18 Days', retention: '93.7%' },
     description: 'Empowering automotive OEMs, semiconductor manufacturers, and smart factories with hardware-adjacent software leaders.',
     roles: ['Embedded C/C++ Autosar Developer', 'SCADA & Industrial IoT Architect', 'Robotics Vision Engineer', 'Supply Chain Digital Twin Specialist', 'Hardware Integration QA Lead'],
@@ -109,8 +109,8 @@ export const INDUSTRIES_DATA = [
     title: 'Retail, E-Commerce & Supply Chain',
     tagline: 'High-concurrency checkout engines, warehouse robotics & omnichannel tech',
     icon: ShoppingBag,
-    color: '#0265FF',
-    bgLight: '#EFF6FF',
+    color: '#000000',
+    bgLight: '#ffffff',
     metrics: { placed: '2,200+ Hires', avgSla: '11 Days', retention: '94.1%' },
     description: 'Delivering elastic scaling talent for rapid delivery apps, omnichannel retail empires, and multi-tier logistics platforms.',
     roles: ['High-Concurrency Checkout Architect', 'Warehouse Automation Tech Lead', 'Dynamic Pricing Data Scientist', 'Search & Recommendation ML Engineer', 'Mobile Commerce Principal'],
@@ -122,8 +122,8 @@ export const INDUSTRIES_DATA = [
     title: 'Professional Services & Consulting',
     tagline: 'Management consulting, Big-4 digital transformations & technology advisory',
     icon: BriefcaseBusiness,
-    color: '#0265FF',
-    bgLight: '#EFF6FF',
+    color: '#000000',
+    bgLight: '#ffffff',
     metrics: { placed: '3,100+ Hires', avgSla: '15 Days', retention: '92.9%' },
     description: 'Staffing enterprise strategy firms, systems integrators, and elite technology consulting practices with client-facing architects.',
     roles: ['Enterprise Cloud Transformation Director', 'Strategy & Architecture Partner', 'SAP S/4HANA Program Lead', 'Cybersecurity Advisory Specialist', 'Digital Workplace Solutions Architect'],
@@ -135,8 +135,8 @@ export const INDUSTRIES_DATA = [
     title: 'Global Capability Centers (GCC)',
     tagline: 'Turnkey offshore engineering hubs, center-of-excellence setup & cost arbitrage',
     icon: Globe2,
-    color: '#0265FF',
-    bgLight: '#EFF6FF',
+    color: '#000000',
+    bgLight: '#ffffff',
     metrics: { placed: '5,500+ Hires', avgSla: '10 Days', retention: '97.4%' },
     description: 'Building complete offshore engineering pods from Day 0 for Fortune 500 multinationals establishing or scaling their India GCCs.',
     roles: ['GCC Managing Director / Site Leader', 'Core Platform Pod (1 Architect + 4 Senior + 2 QA)', 'Offshore People Operations Lead', 'Security & Compliance Officer', 'Staff Product Manager (Global Ownership)'],
@@ -148,8 +148,8 @@ export const INDUSTRIES_DATA = [
     title: 'Automotive & Autonomous Mobility',
     tagline: 'AUTOSAR adaptive stacks, ADAS computer vision & connected EV platforms',
     icon: Car,
-    color: '#0265FF',
-    bgLight: '#EFF6FF',
+    color: '#000000',
+    bgLight: '#ffffff',
     metrics: { placed: '1,250+ Hires', avgSla: '15 Days', retention: '95.1%' },
     description: 'Sourcing software engineers for autonomous vehicle perception, battery management systems, and next-gen infotainment.',
     roles: ['AUTOSAR Embedded Architect', 'ADAS Perception ML Engineer', 'EV Battery Management System (BMS) Lead', 'Infotainment Android Automotive Dev', 'Functional Safety (ISO 26262) Specialist'],
@@ -161,8 +161,8 @@ export const INDUSTRIES_DATA = [
     title: 'Telecommunications & 5G Edge',
     tagline: 'OpenRAN architecture, cloud-native packet cores & 5G MEC edge computing',
     icon: Radio,
-    color: '#0265FF',
-    bgLight: '#EFF6FF',
+    color: '#000000',
+    bgLight: '#ffffff',
     metrics: { placed: '1,600+ Hires', avgSla: '14 Days', retention: '93.8%' },
     description: 'Staffing telecom equipment vendors, Tier-1 operators, and satellite broadband providers with cloud-native network engineers.',
     roles: ['5G Core Network Protocol Engineer', 'OpenRAN Software Developer', 'MEC Edge Computing Architect', 'DPDK / SR-IOV Performance Lead', 'Network Function Virtualization (NFV) Dev'],
@@ -174,8 +174,8 @@ export const INDUSTRIES_DATA = [
     title: 'Aerospace & Defense Technology',
     tagline: 'DO-178C avionics software, real-time embedded Linux & satellite systems',
     icon: Plane,
-    color: '#0265FF',
-    bgLight: '#EFF6FF',
+    color: '#000000',
+    bgLight: '#ffffff',
     metrics: { placed: '850+ Hires', avgSla: '20 Days', retention: '98.0%' },
     description: 'Recruiting safety-critical software engineers for defense contractors, satellite constellations, and commercial avionics.',
     roles: ['DO-178C Flight Control Software Engineer', 'Satellite Telemetry & Command Developer', 'Real-Time Embedded RTOS Specialist', 'Radar Signal Processing Lead', 'Guidance & Navigation Systems (GNC) Engineer'],
@@ -187,8 +187,8 @@ export const INDUSTRIES_DATA = [
     title: 'Energy, Utilities & CleanTech',
     tagline: 'Smart grid telemetry, renewable energy analytics & carbon tracking software',
     icon: Sun,
-    color: '#0265FF',
-    bgLight: '#EFF6FF',
+    color: '#000000',
+    bgLight: '#ffffff',
     metrics: { placed: '1,100+ Hires', avgSla: '16 Days', retention: '94.5%' },
     description: 'Building software engineering and IoT teams for renewable power operators, smart grid utilities, and ESG software startups.',
     roles: ['Smart Grid Telemetry Architect', 'Renewable Forecasting Data Scientist', 'SCADA Energy Management Specialist', 'Carbon Accounting Software Lead', 'Utility IoT Firmware Engineer'],
@@ -200,8 +200,8 @@ export const INDUSTRIES_DATA = [
     title: 'Media, Gaming & Streaming Tech',
     tagline: 'Unreal Engine 5, WebRTC low-latency streaming & cloud gaming infrastructure',
     icon: Gamepad2,
-    color: '#0265FF',
-    bgLight: '#EFF6FF',
+    color: '#000000',
+    bgLight: '#ffffff',
     metrics: { placed: '1,950+ Hires', avgSla: '12 Days', retention: '93.5%' },
     description: 'Providing graphics programmers, video pipeline engineers, and game server architects to AAA studios and streaming media platforms.',
     roles: ['Unreal Engine 5 Graphics Programmer', 'WebRTC Video Pipeline Lead', 'Game Server Infrastructure Architect', 'Anti-Cheat Security Engineer', '3D Asset Pipeline Tools Developer'],
@@ -213,8 +213,8 @@ export const INDUSTRIES_DATA = [
     title: 'EdTech & Digital Learning',
     tagline: 'Interactive video platforms, adaptive AI tutoring & global LMS engines',
     icon: BookOpen,
-    color: '#0265FF',
-    bgLight: '#EFF6FF',
+    color: '#000000',
+    bgLight: '#ffffff',
     metrics: { placed: '1,500+ Hires', avgSla: '13 Days', retention: '92.4%' },
     description: 'Scaling engineering teams for global learning management platforms, gamified education apps, and AI tutoring systems.',
     roles: ['Adaptive AI Tutoring ML Lead', 'Real-Time Video Classroom Engineer', 'EdTech Product Architect', 'Gamification UX/UI Principal', 'Global LMS Scalability Engineer'],
@@ -226,8 +226,8 @@ export const INDUSTRIES_DATA = [
     title: 'Logistics & Express Freight',
     tagline: 'Dynamic route optimization, fleet IoT telemetry & automated warehousing',
     icon: Truck,
-    color: '#0265FF',
-    bgLight: '#EFF6FF',
+    color: '#000000',
+    bgLight: '#ffffff',
     metrics: { placed: '1,800+ Hires', avgSla: '14 Days', retention: '95.0%' },
     description: 'Sourcing logistics tech leaders for 3PL providers, last-mile delivery platforms, and international freight aggregators.',
     roles: ['Route Optimization Operations Research Lead', 'Fleet Telemetry IoT Architect', 'Warehouse Management System (WMS) Lead', 'Cross-Border Freight Tech Principal', 'Last-Mile Delivery Backend Lead'],
@@ -239,8 +239,8 @@ export const INDUSTRIES_DATA = [
     title: 'Pharma & BioTech Data Systems',
     tagline: 'AI drug discovery pipelines, LIMS data management & clinical trial platforms',
     icon: Activity,
-    color: '#0265FF',
-    bgLight: '#EFF6FF',
+    color: '#000000',
+    bgLight: '#ffffff',
     metrics: { placed: '920+ Hires', avgSla: '17 Days', retention: '97.1%' },
     description: 'Placing computational biologists, LIMS software architects, and clinical data pipeline engineers for global pharma R&D hubs.',
     roles: ['Computational Biology ML Scientist', 'LIMS Enterprise System Architect', 'Clinical Trial Data Pipeline Lead', '21 CFR Part 11 Compliance Engineer', 'Genomic Data Platform Architect'],
@@ -252,8 +252,8 @@ export const INDUSTRIES_DATA = [
     title: 'InsurTech & Risk Analytics',
     tagline: 'Automated policy underwriting engines, claims vision AI & actuarial data models',
     icon: Shield,
-    color: '#0265FF',
-    bgLight: '#EFF6FF',
+    color: '#000000',
+    bgLight: '#ffffff',
     metrics: { placed: '1,350+ Hires', avgSla: '15 Days', retention: '94.6%' },
     description: 'Delivering engineering talent to digital insurance carriers, underwriting automation platforms, and claims AI startups.',
     roles: ['Underwriting Automation ML Architect', 'Claims Document Computer Vision Lead', 'Actuarial Data Engineering Specialist', 'Core Policy Engine Developer', 'InsurTech Security & Compliance Officer'],
@@ -290,6 +290,7 @@ export function IndustriesPage() {
 
   return (
     <div
+      className="font-sans"
       style={{
         position: 'relative',
         display: 'block',
@@ -322,7 +323,7 @@ export function IndustriesPage() {
         position: 'relative', 
         paddingTop: '8rem', 
         paddingBottom: '4.5rem', 
-        background: 'linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%)',
+        background: '#ffffff',
         borderBottom: '1px solid #E2E8F0'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem', textAlign: 'center' }}>
@@ -335,9 +336,9 @@ export function IndustriesPage() {
               gap: '0.5rem',
               padding: '0.4rem 1rem',
               borderRadius: '9999px',
-              backgroundColor: '#EFF6FF',
-              border: '1px solid #BFDBFE',
-              color: '#0265FF',
+              backgroundColor: '#ffffff',
+              border: '1px solid #000000',
+              color: '#000000',
               fontSize: '0.85rem',
               fontWeight: 700,
               marginBottom: '1.25rem'
@@ -355,12 +356,12 @@ export function IndustriesPage() {
               fontSize: 'clamp(2.2rem, 5vw, 3.75rem)',
               fontWeight: 800,
               letterSpacing: '-0.03em',
-              color: '#0B132B',
+              color: '#000000',
               lineHeight: 1.15,
               marginBottom: '1.25rem'
             }}
           >
-            Specialized Talent Across <span style={{ color: '#0265FF' }}>16 Core Industries</span>
+            Specialized Talent Across <span style={{ color: '#000000' }}>16 Core Industries</span>
           </motion.h1>
 
           <motion.p
@@ -369,7 +370,7 @@ export function IndustriesPage() {
             transition={{ delay: 0.2 }}
             style={{
               fontSize: 'clamp(1rem, 2vw, 1.2rem)',
-              color: '#475569',
+              color: '#000000',
               maxWidth: '820px',
               margin: '0 auto 2.5rem',
               lineHeight: 1.6
@@ -384,10 +385,10 @@ export function IndustriesPage() {
       {/* Interactive Vertical Practice Navigator */}
       <section style={{ padding: '4rem 1.5rem', maxWidth: '1280px', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#0B132B', marginBottom: '0.5rem' }}>
+          <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#000000', marginBottom: '0.5rem' }}>
             Explore Sector Capabilities & Delivery Models
           </h2>
-          <p style={{ color: '#64748B', fontSize: '1rem' }}>
+          <p style={{ color: '#000000', fontSize: '1rem' }}>
             Click an industry below to inspect roles placed, market challenges, and our tailored sourcing solutions.
           </p>
         </div>
@@ -415,8 +416,8 @@ export function IndustriesPage() {
                   padding: '0.75rem 1.25rem',
                   borderRadius: '12px',
                   border: isActive ? `2px solid ${ind.color}` : '1px solid #E2E8F0',
-                  backgroundColor: isActive ? ind.bgLight : '#ffffff',
-                  color: isActive ? ind.color : '#334155',
+                  backgroundColor: isActive ? '#000000' : '#ffffff',
+                  color: isActive ? '#ffffff' : '#000000',
                   fontWeight: 700,
                   fontSize: '0.9rem',
                   whiteSpace: 'nowrap',
@@ -425,7 +426,7 @@ export function IndustriesPage() {
                   boxShadow: isActive ? '0 4px 15px rgba(0,0,0,0.06)' : 'none'
                 }}
               >
-                <Icon size={18} color={ind.color} />
+                <Icon size={18} color={isActive ? '#ffffff' : '#000000'} />
                 <span>{ind.title}</span>
               </button>
             );
@@ -461,12 +462,12 @@ export function IndustriesPage() {
                   <activeIndustry.icon size={28} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0B132B' }}>{activeIndustry.title}</h3>
-                  <div style={{ fontSize: '0.9rem', color: '#64748B' }}>{activeIndustry.tagline}</div>
+                  <h3 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#000000' }}>{activeIndustry.title}</h3>
+                  <div style={{ fontSize: '0.9rem', color: '#000000' }}>{activeIndustry.tagline}</div>
                 </div>
               </div>
 
-              <p style={{ fontSize: '1rem', color: '#475569', lineHeight: 1.6, marginBottom: '2rem' }}>
+              <p style={{ fontSize: '1rem', color: '#000000', lineHeight: 1.6, marginBottom: '2rem' }}>
                 {activeIndustry.description}
               </p>
 
@@ -475,7 +476,7 @@ export function IndustriesPage() {
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr 1fr',
                 gap: '1rem',
-                backgroundColor: '#F8FAFC',
+                backgroundColor: '#ffffff',
                 padding: '1.25rem',
                 borderRadius: '16px',
                 border: '1px solid #E2E8F0',
@@ -483,25 +484,25 @@ export function IndustriesPage() {
               }}>
                 <div>
                   <div style={{ fontSize: '1.25rem', fontWeight: 800, color: activeIndustry.color }}>{activeIndustry.metrics.placed}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>Placements</div>
+                  <div style={{ fontSize: '0.75rem', color: '#000000', fontWeight: 600 }}>Placements</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0B132B' }}>{activeIndustry.metrics.avgSla}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>Avg. Shortlist SLA</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#000000' }}>{activeIndustry.metrics.avgSla}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#000000', fontWeight: 600 }}>Avg. Shortlist SLA</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#10B981' }}>{activeIndustry.metrics.retention}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>1-Year Retention</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#000000' }}>{activeIndustry.metrics.retention}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#000000', fontWeight: 600 }}>1-Year Retention</div>
                 </div>
               </div>
 
               <div style={{ marginBottom: '1.5rem' }}>
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0B132B', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem' }}>
+                <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem' }}>
                   Frequently Staffed Roles
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {activeIndustry.roles.map((role) => (
-                    <div key={role} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: '#334155' }}>
+                    <div key={role} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: '#000000' }}>
                       <CheckCircle2 size={16} color={activeIndustry.color} />
                       <span style={{ fontWeight: 600 }}>{role}</span>
                     </div>
@@ -529,35 +530,35 @@ export function IndustriesPage() {
             {/* Right: Sector Hiring Challenges & Nexa Solution */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div style={{
-                backgroundColor: '#FEF2F2',
-                border: '1px solid #FECACA',
+                backgroundColor: '#ffffff',
+                border: '1px solid #000000',
                 padding: '1.75rem',
                 borderRadius: '16px'
               }}>
-                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#991B1B', marginBottom: '0.5rem' }}>
+                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#000000', marginBottom: '0.5rem' }}>
                   The Sector Hiring Challenge
                 </h4>
-                <p style={{ fontSize: '0.9rem', color: '#B91C1C', lineHeight: 1.6 }}>
+                <p style={{ fontSize: '0.9rem', color: '#000000', lineHeight: 1.6 }}>
                   {activeIndustry.challenges}
                 </p>
               </div>
 
               <div style={{
-                backgroundColor: '#F0FDF4',
-                border: '1px solid #BBF7D0',
+                backgroundColor: '#000000',
+                border: '1px solid #000000',
                 padding: '1.75rem',
                 borderRadius: '16px'
               }}>
-                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#166534', marginBottom: '0.5rem' }}>
+                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.5rem' }}>
                   How NexaTalent IT Solutions Solves It
                 </h4>
-                <p style={{ fontSize: '0.9rem', color: '#15803D', lineHeight: 1.6 }}>
+                <p style={{ fontSize: '0.9rem', color: '#ffffff', lineHeight: 1.6 }}>
                   {activeIndustry.nexaSolution}
                 </p>
               </div>
 
               <div style={{
-                backgroundColor: '#F8FAFC',
+                backgroundColor: '#ffffff',
                 border: '1px solid #E2E8F0',
                 padding: '1.75rem',
                 borderRadius: '16px',
@@ -568,8 +569,8 @@ export function IndustriesPage() {
                 gap: '1rem'
               }}>
                 <div>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0B132B' }}>Need tailored talent in {activeIndustry.title}?</div>
-                  <div style={{ fontSize: '0.8rem', color: '#64748B' }}>Submit a requisition or book an advisory slot with the practice lead.</div>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#000000' }}>Need tailored talent in {activeIndustry.title}?</div>
+                  <div style={{ fontSize: '0.8rem', color: '#000000' }}>Submit a requisition or book an advisory slot with the practice lead.</div>
                 </div>
                 <Link
                   to="/employers"

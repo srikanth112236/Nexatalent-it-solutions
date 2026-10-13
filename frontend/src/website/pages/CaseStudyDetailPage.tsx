@@ -235,6 +235,7 @@ export function CaseStudyDetailPage() {
 
   return (
     <div
+      className="font-sans"
       style={{
         position: 'relative',
         display: 'block',
@@ -261,24 +262,24 @@ export function CaseStudyDetailPage() {
         position: 'relative', 
         paddingTop: '8rem', 
         paddingBottom: '4.5rem', 
-        background: 'linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%)',
+        background: '#ffffff',
         borderBottom: '1px solid #E2E8F0'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem' }}>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#64748B', marginBottom: '1.5rem' }}>
-            <Link to="/" style={{ color: '#64748B', textDecoration: 'none' }}>Home</Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#000000', marginBottom: '1.5rem' }}>
+            <Link to="/" style={{ color: '#000000', textDecoration: 'none' }}>Home</Link>
             <ChevronRight size={14} />
-            <Link to="/case-studies" style={{ color: '#64748B', textDecoration: 'none' }}>Case Studies</Link>
+            <Link to="/case-studies" style={{ color: '#000000', textDecoration: 'none' }}>Case Studies</Link>
             <ChevronRight size={14} />
-            <span style={{ color: '#4361EE', fontWeight: 600 }}>{study.client}</span>
+            <span style={{ color: '#000000', fontWeight: 600 }}>{study.client}</span>
           </div>
 
           <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', marginBottom: '1.25rem' }}>
-            <span style={{ padding: '0.35rem 0.85rem', borderRadius: '9999px', backgroundColor: '#EEF2FF', color: '#4361EE', fontSize: '0.8rem', fontWeight: 700 }}>
+            <span style={{ padding: '0.35rem 0.85rem', borderRadius: '9999px', backgroundColor: '#ffffff', color: '#000000', fontSize: '0.8rem', fontWeight: 700 }}>
               {study.industry}
             </span>
-            <span style={{ padding: '0.35rem 0.85rem', borderRadius: '9999px', backgroundColor: '#ECFDF5', color: '#059669', fontSize: '0.8rem', fontWeight: 700 }}>
+            <span style={{ padding: '0.35rem 0.85rem', borderRadius: '9999px', backgroundColor: '#000000', color: '#ffffff', fontSize: '0.8rem', fontWeight: 700 }}>
               {study.badge}
             </span>
           </div>
@@ -287,7 +288,7 @@ export function CaseStudyDetailPage() {
             fontSize: 'clamp(2.2rem, 5vw, 3.5rem)',
             fontWeight: 800,
             letterSpacing: '-0.03em',
-            color: '#0B132B',
+            color: '#000000',
             lineHeight: 1.15,
             marginBottom: '1.5rem',
             maxWidth: '960px'
@@ -297,10 +298,10 @@ export function CaseStudyDetailPage() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#4361EE' }}>{study.headlineMetric}</div>
-              <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#64748B', maxWidth: '180px' }}>{study.headlineMetricLabel}</div>
+              <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#000000' }}>{study.headlineMetric}</div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#000000', maxWidth: '180px' }}>{study.headlineMetricLabel}</div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748B', fontSize: '0.9rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#000000', fontSize: '0.9rem' }}>
               <Building2 size={16} />
               <span>Client: <strong>{study.client}</strong></span>
             </div>
@@ -322,13 +323,13 @@ export function CaseStudyDetailPage() {
             border: '1px solid #E2E8F0',
             boxShadow: '0 10px 30px rgba(0,0,0,0.04)'
           }}>
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#DC2626', marginBottom: '0.75rem' }}>
+            <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#000000', marginBottom: '0.75rem' }}>
               The Operational Bottleneck
             </h2>
-            <p style={{ fontSize: '0.95rem', color: '#475569', lineHeight: 1.7, marginBottom: '1.25rem' }}>
+            <p style={{ fontSize: '0.95rem', color: '#000000', lineHeight: 1.7, marginBottom: '1.25rem' }}>
               {study.context}
             </p>
-            <p style={{ fontSize: '0.95rem', color: '#475569', lineHeight: 1.7 }}>
+            <p style={{ fontSize: '0.95rem', color: '#000000', lineHeight: 1.7 }}>
               {study.challenge}
             </p>
           </div>
@@ -340,13 +341,13 @@ export function CaseStudyDetailPage() {
             border: '1px solid #E2E8F0',
             boxShadow: '0 10px 30px rgba(0,0,0,0.04)'
           }}>
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#4361EE', marginBottom: '0.75rem' }}>
+            <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#000000', marginBottom: '0.75rem' }}>
               The NexaTalent IT Solutions Solution
             </h2>
-            <p style={{ fontSize: '0.95rem', color: '#475569', lineHeight: 1.7, marginBottom: '1.25rem' }}>
+            <p style={{ fontSize: '0.95rem', color: '#000000', lineHeight: 1.7, marginBottom: '1.25rem' }}>
               <strong>Mandate Requirement:</strong> {study.requirement}
             </p>
-            <p style={{ fontSize: '0.95rem', color: '#475569', lineHeight: 1.7 }}>
+            <p style={{ fontSize: '0.95rem', color: '#000000', lineHeight: 1.7 }}>
               {study.approach}
             </p>
           </div>
@@ -355,7 +356,7 @@ export function CaseStudyDetailPage() {
 
         {/* Execution Phasing */}
         <div style={{ marginBottom: '4rem' }}>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0B132B', marginBottom: '1.5rem', textAlign: 'center' }}>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#000000', marginBottom: '1.5rem', textAlign: 'center' }}>
             Execution Timeline & Delivery Milestones
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem' }}>
@@ -363,19 +364,19 @@ export function CaseStudyDetailPage() {
               <div
                 key={ex.phase}
                 style={{
-                  backgroundColor: '#F8FAFC',
+                  backgroundColor: '#ffffff',
                   padding: '2rem',
                   borderRadius: '16px',
                   border: '1px solid #E2E8F0'
                 }}
               >
-                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#4361EE', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#000000', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
                   {ex.phase}
                 </div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0B132B', marginBottom: '0.6rem' }}>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#000000', marginBottom: '0.6rem' }}>
                   {ex.title}
                 </h3>
-                <p style={{ fontSize: '0.85rem', color: '#64748B', lineHeight: 1.6 }}>
+                <p style={{ fontSize: '0.85rem', color: '#000000', lineHeight: 1.6 }}>
                   {ex.desc}
                 </p>
               </div>
@@ -385,17 +386,17 @@ export function CaseStudyDetailPage() {
 
         {/* Quantifiable Results Grid */}
         <div style={{
-          backgroundColor: '#0B132B',
+          backgroundColor: '#ffffff',
           borderRadius: '24px',
           padding: '3rem',
-          color: '#ffffff',
+          color: '#000000',
           marginBottom: '4rem'
         }}>
           <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-            <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.5rem' }}>
+            <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#000000', marginBottom: '0.5rem' }}>
               Auditable Business Impact & Results
             </h2>
-            <p style={{ color: '#94A3B8', fontSize: '0.95rem' }}>
+            <p style={{ color: '#000000', fontSize: '0.95rem' }}>
               Quantified deliverables achieved directly through our calibrated talent deployment.
             </p>
           </div>
@@ -403,13 +404,13 @@ export function CaseStudyDetailPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '2rem' }}>
             {study.results.map((r) => (
               <div key={r.label} style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#4361EE', marginBottom: '0.35rem' }}>
+                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#000000', marginBottom: '0.35rem' }}>
                   {r.metric}
                 </div>
-                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.4rem' }}>
+                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#000000', marginBottom: '0.4rem' }}>
                   {r.label}
                 </div>
-                <div style={{ fontSize: '0.8rem', color: '#94A3B8', lineHeight: 1.5 }}>
+                <div style={{ fontSize: '0.8rem', color: '#000000', lineHeight: 1.5 }}>
                   {r.desc}
                 </div>
               </div>
@@ -419,20 +420,20 @@ export function CaseStudyDetailPage() {
 
         {/* Executive Testimonial Quote */}
         <div style={{
-          backgroundColor: '#F8FAFC',
+          backgroundColor: '#ffffff',
           border: '1px solid #E2E8F0',
           borderRadius: '24px',
           padding: '3rem',
           position: 'relative',
           marginBottom: '4rem'
         }}>
-          <Quote size={48} color="#CBD5E1" style={{ position: 'absolute', top: '2rem', right: '2rem' }} />
-          <p style={{ fontSize: '1.25rem', color: '#0B132B', fontStyle: 'italic', lineHeight: 1.7, maxWidth: '850px', marginBottom: '1.5rem' }}>
+          <Quote size={48} color="#000000" style={{ position: 'absolute', top: '2rem', right: '2rem' }} />
+          <p style={{ fontSize: '1.25rem', color: '#000000', fontStyle: 'italic', lineHeight: 1.7, maxWidth: '850px', marginBottom: '1.5rem' }}>
             "{study.quote.text}"
           </p>
           <div>
-            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0B132B' }}>{study.quote.author}</div>
-            <div style={{ fontSize: '0.85rem', color: '#64748B' }}>{study.quote.title}, {study.quote.company}</div>
+            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#000000' }}>{study.quote.author}</div>
+            <div style={{ fontSize: '0.85rem', color: '#000000' }}>{study.quote.title}, {study.quote.company}</div>
           </div>
         </div>
 

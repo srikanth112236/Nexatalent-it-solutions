@@ -1,4 +1,4 @@
-import { V2Footer } from '../components/V2Footer';
+import { SiteFooter } from '../../components/SiteChrome';
 import { V2Navbar } from '../components/V2Navbar';
 import { SeoHead } from '../../components/SeoHead';
 import { V2Hero } from '../sections/Hero';
@@ -18,10 +18,10 @@ import { V2InsightsSubscribe } from '../sections/InsightsSubscribe';
 /** Public homepage at / — full white, responsive + accessible. Old design preserved at /v5. */
 export function NewHomePage() {
   return (
-    <div className="min-h-screen bg-white font-sans text-slate-900 antialiased">
+    <div className="min-h-screen bg-white font-sans text-black antialiased">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-full focus:bg-slate-950 focus:px-5 focus:py-2.5 focus:text-xs focus:font-bold focus:text-white"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-full focus:bg-black focus:px-5 focus:py-2.5 focus:text-xs focus:font-bold focus:text-white"
       >
         Skip to main content
       </a>
@@ -46,7 +46,7 @@ export function NewHomePage() {
         <V2WhyChoose />
         <V2InsightsSubscribe />
       </main>
-      <V2Footer />
+      <SiteFooter />
     </div>
   );
 }

@@ -16,17 +16,17 @@ export function V2Process() {
       <ol className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {STEPS.map((s, i) => (
           <li key={s.title} className="relative rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <span className="absolute right-5 top-5 text-4xl font-black text-slate-100" aria-hidden>
+            <span className="absolute right-5 top-5 text-4xl font-black text-black/10" aria-hidden>
               {i + 1}
             </span>
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0265FF]/10 text-[#0265FF]">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-black text-white">
               <s.icon size={20} aria-hidden />
             </span>
-            <h3 className="mt-4 text-sm font-extrabold text-slate-900">
-              <span className="mr-2 text-[#0265FF]">Step {i + 1}</span>
+            <h3 className="mt-4 text-sm font-extrabold text-black">
+              <span className="mr-2 text-black">Step {i + 1}</span>
               {s.title}
             </h3>
-            <p className="mt-1.5 text-xs leading-relaxed text-slate-600">{s.desc}</p>
+            <p className="mt-1.5 text-xs leading-relaxed text-black">{s.desc}</p>
           </li>
         ))}
       </ol>

@@ -123,24 +123,24 @@ export const ScrollStorySection: React.FC<ScrollStorySectionProps> = ({
   const activeChapter = chapters[activeChapterIndex] || chapters[0];
 
   return (
-    <section ref={containerRef} style={{ padding: '5rem 2rem', position: 'relative', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <section ref={containerRef} className="font-sans" style={{ padding: '5rem 2rem', position: 'relative', minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#ffffff' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto', width: '100%', flex: 1, display: 'flex', flexDirection: 'column' }}>
         <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
           <span
             style={{
               fontSize: '0.8125rem',
               fontWeight: 700,
-              color: 'var(--color-primary-400)',
+              color: '#000000',
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
             }}
           >
             {badge}
           </span>
-          <h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: 'var(--color-text)', marginTop: '0.5rem' }}>
+          <h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: '#000000', marginTop: '0.5rem' }}>
             {title}
           </h2>
-          <p style={{ color: 'var(--color-text-secondary)', maxWidth: '640px', margin: '0.75rem auto 0 auto' }}>
+          <p style={{ color: '#000000', maxWidth: '640px', margin: '0.75rem auto 0 auto' }}>
             {subtitle}
           </p>
         </div>
@@ -156,8 +156,8 @@ export const ScrollStorySection: React.FC<ScrollStorySectionProps> = ({
           }}
         >
           {/* Scroll Progress Bar */}
-          <div style={{ position: 'absolute', left: '-20px', top: '0', bottom: '0', width: '4px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '2px', display: 'none' }}>
-             <div ref={progressRef} style={{ width: '100%', backgroundColor: 'var(--color-primary)', borderRadius: '2px' }} />
+          <div style={{ position: 'absolute', left: '-20px', top: '0', bottom: '0', width: '4px', backgroundColor: '#e5e5e5', borderRadius: '2px', display: 'none' }}>
+             <div ref={progressRef} style={{ width: '100%', backgroundColor: '#000000', borderRadius: '2px' }} />
           </div>
 
           {/* Chapter Selector List */}
@@ -174,12 +174,12 @@ export const ScrollStorySection: React.FC<ScrollStorySectionProps> = ({
                   }}
                   style={{
                     borderRadius: 'var(--radius-xl)',
-                    backgroundColor: isActive ? 'var(--color-surface)' : 'rgba(15, 23, 42, 0.3)',
-                    border: isActive ? '1px solid var(--color-primary)' : '1px solid var(--color-border)',
+                    backgroundColor: isActive ? '#000000' : '#ffffff',
+                    border: isActive ? '1px solid #000000' : '1px solid #e5e5e5',
                     padding: '1.5rem 1.75rem',
                     cursor: 'pointer',
                     transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                    boxShadow: isActive ? '0 10px 30px rgba(59, 130, 246, 0.15)' : 'none',
+                    boxShadow: isActive ? '0 10px 30px rgba(0, 0, 0, 0.25)' : 'none',
                     transform: isActive ? 'translateX(10px)' : 'translateX(0)',
                     opacity: isActive ? 1 : 0.5,
                   }}
@@ -188,7 +188,7 @@ export const ScrollStorySection: React.FC<ScrollStorySectionProps> = ({
                     style={{
                       fontSize: '0.75rem',
                       fontWeight: 700,
-                      color: isActive ? 'var(--color-primary-400)' : 'var(--color-text-tertiary)',
+                      color: isActive ? '#ffffff' : '#000000',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
                       marginBottom: '0.35rem',
@@ -201,7 +201,7 @@ export const ScrollStorySection: React.FC<ScrollStorySectionProps> = ({
                     style={{
                       fontSize: '1.125rem',
                       fontWeight: 700,
-                      color: isActive ? 'var(--color-text)' : 'var(--color-text-secondary)',
+                      color: isActive ? '#ffffff' : '#000000',
                       marginBottom: isActive ? '0.5rem' : 0,
                       transition: 'color 0.3s ease',
                     }}
@@ -216,7 +216,7 @@ export const ScrollStorySection: React.FC<ScrollStorySectionProps> = ({
                       transition: 'all 0.4s ease'
                     }}
                   >
-                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', lineHeight: 1.5, marginTop: '0.5rem' }}>
+                    <p style={{ color: isActive ? '#ffffff' : '#000000', fontSize: '0.875rem', lineHeight: 1.5, marginTop: '0.5rem' }}>
                       {chapter.description}
                     </p>
                   </div>
@@ -230,20 +230,19 @@ export const ScrollStorySection: React.FC<ScrollStorySectionProps> = ({
             ref={rightColRef}
             style={{
               borderRadius: 'var(--radius-2xl)',
-              backgroundColor: 'var(--color-surface)',
-              border: '1px solid rgba(59, 130, 246, 0.3)',
+              backgroundColor: '#ffffff',
+              border: '1px solid #000000',
               padding: '3rem 2.5rem',
               position: 'relative',
               overflow: 'hidden',
-              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(10, 15, 29, 0.95) 100%)',
-              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(59, 130, 246, 0.15)',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.2)',
             }}
           >
             <div className="stat-content"
               style={{
                 fontSize: '0.8125rem',
                 fontWeight: 700,
-                color: 'var(--color-primary-400)',
+                color: '#000000',
                 textTransform: 'uppercase',
                 marginBottom: '1.5rem',
               }}
@@ -255,7 +254,7 @@ export const ScrollStorySection: React.FC<ScrollStorySectionProps> = ({
               style={{
                 fontSize: '3.5rem',
                 fontWeight: 900,
-                color: 'var(--color-text)',
+                color: '#000000',
                 lineHeight: 1,
                 marginBottom: '0.5rem',
               }}
@@ -267,7 +266,7 @@ export const ScrollStorySection: React.FC<ScrollStorySectionProps> = ({
               style={{
                 fontSize: '1.125rem',
                 fontWeight: 600,
-                color: 'var(--color-text-secondary)',
+                color: '#000000',
                 marginBottom: '2rem',
               }}
             >
@@ -278,15 +277,15 @@ export const ScrollStorySection: React.FC<ScrollStorySectionProps> = ({
               style={{
                 padding: '1.25rem',
                 borderRadius: 'var(--radius-lg)',
-                backgroundColor: 'rgba(15, 23, 42, 0.6)',
-                border: '1px solid rgba(255, 255, 255, 0.06)',
+                backgroundColor: '#ffffff',
+                border: '1px solid #000000',
                 marginBottom: '2rem',
               }}
             >
-              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+              <div style={{ fontSize: '0.75rem', color: '#000000', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
                 Operational Metric
               </div>
-              <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--color-primary-400)' }}>
+              <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: '#000000' }}>
                 {activeChapter.visualHighlight}
               </div>
             </div>
@@ -299,22 +298,22 @@ export const ScrollStorySection: React.FC<ScrollStorySectionProps> = ({
                 alignItems: 'center',
                 gap: '0.5rem',
                 color: '#ffffff',
-                backgroundColor: 'var(--color-primary)',
+                backgroundColor: '#000000',
                 padding: '0.75rem 1.5rem',
                 borderRadius: 'var(--radius-lg)',
                 fontWeight: 700,
                 fontSize: '0.9375rem',
                 textDecoration: 'none',
-                boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)',
+                boxShadow: '0 4px 14px rgba(0, 0, 0, 0.35)',
                 transition: 'all 0.2s ease',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.6)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.5)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 14px rgba(59, 130, 246, 0.4)';
+                e.currentTarget.style.boxShadow = '0 4px 14px rgba(0, 0, 0, 0.35)';
               }}
             >
               <span>Explore Employer Guarantee</span>

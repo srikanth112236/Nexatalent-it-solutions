@@ -66,10 +66,11 @@ export const DashboardShowcase: React.FC<DashboardShowcaseProps> = ({
 
   return (
     <section
+      className="font-sans"
       style={{
         padding: '5rem 2rem',
         position: 'relative',
-        background: 'radial-gradient(ellipse 60% 40% at 50% 50%, rgba(99, 102, 241, 0.08), transparent 70%)',
+        backgroundColor: '#ffffff',
       }}
     >
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -88,22 +89,22 @@ export const DashboardShowcase: React.FC<DashboardShowcaseProps> = ({
               gap: '0.5rem',
               padding: '0.35rem 1rem',
               borderRadius: '9999px',
-              backgroundColor: 'rgba(59, 130, 246, 0.1)',
-              border: '1px solid rgba(59, 130, 246, 0.3)',
+              backgroundColor: '#000000',
+              border: '1px solid #000000',
               fontSize: '0.8125rem',
-              color: 'var(--color-primary-400)',
+              color: '#ffffff',
               fontWeight: 600,
               marginBottom: '1rem',
             }}
           >
-            <Activity size={14} />
+            <Activity size={14} color="#ffffff" />
             {badge}
           </div>
           <h2
             style={{
               fontSize: 'clamp(1.75rem, 3.5vw, 2.75rem)',
               fontWeight: 800,
-              color: 'var(--color-text)',
+              color: '#000000',
               marginBottom: '1rem',
               letterSpacing: '-0.02em',
             }}
@@ -114,7 +115,7 @@ export const DashboardShowcase: React.FC<DashboardShowcaseProps> = ({
             style={{
               maxWidth: '680px',
               margin: '0 auto',
-              color: 'var(--color-text-secondary)',
+              color: '#000000',
               fontSize: '1.0625rem',
               lineHeight: 1.6,
             }}
@@ -129,8 +130,8 @@ export const DashboardShowcase: React.FC<DashboardShowcaseProps> = ({
               marginTop: '2rem',
               padding: '0.375rem',
               borderRadius: 'var(--radius-full)',
-              backgroundColor: 'rgba(17, 23, 38, 0.8)',
-              border: '1px solid var(--color-border)',
+              backgroundColor: '#ffffff',
+              border: '1px solid #000000',
               backdropFilter: 'blur(12px)',
               gap: '0.25rem',
             }}
@@ -143,9 +144,9 @@ export const DashboardShowcase: React.FC<DashboardShowcaseProps> = ({
                     style={{
                       position: 'absolute',
                       inset: 0,
-                      backgroundColor: 'var(--color-primary)',
+                      backgroundColor: '#000000',
                       borderRadius: 'var(--radius-full)',
-                      boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)',
+                      boxShadow: '0 0 20px rgba(0, 0, 0, 0.35)',
                       zIndex: 0
                     }}
                     transition={motionTokens.spring.snappy}
@@ -162,8 +163,8 @@ export const DashboardShowcase: React.FC<DashboardShowcaseProps> = ({
                     fontSize: '0.875rem',
                     fontWeight: 600,
                     cursor: 'pointer',
-                    backgroundColor: 'transparent',
-                    color: activeTab === v.id ? 'var(--nt-surface, #ffffff)' : 'var(--color-text-secondary)',
+                    backgroundColor: activeTab === v.id ? '#000000' : 'transparent',
+                    color: activeTab === v.id ? '#ffffff' : '#000000',
                     transition: 'color 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                   }}
                 >
@@ -183,10 +184,10 @@ export const DashboardShowcase: React.FC<DashboardShowcaseProps> = ({
           style={{
             position: 'relative',
             borderRadius: 'var(--radius-xl)',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
-            background: 'linear-gradient(135deg, rgba(17, 23, 38, 0.95), rgba(10, 15, 29, 0.98))',
+            border: '1px solid #000000',
+            backgroundColor: '#ffffff',
             boxShadow:
-              '0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 40px rgba(59, 130, 246, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+              '0 25px 60px -15px rgba(0, 0, 0, 0.3)',
             overflow: 'hidden',
             perspective: '1000px',
           }}
@@ -195,23 +196,23 @@ export const DashboardShowcase: React.FC<DashboardShowcaseProps> = ({
           <div
             style={{
               padding: '1rem 1.5rem',
-              borderBottom: '1px solid var(--color-border)',
+              borderBottom: '1px solid #e5e5e5',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              backgroundColor: 'rgba(15, 23, 42, 0.6)',
+              backgroundColor: '#ffffff',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} transition={{ delay: 0.2 }} style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#ef4444' }} />
-              <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} transition={{ delay: 0.3 }} style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#eab308' }} />
-              <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} transition={{ delay: 0.4 }} style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#22c55e' }} />
+              <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} transition={{ delay: 0.2 }} style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#000000' }} />
+              <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} transition={{ delay: 0.3 }} style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#737373' }} />
+              <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} transition={{ delay: 0.4 }} style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#d4d4d4' }} />
               <span
                 style={{
                   marginLeft: '1rem',
                   fontSize: '0.8125rem',
-                  color: 'var(--color-text-tertiary)',
-                  fontFamily: 'monospace',
+                  color: '#000000',
+                  fontFamily: 'var(--font-family-mono, monospace)',
                 }}
               >
                 app.nexatalent.com/{activeView.id}
@@ -220,7 +221,7 @@ export const DashboardShowcase: React.FC<DashboardShowcaseProps> = ({
             <div
               style={{
                 fontSize: '0.75rem',
-                color: 'var(--color-success)',
+                color: '#000000',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.375rem',
@@ -229,7 +230,7 @@ export const DashboardShowcase: React.FC<DashboardShowcaseProps> = ({
               <motion.div 
                 animate={{ opacity: [1, 0.3, 1] }}
                 transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--color-success)', boxShadow: '0 0 8px var(--color-success)' }} 
+                style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#000000' }} 
               />
               Realtime Synced
             </div>
@@ -256,10 +257,10 @@ export const DashboardShowcase: React.FC<DashboardShowcaseProps> = ({
                   }}
                 >
                   <div>
-                    <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.5rem' }}>
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#000000', marginBottom: '0.5rem' }}>
                       {activeView.previewTitle}
                     </h3>
-                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9375rem' }}>
+                    <p style={{ color: '#000000', fontSize: '0.9375rem' }}>
                       {activeView.previewSubtitle}
                     </p>
                   </div>
@@ -270,13 +271,13 @@ export const DashboardShowcase: React.FC<DashboardShowcaseProps> = ({
                       gap: '0.5rem',
                       padding: '0.5rem 1rem',
                       borderRadius: 'var(--radius-md)',
-                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                      border: '1px solid rgba(59, 130, 246, 0.2)',
+                      backgroundColor: '#000000',
+                      border: '1px solid #000000',
                       fontSize: '0.875rem',
-                      color: 'var(--color-primary-400)',
+                      color: '#ffffff',
                     }}
                   >
-                    <Cpu size={16} />
+                    <Cpu size={16} color="#ffffff" />
                     <span>AI Calibration Active</span>
                   </div>
                 </div>
@@ -302,18 +303,18 @@ export const DashboardShowcase: React.FC<DashboardShowcaseProps> = ({
                       style={{
                         padding: '1.25rem',
                         borderRadius: 'var(--radius-lg)',
-                        backgroundColor: 'rgba(30, 41, 59, 0.5)',
-                        border: '1px solid rgba(255, 255, 255, 0.06)',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #000000',
                       }}
                     >
-                      <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-tertiary)', marginBottom: '0.375rem' }}>
+                      <div style={{ fontSize: '0.8125rem', color: '#000000', marginBottom: '0.375rem' }}>
                         {stat.label}
                       </div>
                       <div
                         style={{
                           fontSize: '1.75rem',
                           fontWeight: 800,
-                          color: 'var(--color-text)',
+                          color: '#000000',
                           display: 'flex',
                           alignItems: 'baseline',
                           gap: '0.75rem',
@@ -325,8 +326,8 @@ export const DashboardShowcase: React.FC<DashboardShowcaseProps> = ({
                             style={{
                               fontSize: '0.75rem',
                               fontWeight: 600,
-                              color: 'var(--color-success)',
-                              backgroundColor: 'rgba(34, 197, 94, 0.15)',
+                              color: '#ffffff',
+                              backgroundColor: '#000000',
                               padding: '0.125rem 0.5rem',
                               borderRadius: 'var(--radius-sm)',
                             }}
@@ -347,8 +348,8 @@ export const DashboardShowcase: React.FC<DashboardShowcaseProps> = ({
                   style={{
                     padding: '1.5rem',
                     borderRadius: 'var(--radius-lg)',
-                    border: '1px dashed rgba(255, 255, 255, 0.12)',
-                    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+                    border: '1px dashed #000000',
+                    backgroundColor: '#ffffff',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
@@ -357,8 +358,8 @@ export const DashboardShowcase: React.FC<DashboardShowcaseProps> = ({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <Layers size={18} color="var(--color-primary-400)" />
-                    <span style={{ fontSize: '0.9375rem', color: 'var(--color-text)' }}>
+                    <Layers size={18} color="#000000" />
+                    <span style={{ fontSize: '0.9375rem', color: '#000000' }}>
                       Enterprise SLA: Guaranteed 48-Hour Shortlist or zero advisory fee
                     </span>
                   </div>
@@ -369,7 +370,7 @@ export const DashboardShowcase: React.FC<DashboardShowcaseProps> = ({
                       alignItems: 'center',
                       gap: '0.375rem',
                       fontSize: '0.875rem',
-                      color: 'var(--color-primary-400)',
+                      color: '#000000',
                       fontWeight: 600,
                       textDecoration: 'none',
                     }}

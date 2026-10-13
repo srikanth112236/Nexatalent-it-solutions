@@ -51,9 +51,10 @@ export default {
         }
       },
       fontFamily: {
-        manrope: ['"Manrope"', '"Inter"', '"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
-        heading: ['"Manrope"', '"Inter"', '"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
-        sans: ['"Manrope"', '"Inter"', '"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+        manrope: ['"Geist"', 'system-ui', '-apple-system', 'sans-serif'],
+        heading: ['"Geist"', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['"Geist"', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['"Geist Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       fontSize: {
         'section-title': ['var(--section-title-size, clamp(1.35rem, 0.8rem + 2.1vw, 2.25rem))', { lineHeight: '1.15', letterSpacing: '-0.025em' }],

@@ -58,7 +58,7 @@ export function DesignSystemShowcase() {
         </div>
         <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>Global Design System</h1>
         <p style={{ color: 'var(--color-text-muted)', fontSize: '1.1rem' }}>
-          Centralized Manrope typography tokens, semantic dark-mode palette, spacing scales, restrained geometry, and WCAG 2.2 AA accessibility standards.
+          Centralized Geist typography tokens, semantic dark-mode palette, spacing scales, restrained geometry, and WCAG 2.2 AA accessibility standards.
         </p>
       </header>
 
@@ -93,7 +93,7 @@ export function DesignSystemShowcase() {
       {/* 2. Typography Hierarchy */}
       <section style={{ marginBottom: '4rem' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span>🔤</span> 2. Fluid Typography (Manrope)
+          <span>🔤</span> 2. Fluid Typography (Geist)
         </h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {typographyItems.map((item) => (

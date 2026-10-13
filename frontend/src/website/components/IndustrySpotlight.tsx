@@ -91,14 +91,15 @@ export const IndustrySpotlight: React.FC<IndustrySpotlightProps> = ({
 
   return (
     <motion.section
+      className="font-sans"
       initial="hidden"
       whileInView="show"
       viewport={{ once: true, margin: "-100px" }}
       style={{
         padding: '5rem 2rem',
         borderRadius: 'var(--radius-2xl)',
-        backgroundColor: 'var(--color-surface)',
-        border: '1px solid var(--color-border)',
+        backgroundColor: '#ffffff',
+        border: '1px solid #e5e5e5',
         margin: '2rem auto',
         maxWidth: '1200px',
         position: 'relative',
@@ -107,11 +108,7 @@ export const IndustrySpotlight: React.FC<IndustrySpotlightProps> = ({
     >
       <motion.div 
         animate={{ 
-          background: [
-            'linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.7) 100%)',
-            'linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.8) 100%)',
-            'linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.7) 100%)'
-          ] 
+          opacity: [0.3, 0.5, 0.3]
         }}
         transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
         style={{
@@ -143,10 +140,10 @@ export const IndustrySpotlight: React.FC<IndustrySpotlightProps> = ({
               gap: '0.4rem',
               padding: '0.35rem 0.875rem',
               borderRadius: '9999px',
-              backgroundColor: 'rgba(59, 130, 246, 0.1)',
-              border: '1px solid rgba(59, 130, 246, 0.3)',
+              backgroundColor: '#000000',
+              border: '1px solid #000000',
               fontSize: '0.8125rem',
-              color: 'var(--color-primary-400)',
+              color: '#ffffff',
               fontWeight: 600,
               marginBottom: '1rem',
             }}
@@ -158,7 +155,7 @@ export const IndustrySpotlight: React.FC<IndustrySpotlightProps> = ({
             style={{
               fontSize: 'clamp(1.75rem, 3vw, 2.5rem)',
               fontWeight: 800,
-              color: 'var(--color-text)',
+              color: '#000000',
               lineHeight: 1.25,
               marginBottom: '1rem',
             }}
@@ -169,7 +166,7 @@ export const IndustrySpotlight: React.FC<IndustrySpotlightProps> = ({
             style={{
               fontSize: '1.125rem',
               fontWeight: 600,
-              color: 'var(--color-primary-400)',
+              color: '#000000',
               marginBottom: '1rem',
             }}
           >
@@ -177,7 +174,7 @@ export const IndustrySpotlight: React.FC<IndustrySpotlightProps> = ({
           </h3>
           <p
             style={{
-              color: 'var(--color-text-secondary)',
+              color: '#000000',
               fontSize: '1rem',
               lineHeight: 1.6,
               marginBottom: '2rem',
@@ -193,7 +190,7 @@ export const IndustrySpotlight: React.FC<IndustrySpotlightProps> = ({
                 fontWeight: 700,
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
-                color: 'var(--color-text-tertiary)',
+                color: '#000000',
                 marginBottom: '0.75rem',
               }}
             >
@@ -212,7 +209,7 @@ export const IndustrySpotlight: React.FC<IndustrySpotlightProps> = ({
                     alignItems: 'flex-start',
                     gap: '0.625rem',
                     fontSize: '0.9375rem',
-                    color: 'var(--color-text)',
+                    color: '#000000',
                   }}
                 >
                   <motion.div
@@ -221,7 +218,7 @@ export const IndustrySpotlight: React.FC<IndustrySpotlightProps> = ({
                     viewport={{ once: true }}
                     transition={{ delay: (idx * motionTokens.stagger.small) + 0.2, ...motionTokens.spring.snappy }}
                   >
-                    <CheckCircle2 size={16} color="var(--color-primary-400)" style={{ flexShrink: 0, marginTop: '3px' }} />
+                    <CheckCircle2 size={16} color="#000000" style={{ flexShrink: 0, marginTop: '3px' }} />
                   </motion.div>
                   <span>{role}</span>
                 </motion.li>
@@ -240,21 +237,21 @@ export const IndustrySpotlight: React.FC<IndustrySpotlightProps> = ({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                backgroundColor: 'var(--color-primary)',
+                backgroundColor: '#000000',
                 color: '#ffffff',
                 padding: '0.75rem 1.5rem',
                 borderRadius: 'var(--radius-lg)',
                 fontWeight: 600,
                 fontSize: '0.9375rem',
                 textDecoration: 'none',
-                boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)',
+                boxShadow: '0 4px 14px rgba(0, 0, 0, 0.35)',
                 transition: 'box-shadow 0.2s ease',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.6)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.5)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 4px 14px rgba(59, 130, 246, 0.4)';
+                e.currentTarget.style.boxShadow = '0 4px 14px rgba(0, 0, 0, 0.35)';
               }}
             >
               <span>{ctaText}</span>
@@ -278,26 +275,26 @@ export const IndustrySpotlight: React.FC<IndustrySpotlightProps> = ({
               variants={itemVariant}
               whileHover={{ y: -5, scale: 1.02 }}
               style={{
-                backgroundColor: 'rgba(17, 23, 38, 0.7)',
-                border: '1px solid var(--color-border)',
+                backgroundColor: '#ffffff',
+                border: '1px solid #000000',
                 borderRadius: 'var(--radius-xl)',
                 padding: '2rem 1.5rem',
                 textAlign: 'center',
-                boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+                boxShadow: 'none',
                 transition: 'border-color 0.2s ease',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+                e.currentTarget.style.borderColor = '#000000';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-border)';
+                e.currentTarget.style.borderColor = '#000000';
               }}
             >
               <div
                 style={{
                   fontSize: '2.5rem',
                   fontWeight: 900,
-                  color: 'var(--color-text)',
+                  color: '#000000',
                   lineHeight: 1,
                   marginBottom: '0.5rem',
                 }}
@@ -307,7 +304,7 @@ export const IndustrySpotlight: React.FC<IndustrySpotlightProps> = ({
               <div
                 style={{
                   fontSize: '0.875rem',
-                  color: 'var(--color-text-secondary)',
+                  color: '#000000',
                   fontWeight: 500,
                 }}
               >

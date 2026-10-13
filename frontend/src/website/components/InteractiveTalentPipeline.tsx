@@ -47,7 +47,7 @@ export const InteractiveTalentPipeline: React.FC = () => {
   }, []);
 
   return (
-    <section ref={sectionRef} style={{ maxWidth: '1280px', margin: '5rem auto', padding: '0 2rem' }}>
+    <section ref={sectionRef} className="font-sans" style={{ maxWidth: '1280px', margin: '5rem auto', padding: '0 2rem', backgroundColor: '#ffffff' }}>
       <motion.div 
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -55,11 +55,11 @@ export const InteractiveTalentPipeline: React.FC = () => {
         transition={{ duration: motionTokens.duration.slow, ease: motionTokens.ease.outQuart }}
         style={{ textAlign: 'center', marginBottom: '3rem' }}
       >
-        <Badge variant="accent" style={{ marginBottom: '1rem' }}>Funnel Transparency</Badge>
-        <h2 style={{ fontSize: 'clamp(2rem, 3.5vw, 2.75rem)', fontWeight: 800 }}>
+        <Badge variant="default" style={{ marginBottom: '1rem' }}>Funnel Transparency</Badge>
+        <h2 style={{ fontSize: 'clamp(2rem, 3.5vw, 2.75rem)', fontWeight: 800, color: '#000000' }}>
           Interactive Talent Qualification Pipeline
         </h2>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '1rem', maxWidth: '600px', margin: '0.5rem auto 0 auto' }}>
+        <p style={{ color: '#000000', fontSize: '1rem', maxWidth: '600px', margin: '0.5rem auto 0 auto' }}>
           Explore the quality filters applied before any engineer is presented to your hiring team.
         </p>
       </motion.div>
@@ -79,10 +79,10 @@ export const InteractiveTalentPipeline: React.FC = () => {
                 flex: 1,
                 minWidth: '180px',
                 padding: '1.25rem',
-                backgroundColor: 'var(--color-surface)',
+                backgroundColor: isSelected ? '#000000' : '#ffffff',
                 border: '1px solid transparent',
                 borderRadius: 'var(--radius-lg)',
-                color: isSelected ? 'var(--nt-surface, #ffffff)' : 'var(--color-text-muted)',
+                color: isSelected ? '#ffffff' : '#000000',
                 textAlign: 'left',
                 cursor: 'pointer',
                 fontFamily: 'var(--font-family-sans)',
@@ -98,8 +98,8 @@ export const InteractiveTalentPipeline: React.FC = () => {
                   style={{
                     position: 'absolute',
                     inset: 0,
-                    backgroundColor: 'var(--color-surface-raised)',
-                    border: '1px solid var(--color-primary)',
+                    backgroundColor: '#000000',
+                    border: '1px solid #000000',
                     borderRadius: 'inherit',
                     zIndex: -1,
                   }}
@@ -110,18 +110,18 @@ export const InteractiveTalentPipeline: React.FC = () => {
                   style={{
                     position: 'absolute',
                     inset: 0,
-                    border: '1px solid var(--color-border)',
+                    border: '1px solid #e5e5e5',
                     borderRadius: 'inherit',
                     zIndex: -1,
                   }}
                 />
               )}
               
-              <div style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', color: isSelected ? 'var(--color-primary)' : 'var(--color-text-subtle)', transition: 'color 0.3s' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', color: isSelected ? '#ffffff' : '#000000', transition: 'color 0.3s' }}>
                 Stage 0{idx + 1}
               </div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0.25rem 0', color: isSelected ? 'var(--nt-surface, #ffffff)' : 'inherit', transition: 'color 0.3s' }}>{p.stage}</div>
-              <div style={{ fontSize: '0.85rem', color: isSelected ? 'var(--color-accent)' : 'var(--color-text-muted)', transition: 'color 0.3s' }}>{p.count}</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0.25rem 0', color: isSelected ? '#ffffff' : '#000000', transition: 'color 0.3s' }}>{p.stage}</div>
+              <div style={{ fontSize: '0.85rem', color: isSelected ? '#ffffff' : '#000000', transition: 'color 0.3s' }}>{p.count}</div>
             </motion.button>
           );
         })}
@@ -134,12 +134,12 @@ export const InteractiveTalentPipeline: React.FC = () => {
           animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
           exit={{ opacity: 0, y: -15, filter: 'blur(8px)' }}
           transition={{ duration: motionTokens.duration.standard, ease: motionTokens.ease.outQuart }}
-          style={{ padding: '2.5rem', backgroundColor: 'rgba(var(--color-surface-rgb), 0.8)', backdropFilter: 'blur(16px)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-border)' }}
+          style={{ padding: '2.5rem', backgroundColor: '#ffffff', backdropFilter: 'blur(16px)', borderRadius: 'var(--radius-xl)', border: '1px solid #e5e5e5' }}
         >
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem', color: '#000000' }}>
             {pipelineStages[selectedStage].stage} Gate Criteria
           </h3>
-          <p style={{ color: 'var(--color-text-muted)', lineHeight: 1.6, fontSize: '0.95rem' }}>
+          <p style={{ color: '#000000', lineHeight: 1.6, fontSize: '0.95rem' }}>
             {pipelineStages[selectedStage].desc}
           </p>
         </motion.div>

@@ -57,15 +57,16 @@ export const TrustSignalStrip: React.FC<TrustSignalStripProps> = ({
 
   return (
     <motion.section
+      className="font-sans"
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, margin: '-50px' }}
       variants={containerVariants}
       style={{
         padding: '2.5rem 2rem',
-        backgroundColor: 'rgba(15, 23, 42, 0.6)',
-        borderTop: '1px solid var(--color-border)',
-        borderBottom: '1px solid var(--color-border)',
+        backgroundColor: '#ffffff',
+        borderTop: '1px solid #e5e5e5',
+        borderBottom: '1px solid #e5e5e5',
         overflow: 'hidden'
       }}
     >
@@ -101,26 +102,26 @@ export const TrustSignalStrip: React.FC<TrustSignalStripProps> = ({
                   width: '36px',
                   height: '36px',
                   borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                  color: 'var(--color-primary-400)',
+                  backgroundColor: '#000000',
+                  color: '#ffffff',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
-                  boxShadow: '0 0 0 rgba(59, 130, 246, 0)'
+                  boxShadow: '0 0 0 rgba(0, 0, 0, 0)'
                 }}
                 whileHover={{
-                  boxShadow: '0 0 15px rgba(59, 130, 246, 0.5)',
-                  backgroundColor: 'rgba(59, 130, 246, 0.2)'
+                  boxShadow: '0 0 15px rgba(0, 0, 0, 0.35)',
+                  backgroundColor: '#262626'
                 }}
               >
                 <ShieldCheck size={20} />
               </motion.div>
               <div>
-                <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.2rem' }}>
+                <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#000000', marginBottom: '0.2rem' }}>
                   {sig.headline}
                 </div>
-                <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', lineHeight: 1.4 }}>
+                <div style={{ fontSize: '0.8125rem', color: '#000000', lineHeight: 1.4 }}>
                   {sig.subtext}
                 </div>
               </div>

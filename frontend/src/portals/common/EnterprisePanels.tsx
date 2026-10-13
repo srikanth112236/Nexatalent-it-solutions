@@ -535,6 +535,190 @@ function loadVisibleCols(): string[] {
   return [...REQ_DEFAULT_COLUMNS];
 }
 
+/* ---------------- Shared: activity timeline + recruiter assignment ---------------- */
+export type ActivityItem = { at?: string; title: string; meta?: React.ReactNode; tone?: 'ok' | 'info' | 'warn' | 'bad' | 'neutral' };
+
+const ACTIVITY_TONE: Record<string, string> = {
+  ok: 'bg-emerald-500', info: 'bg-blue-500', warn: 'bg-amber-500', bad: 'bg-red-500', neutral: 'bg-slate-400',
+};
+
+export function sortActivity(items: ActivityItem[]): ActivityItem[] {
+  return [...items].sort((a, b) => new Date(b.at || 0).getTime() - new Date(a.at || 0).getTime()).slice(0, 60);
+}
+
+/** One timeline look for every drawer — dot + card + actor/time meta. */
+export function ActivityTimeline({ items, empty = 'No activity recorded yet.' }: { items: ActivityItem[]; empty?: string }) {
+  if (items.length === 0) {
+    return <div className="p-3.5 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-[11px] font-semibold text-slate-500">{empty}</div>;
+  }
+  return (
+    <ol className="relative space-y-2 pl-4">
+      <span aria-hidden="true" className="absolute left-[3px] top-2 bottom-2 w-px bg-slate-200" />
+      {items.map((it, i) => (
+        <li key={`${it.title}-${it.at || ''}-${i}`} className="relative">
+          <span aria-hidden="true" className={`absolute -left-4 top-2 w-2 h-2 rounded-full ring-2 ring-white ${ACTIVITY_TONE[it.tone || 'neutral']}`} />
+          <div className="p-2.5 rounded-xl bg-white border border-slate-200">
+            <div className="flex items-start justify-between gap-2">
+              <span className="text-xs font-extrabold text-slate-900 leading-4">{it.title}</span>
+              <span className="text-[10px] font-bold text-slate-400 shrink-0 tabular-nums">
+                {it.at ? `${String(it.at).slice(0, 10)} ${String(it.at).slice(11, 16)}` : ''}
+              </span>
+            </div>
+            {it.meta ? <div className="text-[11px] font-medium text-slate-500 mt-0.5 break-words">{it.meta}</div> : null}
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** Human label for audit actions such as `REQUISITION_STATUS:REQ-1 A->B`. */
+export function auditLabel(action: string): string {
+  const [head, tail] = String(action).split(':');
+  const nice = head.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  if (!tail) return nice;
+  return `${nice} • ${tail.replace(/->/g, ' → ')}`;
+}
+
+const RECRUITER_ROLES = ['internal_recruiter', 'company_recruiter', 'recruiter', 'operations_admin', 'employee', 'hiring_manager'];
+
+/** Active assignable people for the caller's org — [] when the directory is unavailable. */
+export async function loadAssignableRecruiters(): Promise<any[]> {
+  try {
+    const res: any = await directoryApi.users('?page=1&pageSize=200');
+    return unwrapList(res).filter((u: any) => RECRUITER_ROLES.includes(u.role) && String(u.status || '').toLowerCase() === 'active');
+  } catch { return []; }
+}
+
+/**
+ * Shared assign-recruiter modal — used by the requirements table, the requirement
+ * drawer and the job drawer. Assignment always goes through POST /requisitions/:id/assign
+ * (no status gate, records owner + history); a typed email keeps it usable even when
+ * the user directory returns nothing.
+ */
+export function AssignRecruiterModal({ open, targets, rows = [], onClose, onDone }: {
+  open: boolean; targets: any[]; rows?: any[]; onClose: () => void; onDone?: (updated: any[]) => void;
+}) {
+  const [recruiters, setRecruiters] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [q, setQ] = useState('');
+  const [email, setEmail] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    setQ(''); setEmail(''); setError(''); setBusy(false);
+    setLoading(true);
+    let live = true;
+    (async () => {
+      const list = await loadAssignableRecruiters();
+      if (!live) return;
+      // Fallback: people already named on visible requirements — works even if the directory is restricted.
+      const known = [...new Set(rows.map((r: any) => String(r?.recruiter || '').trim()).filter(Boolean))]
+        .map((e: string) => ({ id: `eml:${e}`, name: e.split('@')[0], email: e, role: 'recruiter', status: 'Active' }));
+      const merged = [...list, ...known.filter((k) => !list.some((l) => String(l.email || '').toLowerCase() === k.email.toLowerCase()))];
+      setRecruiters(merged);
+      setLoading(false);
+    })();
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const workload = (em: string) => rows.filter((r: any) => String(r?.recruiter || '').toLowerCase() === em.toLowerCase() && !['Filled', 'Cancelled'].includes(r?.status)).length;
+  const shown = recruiters.filter((u) => {
+    const s = q.trim().toLowerCase();
+    return !s || `${u.name || ''} ${u.email || ''} ${u.role || ''}`.toLowerCase().includes(s);
+  });
+
+  const run = async (value: string) => {
+    setBusy(true); setError('');
+    try {
+      const updated: any[] = [];
+      for (const r of targets) {
+        const res = await requisitionsApi.assign(r.id, { recruiter: value });
+        const row = unwrapObj(res);
+        updated.push(row?.id ? row : { ...r, recruiter: value });
+      }
+      onDone?.(updated);
+      onClose();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+
+  const assign = () => {
+    const v = email.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) { setError('Enter a valid recruiter email, or pick one from the list.'); return; }
+    void run(v);
+  };
+
+  if (!open) return null;
+  return (
+    <Modal open={open} onClose={onClose}
+      title={`Assign recruiter — ${targets.length} requirement(s)`}
+      subtitle="Workload shows open requirements this person already owns">
+      <div className="space-y-3">
+        <div className="relative">
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter recruiters by name, email or role…"
+            aria-label="Filter recruiters"
+            className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:border-blue-500" />
+          <span aria-hidden="true" className="absolute left-2.5 top-2 text-slate-400 text-xs">⌕</span>
+        </div>
+
+        <div className="max-h-60 overflow-y-auto space-y-1.5" data-lenis-prevent>
+          {loading && <InlineLoading message="Loading recruiters…" />}
+          {!loading && shown.length === 0 && (
+            <div className="p-3 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-[11px] font-semibold text-slate-500">
+              No active recruiters found in your organization yet — type an email below to assign.
+            </div>
+          )}
+          {shown.map((u) => {
+            const picked = email.trim().toLowerCase() === String(u.email || '').toLowerCase();
+            const load = workload(String(u.email || ''));
+            return (
+              <button key={String(u.id)} type="button" onClick={() => setEmail(String(u.email || ''))}
+                className={`w-full text-left px-3 py-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 transition ${picked ? 'bg-blue-50 border-blue-400 ring-1 ring-blue-200' : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}>
+                <span className="min-w-0">
+                  <span className="block font-extrabold text-slate-900 truncate">{u.name || u.email}</span>
+                  <span className="block text-[11px] font-medium text-slate-500 truncate">{u.email} • {String(u.role || '').replace(/_/g, ' ')}</span>
+                </span>
+                <span className={`shrink-0 px-2 py-0.5 rounded-full border font-bold text-[10px] ${load > 5 ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                  {load} open
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div>
+          <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-1" htmlFor="assign-recruiter-email">Recruiter email</label>
+          <input id="assign-recruiter-email" type="email" value={email} onChange={(e) => { setEmail(e.target.value); setError(''); }}
+            placeholder="recruiter@company.com" list="assign-recruiter-emails"
+            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:border-blue-500" />
+          <datalist id="assign-recruiter-emails">
+            {shown.map((u) => <option key={String(u.email)} value={String(u.email || '')} />)}
+          </datalist>
+          <p className="text-[10px] font-medium text-slate-400 mt-1">Lead recruiter for {targets.length === 1 ? 'this requirement' : `these ${targets.length} requirements`} — history keeps the previous owner.</p>
+        </div>
+
+        {error && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold" role="alert">{error}</div>}
+
+        <div className="flex flex-wrap justify-between gap-2 pt-1 border-t border-slate-100">
+          <button type="button" disabled={busy} onClick={() => run('')}
+            className="px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 font-bold text-xs disabled:opacity-50">
+            Clear assignment
+          </button>
+          <div className="flex gap-2">
+            <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
+            <button type="button" disabled={busy || !email.trim()} onClick={assign} className={btnPrimary}>
+              {busy ? 'Assigning…' : 'Assign'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function RequisitionsPanel() {
   const navigate = useNavigate();
   const [rows, setRows] = useState<any[]>([]);
@@ -562,9 +746,7 @@ export function RequisitionsPanel() {
   const [editing, setEditing] = useState<any>(null);
   const [deleteFor, setDeleteFor] = useState<any>(null);
   const [decideFor, setDecideFor] = useState<{ row: any; action: 'approve' | 'reject' | 'changes' } | null>(null);
-    const [assignFor, setAssignFor] = useState<any[]>([]);
-  const [assignEmail, setAssignEmail] = useState('');
-  const [recruiters, setRecruiters] = useState<any[]>([]);
+  const [assignFor, setAssignFor] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<Record<string, any[] | null>>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const pageSize = 10;
@@ -587,7 +769,10 @@ export function RequisitionsPanel() {
     } catch (e) { setError(errMsg(e)); setLoadError(errStatus(e)); }
     finally { setLoading(false); }
   };
-  useEffect(() => { load(page); }, [page, statusF, orgF, dq ]);
+  // Filter/search changes restart at page 1 (page turns re-run load via the effect below).
+  useEffect(() => { if (page !== 1) { setPage(1); return; } load(1); }, [statusF, orgF, dq]);
+  const firstReqRun = useRef(false);
+  useEffect(() => { if (!firstReqRun.current) { firstReqRun.current = true; return; } load(page); }, [page]);
   useEffect(() => { try { localStorage.setItem(REQ_COLS_KEY, JSON.stringify(visibleCols)); } catch { /* noop */ } }, [visibleCols]);
 
   const refreshRow = (updated: any) => {
@@ -630,25 +815,16 @@ export function RequisitionsPanel() {
       setExpanded((m) => ({ ...m, [r.id]: unwrapList(res) }));
     } catch (e) { setError(errMsg(e)); setExpanded((m) => { const n = { ...m }; delete n[r.id]; return n; }); }
   };
-  const openAssign = async (targets: any[]) => {
-    setAssignFor(targets); setAssignEmail('');
-    try {
-      const { directoryApi } = await import('../../shared/enterprise/phaseApi');
-      const res: any = await directoryApi.users();
-      const all = unwrapList(res);
-      setRecruiters(all.filter((u: any) => ['internal_recruiter', 'company_recruiter', 'employee', 'operations_admin'].includes(u.role) && u.status === 'Active'));
-    } catch (e) { setError(errMsg(e)); }
+  const openAssign = (targets: any[]) => {
+    const list = (targets || []).filter((t) => t?.id);
+    if (list.length === 0) { setError('Select at least one requirement to assign a recruiter.'); return; }
+    setAssignFor(list);
   };
-  const doAssign = async () => {
-    if (assignFor.length === 0 || !assignEmail.trim()) return;
-    setBusy(true); setError('');
-    try {
-      for (const r of assignFor) {
-        const updated = unwrapObj(await requisitionsApi.update(r.id, { recruiter: assignEmail.trim() }));
-        if (updated?.id) refreshRow(updated);
-      }
-      setAssignFor([]); setOk(`Recruiter assigned to ${assignFor.length} requirement(s).`); syncAll();
-    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  const onAssignDone = (updated: any[]) => {
+    updated.forEach(refreshRow);
+    setAssignFor([]);
+    setOk(`Recruiter assigned to ${updated.length} requirement(s).`);
+    syncAll();
   };
   const doBulkApprove = async () => {
     const eligible = rows.filter((r) => selected.has(r.id) && r.status === 'Pending Approval');
@@ -681,18 +857,33 @@ export function RequisitionsPanel() {
   const cellFor = (r: any, key: string): React.ReactNode => {
     const f = funnel(r);
     switch (key) {
-      case 'req': return (<><div className="font-bold text-slate-900">{r.title}</div><div className="font-mono text-[11px] text-slate-500">{r.id}</div></>);
+      case 'req': return (
+        <button type="button" onClick={() => setPipelineFor(r)} className="text-left group" title="Open requirement pipeline">
+          <div className="font-bold text-slate-900 group-hover:text-blue-700 leading-4">{r.title}</div>
+          <div className="font-mono text-[10px] text-slate-500 mt-0.5">{r.id}</div>
+        </button>
+      );
       case 'company': return <span className="font-mono font-bold text-amber-700">{r.orgId}</span>;
       case 'location': return r.location || r.city || '—';
       case 'openings': return <span className="font-bold">{r.openings || 1} <span className="text-slate-400 font-medium">({f.openingsFilled} filled)</span></span>;
-      case 'status': return <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">{r.status}</span>;
-      case 'pipeline': return (
-        <span className="inline-flex items-center gap-1 font-bold" title={`Applied ${f.applied} → Screening ${f.screening} → Interview ${f.interview} → Offer ${f.offer} → Hired ${f.hired}`}>
-          <span className="text-slate-700">{f.applications} apps</span>
-          <span className="text-slate-300">→</span>
-          <span className="text-emerald-700">{f.hired} hired</span>
-        </span>
-      );
+      case 'status': return <span className={tonePill(r.status)}>{r.status}</span>;
+      case 'pipeline': {
+        const max = Math.max(1, f.applied);
+        const step = (n: number, label: string, bg: string) => (
+          <span key={label} className="flex-1 min-w-[26px]" title={`${label}: ${n}`}>
+            <span className="block font-bold text-slate-800 text-[11px] leading-3">{n}</span>
+            <span className="block h-1 rounded-full mt-0.5" style={{ width: `${Math.max(12, (n / max) * 100)}%`, backgroundColor: bg }} />
+          </span>
+        );
+        return (
+          <span className="inline-flex flex-col gap-1" title={`Applied ${f.applied} → Screening ${f.screening} → Interview ${f.interview} → Offer ${f.offer} → Hired ${f.hired}`}>
+            <span className="flex items-end gap-1.5">
+              {step(f.applied, 'Applied', '#087BFF')}{step(f.interview, 'Interview', '#F59E0B')}{step(f.hired, 'Hired', '#10B981')}
+            </span>
+            <span className="text-[10px] font-bold text-slate-500">{f.applications} apps → {f.hired} hired</span>
+          </span>
+        );
+      }
       case 'ageing': { const a = ageingTone(r); return a ? <span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${a.cls}`}>{a.label}</span> : <span className="text-slate-400">—</span>; }
       case 'branch': return r.branch || '—';
       case 'manager': return r.hiringManager || '—';
@@ -720,20 +911,45 @@ export function RequisitionsPanel() {
     ]} />
   );
   const cols = REQ_ALL_COLUMNS.filter((c) => visibleCols.includes(c.key));
+  const pageStats = (() => {
+    const open = rows.filter((r) => !['Filled', 'Cancelled'].includes(r.status)).length;
+    const pending = rows.filter((r) => r.status === 'Pending Approval').length;
+    const sourcing = rows.filter((r) => r.status === 'Sourcing').length;
+    const filled = rows.filter((r) => r.status === 'Filled').length;
+    const openings = rows.reduce((s, r) => s + (Number(r.openings) || 1), 0);
+    const apps = rows.reduce((s, r) => s + (funnel(r).applications || 0), 0);
+    return { open, pending, sourcing, filled, openings, apps };
+  })();
+  const chip = (label: string, value: string | number, cls = 'bg-white border-slate-200 text-slate-700') => (
+    <span className={`inline-flex items-baseline gap-1 px-2.5 py-1 rounded-lg border text-[11px] font-bold ${cls}`}>
+      <span className="font-extrabold text-[12px]">{value}</span> {label}
+    </span>
+  );
 
   return (
     <div className={cardCls}>
-      <div className="flex flex-col gap-1">
-        <h3 className="text-base font-extrabold text-slate-900">Requirements — internal hiring demand</h3>
-        <p className="text-xs text-slate-500 font-medium">One requirement → many job postings. Candidates never see this screen; only Published, unexpired jobs leave the building.</p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex flex-col gap-0.5">
+          <h3 className="text-base font-extrabold text-slate-900">Requirements — internal hiring demand</h3>
+          <p className="text-xs text-slate-500 font-medium">One requirement → many job postings. Candidates never see this screen; only Published, unexpired jobs leave the building.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5" aria-label="This page summary">
+          {chip('total', total, 'bg-slate-50 border-slate-200 text-slate-700')}
+          {chip('open', pageStats.open, 'bg-white border-emerald-200 text-emerald-700')}
+          {chip('pending', pageStats.pending, 'bg-white border-amber-200 text-amber-800')}
+          {chip('sourcing', pageStats.sourcing, 'bg-white border-blue-200 text-blue-700')}
+          {chip('filled', pageStats.filled, 'bg-white border-slate-200 text-slate-600')}
+          {chip('openings', pageStats.openings)}
+          {chip('apps', pageStats.apps)}
+        </div>
       </div>
       {error && <PanelError message={error} status={loadError} onRetry={() => load(page)} />}
-      {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
-      <div className="flex flex-col lg:flex-row gap-2">
-        <div className="relative flex-1"><SearchSuggest value={q} onChange={setQ} placeholder="Search ID, title, department, manager…"
-    items={rows.map((r: any) => ({ key: String(r.id), query: String(r.id), title: String(r.title || r.id), meta: [r.id, r.department].filter(Boolean).join(' • '), status: r.status }))}
+      {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold" role="status">{ok}</div>}
+      <div className="flex flex-col lg:flex-row gap-2 items-stretch">
+        <div className="relative flex-1 min-w-[220px]"><SearchSuggest value={q} onChange={setQ} placeholder="Search ID, title, department, manager…"
+    items={rows.map((r: any) => ({ key: String(r.id), query: String(r.id), title: String(r.title || r.id), meta: [r.id, r.department, r.location].filter(Boolean).join(' • '), status: r.status }))}
     onPick={(it) => { setQ(it.query ?? it.key); setPage(1); }} /></div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <div className="w-44 shrink-0">
             <Select value={statusF} onChange={setStatusF} ariaLabel="Requirement status filter" placeholder="All statuses"
               options={[{ value: '', label: 'All statuses' }, ...['Draft', 'Pending Approval', 'Approved', 'Sourcing', 'On Hold', 'Filled', 'Cancelled'].map((s) => ({ value: s, label: s }))]} />
@@ -771,47 +987,50 @@ export function RequisitionsPanel() {
         </div>
       )}
       {loading ? <InlineLoading message="Loading requirements…" /> : rows.length === 0 ? (
-        <EmptyState title="No requirements" message="Create the first hiring requirement to start the approval flow." />
+        <EmptyState title={dq.trim() ? 'No matching requirements' : 'No requirements'}
+          message={dq.trim() ? `Nothing on this page matches “${dq.trim()}” — try a shorter term, a REQ id, or clear the status/company filters.` : 'Create the first hiring requirement to start the approval flow.'} />
       ) : (<>
         <div className="space-y-2 md:hidden">
           {rows.map((r) => {
             const f = funnel(r);
             return (
-            <div key={r.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+            <div key={r.id} className="p-3.5 rounded-2xl bg-white border border-slate-200 text-xs space-y-1.5">
               <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
+                <button type="button" onClick={() => setPipelineFor(r)} className="min-w-0 text-left">
                   <div className="font-extrabold text-slate-900 text-sm truncate">{r.title}</div>
-                  <div className="font-mono text-[11px] text-slate-500">{r.id} • {r.openings || 1} opening(s) • {f.openingsFilled} filled</div>
-                </div>
+                  <div className="font-mono text-[10px] text-slate-500">{r.id} • {r.openings || 1} opening(s) • {f.openingsFilled} filled</div>
+                </button>
                 {reqMenuFor(r)}
               </div>
-              <div><span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">{r.status}</span></div>
+              <div><span className={tonePill(r.status)}>{r.status}</span></div>
               <div className="font-bold text-slate-700">{f.applications} apps → {f.hired} hired</div>
               <div className="text-slate-600 font-medium">{r.department || '—'} • {r.location || '—'}</div>
+              <div className="text-slate-500 font-medium">{r.recruiter ? `Recruiter: ${r.recruiter}` : 'Recruiter: Unassigned'}</div>
             </div>
             );
           })}
         </div>
         <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
           <table className="w-full text-left text-xs min-w-[980px]">
-            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
-              <th className="px-2 py-3 w-8"><input type="checkbox" aria-label="Select page" checked={rows.length > 0 && rows.every((r) => selected.has(r.id))} onChange={toggleSelectPage} className="w-3.5 h-3.5 accent-[#087BFF]" /></th>
-              <th className="px-2 py-3 w-8" aria-label="Expand" />
-              {cols.map((c) => <th key={c.key} className="px-4 py-3">{c.label}</th>)}
-              <th className="px-4 py-3 text-right">Actions</th>
+            <thead className="bg-slate-50/80 backdrop-blur sticky top-0 z-10">
+              <tr className="text-slate-500 font-extrabold uppercase tracking-wider text-[10px]">
+              <th className="px-2 py-2.5 w-8"><input type="checkbox" aria-label="Select page" checked={rows.length > 0 && rows.every((r) => selected.has(r.id))} onChange={toggleSelectPage} className="w-3.5 h-3.5 accent-[#087BFF]" /></th>
+              <th className="px-2 py-2.5 w-8" aria-label="Expand" />
+              {cols.map((c) => <th key={c.key} className="px-3 py-2.5">{c.label}</th>)}
+              <th className="px-3 py-2.5 text-right">Actions</th>
             </tr></thead>
             <tbody className="divide-y divide-slate-100">
               {rows.map((r) => (
                 <Fragment key={r.id}>
-                <tr className="hover:bg-slate-50/70">
-                  <td className="px-2 py-3"><input type="checkbox" aria-label={`Select ${r.id}`} checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="w-3.5 h-3.5 accent-[#087BFF]" /></td>
-                  <td className="px-2 py-3">
+                <tr className="hover:bg-slate-50/70 align-top">
+                  <td className="px-2 py-2.5"><input type="checkbox" aria-label={`Select ${r.id}`} checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="w-3.5 h-3.5 accent-[#087BFF]" /></td>
+                  <td className="px-2 py-2.5">
                     <button type="button" onClick={() => toggleExpand(r)} aria-expanded={expanded[r.id] !== undefined} aria-label={expanded[r.id] !== undefined ? 'Collapse linked jobs' : 'Expand linked jobs'} className="p-1 rounded-lg hover:bg-slate-200 text-slate-500 font-bold">
                       {expanded[r.id] !== undefined ? '▾' : '▸'}
                     </button>
                   </td>
-                  {cols.map((c) => <td key={c.key} className="px-4 py-3">{cellFor(r, c.key)}</td>)}
-                  <td className="px-4 py-3"><div className="flex justify-end">{reqMenuFor(r)}</div></td>
+                  {cols.map((c) => <td key={c.key} className="px-3 py-2.5">{cellFor(r, c.key)}</td>)}
+                  <td className="px-3 py-2.5"><div className="flex justify-end">{reqMenuFor(r)}</div></td>
                 </tr>
                 {(() => { const linked = expanded[r.id]; return linked !== undefined && (
                   <tr key={`${r.id}-jobs`} className="bg-blue-50/40">
@@ -901,25 +1120,8 @@ export function RequisitionsPanel() {
           }
           setDecideFor(null);
         }} />
-      <Modal open={assignFor.length > 0} onClose={() => setAssignFor([])} title={`Assign recruiter — ${assignFor.length} requirement(s)`} subtitle="Workload shows open requirements already owned">
-        <div className="space-y-2 max-h-64 overflow-y-auto" data-lenis-prevent>
-          {recruiters.length === 0 && <div className="text-[11px] text-slate-500 font-medium">No active recruiters found.</div>}
-          {recruiters.map((u) => {
-            const load = rows.filter((r) => r.recruiter === u.email && !['Filled', 'Cancelled'].includes(r.status)).length;
-            return (
-              <button key={u.id} type="button" onClick={() => setAssignEmail(u.email)}
-                className={`w-full text-left p-3 rounded-xl border text-xs font-bold flex items-center justify-between gap-2 ${assignEmail === u.email ? 'bg-blue-50 border-blue-400' : 'bg-slate-50 border-slate-200'}`}>
-                <span className="truncate">{u.name} • <span className="text-slate-500">{u.email}</span></span>
-                <span className={`shrink-0 ${load > 5 ? 'text-red-600' : 'text-emerald-600'}`}>{load} open</span>
-              </button>
-            );
-          })}
-        </div>
-        <div className="flex justify-end gap-2 pt-3">
-          <button type="button" onClick={() => setAssignFor([])} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
-          <button type="button" disabled={busy || !assignEmail.trim()} onClick={doAssign} className={btnPrimary}>{busy ? 'Assigning…' : 'Assign'}</button>
-        </div>
-      </Modal>
+      <AssignRecruiterModal open={assignFor.length > 0} targets={assignFor} rows={rows}
+        onClose={() => setAssignFor([])} onDone={onAssignDone} />
       <ActionConfirm open={deleteFor !== null} onCancel={() => setDeleteFor(null)}
         title={`Delete ${deleteFor?.id || ''}`}
         subtitle={deleteFor?.title || ''}
@@ -1104,6 +1306,7 @@ export function RequirementPipeline({ reqId, onClose, onDecide, onEdit, onAssign
 }) {
   const [data, setData] = useState<any>(null);
   const [interviews, setInterviews] = useState<any[]>([]);
+  const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [tab, setTab] = useState('overview');
@@ -1112,20 +1315,26 @@ export function RequirementPipeline({ reqId, onClose, onDecide, onEdit, onAssign
   const gDelete = useActionGuard('requirement', data, 'delete');
   const gAssign = useActionGuard('requirement', data, 'assign');
   useEffect(() => {
+    let live = true;
     (async () => {
       setLoading(true); setError('');
       try {
-        const [rRes, iRes] = await Promise.all([
-          requisitionsApi.list(`?page=1&pageSize=100`),
+        // Single-record fetch (§Phase 2) + the tenant audit trail for this requirement.
+        const [rRes, iRes, aRes] = await Promise.all([
+          requisitionsApi.get(reqId),
           interviewsApi.list(`?requisitionId=${reqId}`),
+          directoryApi.auditLogs(`?recordId=${encodeURIComponent(reqId)}&page=1&pageSize=50`).catch(() => null),
         ]);
-        const row = unwrapList(rRes).find((r: any) => r.id === reqId);
-        if (!row) throw new Error('Requirement no longer exists.');
+        if (!live) return;
+        const row = unwrapObj(rRes);
+        if (!row?.id) throw new Error('Requirement no longer exists.');
         setData(row);
         setInterviews(unwrapList(iRes).filter((i: any) => ['Scheduled', 'Rescheduled'].includes(i.status)).slice(0, 10));
-      } catch (e) { setError(errMsg(e)); }
-      finally { setLoading(false); }
+        setLogs(aRes ? unwrapList(aRes) : []);
+      } catch (e) { if (live) setError(errMsg(e)); }
+      finally { if (live) setLoading(false); }
     })();
+    return () => { live = false; };
   }, [reqId]);
   const f = data?.rollup || { applied: 0, screening: 0, interview: 0, offer: 0, hired: 0, applications: 0, interviews: 0, openingsFilled: 0, ageingDays: 0, linkedJobs: [] };
   const max = Math.max(1, f.applied);
@@ -1134,7 +1343,17 @@ export function RequirementPipeline({ reqId, onClose, onDecide, onEdit, onAssign
     !gEdit.allowed && gEdit.reason,
     !gDelete.allowed && gDelete.reason,
   ].filter(Boolean) as string[];
-  const activity = [...(data?.changeRequests || []).map((c: any) => ({ at: c.at, kind: 'changes', text: `Changes requested by ${c.by}: ${c.note}` })), ...(data?.history || []).map((h: any) => ({ at: h.at, kind: h.to, text: `${h.from} → ${h.to} by ${h.by}${h.reason ? `: ${h.reason}` : ''}` }))].reverse().slice(0, 30);
+  const activity = useMemo(() => {
+    const items: ActivityItem[] = [];
+    (data?.history || []).forEach((h: any) => items.push({ at: h.at, title: `${h.from || '—'} → ${h.to}`, meta: h.reason ? `${h.by || '—'} • ${h.reason}` : (h.by || '—'), tone: h.to === 'Cancelled' ? 'bad' : h.to === 'Approved' ? 'ok' : 'info' }));
+    (data?.changeRequests || []).forEach((c: any) => items.push({ at: c.at, title: 'Changes requested', meta: `${c.by} • ${c.note}`, tone: 'warn' }));
+    (data?.assignmentHistory || []).forEach((a: any) => items.push({ at: a.at, title: a.from ? 'Recruiter reassigned' : 'Recruiter assigned', meta: `${a.from || '—'} → ${a.to || '—'} by ${a.by || '—'}`, tone: 'info' }));
+    // Audit rows the history above does not already cover (edits, deletes, exports…).
+    logs.filter((l: any) => !/(_STATUS:|_CREATED:|_ASSIGNED:|CHANGES_REQUESTED)/.test(String(l.action)))
+      .forEach((l: any) => items.push({ at: l.timestamp, title: auditLabel(String(l.action)), meta: l.actor, tone: 'neutral' }));
+    if (data?.createdAt) items.push({ at: data.createdAt, title: 'Requirement created', meta: data.createdBy || '—', tone: 'info' });
+    return sortActivity(items);
+  }, [data, logs]);
   return (
     <DetailDrawer title={data?.title || reqId} subtitle={`${reqId} • ${data?.status || ''} • ${f.openingsFilled}/${data?.openings || 1} filled`} onClose={onClose} width="max-w-4xl">
       {loading ? <InlineLoading message="Loading pipeline…" /> : error ? (
@@ -1213,18 +1432,8 @@ export function RequirementPipeline({ reqId, onClose, onDecide, onEdit, onAssign
             </DetailSection>
           )}
           {tab === 'activity' && (
-            <DetailSection title="Change & status history" count={activity.length}>
-              {activity.length === 0 ? <div className="text-[11px] text-slate-500 font-medium">No recorded transitions yet.</div> : (
-                <ol className="relative ml-1.5 border-l-2 border-slate-100 space-y-3">
-                  {activity.map((e: any, i: number) => (
-                    <li key={i} className="ml-4 relative">
-                      <span className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-slate-900 ring-4 ring-slate-100" />
-                      <div className="font-bold text-slate-900">{e.text}</div>
-                      <div className="text-[11px] text-slate-500 font-medium font-mono">{String(e.at || '').slice(0, 16).replace('T', ' ')}</div>
-                    </li>
-                  ))}
-                </ol>
-              )}
+            <DetailSection title="Activity — history, assignments & audit" count={activity.length}>
+              <ActivityTimeline items={activity} empty="No transitions recorded yet — approve, assign or rework to start the trail." />
             </DetailSection>
           )}
         </div>
@@ -1254,29 +1463,50 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
   const [view, setView] = useQueryState('app_view');
   const [boardRows, setBoardRows] = useState<any[]>([]);
   const [boardLoading, setBoardLoading] = useState(false);
+  const [suggestRows, setSuggestRows] = useState<any[]>([]);
   const pageSize = 10;
 
-  const load = async (p = page, f = appliedFilter) => {
-    setLoading(true); setError('');
+  /** Server-side search (§recruitment.ts q) — matches any field of the application row. */
+  const buildParams = (p: number, f: string, term: string) => {
+    const sp = new URLSearchParams({ page: String(p), pageSize: String(pageSize) });
+    if (f) sp.set('status', f);
+    if (term.trim()) sp.set('q', term.trim());
+    return sp.toString();
+  };
+  const load = async (p = page, f = appliedFilter, term = q) => {
+    setLoading(true); setError(''); setLoadError(0);
     try {
-      const res: any = await applicationsApi.list(`?page=${p}&pageSize=${pageSize}${f ? `&status=${encodeURIComponent(f)}` : ''}`);
+      const res: any = await applicationsApi.list(`?${buildParams(p, f, term)}`);
       setRows(unwrapList(res));
       setTotal(Number(res?.pagination?.total || unwrapList(res).length));
     } catch (e) { setError(errMsg(e)); setLoadError(errStatus(e)); }
     finally { setLoading(false); }
   };
-  useEffect(() => { load(page, appliedFilter); }, [page, appliedFilter]);
+  // Search/filter changes restart at page 1; page turns reuse the same term. Debounced so typing stays cheap.
+  useEffect(() => { if (page !== 1) { setPage(1); return; } load(1, appliedFilter, dqApp); }, [dqApp, appliedFilter]);
+  const firstPageRun = useRef(false);
+  useEffect(() => { if (!firstPageRun.current) { firstPageRun.current = true; return; } load(page, appliedFilter, dqApp); }, [page]);
   useEffect(() => {
     if ((view || 'list') !== 'board') return;
     (async () => {
       setBoardLoading(true);
       try {
-        const res: any = await applicationsApi.list(`?page=1&pageSize=100${appliedFilter ? `&status=${encodeURIComponent(appliedFilter)}` : ''}`);
+        const res: any = await applicationsApi.list(`?${buildParams(1, appliedFilter, q)}`);
         setBoardRows(unwrapList(res));
       } catch (e) { setError(errMsg(e)); }
       finally { setBoardLoading(false); }
     })();
-  }, [view, appliedFilter]);
+  }, [view, appliedFilter, dqApp]);
+  useEffect(() => {
+    const term = q.trim();
+    if (term.length < 2) { setSuggestRows([]); return; }
+    const t = setTimeout(() => {
+      applicationsApi.list(`?${buildParams(1, appliedFilter, term)}`)
+        .then((res: any) => setSuggestRows(unwrapList(res)))
+        .catch(() => setSuggestRows([]));
+    }, 250);
+    return () => clearTimeout(t);
+  }, [q, appliedFilter]);
 
   const patchBoth = (id: string, updated: any) => {
     if (!updated?.id) return;
@@ -1359,6 +1589,23 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
   };
 
   const filteredApps = rows.filter((a) => !dqApp.trim() || `${a.id} ${a.jobTitle} ${a.candidateEmail}`.toLowerCase().includes(dqApp.toLowerCase()));
+  // Suggestions come from a debounced server search (10 rows) merged with the visible page,
+  // so a pick can land on an application that is not on the current page.
+  const appSuggest = (() => {
+    const seen = new Set<string>();
+    return [...suggestRows, ...rows]
+      .filter((a: any) => {
+        if (!a?.id || seen.has(a.id)) return false;
+        seen.add(a.id); return true;
+      })
+      .slice(0, 7)
+      .map((a: any) => ({
+        key: String(a.id), query: String(a.id),
+        title: String(a.jobTitle || a.jobId || a.id),
+        meta: [a.candidateEmail, a.id].filter(Boolean).join(' • '),
+        status: a.stage,
+      }));
+  })();
   const appMenuFor = (a: any) => {
     // Phase 3: Offer/Hired excluded from direct moves — use Issue offer / Record joining (explicit records).
     const moves = ['Shortlisted', 'Interview Scheduled', 'Selected', 'Rejected', 'Withdrawn', 'On Hold'].filter((s) => s !== a.stage).slice(0, 6);
@@ -1420,11 +1667,11 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
             <ExportButton filename="applications.csv" rows={filteredApps} columns={['id', 'jobTitle', 'jobId', 'candidateEmail', 'stage']} />
           </div>
         </div>
-        <SearchSuggest value={q} onChange={setQ} placeholder="Search job title, candidate email, application ID…"
-        items={rows.map((a: any) => ({ key: String(a.id), query: String(a.id), title: String(a.jobTitle || a.id), meta: String(a.candidateEmail || ''), status: a.stage }))}
+        <SearchSuggest value={q} onChange={setQ} placeholder="Search application ID, job title, candidate email…"
+        items={appSuggest}
         onPick={(it) => { setQ(it.query ?? it.key); setPage(1); }} />
       </div>
-      {error && <PanelError message={error} status={loadError} onRetry={() => load(page, appliedFilter)} />}
+      {error && <PanelError message={error} status={loadError} onRetry={() => load(page, appliedFilter, dqApp)} />}
       {!compact && (
         <input className={inputCls} placeholder="Reason / note for next move (required for Rejected, Withdrawn, On Hold)" value={reason} onChange={(e) => setReason(e.target.value)} />
       )}
@@ -1433,7 +1680,8 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
           <EmptyState title="No applications" message="Applications appear here once candidates apply or agencies submit." />
         ) : <ApplicationsKanban apps={boardRows} onOpen={openDetail} onDropMove={dropMove} />
       ) : loading ? <InlineLoading message="Loading applications…" /> : filteredApps.length === 0 ? (
-        <EmptyState title="No applications" message="Applications appear here once candidates apply or agencies submit." />
+        <EmptyState title={dqApp.trim() ? 'No matching applications' : 'No applications'}
+          message={dqApp.trim() ? `Nothing on this page matches “${dqApp.trim()}” — try a shorter term, an application ID, or clear the stage filter.` : 'Applications appear here once candidates apply or agencies submit.'} />
       ) : (<>
         <div className="space-y-2 md:hidden">
           {filteredApps.map((a) => (
@@ -2469,6 +2717,7 @@ export function TalentPoolsPanel() {
   const [poolTab, setPoolTab] = useState<'members' | 'details' | 'analytics'>('members');
   const [members, setMembers] = useState<any[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
+  const [memberFilter, setMemberFilter] = useState('');
   const [memberDetail, setMemberDetail] = useState<any>(null);
   const [memberTab, setMemberTab] = useState<'profile' | 'pipeline' | 'actions'>('profile');
   const [memberApps, setMemberApps] = useState<any[]>([]);
@@ -2508,7 +2757,7 @@ export function TalentPoolsPanel() {
   };
   useEffect(() => { load(); }, []);
   const openDrawer = async (p: any) => {
-    setDrawerPool(p); setPoolTab('members'); setMembers([]); setMemberDetail(null);
+    setDrawerPool(p); setPoolTab('members'); setMembers([]); setMemberDetail(null); setMemberFilter('');
     setMembersLoading(true);
     try { setMembers(unwrapList(await talentApi.poolMembers(p.id))); }
     catch (e) { setError(errMsg(e)); } finally { setMembersLoading(false); }
@@ -2613,6 +2862,11 @@ export function TalentPoolsPanel() {
   const visible = pools
     .filter((p) => (statusTab === 'all' || (statusTab === 'archived' ? p.status === 'Archived' : p.status !== 'Archived')))
     .filter((p) => !search.trim() || `${p.name} ${p.id}`.toLowerCase().includes(search.trim().toLowerCase()));
+  const membersVisible = members.filter((m) => {
+    const s = memberFilter.trim().toLowerCase();
+    if (!s) return true;
+    return `${m.candidate?.name || ''} ${m.candidate?.roleTitle || ''} ${m.candidate?.location || ''} ${m.candidate?.skills || ''}`.toLowerCase().includes(s);
+  });
   const skillMix = (() => {
     const map = new Map<string, number>();
     for (const m of members) for (const s of String(m.candidate?.skills || '').split(/[,;|]+/)) {
@@ -2620,60 +2874,96 @@ export function TalentPoolsPanel() {
     }
     return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
   })();
+  const poolMenuItems = (p: any) => [
+    { label: 'Open pool', onSelect: () => openDrawer(p) },
+    { label: 'Add member', onSelect: () => { setAddPoolId(p.id); setShowAdd(true); } },
+    { label: 'Rename', onSelect: () => { setRenameFor(p); setRenameName(p.name || ''); } },
+    ...(p.status !== 'Archived' ? [{ label: 'Archive pool', danger: true as const, onSelect: () => doArchive(p) }] : []),
+  ];
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         {([
-          ['Pools', totals.pools, 'total groups'],
-          ['Active', totals.active, 'hiring now'],
-          ['Members', totals.members, 'bench strength'],
-          ['Stale', totals.stale, 'needs cleanup'],
-          ['Archived', totals.archived, 'retained'],
-        ] as const).map(([label, value, sub]) => (
-          <div key={label} className="p-4 bg-white rounded-2xl border border-slate-200/90 shadow-sm">
-            <div className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">{label}</div>
-            <div className={`text-2xl font-extrabold ${label === 'Stale' && value > 0 ? 'text-amber-600' : 'text-slate-900'}`}>{value}</div>
-            <div className="text-[11px] font-bold text-slate-500">{sub}</div>
+          ['Pools', totals.pools, ''],
+          ['Active', totals.active, 'text-emerald-700'],
+          ['Members', totals.members, ''],
+          ['Stale', totals.stale, totals.stale > 0 ? 'text-amber-700' : 'text-slate-400'],
+          ['Archived', totals.archived, 'text-slate-500'],
+        ] as const).map(([label, value, tone]) => (
+          <div key={label} className="flex items-baseline gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-sm">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{label}</span>
+            <span className={`text-base font-extrabold ${tone || 'text-slate-900'}`}>{value}</span>
           </div>
         ))}
       </div>
       <div className={cardCls}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex rounded-xl bg-slate-100 border border-slate-200 p-0.5 w-fit" role="tablist" aria-label="Pool status">
-            {([[ 'all', 'All' ], [ 'active', 'Active' ], [ 'archived', 'Archived' ]] as const).map(([v, label]) => (
-              <button key={v} role="tab" aria-selected={statusTab === v} type="button" onClick={() => setStatusTab(v)}
-                className={`px-3.5 py-1.5 rounded-lg font-bold text-xs cursor-pointer ${statusTab === v ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>{label}</button>
-            ))}
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex flex-col gap-0.5">
+              <h3 className="text-base font-extrabold text-slate-900">Talent pools — bench groups, members, pipeline</h3>
+              <p className="text-xs text-slate-500 font-medium">Pools are reusable talent benches. Stale members have no profile on file — clean them up.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => { setAddPoolId(drawerPool?.id || pools.find((p) => p.status !== 'Archived')?.id || ''); setShowAdd(true); }} className={btnDark}>+ Add member</button>
+              <button type="button" onClick={() => setShowCreate(true)} className={btnPrimary}>+ New pool</button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search pools…" className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:border-blue-500 w-44" />
-            <button type="button" onClick={() => { setAddPoolId(drawerPool?.id || pools.find((p) => p.status !== 'Archived')?.id || ''); setShowAdd(true); }} className={btnDark}>+ Add member</button>
-            <button type="button" onClick={() => setShowCreate(true)} className={btnPrimary}>+ New pool</button>
+          <div className="flex flex-col lg:flex-row gap-2">
+            <div className="flex rounded-xl bg-slate-100 border border-slate-200 p-0.5 w-fit" role="tablist" aria-label="Pool status">
+              {([[ 'all', `All (${totals.pools})` ], [ 'active', `Active (${totals.active})` ], [ 'archived', `Archived (${totals.archived})` ]] as const).map(([v, label]) => (
+                <button key={v} role="tab" aria-selected={statusTab === v} type="button" onClick={() => setStatusTab(v)}
+                  className={`px-3.5 py-1.5 rounded-lg font-bold text-xs cursor-pointer whitespace-nowrap ${statusTab === v ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{label}</button>
+              ))}
+            </div>
+            <div className="flex-1 min-w-[200px] max-w-sm">
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search pools by name or ID…" aria-label="Search pools"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:border-blue-500" />
+            </div>
           </div>
         </div>
         {error && <PanelError message={error} status={loadError} onRetry={() => load()} />}
-        {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
+        {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold" role="status">{ok}</div>}
         {loading ? <InlineLoading message="Loading pools…" /> : visible.length === 0 ? (
           <EmptyState title="No pools" message="Create a talent pool to group shortlisted candidates." />
-        ) : (
-          <div className="space-y-2">{visible.map((p) => {
-            const c = counts[p.id] || { total: 0, stale: 0 };
-            return (
-              <div key={p.id} className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 transition">
-                <button type="button" onClick={() => openDrawer(p)} className="flex-1 min-w-0 text-left cursor-pointer" title="Open pool">
-                  <div className="font-extrabold text-slate-900 text-sm truncate">{p.name} <span className="font-mono text-[11px] text-slate-400">{p.id}</span></div>
-                  <div className="text-[11px] text-slate-500 font-medium">{c.total} member{c.total === 1 ? '' : 's'}{c.stale > 0 ? <span className="ml-1.5 text-amber-700 font-bold">• {c.stale} stale</span> : ''} • {p.status === 'Archived' ? 'archived' : 'active'}</div>
-                </button>
-                <RowMenu label={`Manage ${p.id}`} items={[
-                  { label: 'Open pool', onSelect: () => openDrawer(p) },
-                  { label: 'Add member', onSelect: () => { setAddPoolId(p.id); setShowAdd(true); } },
-                  { label: 'Rename', onSelect: () => { setRenameFor(p); setRenameName(p.name || ''); } },
-                  ...(p.status !== 'Archived' ? [{ label: 'Archive pool', danger: true, onSelect: () => doArchive(p) }] : []),
-                ]} />
-              </div>
-            );
-          })}</div>
-        )}
+        ) : (<>
+          <div className="space-y-2 md:hidden">
+            {visible.map((p) => {
+              const c = counts[p.id] || { total: 0, stale: 0 };
+              return (
+                <DrawerCard key={p.id} status={p.status === 'Archived' ? 'Archived' : 'Active'}
+                  title={p.name || p.id} mono
+                  meta={`${c.total} member${c.total === 1 ? '' : 's'}${c.stale > 0 ? ` • ${c.stale} stale` : ''} • ${p.owner || '—'}`}
+                  right={<RowMenu label={`Manage ${p.id}`} items={poolMenuItems(p)} />} />
+              );
+            })}
+          </div>
+          <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
+            <table className="w-full text-left text-xs min-w-[720px]">
+              <thead className="bg-slate-50 sticky top-0 z-10"><tr className="text-slate-500 font-extrabold uppercase tracking-wider text-[10px]">
+                <th className="px-3 py-2.5">Pool</th><th className="px-3 py-2.5 text-right">Members</th><th className="px-3 py-2.5 text-right">Stale</th><th className="px-3 py-2.5">Status</th><th className="px-3 py-2.5">Owner</th><th className="px-3 py-2.5">Created</th><th className="px-3 py-2.5 text-right">Actions</th>
+              </tr></thead>
+              <tbody className="divide-y divide-slate-100">
+                {visible.map((p) => {
+                  const c = counts[p.id] || { total: 0, stale: 0 };
+                  return (
+                    <tr key={p.id} className="hover:bg-slate-50/70">
+                      <td className="px-3 py-2.5">
+                        <button type="button" onClick={() => openDrawer(p)} className="text-left font-bold text-slate-900 underline decoration-slate-300 underline-offset-2 hover:text-spec-electric cursor-pointer" title="Open pool">{p.name || p.id}</button>
+                        <div className="font-mono text-[10px] text-slate-400">{p.id}</div>
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-extrabold">{c.total}</td>
+                      <td className={`px-3 py-2.5 text-right font-extrabold ${c.stale > 0 ? 'text-amber-700' : 'text-slate-400'}`}>{c.stale || '—'}</td>
+                      <td className="px-3 py-2.5"><span className={invPill(p.status === 'Archived' ? 'Void' : 'Paid')}>{p.status === 'Archived' ? 'Archived' : 'Active'}</span></td>
+                      <td className="px-3 py-2.5 font-mono">{p.owner || '—'}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">{p.createdAt ? String(p.createdAt).slice(0, 10) : '—'}</td>
+                      <td className="px-3 py-2.5"><div className="flex justify-end"><RowMenu label={`Manage ${p.id}`} items={poolMenuItems(p)} /></div></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>)}
       </div>
 
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New talent pool">
@@ -2718,21 +3008,28 @@ export function TalentPoolsPanel() {
           </div>
           {poolTab === 'members' && (
             <div className="space-y-2">
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 flex-wrap items-center">
                 <button type="button" onClick={() => { setAddPoolId(drawerPool.id); setShowAdd(true); }} className="px-3 py-2 rounded-xl bg-slate-900 text-white font-bold text-[11px] cursor-pointer">+ Add member</button>
                 <button type="button" disabled={busy || members.filter(staleOf).length === 0} onClick={() => removeStale(drawerPool)} className="px-3 py-2 rounded-xl bg-white border border-slate-200 font-bold text-[11px] disabled:opacity-40 cursor-pointer">Remove stale ({members.filter(staleOf).length})</button>
                 <button type="button" onClick={() => startOutreach(members.map((m) => m.candidateEmail), `pool ${drawerPool.name}`)} className="px-3 py-2 rounded-xl bg-white border border-slate-200 font-bold text-[11px] cursor-pointer">Start outreach →</button>
+                {members.length > 0 && (
+                  <input value={memberFilter} onChange={(e) => setMemberFilter(e.target.value)} placeholder="Filter members…" aria-label="Filter pool members"
+                    className="ml-auto px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-[11px] font-semibold outline-none focus:border-blue-500 w-40" />
+                )}
               </div>
               {membersLoading ? <InlineLoading message="Loading members…" /> : members.length === 0 ? (
-                <div className="text-[11px] text-slate-500 font-medium p-3 rounded-xl bg-slate-50 border">No members yet — add from Talent Search.</div>
-              ) : members.map((m) => (
-                <button key={m.id} type="button" onClick={() => openMember(m)} className="w-full flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 text-left cursor-pointer transition">
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${staleOf(m) ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                <div className="text-[11px] text-slate-500 font-medium p-3 rounded-xl bg-slate-50 border border-dashed border-slate-200">No members yet — add from Talent Search.</div>
+              ) : membersVisible.length === 0 ? (
+                <div className="text-[11px] text-slate-500 font-medium p-3 rounded-xl bg-slate-50 border border-dashed border-slate-200">No members match this filter.</div>
+              ) : membersVisible.map((m) => (
+                <button key={m.id} type="button" onClick={() => openMember(m)} className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-blue-300 text-left cursor-pointer transition">
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${staleOf(m) ? 'bg-amber-500' : 'bg-emerald-500'}`} />
                   <span className="flex-1 min-w-0">
-                    <span className="block font-extrabold text-slate-900 text-sm truncate">{m.candidate?.name || 'Unknown candidate'}</span>
+                    <span className="block font-bold text-slate-900 text-[13px] leading-5 truncate">{m.candidate?.name || 'Unknown candidate'}</span>
                     <span className="block text-[11px] text-slate-500 font-medium truncate">{m.candidate ? `${m.candidate.roleTitle || '—'} • ${m.candidate.experienceYears ?? '—'}y • ${m.candidate.location || '—'}` : 'profile no longer on file'}</span>
                   </span>
                   {m.applicationId && <span className="px-2 py-0.5 rounded-full bg-blue-50 text-[#087BFF] border border-blue-200 font-bold text-[10px] shrink-0">in pipeline</span>}
+                  {staleOf(m) && <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-bold text-[10px] shrink-0">stale</span>}
                 </button>
               ))}
             </div>
@@ -4199,6 +4496,27 @@ export function downloadDocFile(filename: string, title: string, bodyHtml: strin
 }
 
 const INV_STATUSES = ['Draft', 'Issued', 'Partially Paid', 'Paid', 'Overdue', 'Void', 'Credited'];
+/** Invoice sub-menus — `view` is a server-side saved search (`/invoices?view=`). */
+const INV_VIEWS = [
+  { key: 'all', label: 'All' },
+  { key: 'open', label: 'Pending' },
+  { key: 'overdue', label: 'Overdue' },
+  { key: 'paid', label: 'Paid' },
+  { key: 'draft', label: 'Drafts' },
+  { key: 'void', label: 'Void / credited' },
+] as const;
+const INV_STATUS_TONE: Record<string, string> = {
+  Paid: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  Overdue: 'bg-red-50 text-red-700 border-red-200',
+  Draft: 'bg-amber-50 text-amber-800 border-amber-200',
+  Issued: 'bg-blue-50 text-blue-700 border-blue-200',
+  'Partially Paid': 'bg-blue-50 text-blue-700 border-blue-200',
+  Void: 'bg-slate-100 text-slate-500 border-slate-200',
+  Credited: 'bg-slate-100 text-slate-500 border-slate-200',
+};
+function invPill(status: string): string {
+  return `inline-block px-2 py-0.5 rounded-full border font-bold text-[11px] whitespace-nowrap ${INV_STATUS_TONE[status] || 'bg-slate-100 text-slate-600 border-slate-200'}`;
+}
 
 /* ---------------- Invoices (dedicated page: table, statuses, corporate document, reminders) ---------------- */
 export function InvoicesPanel() {
@@ -4216,6 +4534,9 @@ export function InvoicesPanel() {
   const ips = Number(invPageSize) === 50 ? 50 : Number(invPageSize) === 100 ? 100 : 20;
   const [invTotal, setInvTotal] = useState(0);
   const [typeF, setTypeF] = useQueryState('inv_type');
+  const [viewF, setViewF] = useQueryState('inv_view');
+  const view = (INV_VIEWS.some((v) => v.key === viewF) ? viewF : 'all') as string;
+  const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
   const [orgs, setOrgs] = useState<any[]>([]);
   const [showSeries, setShowSeries] = useState(false);
   const [seriesForm, setSeriesForm] = useState({ orgId: '', label: 'Monthly payroll fee', amount: '', startMonth: '', months: '12', taxRate: '18', draft: true });
@@ -4266,7 +4587,7 @@ export function InvoicesPanel() {
   const [dues, setDues] = useState<any>(null);
   const loadDues = async () => {
     try {
-      const all = unwrapList(await billingApi.invoices('?page=1&pageSize=100'));
+      const all = unwrapList(await billingApi.invoices('?page=1&pageSize=100&view=open'));
       const open = all.filter((i: any) => Number(i.balance || 0) > 0 && ['Issued', 'Partially Paid'].includes(i.status));
       const bucket = (pred: (d: number) => boolean) => open.filter((i: any) => { const ms = new Date(i.dueDate).getTime(); if (!Number.isFinite(ms)) return false; return pred(Math.floor((ms - Date.now()) / 864e5)); });
       const sum = (rows: any[]) => rows.reduce((a, i) => a + Number(i.balance || 0), 0);
@@ -4277,8 +4598,18 @@ export function InvoicesPanel() {
   const [reminders, setReminders] = useState<any[]>([]);
   const [remResult, setRemResult] = useState('');
   const [remBusy, setRemBusy] = useState(false);
+  const [remKind, setRemKind] = useState<'all' | 'overdue' | 'due-soon' | 'settled'>('all');
+  const [remQ, setRemQ] = useState('');
   const [schedResult, setSchedResult] = useState('');
   const [schedBusy, setSchedBusy] = useState(false);
+  /** Safe age label — seeded reminders used to render "due in undefinedd". */
+  const remAge = (r: any) => (r.kind === 'overdue' ? `${Number(r.daysOverdue || 0)}d overdue` : `due in ${Number(r.daysToDue || 0)}d`);
+  const remVisible = reminders.filter((r) => {
+    if (remKind === 'settled' ? !r.settled : remKind !== 'all' && r.kind !== remKind) return false;
+    const s = remQ.trim().toLowerCase();
+    return !s || `${r.number || ''} ${r.invoiceId || ''} ${r.orgId || ''}`.toLowerCase().includes(s);
+  });
+  const remAttention = reminders.filter((r) => !r.settled && (r.kind === 'overdue' || Number(r.daysToDue ?? 99) <= 7)).length;
   const runSchedule = async () => {
     setSchedBusy(true); setSchedResult('');
     try {
@@ -4294,17 +4625,30 @@ export function InvoicesPanel() {
       if (qq.trim()) params.set('q', qq.trim());
       if (st) params.set('status', st);
       if (ty) params.set('type', ty);
+      if (view && view !== 'all') params.set('view', view);
       const res: any = await billingApi.invoices(`?${params.toString()}`);
       setInvoices(unwrapList(res)); setInvTotal(Number(res?.pagination?.total || unwrapList(res).length));
-      loadReminders(); loadDues(); loadOrgs();
+      loadReminders(); loadDues(); loadOrgs(); loadViewCounts();
     }
     catch (e) { setError(errMsg(e)); setLoadError(errStatus(e)); }
     finally { setLoading(false); }
   };
-  useEffect(() => { setInvPage(1); }, [dqInv, statusF, typeF, ips]);
-  useEffect(() => { load(invPage, ips, dqInv, statusF, typeF); }, [invPage, ips, dqInv, statusF, typeF]);
+  /** One cheap total per sub-menu so the tabs always show live counts. */
+  const loadViewCounts = async () => {
+    try {
+      const entries = await Promise.all(INV_VIEWS.map(async (v) => {
+        const params = new URLSearchParams({ page: '1', pageSize: '1', view: v.key });
+        if (typeF) params.set('type', typeF);
+        const res: any = await billingApi.invoices(`?${params.toString()}`);
+        return [v.key, Number(res?.pagination?.total || 0)] as const;
+      }));
+      setViewCounts(Object.fromEntries(entries));
+    } catch { /* counts are cosmetic — never block the table */ }
+  };
+  useEffect(() => { setInvPage(1); }, [dqInv, statusF, typeF, ips, view]);
+  useEffect(() => { load(invPage, ips, dqInv, statusF, typeF); }, [invPage, ips, dqInv, statusF, typeF, view]);
   const loadReminders = async () => {
-    try { setReminders(unwrapList(await billingApi.invoiceReminders())); } catch { setReminders([]); }
+    try { setReminders(unwrapList(await billingApi.invoiceReminders('?page=1&pageSize=50'))); } catch { setReminders([]); }
   };
   const runReminders = async () => {
     setRemBusy(true); setRemResult('');
@@ -4372,78 +4716,128 @@ export function InvoicesPanel() {
   );
   return (
     <div className={cardCls}>
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-base font-extrabold text-slate-900">Invoices — Tax invoices, statuses, documents</h3>
-          <div className="flex gap-2">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex flex-col gap-0.5">
+            <h3 className="text-base font-extrabold text-slate-900">Tax invoices — statuses, documents, reminders</h3>
+            <p className="text-xs text-slate-500 font-medium">
+              Issued invoices are immutable — amend with a credit note or void. {invTotal} in view.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
             <ExportButton filename="invoices.csv" rows={filteredInv} columns={['id', 'number', 'orgId', 'agreementId', 'invoiceType', 'billingPeriod', 'subtotal', 'tax', 'total', 'amountPaid', 'balance', 'status', 'dueDate']} />
             {canBill ? <button type="button" onClick={() => setShowSeries(true)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">+ Monthly series</button> : null}
-            {canBill ? <button type="button" onClick={() => setShowInvoice(true)} className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">+ Invoice</button> : null}
+            {canBill ? <button type="button" onClick={() => setShowInvoice(true)} className={btnPrimary}>+ Invoice</button> : null}
           </div>
         </div>
+        <div className="flex rounded-xl bg-slate-100 border border-slate-200 p-0.5 w-fit max-w-full overflow-x-auto" role="tablist" aria-label="Invoice views">
+          {INV_VIEWS.map((v) => (
+            <button key={v.key} role="tab" aria-selected={view === v.key} type="button" onClick={() => setViewF(v.key)}
+              className={`px-3.5 py-1.5 rounded-lg font-bold text-xs cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${view === v.key ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>
+              {v.label}
+              {viewCounts[v.key] !== undefined && (
+                <span className={`px-1.5 py-px rounded-md text-[10px] font-extrabold ${view === v.key ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-500'}`}>{viewCounts[v.key]}</span>
+              )}
+            </button>
+          ))}
+        </div>
         <div className="flex flex-col lg:flex-row gap-2">
-          <SearchSuggest value={q} onChange={setQ} placeholder="Search invoice ID, number, org, agreement…"
-    items={invoices.map((i: any) => ({ key: String(i.id), query: String(i.number || i.id), title: String(i.number || i.id), meta: [i.orgId, i.total != null ? `₹${i.total}` : ''].filter(Boolean).join(' • '), status: i.status }))}
-    onPick={(it) => { setQ(it.query ?? it.key); setInvPage(1); }} />
-          <div className="w-full lg:w-44 shrink-0">
-            <Select value={statusF} onChange={setStatusF} ariaLabel="Invoice status filter" placeholder="All statuses"
-              options={[{ value: '', label: 'All statuses' }, ...INV_STATUSES.map((s) => ({ value: s, label: s }))]} />
-          </div>
-          <div className="w-full lg:w-44 shrink-0">
-            <Select value={typeF} onChange={setTypeF} ariaLabel="Invoice type filter" placeholder="All types"
-              options={[{ value: '', label: 'All types' }, { value: 'one_time', label: 'One-time' }, { value: 'monthly', label: 'Monthly' }, { value: 'recurring', label: 'Recurring' }]} />
-          </div>
-          <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-[220px]"><SearchSuggest value={q} onChange={setQ} placeholder="Search invoice ID, number, company, agreement…"
+    items={invoices.map((i: any) => ({ key: String(i.id), query: String(i.number || i.id), title: String(i.number || i.id), meta: [i.orgId, i.total != null ? `₹${i.total}` : ''].filter(Boolean).join(' • '), status: i.overdue ? 'Overdue' : i.status }))}
+    onPick={(it) => { setQ(it.query ?? it.key); setInvPage(1); }} /></div>
+          <div className="flex flex-wrap gap-2">
+            <div className="w-full sm:w-44 shrink-0">
+              <Select value={statusF} onChange={setStatusF} ariaLabel="Invoice status filter" placeholder="All statuses"
+                options={[{ value: '', label: 'All statuses' }, ...INV_STATUSES.map((s) => ({ value: s, label: s }))]} />
+            </div>
+            <div className="w-full sm:w-44 shrink-0">
+              <Select value={typeF} onChange={setTypeF} ariaLabel="Invoice type filter" placeholder="All types"
+                options={[{ value: '', label: 'All types' }, { value: 'one_time', label: 'One-time' }, { value: 'monthly', label: 'Monthly' }, { value: 'recurring', label: 'Recurring' }]} />
+            </div>
             <PageSize value={ips} onChange={(n) => setInvPageSize(String(n))} />
           </div>
         </div>
       </div>
       {error && <PanelError message={error} status={loadError} onRetry={() => load(invPage, ips, dqInv, statusF)} />}
-      {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
-      <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 text-xs space-y-2">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="font-extrabold text-amber-900">Payment reminders → superadmin ({invoices.filter((i) => Number(i.balance || 0) > 0 && ['Issued', 'Partially Paid'].includes(i.status) && i.dueDate && (new Date(i.dueDate).getTime() - Date.now()) / 864e5 <= 7).length} needing attention)</div>
-          <div className="flex gap-2">
-            {canBill ? <button type="button" disabled={schedBusy} onClick={runSchedule} className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs disabled:opacity-50 w-fit">{schedBusy ? 'Running…' : 'Run billing schedule'}</button> : null}
-            {canBill ? <button type="button" disabled={remBusy} onClick={runReminders} className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs disabled:opacity-50 w-fit">{remBusy ? 'Sending…' : 'Send reminders now'}</button> : null}
+      {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold" role="status">{ok}</div>}
+      <div className="p-3.5 rounded-2xl bg-amber-50/50 border border-amber-200 text-xs space-y-2.5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-extrabold text-amber-900">Payment reminders → superadmin</span>
+            <span className={`px-2 py-0.5 rounded-full border font-bold text-[10px] ${remAttention > 0 ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+              {remAttention} needing attention
+            </span>
+            <span className="text-amber-800 font-medium">• {reminders.length} logged</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {canBill ? <button type="button" disabled={schedBusy} onClick={runSchedule} className="px-3.5 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs disabled:opacity-50">{schedBusy ? 'Running…' : 'Run billing schedule'}</button> : null}
+            {canBill ? <button type="button" disabled={remBusy} onClick={runReminders} className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs disabled:opacity-50">{remBusy ? 'Sending…' : 'Send reminders now'}</button> : null}
           </div>
         </div>
-        {remResult && <div className="font-bold text-emerald-700">{remResult}</div>}
-        {schedResult && <div className="font-bold text-emerald-700">{schedResult}</div>}
+        {remResult && <div className="font-bold text-emerald-700" role="status">{remResult}</div>}
+        {schedResult && <div className="font-bold text-emerald-700" role="status">{schedResult}</div>}
         {reminders.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex rounded-lg bg-white border border-amber-200 p-0.5" role="tablist" aria-label="Reminder filter">
+              {([['all', 'All'], ['overdue', 'Overdue'], ['due-soon', 'Due soon'], ['settled', 'Settled']] as const).map(([v, label]) => (
+                <button key={v} type="button" role="tab" aria-selected={remKind === v} onClick={() => setRemKind(v)}
+                  className={`px-2.5 py-1 rounded-md font-bold text-[11px] cursor-pointer whitespace-nowrap ${remKind === v ? 'bg-amber-600 text-white' : 'text-amber-800 hover:bg-amber-100'}`}>{label}</button>
+              ))}
+            </div>
+            <input value={remQ} onChange={(e) => setRemQ(e.target.value)} placeholder="Filter invoice / company…" aria-label="Filter reminders"
+              className="px-3 py-1.5 rounded-lg bg-white border border-amber-200 text-[11px] font-semibold outline-none focus:border-amber-500 w-48" />
+            <span className="text-[11px] font-bold text-amber-800">{remVisible.length} shown</span>
+          </div>
+        )}
+        {remVisible.length === 0 ? (
+          <div className="p-3 rounded-xl bg-white/60 border border-dashed border-amber-300 text-[11px] font-semibold text-amber-800">
+            {reminders.length === 0
+              ? 'No reminders logged yet — “Send reminders now” queues overdue and due-within-7-days notices.'
+              : 'No reminders match this filter.'}
+          </div>
+        ) : (<>
           <div className="overflow-x-auto rounded-2xl border border-amber-200 bg-white/60 hidden md:block">
             <table className="w-full text-left text-xs min-w-[760px]">
-              <thead><tr className="text-amber-800 font-bold uppercase tracking-wider text-[10px]">
-                <th className="px-3 py-2">Reminder</th><th className="px-3 py-2">Invoice</th><th className="px-3 py-2">Company</th><th className="px-3 py-2 text-right">Balance</th><th className="px-3 py-2">Age</th><th className="px-3 py-2">Sent</th>
+              <thead className="bg-amber-50/60"><tr className="text-amber-800 font-extrabold uppercase tracking-wider text-[10px]">
+                <th className="px-3 py-2">Reminder</th><th className="px-3 py-2">Invoice</th><th className="px-3 py-2">Company</th><th className="px-3 py-2 text-right">Balance</th><th className="px-3 py-2">Age</th><th className="px-3 py-2">Log</th>
               </tr></thead>
               <tbody className="divide-y divide-amber-100">
-                {reminders.slice(0, 10).map((r: any) => (
-                  <tr key={r.id} className="text-amber-900">
-                    <td className="px-3 py-2"><span className={`px-2 py-0.5 rounded-full border font-bold text-[10px] ${r.kind === 'overdue' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-800 border-amber-300'}`}>{r.kind}</span></td>
+                {remVisible.slice(0, 12).map((r: any) => (
+                  <tr key={r.id} className="text-amber-900 hover:bg-amber-50/60">
+                    <td className="px-3 py-2">
+                      <span className={`px-2 py-0.5 rounded-full border font-bold text-[10px] ${r.kind === 'overdue' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-800 border-amber-300'}`}>
+                        {r.kind === 'overdue' ? 'overdue' : 'due-soon'}
+                      </span>
+                      {r.settled && <span className="ml-1.5 px-2 py-0.5 rounded-full border font-bold text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">settled</span>}
+                    </td>
                     <td className="px-3 py-2 font-mono font-bold">{r.number || r.invoiceId}</td>
-                    <td className="px-3 py-2 font-mono">{r.orgId}</td>
+                    <td className="px-3 py-2 font-mono">{r.orgId || '—'}</td>
                     <td className="px-3 py-2 text-right font-extrabold">₹{Number(r.balance || 0).toLocaleString('en-IN')}</td>
-                    <td className="px-3 py-2 font-bold">{r.kind === 'overdue' ? `${r.daysOverdue}d overdue` : `due in ${r.daysToDue}d`}</td>
-                    <td className="px-3 py-2 text-[11px]">{String(r.sentAt || '').slice(0, 16).replace('T', ' ')} • {r.by}</td>
+                    <td className="px-3 py-2 font-bold whitespace-nowrap">{remAge(r)}</td>
+                    <td className="px-3 py-2 text-[11px] text-amber-800">
+                      {r.sentAt ? `${String(r.sentAt).slice(0, 16).replace('T', ' ')}` : '—'}{r.by ? ` • ${r.by}` : ''}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        )}
-        {reminders.length > 0 && (
           <div className="space-y-1.5 md:hidden">
-            {reminders.slice(0, 6).map((r: any) => (
+            {remVisible.slice(0, 8).map((r: any) => (
               <div key={r.id} className="p-3 rounded-xl bg-white/70 border border-amber-200 text-xs space-y-0.5">
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-mono font-bold text-amber-900">{r.number || r.invoiceId}</span>
-                  <span className={`px-2 py-0.5 rounded-full border font-bold text-[10px] ${r.kind === 'overdue' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-800 border-amber-300'}`}>{r.kind}</span>
+                  <span className="flex gap-1">
+                    <span className={`px-2 py-0.5 rounded-full border font-bold text-[10px] ${r.kind === 'overdue' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-800 border-amber-300'}`}>{r.kind === 'overdue' ? 'overdue' : 'due-soon'}</span>
+                    {r.settled && <span className="px-2 py-0.5 rounded-full border font-bold text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">settled</span>}
+                  </span>
                 </div>
-                <div className="font-bold text-amber-900">bal ₹{Number(r.balance || 0).toLocaleString('en-IN')} • {r.kind === 'overdue' ? `${r.daysOverdue}d overdue` : `due in ${r.daysToDue}d`}</div>
+                <div className="font-bold text-amber-900">{r.orgId || '—'} • bal ₹{Number(r.balance || 0).toLocaleString('en-IN')} • {remAge(r)}</div>
+                <div className="text-amber-800 font-medium">{r.sentAt ? String(r.sentAt).slice(0, 16).replace('T', ' ') : '—'}{r.by ? ` • ${r.by}` : ''}</div>
               </div>
             ))}
           </div>
-        )}
+        </>)}
       </div>
       {dues && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
@@ -4518,7 +4912,9 @@ export function InvoicesPanel() {
           </div>
         </form>
       </Modal>
-      <Modal open={docFor !== null} onClose={() => { setDocFor(null); setDoc(null); }} title={`Invoice ${doc?.number || docFor?.number || docFor?.id || ''}`} subtitle="Corporate tax invoice — terms, GST, reminders">
+      {docFor !== null && (
+      <DetailDrawer width="max-w-[85vw]" title={`Invoice ${doc?.number || docFor?.number || docFor?.id || ''}`} subtitle="Corporate tax invoice — terms, GST, payments, reminders"
+        onClose={() => { setDocFor(null); setDoc(null); }}>
         {!doc ? <InlineLoading message="Loading document…" /> : (
           <div className="space-y-3 text-xs">
             <div className="p-4 rounded-2xl bg-slate-900 text-white space-y-1">
@@ -4543,7 +4939,7 @@ export function InvoicesPanel() {
               <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-0.5">
                 <div className="text-[10px] font-bold text-slate-500 uppercase">Invoice</div>
                 <div className="font-medium">Issued {String(doc.issueDate || doc.createdAt || '').slice(0, 10)} • Due {String(doc.dueDate || '').slice(0, 10)}</div>
-                <div className="font-medium">Status: <strong>{doc.status}</strong>{doc.overdue ? ` • ${doc.daysOverdue}d overdue` : ''}</div>
+                <div className="font-medium">Status: <span className={invPill(doc.status)}>{doc.status}</span>{doc.overdue ? ` • ${doc.daysOverdue}d overdue` : ''}</div>
                 {doc.billingPeriod ? <div className="font-medium">Period: {doc.billingPeriod}</div> : null}
                 {doc.subscriptionId ? <div className="font-medium">Subscription/service: {doc.subscriptionId}</div> : null}
                 <div className="font-medium">Currency: {doc.currency || 'INR'}</div>
@@ -4581,13 +4977,14 @@ export function InvoicesPanel() {
               </div>
             )}
             {(doc.reminders || []).length > 0 && <div className="text-slate-600 font-medium">Reminders sent: {(doc.reminders || []).map((r: any) => `${r.kind} ${String(r.sentAt || '').slice(0, 10)}`).join(' • ')}</div>}
-            <div className="flex justify-end gap-2">
+            <div className="sticky bottom-0 -mx-6 px-6 py-3 bg-white/95 backdrop-blur border-t border-slate-200 flex flex-wrap justify-end gap-2">
               <button type="button" onClick={async () => { try { await openPdfBlob(await billingApi.invoicePdf(doc.id), `${doc.number || doc.id}.pdf`); } catch (e) { setError(errMsg(e)); } }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Download PDF (server)</button>
-              <button type="button" onClick={() => printHtmlDocument(`Invoice ${doc.number || doc.id}`, docPrintHtml(doc))} className="px-4 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs">Print / Save PDF</button>
+              <button type="button" onClick={() => printHtmlDocument(`Invoice ${doc.number || doc.id}`, docPrintHtml(doc))} className={btnDark}>Print / Save PDF</button>
             </div>
           </div>
         )}
-      </Modal>
+      </DetailDrawer>
+      )}
       <Modal open={voidFor !== null} onClose={() => setVoidFor(null)} title={`Void ${voidFor?.number || voidFor?.id || ''}?`} subtitle="Paid/Credited/Void invoices cannot be voided — use a credit note.">
         <div className="space-y-3">
           <Field label="Void reason *"><textarea rows={3} className={kitInput} value={voidReason} onChange={(e) => setVoidReason(e.target.value)} placeholder="e.g. Duplicate billing — finance approval" /></Field>
@@ -4624,7 +5021,7 @@ export function InvoicesPanel() {
               </div>
               <div className="font-bold text-slate-700">{i.invoiceType === 'one_time' || !i.invoiceType ? 'One-time' : i.invoiceType === 'monthly' ? `Monthly${i.billingPeriod ? ` ${i.billingPeriod}` : ''}` : `Recurring ${i.recurrenceIndex || ''}/${i.recurrenceTotal || ''}`} • Total ₹{Number(i.total || 0).toLocaleString('en-IN')} • paid ₹{Number(i.amountPaid || 0).toLocaleString('en-IN')} • bal <strong>₹{Number(i.balance || 0).toLocaleString('en-IN')}</strong></div>
               <div className="flex flex-wrap gap-1 items-center">
-                <span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${st === 'Paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : st === 'Overdue' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>{st}</span>
+                <span className={invPill(st)}>{st}</span>
                 <span className="text-slate-500 font-medium">due {String(i.dueDate || '').slice(0, 10)}{i.overdue ? ` • ${i.daysOverdue}d overdue` : ''}</span>
               </div>
             </div>
@@ -4633,26 +5030,29 @@ export function InvoicesPanel() {
         </div>
         <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
           <table className="w-full text-left text-xs min-w-[1020px]">
-            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
-              <th className="px-4 py-3">Invoice</th><th className="px-4 py-3">Company</th><th className="px-4 py-3">Agreement</th><th className="px-4 py-3">Type</th><th className="px-4 py-3 text-right">Subtotal</th><th className="px-4 py-3 text-right">GST</th><th className="px-4 py-3 text-right">Total</th><th className="px-4 py-3 text-right">Paid</th><th className="px-4 py-3 text-right">Balance</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Due</th><th className="px-4 py-3 text-right">Actions</th>
+            <thead className="bg-slate-50 sticky top-0 z-10"><tr className="text-slate-500 font-extrabold uppercase tracking-wider text-[10px]">
+              <th className="px-3 py-2.5">Invoice</th><th className="px-3 py-2.5">Company</th><th className="px-3 py-2.5">Agreement</th><th className="px-3 py-2.5">Type</th><th className="px-3 py-2.5 text-right">Subtotal</th><th className="px-3 py-2.5 text-right">GST</th><th className="px-3 py-2.5 text-right">Total</th><th className="px-3 py-2.5 text-right">Paid</th><th className="px-3 py-2.5 text-right">Balance</th><th className="px-3 py-2.5">Status</th><th className="px-3 py-2.5">Due</th><th className="px-3 py-2.5 text-right">Actions</th>
             </tr></thead>
             <tbody className="divide-y divide-slate-100">
               {filteredInv.map((i) => {
                 const st = i.overdue ? 'Overdue' : i.status;
                 return (
                 <tr key={i.id} className="hover:bg-slate-50/70">
-                  <td className="px-4 py-3"><div className="font-bold text-slate-900">{i.number || i.id}</div><div className="font-mono text-[11px] text-slate-500">{i.id}</div></td>
-                  <td className="px-4 py-3 font-mono font-bold text-amber-700">{i.orgId}</td>
-                  <td className="px-4 py-3 font-mono">{i.agreementId || '—'}</td>
-                  <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 font-bold text-[11px]">{i.invoiceType === 'recurring' ? `Recurring ${i.recurrenceIndex || ''}/${i.recurrenceTotal || ''}` : i.invoiceType === 'monthly' ? `Monthly${i.billingPeriod ? ` ${i.billingPeriod}` : ''}` : 'One-time'}</span></td>
-                  <td className="px-4 py-3 text-right">₹{Number(i.subtotal || 0).toLocaleString('en-IN')}</td>
-                  <td className="px-4 py-3 text-right">₹{Number(i.tax || 0).toLocaleString('en-IN')}</td>
-                  <td className="px-4 py-3 text-right font-bold">₹{Number(i.total || 0).toLocaleString('en-IN')}</td>
-                  <td className="px-4 py-3 text-right text-emerald-700 font-bold">₹{Number(i.amountPaid || 0).toLocaleString('en-IN')}</td>
-                  <td className="px-4 py-3 text-right font-extrabold">₹{Number(i.balance || 0).toLocaleString('en-IN')}</td>
-                  <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${st === 'Paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : st === 'Overdue' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>{st}</span></td>
-                  <td className="px-4 py-3">{String(i.dueDate || '').slice(0, 10)}{i.overdue ? <span className="text-red-600 font-bold"> • {i.daysOverdue}d</span> : ''}</td>
-                  <td className="px-4 py-3"><div className="flex justify-end">{invMenuFor(i)}</div></td>
+                  <td className="px-3 py-2.5">
+                    <button type="button" onClick={() => openDocument(i)} className="text-left font-bold text-slate-900 underline decoration-slate-300 underline-offset-2 hover:text-spec-electric cursor-pointer" title="Open invoice document">{i.number || i.id}</button>
+                    <div className="font-mono text-[10px] text-slate-400">{i.id}</div>
+                  </td>
+                  <td className="px-3 py-2.5 font-mono font-bold text-amber-700">{i.orgId}</td>
+                  <td className="px-3 py-2.5 font-mono">{i.agreementId || '—'}</td>
+                  <td className="px-3 py-2.5"><span className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 font-bold text-[10px] whitespace-nowrap">{i.invoiceType === 'recurring' ? `Recurring ${i.recurrenceIndex || ''}/${i.recurrenceTotal || ''}` : i.invoiceType === 'monthly' ? `Monthly${i.billingPeriod ? ` ${i.billingPeriod}` : ''}` : 'One-time'}</span></td>
+                  <td className="px-3 py-2.5 text-right">₹{Number(i.subtotal || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-3 py-2.5 text-right">₹{Number(i.tax || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-3 py-2.5 text-right font-bold">₹{Number(i.total || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-3 py-2.5 text-right text-emerald-700 font-bold">₹{Number(i.amountPaid || 0).toLocaleString('en-IN')}</td>
+                  <td className={`px-3 py-2.5 text-right font-extrabold ${Number(i.balance || 0) > 0 ? 'text-red-700' : 'text-slate-400'}`}>₹{Number(i.balance || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-3 py-2.5"><span className={invPill(st)}>{st}</span></td>
+                  <td className="px-3 py-2.5 whitespace-nowrap">{String(i.dueDate || '').slice(0, 10)}{i.overdue ? <span className="text-red-600 font-bold"> • {i.daysOverdue}d</span> : ''}</td>
+                  <td className="px-3 py-2.5"><div className="flex justify-end">{invMenuFor(i)}</div></td>
                 </tr>
                 );
               })}
@@ -4777,9 +5177,8 @@ export function PaymentsRemindersPanel() {
   );
 }
 
-/* ---------------- Phase 3: Billing ---------------- */
+/* ---------------- Phase 3: Billing (payments / refunds / reconciliation) ---------------- */
 export function BillingPanel() {
-  const [usage, setUsage] = useState<any>(null);
   const [payments, setPayments] = useState<any[]>([]);
   const [refunds, setRefunds] = useState<any[]>([]);
   const [error, setError] = useState('');
@@ -4803,10 +5202,9 @@ export function BillingPanel() {
     try {
       const params = new URLSearchParams({ page: String(p), pageSize: String(bps) });
       if (qq.trim()) params.set('q', qq.trim());
-      const [u, pay, r, rec] = await Promise.all([
-        billingApi.usage().catch(() => null), billingApi.payments(`?${params.toString()}`).catch(() => null), billingApi.refunds(`?${params.toString()}`).catch(() => null), billingApi.reconciliation().catch(() => null),
+      const [pay, r, rec] = await Promise.all([
+        billingApi.payments(`?${params.toString()}`).catch(() => null), billingApi.refunds(`?${params.toString()}`).catch(() => null), billingApi.reconciliation().catch(() => null),
       ]);
-      if (u) setUsage(unwrapObj(u));
       if (pay) { setPayments(unwrapList(pay)); setPayTotal(Number((pay as any)?.pagination?.total || unwrapList(pay).length)); }
       if (r) setRefunds(unwrapList(r));
       if (rec) setRecon(unwrapObj(rec));
@@ -4906,18 +5304,8 @@ export function BillingPanel() {
         onConfirm={async () => { await doRefund(); setRefundConfirm(false); }}
         onCancel={() => setRefundConfirm(false)}
       />
-      {usage && (
-        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700">
-          Plan: {usage.plan} • Subscription: {usage.subscription} • Period: {usage.period}
-          <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-2">
-            {Object.entries(usage.usage || {}).map(([k, v]: [string, any]) => (
-              <div key={k} className="p-2 rounded-xl bg-white border border-slate-200">{k}: {v.limit !== undefined ? `${v.used}/${v.limit} (left ${v.remaining})` : 'enabled'}</div>
-            ))}
-          </div>
-        </div>
-      )}
       <div className="text-xs font-extrabold text-slate-700">Payments ({payTotal})</div>
-      {filteredPay.length === 0 ? <div className="text-xs text-slate-500">No payments match.</div> : (<>
+      {filteredPay.length === 0 ? <div className="text-xs text-slate-500 font-medium p-3 rounded-xl bg-slate-50 border border-dashed border-slate-200">No payments match.</div> : (<>
         <div className="space-y-2 md:hidden">
           {filteredPay.map((p) => (
             <div key={p.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
@@ -4928,19 +5316,19 @@ export function BillingPanel() {
         </div>
         <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
           <table className="w-full text-left text-xs min-w-[860px]">
-            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
-              <th className="px-4 py-3">Payment</th><th className="px-4 py-3">Invoice</th><th className="px-4 py-3">Company</th><th className="px-4 py-3 text-right">Amount</th><th className="px-4 py-3">Method</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Date</th>
+            <thead className="bg-slate-50 sticky top-0 z-10"><tr className="text-slate-500 font-extrabold uppercase tracking-wider text-[10px]">
+              <th className="px-3 py-2.5">Payment</th><th className="px-3 py-2.5">Invoice</th><th className="px-3 py-2.5">Company</th><th className="px-3 py-2.5 text-right">Amount</th><th className="px-3 py-2.5">Method</th><th className="px-3 py-2.5">Status</th><th className="px-3 py-2.5">Date</th>
             </tr></thead>
             <tbody className="divide-y divide-slate-100">
               {filteredPay.map((p) => (
                 <tr key={p.id} className="hover:bg-slate-50/70">
-                  <td className="px-4 py-3 font-mono font-bold">{p.id}</td>
-                  <td className="px-4 py-3 font-mono">{p.invoiceId}</td>
-                  <td className="px-4 py-3 font-mono font-bold text-amber-700">{p.orgId}</td>
-                  <td className="px-4 py-3 text-right font-extrabold">₹{Number(p.amount || 0).toLocaleString('en-IN')}</td>
-                  <td className="px-4 py-3">{p.method || ''}{p.provider ? ` via ${p.provider}` : ''}</td>
-                  <td className="px-4 py-3"><span className="font-bold">{p.status}</span>{p.refundedAmount ? <span className="text-slate-500"> • ref ₹{p.refundedAmount}</span> : ''}</td>
-                  <td className="px-4 py-3">{String(p.transactionDate || p.createdAt || '').slice(0, 10)}</td>
+                  <td className="px-3 py-2.5 font-mono font-bold">{p.id}</td>
+                  <td className="px-3 py-2.5 font-mono">{p.invoiceId}</td>
+                  <td className="px-3 py-2.5 font-mono font-bold text-amber-700">{p.orgId}</td>
+                  <td className="px-3 py-2.5 text-right font-extrabold">₹{Number(p.amount || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-3 py-2.5">{p.method || ''}{p.provider ? ` via ${p.provider}` : ''}</td>
+                  <td className="px-3 py-2.5"><span className={invPill(p.status === 'succeeded' || p.status === 'Succeeded' ? 'Paid' : p.status === 'failed' || p.status === 'Failed' ? 'Overdue' : 'Issued')}>{p.status}</span>{p.refundedAmount ? <span className="text-slate-500 font-bold"> • ref ₹{p.refundedAmount}</span> : ''}</td>
+                  <td className="px-3 py-2.5 whitespace-nowrap">{String(p.transactionDate || p.createdAt || '').slice(0, 10)}</td>
                 </tr>
               ))}
             </tbody>
@@ -4949,7 +5337,7 @@ export function BillingPanel() {
       </>)}
       <Pager page={payPage} total={payTotal} pageSize={bps} onPage={setPayPage} />
       <div className="text-xs font-extrabold text-slate-700">Refunds ({refunds.length})</div>
-      {refunds.length === 0 ? <div className="text-xs text-slate-500">No refunds.</div> : (<>
+      {refunds.length === 0 ? <div className="text-xs text-slate-500 font-medium p-3 rounded-xl bg-slate-50 border border-dashed border-slate-200">No refunds.</div> : (<>
         <div className="space-y-2 md:hidden">
           {refunds.map((r) => (
             <div key={r.id} className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs font-bold">{r.id} • payment {r.paymentId} • ₹{r.amount} • {r.status}</div>
@@ -4957,24 +5345,163 @@ export function BillingPanel() {
         </div>
         <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
           <table className="w-full text-left text-xs min-w-[720px]">
-            <thead className="bg-slate-50"><tr className="text-slate-500 font-bold uppercase tracking-wider">
-              <th className="px-4 py-3">Refund</th><th className="px-4 py-3">Payment</th><th className="px-4 py-3">Invoice</th><th className="px-4 py-3 text-right">Amount</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Reason</th>
+            <thead className="bg-slate-50 sticky top-0 z-10"><tr className="text-slate-500 font-extrabold uppercase tracking-wider text-[10px]">
+              <th className="px-3 py-2.5">Refund</th><th className="px-3 py-2.5">Payment</th><th className="px-3 py-2.5">Invoice</th><th className="px-3 py-2.5 text-right">Amount</th><th className="px-3 py-2.5">Status</th><th className="px-3 py-2.5">Reason</th>
             </tr></thead>
             <tbody className="divide-y divide-slate-100">
               {refunds.map((r) => (
                 <tr key={r.id} className="hover:bg-slate-50/70">
-                  <td className="px-4 py-3 font-mono font-bold">{r.id}</td>
-                  <td className="px-4 py-3 font-mono">{r.paymentId}</td>
-                  <td className="px-4 py-3 font-mono">{r.invoiceId}</td>
-                  <td className="px-4 py-3 text-right font-extrabold">₹{Number(r.amount || 0).toLocaleString('en-IN')}</td>
-                  <td className="px-4 py-3 font-bold">{r.status}</td>
-                  <td className="px-4 py-3 text-slate-600">{r.reason || '—'}</td>
+                  <td className="px-3 py-2.5 font-mono font-bold">{r.id}</td>
+                  <td className="px-3 py-2.5 font-mono">{r.paymentId}</td>
+                  <td className="px-3 py-2.5 font-mono">{r.invoiceId}</td>
+                  <td className="px-3 py-2.5 text-right font-extrabold">₹{Number(r.amount || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-3 py-2.5"><span className={invPill(r.status === 'Succeeded' || r.status === 'succeeded' ? 'Paid' : r.status === 'Failed' || r.status === 'failed' ? 'Overdue' : 'Issued')}>{r.status}</span></td>
+                  <td className="px-3 py-2.5 text-slate-600">{r.reason || '—'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </>)}
+    </div>
+  );
+}
+
+/* ---------------- Phase 3: Plan & usage (billing sub-menu) ---------------- */
+export function PlanUsagePanel() {
+  const [usage, setUsage] = useState<any>(null);
+  const [subs, setSubs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [loadError, setLoadError] = useState(0);
+  const load = async () => {
+    setLoading(true); setError('');
+    try {
+      const [u, s] = await Promise.all([
+        billingApi.usage().catch(() => null),
+        billingApi.subscriptions().catch(() => null),
+      ]);
+      setUsage(u ? unwrapObj(u) : null);
+      setSubs(s ? unwrapList(s) : []);
+    } catch (e) { setError(errMsg(e)); setLoadError(errStatus(e)); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
+  const ents = Object.entries(usage?.usage || {}) as [string, any][];
+  const pct = (v: any) => {
+    if (!v || v.limit === undefined || !Number(v.limit)) return null;
+    return Math.min(100, Math.round((Number(v.used || 0) / Number(v.limit)) * 100));
+  };
+  return (
+    <div className={cardCls}>
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex flex-col gap-0.5">
+            <h3 className="text-base font-extrabold text-slate-900">Plan & usage — subscription, entitlements, quota</h3>
+            <p className="text-xs text-slate-500 font-medium">Entitlements are enforced live on every write. Ask superadmin to change the plan.</p>
+          </div>
+          <button type="button" onClick={load} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Refresh</button>
+        </div>
+      </div>
+      {error && <PanelError message={error} status={loadError} onRetry={load} />}
+      {loading ? <InlineLoading message="Loading plan…" /> : (<>
+        {!usage ? (
+          <EmptyState title="No usage record" message="No subscription is active on this account yet." />
+        ) : (<>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+            <div className="p-3.5 rounded-2xl bg-slate-900 text-white">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Plan</div>
+              <div className="text-base font-extrabold mt-0.5">{usage.plan || '—'}</div>
+            </div>
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Subscription</div>
+              <div className="text-base font-extrabold mt-0.5">{usage.subscription || '—'}</div>
+            </div>
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Period</div>
+              <div className="text-base font-extrabold mt-0.5">{usage.period || '—'}</div>
+            </div>
+          </div>
+          {ents.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="text-xs font-extrabold text-slate-700">Entitlements ({ents.length})</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {ents.map(([k, v]) => {
+                  const p = pct(v);
+                  return (
+                    <div key={k} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-bold text-slate-900 break-all">{k}</span>
+                        {v?.limit === undefined
+                          ? <span className="px-2 py-0.5 rounded-full border font-bold text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200 shrink-0">enabled</span>
+                          : <span className="shrink-0 font-mono font-extrabold">{Number(v.used || 0).toLocaleString('en-IN')}/{Number(v.limit || 0).toLocaleString('en-IN')}</span>}
+                      </div>
+                      {p !== null && (
+                        <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden" role="progressbar" aria-valuenow={p} aria-valuemin={0} aria-valuemax={100} aria-label={`${k} usage`}>
+                          <div className={`h-full rounded-full ${p >= 90 ? 'bg-red-500' : p >= 70 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${p}%` }} />
+                        </div>
+                      )}
+                      {v?.limit !== undefined && (
+                        <div className="text-slate-500 font-medium">left <strong className={Number(v.remaining || 0) <= 0 ? 'text-red-600' : 'text-slate-700'}>{Number(v.remaining || 0).toLocaleString('en-IN')}</strong>{p !== null ? ` • ${p}% used` : ''}</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>)}
+        <div className="text-xs font-extrabold text-slate-700">Subscriptions ({subs.length})</div>
+        {subs.length === 0 ? <div className="text-xs text-slate-500 font-medium p-3 rounded-xl bg-slate-50 border border-dashed border-slate-200">No subscription records.</div> : (
+          <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
+            <table className="w-full text-left text-xs min-w-[720px]">
+              <thead className="bg-slate-50 sticky top-0 z-10"><tr className="text-slate-500 font-extrabold uppercase tracking-wider text-[10px]">
+                <th className="px-3 py-2.5">Subscription</th><th className="px-3 py-2.5">Company</th><th className="px-3 py-2.5">Plan</th><th className="px-3 py-2.5">Status</th><th className="px-3 py-2.5">Started</th><th className="px-3 py-2.5">Renews</th>
+              </tr></thead>
+              <tbody className="divide-y divide-slate-100">
+                {subs.map((s: any) => (
+                  <tr key={s.id} className="hover:bg-slate-50/70">
+                    <td className="px-3 py-2.5 font-mono font-bold">{s.id}</td>
+                    <td className="px-3 py-2.5 font-mono font-bold text-amber-700">{s.orgId}</td>
+                    <td className="px-3 py-2.5 font-bold">{s.planId || s.plan || '—'}</td>
+                    <td className="px-3 py-2.5"><span className={invPill(s.status === 'active' ? 'Paid' : s.status === 'canceled' || s.status === 'cancelled' ? 'Void' : 'Issued')}>{s.status || '—'}</span></td>
+                    <td className="px-3 py-2.5 whitespace-nowrap">{String(s.startDate || s.start || s.createdAt || '').slice(0, 10) || '—'}</td>
+                    <td className="px-3 py-2.5 whitespace-nowrap">{String(s.currentPeriodEnd || s.renewalDate || s.endDate || '').slice(0, 10) || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </>)}
+    </div>
+  );
+}
+
+/** Billing sub-menu workspace — Invoices / Payments & refunds / Plan & usage. */
+const BILL_VIEWS = [
+  { key: 'invoices', label: 'Invoices' },
+  { key: 'payments', label: 'Payments & refunds' },
+  { key: 'plan', label: 'Plan & usage' },
+] as const;
+export function EmployerBillingWorkspace() {
+  const [tab, setTab] = useQueryState('bill_tab');
+  const active = (BILL_VIEWS.some((v) => v.key === tab) ? tab : 'invoices') as string;
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex flex-col gap-0.5">
+          <h2 className="text-lg font-extrabold text-slate-900">Billing</h2>
+          <p className="text-xs text-slate-500 font-medium">Tax invoices, payments, refunds and plan entitlements — one place, live data.</p>
+        </div>
+        <div className="flex rounded-xl bg-slate-100 border border-slate-200 p-0.5" role="tablist" aria-label="Billing sections">
+          {BILL_VIEWS.map((v) => (
+            <button key={v.key} type="button" role="tab" aria-selected={active === v.key} onClick={() => setTab(v.key)}
+              className={`px-3.5 py-1.5 rounded-lg font-bold text-xs cursor-pointer whitespace-nowrap ${active === v.key ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{v.label}</button>
+          ))}
+        </div>
+      </div>
+      {active === 'invoices' ? <InvoicesPanel /> : active === 'payments' ? <BillingPanel /> : <PlanUsagePanel />}
     </div>
   );
 }
@@ -6587,9 +7114,10 @@ export function SubmissionsPanel({ canReview = false }: { canReview?: boolean })
     setBusy(true);
     try {
       const s = unwrapObj(await salesApi.submit(form));
-      if (s?.id) setRows((x) => [s, ...x]);
       setForm({ jobId: '', candidateEmail: '', consent: '' });
       setShowSubmit(false);
+      setOk(s?.status === 'Duplicate-Review' ? 'Submitted — flagged as duplicate for review.' : 'Candidate submitted.');
+      if (page === 1) load(1); else setPage(1);
       syncAll();
     } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
   };
@@ -6662,38 +7190,51 @@ export function SubmissionsPanel({ canReview = false }: { canReview?: boolean })
   };
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         {([
-          ['Total', rows.length, `of ${total}`],
-          ['In review', rows.filter((s) => bucket(s) === 'review').length, 'needs decision'],
-          ['Shortlisted', count('shortlisted'), 'accepted so far'],
-          ['Rejected', count('rejected'), 'with reasons'],
-          ['Duplicates', count('duplicates'), '90-day window'],
-        ] as const).map(([label, value, sub]) => (
-          <div key={label} className="p-4 bg-white rounded-2xl border border-slate-200/90 shadow-sm">
-            <div className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">{label}</div>
-            <div className="text-2xl font-extrabold text-slate-900">{value}</div>
-            <div className="text-[11px] font-bold text-slate-500">{sub}</div>
+          ['Total', rows.length, ''],
+          ['In review', count('review'), count('review') > 0 ? 'text-amber-700' : 'text-slate-400'],
+          ['Shortlisted', count('shortlisted'), 'text-emerald-700'],
+          ['Rejected', count('rejected'), 'text-slate-500'],
+          ['Duplicates', count('duplicates'), count('duplicates') > 0 ? 'text-amber-700' : 'text-slate-400'],
+        ] as const).map(([label, value, tone]) => (
+          <div key={label} className="flex items-baseline gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-sm">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{label}</span>
+            <span className={`text-base font-extrabold ${tone || 'text-slate-900'}`}>{value}</span>
           </div>
         ))}
+        <span className="text-[11px] font-bold text-slate-400 ml-1">of {total} loaded</span>
       </div>
       <div className={cardCls}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex rounded-xl bg-slate-100 border border-slate-200 p-0.5 w-fit max-w-full overflow-x-auto" role="tablist" aria-label="Submission status">
-            {([[ 'all', 'All' ], [ 'review', 'In review' ], [ 'shortlisted', 'Shortlisted' ], [ 'rejected', 'Rejected' ], [ 'duplicates', 'Duplicates' ]] as const).map(([v, label]) => (
-              <button key={v} role="tab" aria-selected={statusTab === v} type="button" onClick={() => setStatusTab(v)}
-                className={`px-3.5 py-1.5 rounded-lg font-bold text-xs cursor-pointer whitespace-nowrap ${statusTab === v ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>{label}</button>
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search candidate, job, agency…" className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:border-blue-500 w-52" />
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex flex-col gap-0.5">
+              <h3 className="text-base font-extrabold text-slate-900">Agency submissions — review, accept, track</h3>
+              <p className="text-xs text-slate-500 font-medium">Duplicates route to Duplicate-Review — never auto-rejected. Accept creates an ATS application.</p>
+            </div>
             <button type="button" onClick={() => setShowSubmit(true)} className={btnPrimary}>+ Submit candidate</button>
+          </div>
+          <div className="flex flex-col lg:flex-row gap-2">
+            <div className="flex rounded-xl bg-slate-100 border border-slate-200 p-0.5 w-fit max-w-full overflow-x-auto" role="tablist" aria-label="Submission status">
+              {([
+                ['all', `All (${rows.length})`], ['review', `In review (${count('review')})`], ['shortlisted', `Shortlisted (${count('shortlisted')})`],
+                ['rejected', `Rejected (${count('rejected')})`], ['duplicates', `Duplicates (${count('duplicates')})`],
+              ] as const).map(([v, label]) => (
+                <button key={v} role="tab" aria-selected={statusTab === v} type="button" onClick={() => setStatusTab(v)}
+                  className={`px-3 py-1.5 rounded-lg font-bold text-[11px] cursor-pointer whitespace-nowrap ${statusTab === v ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{label}</button>
+              ))}
+            </div>
+            <div className="flex-1 min-w-[200px] max-w-sm">
+              <SearchSuggest value={search} onChange={setSearch} placeholder="Search candidate, job, agency…"
+                items={visible.slice(0, 10).map((s) => ({ key: String(s.id), query: String(s.candidateEmail || s.id), title: String(s.candidateEmail || s.id), meta: [s.jobId, s.agencyId || s.submittedBy || 'direct'].filter(Boolean).join(' • '), status: s.status }))}
+                onPick={(it) => { setSearch(it.query ?? it.key); setPage(1); }} />
+            </div>
           </div>
         </div>
         {error && <PanelError message={error} onRetry={load} />}
-        {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
+        {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold" role="status">{ok}</div>}
         {scorecard.length > 1 && (
-          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
             <div className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5">Agency scorecard (current view)</div>
             <div className="flex flex-wrap gap-2">
               {scorecard.map((r) => (
@@ -6704,22 +7245,43 @@ export function SubmissionsPanel({ canReview = false }: { canReview?: boolean })
         )}
         {loading ? <InlineLoading message="Loading submissions…" /> : visible.length === 0 ? (
           <EmptyState title="No submissions" message="Agency submissions appear here; duplicates route to Duplicate-Review, never auto-reject." />
-        ) : (
-          <div className="space-y-2">{visible.map((s) => (
-            <div key={s.id} className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 transition">
-              <button type="button" onClick={() => openDetail(s)} className="flex-1 min-w-0 text-left cursor-pointer" title="View details">
-                <div className="font-extrabold text-slate-900 text-sm truncate">{s.candidateEmail} <span className="text-slate-400">→</span> {s.jobId}</div>
-                <div className="text-[11px] text-slate-500 font-medium truncate">
-                  <span className="font-mono">{s.id}</span> • {s.agencyId || s.submittedBy || 'direct'}
-                  {s.applicationId && <span className="ml-1.5 px-1.5 py-px rounded-md bg-blue-50 text-[#087BFF] font-bold text-[10px]">in pipeline</span>}
-                  {s.status === 'Duplicate-Review' && <span className="ml-1.5 px-1.5 py-px rounded-md bg-amber-100 text-amber-800 font-bold text-[10px]">duplicate check</span>}
-                </div>
-              </button>
-              <StatusPill value={s.status} />
-              <RowMenu label={`Manage ${s.id}`} items={manageItems(s)} />
-            </div>
-          ))}</div>
-        )}
+        ) : (<>
+          <div className="space-y-2 md:hidden">
+            {visible.map((s) => (
+              <DrawerCard key={s.id} status={s.status}
+                title={s.candidateEmail || s.id}
+                meta={<><span className="font-mono">{s.id}</span> • {s.jobId} • {s.agencyId || s.submittedBy || 'direct'}{s.applicationId ? ' • in pipeline' : ''}</>}
+                right={<>
+                  <StatusPill value={s.status} />
+                  <RowMenu label={`Manage ${s.id}`} items={manageItems(s)} />
+                </>} />
+            ))}
+          </div>
+          <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
+            <table className="w-full text-left text-xs min-w-[860px]">
+              <thead className="bg-slate-50 sticky top-0 z-10"><tr className="text-slate-500 font-extrabold uppercase tracking-wider text-[10px]">
+                <th className="px-3 py-2.5">Submission</th><th className="px-3 py-2.5">Candidate</th><th className="px-3 py-2.5">Job</th><th className="px-3 py-2.5">Agency</th><th className="px-3 py-2.5">Status</th><th className="px-3 py-2.5">Submitted</th><th className="px-3 py-2.5 text-right">Actions</th>
+              </tr></thead>
+              <tbody className="divide-y divide-slate-100">
+                {visible.map((s) => (
+                  <tr key={s.id} className="hover:bg-slate-50/70">
+                    <td className="px-3 py-2.5"><span className="font-mono font-bold text-slate-700">{s.id}</span>
+                      {s.applicationId && <div className="text-[10px] font-bold text-blue-700">in pipeline • {s.applicationId}</div>}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <button type="button" onClick={() => openDetail(s)} className="text-left font-bold text-slate-900 underline decoration-slate-300 underline-offset-2 hover:text-spec-electric cursor-pointer" title="View submission">{s.candidateEmail || '—'}</button>
+                    </td>
+                    <td className="px-3 py-2.5 font-mono">{s.jobId || '—'}</td>
+                    <td className="px-3 py-2.5 font-mono font-bold text-amber-700">{s.agencyId || s.submittedBy || 'direct'}</td>
+                    <td className="px-3 py-2.5"><StatusPill value={s.status} /></td>
+                    <td className="px-3 py-2.5 whitespace-nowrap">{s.createdAt ? String(s.createdAt).slice(0, 10) : '—'}</td>
+                    <td className="px-3 py-2.5"><div className="flex justify-end"><RowMenu label={`Manage ${s.id}`} items={manageItems(s)} /></div></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>)}
         <Pager page={page} total={total} pageSize={pageSize} onPage={setPage} />
       </div>
       <Modal open={showSubmit} onClose={() => setShowSubmit(false)} title="Submit candidate" subtitle="Duplicates route to review — never auto-rejected">

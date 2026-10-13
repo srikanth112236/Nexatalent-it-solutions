@@ -53,12 +53,11 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
       transition={{ duration: motionTokens.duration.slow, ease: motionTokens.ease.outQuart }}
       style={{
         borderRadius: 'var(--radius-xl)',
-        backgroundColor: 'var(--color-surface)',
-        border: '1px solid var(--color-border)',
+        backgroundColor: '#ffffff',
+        border: '1px solid #e5e5e5',
         padding: '3rem 2.5rem',
         position: 'relative',
         overflow: 'hidden',
-        background: 'linear-gradient(180deg, rgba(30, 41, 59, 0.5) 0%, rgba(17, 23, 38, 0.8) 100%)',
       }}
     >
       {/* Top Banner */}
@@ -69,7 +68,7 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: '1rem',
-          borderBottom: '1px solid var(--color-border)',
+          borderBottom: '1px solid #e5e5e5',
           paddingBottom: '1.5rem',
           marginBottom: '2.5rem',
         }}
@@ -81,12 +80,12 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
               fontWeight: 700,
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
-              color: 'var(--color-primary-400)',
+              color: '#000000',
             }}
           >
             Verified Case Outcome · {clientIndustry}
           </span>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-text)', marginTop: '0.25rem' }}>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#000000', marginTop: '0.25rem' }}>
             {clientName}
           </h2>
         </div>
@@ -101,9 +100,9 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
             gap: '0.5rem',
             padding: '0.5rem 1rem',
             borderRadius: '9999px',
-            backgroundColor: 'rgba(34, 197, 94, 0.1)',
-            border: '1px solid rgba(34, 197, 94, 0.3)',
-            color: 'var(--color-success)',
+            backgroundColor: '#000000',
+            border: '1px solid #000000',
+            color: '#ffffff',
             fontSize: '0.8125rem',
             fontWeight: 600,
           }}
@@ -132,25 +131,25 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
             style={{
               padding: '1.5rem',
               borderRadius: 'var(--radius-lg)',
-              backgroundColor: 'rgba(15, 23, 42, 0.6)',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
+              backgroundColor: '#ffffff',
+              border: '1px solid #000000',
             }}
           >
             <div
               style={{
                 fontSize: '2rem',
                 fontWeight: 800,
-                color: 'var(--color-text)',
+                color: '#000000',
                 lineHeight: 1,
                 marginBottom: '0.5rem',
               }}
             >
               {m.value}
             </div>
-            <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-primary-400)', marginBottom: '0.25rem' }}>
+            <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#000000', marginBottom: '0.25rem' }}>
               {m.label}
             </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', lineHeight: 1.4 }}>
+            <div style={{ fontSize: '0.75rem', color: '#000000', lineHeight: 1.4 }}>
               {m.detail}
             </div>
           </motion.div>
@@ -176,17 +175,17 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
             style={{
               fontSize: '1.125rem',
               fontWeight: 700,
-              color: 'var(--color-text)',
+              color: '#000000',
               marginBottom: '0.75rem',
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
             }}
           >
-            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#ef4444' }} />
+            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#000000' }} />
             {challengeTitle}
           </h3>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9375rem', lineHeight: 1.6 }}>
+          <p style={{ color: '#000000', fontSize: '0.9375rem', lineHeight: 1.6 }}>
             {challengeDescription}
           </p>
         </motion.div>
@@ -201,14 +200,14 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
             style={{
               fontSize: '1.125rem',
               fontWeight: 700,
-              color: 'var(--color-text)',
+              color: '#000000',
               marginBottom: '0.75rem',
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
             }}
           >
-            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--color-success)' }} />
+            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#000000' }} />
             {solutionTitle}
           </h3>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -224,7 +223,7 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
                   alignItems: 'flex-start',
                   gap: '0.625rem',
                   fontSize: '0.875rem',
-                  color: 'var(--color-text-secondary)',
+                  color: '#000000',
                   lineHeight: 1.5,
                 }}
               >
@@ -234,7 +233,7 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
                   viewport={{ once: true }}
                   transition={{ ...motionTokens.spring.snappy, delay: 0.5 + idx * motionTokens.stagger.small + 0.1 }}
                 >
-                  <CheckCircle2 size={16} color="var(--color-success)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <CheckCircle2 size={16} color="#000000" style={{ flexShrink: 0, marginTop: '2px' }} />
                 </motion.div>
                 <span>{hl}</span>
               </motion.li>
@@ -252,8 +251,8 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
         style={{
           padding: '1.75rem',
           borderRadius: 'var(--radius-lg)',
-          backgroundColor: 'rgba(59, 130, 246, 0.05)',
-          border: '1px solid rgba(59, 130, 246, 0.2)',
+          backgroundColor: '#ffffff',
+          border: '1px solid #000000',
           display: 'flex',
           gap: '1.25rem',
           alignItems: 'flex-start',
@@ -265,22 +264,22 @@ export const CaseStudyResultPanel: React.FC<CaseStudyResultPanelProps> = ({
           viewport={{ once: true }}
           transition={{ ...motionTokens.spring.bouncy, delay: 0.8 }}
         >
-          <Quote size={28} color="var(--color-primary-400)" style={{ flexShrink: 0 }} />
+          <Quote size={28} color="#000000" style={{ flexShrink: 0 }} />
         </motion.div>
         <div>
           <p
             style={{
               fontSize: '1rem',
               fontStyle: 'italic',
-              color: 'var(--color-text)',
+              color: '#000000',
               lineHeight: 1.6,
               marginBottom: '0.75rem',
             }}
           >
             "{quote.text}"
           </p>
-          <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text)' }}>
-            {quote.author} · <span style={{ color: 'var(--color-text-secondary)', fontWeight: 400 }}>{quote.role}, {quote.company}</span>
+          <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#000000' }}>
+            {quote.author} · <span style={{ color: '#000000', fontWeight: 400 }}>{quote.role}, {quote.company}</span>
           </div>
         </div>
       </motion.div>

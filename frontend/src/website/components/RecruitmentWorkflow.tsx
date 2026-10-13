@@ -15,13 +15,13 @@ export const RecruitmentWorkflow: React.FC = () => {
   const [activeStep, setActiveStep] = useState(0);
 
   return (
-    <section style={{ maxWidth: '1280px', margin: '5rem auto', padding: '0 2rem' }}>
+    <section className="font-sans" style={{ maxWidth: '1280px', margin: '5rem auto', padding: '0 2rem', backgroundColor: '#ffffff' }}>
       <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
         <motion.span
           initial={{ opacity: 0, y: -10 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-primary-400)', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+          style={{ fontSize: '0.85rem', fontWeight: 700, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.05em' }}
         >
           Methodical Rigor
         </motion.span>
@@ -31,7 +31,7 @@ export const RecruitmentWorkflow: React.FC = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.1, ease: motionTokens.ease.standard }}
-          style={{ fontSize: 'clamp(2rem, 3.5vw, 3rem)', fontWeight: 800, margin: '0.5rem 0 1rem 0', color: '#ffffff' }}
+          style={{ fontSize: 'clamp(2rem, 3.5vw, 3rem)', fontWeight: 800, margin: '0.5rem 0 1rem 0', color: '#000000' }}
         >
           The NexaTalent IT Solutions Six-Stage Hiring Protocol
         </motion.h2>
@@ -41,7 +41,7 @@ export const RecruitmentWorkflow: React.FC = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2, ease: motionTokens.ease.standard }}
-          style={{ color: 'var(--color-text-muted)', fontSize: '1.05rem', maxWidth: '640px', margin: '0 auto', lineHeight: 1.6 }}
+          style={{ color: '#000000', fontSize: '1.05rem', maxWidth: '640px', margin: '0 auto', lineHeight: 1.6 }}
         >
           Every candidate presented to your team has passed rigorous multi-point validation to protect your engineering bandwidth.
         </motion.p>
@@ -70,11 +70,11 @@ export const RecruitmentWorkflow: React.FC = () => {
               }}
               style={{
                 padding: '2.25rem 2rem',
-                backgroundColor: isSelected ? 'rgba(30, 41, 59, 0.9)' : 'var(--color-surface)',
+                backgroundColor: isSelected ? '#000000' : '#ffffff',
                 borderRadius: 'var(--radius-xl)',
-                border: isSelected ? '1px solid var(--color-primary)' : '1px solid var(--color-border)',
+                border: isSelected ? '1px solid #000000' : '1px solid #e5e5e5',
                 boxShadow: isSelected
-                  ? '0 15px 35px rgba(59, 130, 246, 0.25), 0 0 20px rgba(59, 130, 246, 0.2)'
+                  ? '0 15px 35px rgba(0, 0, 0, 0.3)'
                   : 'var(--shadow-sm)',
                 cursor: 'pointer',
                 position: 'relative',
@@ -91,8 +91,8 @@ export const RecruitmentWorkflow: React.FC = () => {
                     left: 0,
                     right: 0,
                     height: '3px',
-                    backgroundColor: 'var(--color-primary)',
-                    boxShadow: '0 0 12px var(--color-primary)',
+                    backgroundColor: '#ffffff',
+                    boxShadow: '0 0 12px rgba(255, 255, 255, 0.6)',
                   }}
                 />
               )}
@@ -102,7 +102,7 @@ export const RecruitmentWorkflow: React.FC = () => {
                   style={{
                     fontSize: '1.75rem',
                     fontWeight: 900,
-                    color: isSelected ? 'var(--color-primary-400)' : 'var(--color-text-subtle)',
+                    color: isSelected ? '#ffffff' : '#000000',
                     transition: 'color 0.2s ease',
                   }}
                 >
@@ -119,7 +119,7 @@ export const RecruitmentWorkflow: React.FC = () => {
                         width: '10px',
                         height: '10px',
                         borderRadius: '50%',
-                        backgroundColor: 'var(--color-primary)',
+                        backgroundColor: '#ffffff',
                       }}
                     />
                   )}
@@ -128,7 +128,7 @@ export const RecruitmentWorkflow: React.FC = () => {
                       width: '10px',
                       height: '10px',
                       borderRadius: '50%',
-                      backgroundColor: isSelected ? 'var(--color-primary)' : 'var(--color-border-strong)',
+                      backgroundColor: isSelected ? '#ffffff' : '#000000',
                       transition: 'background-color 0.2s ease',
                     }}
                   />
@@ -140,14 +140,14 @@ export const RecruitmentWorkflow: React.FC = () => {
                   fontSize: '1.25rem',
                   fontWeight: 700,
                   marginBottom: '0.625rem',
-                  color: isSelected ? 'var(--nt-surface, #ffffff)' : 'var(--color-text)',
+                  color: isSelected ? '#ffffff' : '#000000',
                   transition: 'color 0.2s ease',
                 }}
               >
                 {s.title}
               </h3>
 
-              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.925rem', lineHeight: 1.6 }}>
+              <p style={{ color: isSelected ? '#ffffff' : '#000000', fontSize: '0.925rem', lineHeight: 1.6 }}>
                 {s.desc}
               </p>
             </motion.div>

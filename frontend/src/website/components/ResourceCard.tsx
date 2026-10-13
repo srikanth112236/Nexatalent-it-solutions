@@ -64,11 +64,11 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
       whileInView={{ opacity: 1, y: 0, scale: 1 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={motionTokens.spring.gentle}
-      whileHover={{ y: -8, scale: 1.02, boxShadow: '0 10px 30px -10px rgba(59, 130, 246, 0.2)' }}
+      whileHover={{ y: -8, scale: 1.02, boxShadow: '0 10px 30px -10px rgba(0, 0, 0, 0.25)' }}
       style={{
         borderRadius: 'var(--radius-xl)',
-        backgroundColor: 'var(--color-surface)',
-        border: '1px solid var(--color-border)',
+        backgroundColor: '#ffffff',
+        border: '1px solid #e5e5e5',
         padding: '2rem',
         display: 'flex',
         flexDirection: 'column',
@@ -78,10 +78,10 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
         transition: 'border-color 0.3s ease',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+        e.currentTarget.style.borderColor = '#000000';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = 'var(--color-border)';
+        e.currentTarget.style.borderColor = '#e5e5e5';
       }}
     >
       <div>
@@ -96,8 +96,8 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
               fontWeight: 700,
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
-              color: 'var(--color-primary-400)',
-              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              color: '#ffffff',
+              backgroundColor: '#000000',
               padding: '0.25rem 0.625rem',
               borderRadius: 'var(--radius-sm)',
             }}
@@ -115,7 +115,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
               alignItems: 'center',
               gap: '0.25rem',
               fontSize: '0.75rem',
-              color: 'var(--color-text-tertiary)',
+              color: '#000000',
             }}
           >
             <FileText size={14} />
@@ -127,7 +127,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
           style={{
             fontSize: '1.25rem',
             fontWeight: 700,
-            color: 'var(--color-text)',
+            color: '#000000',
             lineHeight: 1.4,
             marginBottom: '0.75rem',
           }}
@@ -138,7 +138,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
         <p
           style={{
             fontSize: '0.875rem',
-            color: 'var(--color-text-secondary)',
+            color: '#000000',
             lineHeight: 1.6,
             marginBottom: '1.5rem',
           }}
@@ -153,10 +153,10 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
           justifyContent: 'space-between',
           alignItems: 'center',
           paddingTop: '1.25rem',
-          borderTop: '1px solid var(--color-border)',
+          borderTop: '1px solid #e5e5e5',
         }}
       >
-        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>
+        <span style={{ fontSize: '0.75rem', color: '#000000' }}>
           <Counter value={downloadsCount} />
         </span>
 
@@ -169,9 +169,9 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
               gap: '0.4rem',
               padding: '0.45rem 1rem',
               borderRadius: 'var(--radius-md)',
-              backgroundColor: 'rgba(59, 130, 246, 0.1)',
-              color: 'var(--color-primary-400)',
-              border: '1px solid rgba(59, 130, 246, 0.2)',
+              backgroundColor: '#000000',
+              color: '#ffffff',
+              border: '1px solid #000000',
               fontSize: '0.8125rem',
               fontWeight: 600,
               textDecoration: 'none',

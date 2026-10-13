@@ -25,6 +25,7 @@ import { NewHomePage } from '../v2/pages/NewHomePage';
 import { NewSolutionsPage } from '../v2/pages/NewSolutionsPage';
 import { NewIndustriesPage } from '../v2/pages/NewIndustriesPage';
 import { NewJobsPage } from '../v2/pages/NewJobsPage';
+import { NewCareersPage } from '../v2/pages/NewCareersPage';
 import { NewInsightsPage } from '../v2/pages/NewInsightsPage';
 import { NewEmployersPage } from '../v2/pages/NewEmployersPage';
 import { NewAboutPage } from '../v2/pages/NewAboutPage';
@@ -71,6 +72,11 @@ export function WebsiteRoutes() {
           <Route path="/classic/jobs" element={<JobsPage />} />
           <Route path="/jobs/:jobSlug" element={<NewJobDetailPage />} />
 
+          {/* 6b. Careers — same board, one-step no-login apply with resume */}
+          <Route path="/careers" element={<NewCareersPage />} />
+          <Route path="/career" element={<NewCareersPage />} />
+          <Route path="/careers/:jobSlug" element={<NewJobDetailPage />} />
+
           {/* 7. Partner / Vendor Empanelment */}
           <Route path="/partners" element={<PartnersPage />} />
           <Route path="/partner" element={<PartnersPage />} />
@@ -87,9 +93,9 @@ export function WebsiteRoutes() {
           <Route path="/guides" element={<NewInsightsPage />} />
           <Route path="/reports" element={<NewInsightsPage />} />
 
-          {/* 10. Company & Direct Contact — new light design (old at /classic/*) */}
-          <Route path="/about" element={<NewAboutPage />} />
-          <Route path="/classic/about" element={<AboutPage />} />
+          {/* 10. Company & Direct Contact — replica about (previous v2 at /classic/*) */}
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/classic/about" element={<NewAboutPage />} />
           <Route path="/contact" element={<NewContactPage />} />
           <Route path="/classic/contact" element={<ContactPage />} />
 

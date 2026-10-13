@@ -103,7 +103,7 @@ export const LocationExplorer: React.FC<LocationExplorerProps> = ({
   };
 
   return (
-    <section style={{ padding: '5rem 2rem', position: 'relative' }}>
+    <section className="font-sans" style={{ padding: '5rem 2rem', position: 'relative', backgroundColor: '#ffffff' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -116,17 +116,17 @@ export const LocationExplorer: React.FC<LocationExplorerProps> = ({
             style={{
               fontSize: '0.8125rem',
               fontWeight: 700,
-              color: 'var(--color-primary-400)',
+              color: '#000000',
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
             }}
           >
             {badge}
           </span>
-          <h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: 'var(--color-text)', marginTop: '0.5rem' }}>
+          <h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: '#000000', marginTop: '0.5rem' }}>
             {title}
           </h2>
-          <p style={{ color: 'var(--color-text-secondary)', maxWidth: '640px', margin: '0.75rem auto 0 auto' }}>
+          <p style={{ color: '#000000', maxWidth: '640px', margin: '0.75rem auto 0 auto' }}>
             {subtitle}
           </p>
         </motion.div>
@@ -164,9 +164,10 @@ export const LocationExplorer: React.FC<LocationExplorerProps> = ({
                       position: 'absolute',
                       inset: '-1px',
                       borderRadius: 'var(--radius-xl)',
-                      background: 'linear-gradient(135deg, var(--color-primary), transparent)',
+                      background: '#000000',
                       zIndex: -1,
                       filter: 'blur(8px)',
+                      opacity: 0.15,
                     }}
                   />
                 )}
@@ -175,13 +176,13 @@ export const LocationExplorer: React.FC<LocationExplorerProps> = ({
               <motion.div
                 animate={{
                   y: hoveredId === loc.id ? -8 : 0,
-                  borderColor: hoveredId === loc.id ? 'var(--color-primary)' : 'var(--color-border)',
+                  borderColor: hoveredId === loc.id ? '#000000' : '#e5e5e5',
                 }}
                 transition={motionTokens.spring.snappy}
                 style={{
                   borderRadius: 'var(--radius-xl)',
-                  backgroundColor: 'var(--color-surface)',
-                  border: '1px solid var(--color-border)',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e5e5e5',
                   padding: '2rem',
                   display: 'flex',
                   flexDirection: 'column',
@@ -199,31 +200,31 @@ export const LocationExplorer: React.FC<LocationExplorerProps> = ({
                         animate={{ y: hoveredId === loc.id ? [0, -5, 0] : 0 }}
                         transition={{ duration: 0.5, repeat: hoveredId === loc.id ? Infinity : 0, repeatDelay: 1 }}
                       >
-                        <MapPin size={18} color="var(--color-primary-400)" />
+                        <MapPin size={18} color="#000000" />
                       </motion.div>
                       <div>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-text)' }}>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#000000' }}>
                           {loc.city}
                         </h3>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>{loc.country}</span>
+                        <span style={{ fontSize: '0.75rem', color: '#000000' }}>{loc.country}</span>
                       </div>
                     </div>
                     <span
                       style={{
                         fontSize: '0.75rem',
                         fontWeight: 700,
-                        color: 'var(--color-primary-400)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        color: '#ffffff',
+                        backgroundColor: '#000000',
                         padding: '0.2rem 0.6rem',
                         borderRadius: '9999px',
-                        border: '1px solid rgba(59, 130, 246, 0.25)',
+                        border: '1px solid #000000',
                       }}
                     >
                       {hoveredId === loc.id ? <AnimatedRoleCounter value={loc.activeRoles} /> : loc.activeRoles} Open Roles
                     </span>
                   </div>
 
-                  <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+                  <p style={{ fontSize: '0.875rem', color: '#000000', lineHeight: 1.5, marginBottom: '1.25rem' }}>
                     {loc.description}
                   </p>
 
@@ -232,15 +233,15 @@ export const LocationExplorer: React.FC<LocationExplorerProps> = ({
                     style={{
                       padding: '0.75rem 1rem',
                       borderRadius: 'var(--radius-md)',
-                      backgroundColor: 'rgba(15, 23, 42, 0.6)',
-                      border: '1px solid rgba(255, 255, 255, 0.05)',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #000000',
                       marginBottom: '1.25rem',
                     }}
                   >
-                    <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-tertiary)', textTransform: 'uppercase' }}>
+                    <div style={{ fontSize: '0.6875rem', color: '#000000', textTransform: 'uppercase' }}>
                       Median Senior Comp Band
                     </div>
-                    <div style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-success)', marginTop: '0.2rem' }}>
+                    <div style={{ fontSize: '1.125rem', fontWeight: 800, color: '#000000', marginTop: '0.2rem' }}>
                       {loc.avgComp}
                     </div>
                   </div>
@@ -254,8 +255,9 @@ export const LocationExplorer: React.FC<LocationExplorerProps> = ({
                           fontSize: '0.6875rem',
                           padding: '0.2rem 0.5rem',
                           borderRadius: 'var(--radius-sm)',
-                          backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                          color: 'var(--color-text-secondary)',
+                          backgroundColor: '#ffffff',
+                          color: '#000000',
+                          border: '1px solid #e5e5e5',
                         }}
                       >
                         {tech}
@@ -276,9 +278,9 @@ export const LocationExplorer: React.FC<LocationExplorerProps> = ({
                       gap: '0.4rem',
                       fontSize: '0.875rem',
                       fontWeight: 600,
-                      color: 'var(--color-primary-400)',
+                      color: '#000000',
                       paddingTop: '0.75rem',
-                      borderTop: '1px solid var(--color-border)',
+                      borderTop: '1px solid #e5e5e5',
                       width: '100%',
                     }}
                   >

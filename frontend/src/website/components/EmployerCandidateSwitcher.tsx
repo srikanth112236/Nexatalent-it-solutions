@@ -48,16 +48,16 @@ export const EmployerCandidateSwitcher: React.FC = () => {
   const current = content[activeTab];
 
   return (
-    <section style={{ maxWidth: '1100px', margin: '4rem auto', padding: '0 2rem' }}>
+    <section className="font-sans" style={{ maxWidth: '1100px', margin: '4rem auto', padding: '0 2rem', backgroundColor: '#ffffff' }}>
       {/* 21st.dev Style Sliding Pill Switcher with Framer Motion layoutId */}
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2.5rem' }}>
         <div
           style={{
             display: 'inline-flex',
             padding: '5px',
-            backgroundColor: 'var(--color-surface)',
+            backgroundColor: '#ffffff',
             borderRadius: 'var(--radius-pill)',
-            border: '1px solid var(--color-border)',
+            border: '1px solid #000000',
             position: 'relative',
           }}
         >
@@ -74,7 +74,7 @@ export const EmployerCandidateSwitcher: React.FC = () => {
                   borderRadius: 'var(--radius-pill)',
                   border: 'none',
                   backgroundColor: 'transparent',
-                  color: isActive ? 'var(--nt-surface, #ffffff)' : 'var(--color-text-muted)',
+                  color: isActive ? '#ffffff' : '#000000',
                   fontWeight: 700,
                   fontSize: '0.9rem',
                   cursor: 'pointer',
@@ -94,9 +94,9 @@ export const EmployerCandidateSwitcher: React.FC = () => {
                     style={{
                       position: 'absolute',
                       inset: 0,
-                      backgroundColor: 'var(--color-primary)',
+                      backgroundColor: '#000000',
                       borderRadius: 'var(--radius-pill)',
-                      boxShadow: '0 0 20px rgba(59, 130, 246, 0.4)',
+                      boxShadow: '0 0 20px rgba(0, 0, 0, 0.3)',
                       zIndex: -1,
                     }}
                   />
@@ -117,9 +117,9 @@ export const EmployerCandidateSwitcher: React.FC = () => {
           exit={{ opacity: 0, y: -15, scale: 0.98 }}
           transition={{ duration: 0.35, ease: motionTokens.ease.standard }}
           style={{
-            backgroundColor: 'var(--color-surface)',
+            backgroundColor: '#ffffff',
             borderRadius: 'var(--radius-2xl)',
-            border: '1px solid var(--color-border)',
+            border: '1px solid #e5e5e5',
             padding: '3rem',
             boxShadow: 'var(--shadow-lg)',
             display: 'grid',
@@ -129,13 +129,13 @@ export const EmployerCandidateSwitcher: React.FC = () => {
           }}
         >
           <div>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               {current.tag}
             </span>
-            <h3 style={{ fontSize: 'clamp(1.75rem, 3vw, 2.25rem)', fontWeight: 800, margin: '0.75rem 0 1rem 0', color: '#ffffff' }}>
+            <h3 style={{ fontSize: 'clamp(1.75rem, 3vw, 2.25rem)', fontWeight: 800, margin: '0.75rem 0 1rem 0', color: '#000000' }}>
               {current.title}
             </h3>
-            <p style={{ color: 'var(--color-text-muted)', lineHeight: 1.6, marginBottom: '2rem' }}>
+            <p style={{ color: '#000000', lineHeight: 1.6, marginBottom: '2rem' }}>
               {current.description}
             </p>
             <motion.div whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.98 }}>
@@ -147,8 +147,8 @@ export const EmployerCandidateSwitcher: React.FC = () => {
             </motion.div>
           </div>
 
-          <div style={{ backgroundColor: 'var(--color-surface-raised)', borderRadius: 'var(--radius-xl)', padding: '2rem', border: '1px solid var(--color-border-subtle)' }}>
-            <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff', marginBottom: '1.25rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: 'var(--radius-xl)', padding: '2rem', border: '1px solid #000000' }}>
+            <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#000000', marginBottom: '1.25rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Core Advantages
             </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -158,9 +158,9 @@ export const EmployerCandidateSwitcher: React.FC = () => {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.08, duration: 0.3 }}
-                  style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', fontSize: '0.925rem', color: 'var(--color-text)' }}
+                  style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', fontSize: '0.925rem', color: '#000000' }}
                 >
-                  <span style={{ color: 'var(--color-success)', fontWeight: 700 }}>✓</span>
+                  <span style={{ color: '#000000', fontWeight: 700 }}>✓</span>
                   <span>{b}</span>
                 </motion.li>
               ))}

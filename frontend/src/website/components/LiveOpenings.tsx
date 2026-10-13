@@ -60,16 +60,16 @@ export const LiveOpenings: React.FC = () => {
   const pages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <section style={{ backgroundColor: '#fff', borderBottom: '1px solid #e2e8f0', padding: '4rem 2rem' }}>
+    <section className="font-sans" style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #e5e5e5', padding: '4rem 2rem' }}>
       <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.08em', color: '#2563eb' }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.08em', color: '#000000' }}>
             LIVE OPENINGS
           </span>
-          <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.25rem)', fontWeight: 900, color: '#0f172a', margin: '0.5rem 0' }}>
+          <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.25rem)', fontWeight: 900, color: '#000000', margin: '0.5rem 0' }}>
             Open roles hiring now
           </h2>
-          <p style={{ fontSize: '0.875rem', color: '#64748b' }}>
+          <p style={{ fontSize: '0.875rem', color: '#000000' }}>
             {total > 0 ? `${total} verified opening${total === 1 ? '' : 's'}` : 'Verified openings from hiring companies'}
           </p>
         </div>
@@ -91,29 +91,30 @@ export const LiveOpenings: React.FC = () => {
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search title, skill, location…"
             aria-label="Search openings"
-            style={{ flex: 1, minWidth: '220px', padding: '0.7rem 1rem', borderRadius: '0.75rem', border: '1px solid #e2e8f0', fontSize: '0.875rem' }}
+            className="focus:outline-none focus:border-black"
+            style={{ flex: 1, minWidth: '220px', padding: '0.7rem 1rem', borderRadius: '0.75rem', border: '1px solid #000000', fontSize: '0.875rem', backgroundColor: '#ffffff', color: '#000000' }}
           />
           <button
             type="submit"
-            style={{ padding: '0.7rem 1.5rem', borderRadius: '0.75rem', backgroundColor: '#2563eb', color: '#fff', fontWeight: 800, fontSize: '0.875rem', border: 'none', cursor: 'pointer' }}
+            style={{ padding: '0.7rem 1.5rem', borderRadius: '0.75rem', backgroundColor: '#000000', color: '#ffffff', fontWeight: 800, fontSize: '0.875rem', border: '1px solid #000000', cursor: 'pointer' }}
           >
             Search
           </button>
         </form>
 
         {loading ? (
-          <div role="status" style={{ textAlign: 'center', color: '#64748b', fontSize: '0.875rem', padding: '2rem' }}>Loading openings…</div>
+          <div role="status" style={{ textAlign: 'center', color: '#000000', fontSize: '0.875rem', padding: '2rem' }}>Loading openings…</div>
         ) : failed ? (
-          <div role="alert" style={{ textAlign: 'center', color: '#64748b', fontSize: '0.875rem', padding: '2rem', backgroundColor: '#f8fafc', borderRadius: '1rem' }}>
+          <div role="alert" style={{ textAlign: 'center', color: '#000000', fontSize: '0.875rem', padding: '2rem', backgroundColor: '#ffffff', border: '1px solid #000000', borderRadius: '1rem' }}>
             Could not reach the jobs service right now. Please try again shortly.
             <div style={{ marginTop: '0.75rem' }}>
-              <button type="button" onClick={() => window.location.reload()} style={{ padding: '0.6rem 1.25rem', borderRadius: '0.75rem', backgroundColor: '#2563eb', color: '#fff', fontWeight: 800, fontSize: '0.8rem', border: 'none', cursor: 'pointer' }}>
+              <button type="button" onClick={() => window.location.reload()} style={{ padding: '0.6rem 1.25rem', borderRadius: '0.75rem', backgroundColor: '#000000', color: '#ffffff', fontWeight: 800, fontSize: '0.8rem', border: '1px solid #000000', cursor: 'pointer' }}>
                 Try again
               </button>
             </div>
           </div>
         ) : rows.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#64748b', fontSize: '0.875rem', padding: '2rem', backgroundColor: '#f8fafc', borderRadius: '1rem' }}>
+          <div style={{ textAlign: 'center', color: '#000000', fontSize: '0.875rem', padding: '2rem', backgroundColor: '#ffffff', border: '1px solid #000000', borderRadius: '1rem' }}>
             No openings match right now. Adjust your search or check back soon.
           </div>
         ) : (
@@ -122,28 +123,28 @@ export const LiveOpenings: React.FC = () => {
               {rows.map((j) => (
                 <div
                   key={j.id}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', padding: '1rem 1.25rem', border: '1px solid #e2e8f0', borderRadius: '1rem', backgroundColor: '#fff' }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', padding: '1rem 1.25rem', border: '1px solid #e5e5e5', borderRadius: '1rem', backgroundColor: '#ffffff' }}
                 >
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem' }}>{j.title}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.25rem' }}>
+                    <div style={{ fontWeight: 800, color: '#000000', fontSize: '0.95rem' }}>{j.title}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#000000', marginTop: '0.25rem' }}>
                       {[j.companyName, j.location, j.employmentType].filter(Boolean).join(' • ')}
                       {j.experienceMin != null && ` • ${j.experienceMin}–${j.experienceMax ?? '+'} yrs`}
                     </div>
                     {j.requiredSkills && (
-                      <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '0.25rem' }}>{j.requiredSkills}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#000000', marginTop: '0.25rem' }}>{j.requiredSkills}</div>
                     )}
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
                     {j.salaryMin ? (
-                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#000000' }}>
                         ₹{Number(j.salaryMin).toLocaleString('en-IN')}
                         {j.salaryMax ? `–₹${Number(j.salaryMax).toLocaleString('en-IN')}` : ''}
                       </span>
                     ) : null}
                     <Link
                       to={`/candidate/jobs/${encodeURIComponent(j.id)}`}
-                      style={{ padding: '0.6rem 1.25rem', borderRadius: '0.75rem', backgroundColor: '#0f172a', color: '#fff', fontWeight: 800, fontSize: '0.8rem', textDecoration: 'none' }}
+                      style={{ padding: '0.6rem 1.25rem', borderRadius: '0.75rem', backgroundColor: '#000000', color: '#ffffff', fontWeight: 800, fontSize: '0.8rem', textDecoration: 'none' }}
                     >
                       View & Apply
                     </Link>
@@ -153,11 +154,11 @@ export const LiveOpenings: React.FC = () => {
             </div>
             {pages > 1 && (
               <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1.25rem', alignItems: 'center' }}>
-                <button type="button" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0', backgroundColor: '#fff', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}>
+                <button type="button" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #000000', backgroundColor: '#ffffff', color: '#000000', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}>
                   ← Prev
                 </button>
-                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Page {page} of {pages}</span>
-                <button type="button" disabled={page >= pages} onClick={() => setPage((p) => Math.min(pages, p + 1))} style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0', backgroundColor: '#fff', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}>
+                <span style={{ fontSize: '0.8rem', color: '#000000' }}>Page {page} of {pages}</span>
+                <button type="button" disabled={page >= pages} onClick={() => setPage((p) => Math.min(pages, p + 1))} style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #000000', backgroundColor: '#ffffff', color: '#000000', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}>
                   Next →
                 </button>
               </div>

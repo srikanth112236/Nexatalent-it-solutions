@@ -45,9 +45,13 @@ export interface SolutionDetailData {
   faqs: { q: string; a: string }[];
 }
 
+export function stripNumberPrefix(title: string): string {
+  return title.replace(/^\s*\d+\s*[.)\-–:]*\s*/, '').trim();
+}
+
 export const SOLUTIONS_DETAIL_MAP: Record<string, SolutionDetailData> = {
   'permanent-hiring': {
-    title: '1. Permanent Recruitment & Direct Sourcing',
+    title: 'Permanent Recruitment & Direct Sourcing',
     tagline: 'High-retention lateral talent for core engineering & technology leadership roles.',
     badge: 'DIRECT FULL-TIME HIRING SLA',
     problem: 'Companies suffer from high candidate drop-out rates, endless screening of unvetted profiles, and 90+ day fill times for critical full-time engineering roles.',
@@ -87,7 +91,7 @@ export const SOLUTIONS_DETAIL_MAP: Record<string, SolutionDetailData> = {
     ]
   },
   'contract-staffing': {
-    title: '2. Contract Staffing & Agile Staff Augmentation',
+    title: 'Contract Staffing & Agile Staff Augmentation',
     tagline: 'Rapid deployment of pre-vetted senior engineering contractors on flexible terms.',
     badge: 'FLEXIBLE CAPACITY & PAYROLL COMPLIANCE',
     problem: 'Lengthy hiring cycles delay critical product sprints, while rigid full-time headcounts restrict project-based agility.',
@@ -126,7 +130,7 @@ export const SOLUTIONS_DETAIL_MAP: Record<string, SolutionDetailData> = {
     ]
   },
   'gcc-hiring': {
-    title: '3. Turnkey GCC Engineering Pods',
+    title: 'Turnkey GCC Engineering Pods',
     tagline: 'End-to-end talent infrastructure for Global Capability Centers (GCC) in India.',
     badge: 'OFFSHORE R&D BOT MODEL',
     problem: 'Multinational enterprises entering India struggle with zero local employer brand, compliance hurdles, and slow hiring of 50-200 engineers.',
@@ -165,7 +169,7 @@ export const SOLUTIONS_DETAIL_MAP: Record<string, SolutionDetailData> = {
     ]
   },
   'executive-search': {
-    title: '4. Executive & Leadership Search',
+    title: 'Executive & Leadership Search',
     tagline: 'Confidential, retained search for CTOs, VPs of Engineering, and GCC Site Directors.',
     badge: 'CONFIDENTIAL C-SUITE MANDATE',
     problem: 'Standard recruiters lack the credibility and strategic depth to access passive C-suite and VP-level technology leaders.',
@@ -204,7 +208,7 @@ export const SOLUTIONS_DETAIL_MAP: Record<string, SolutionDetailData> = {
     ]
   },
   'recruitment-process-support': {
-    title: '5. RPO & Embedded TA Support',
+    title: 'RPO & Embedded TA Support',
     tagline: 'Dedicated talent acquisition teams scaling your internal hiring capacity.',
     badge: 'EXTENDED RECRUITMENT CAPACITY',
     problem: 'Internal HR teams get overwhelmed during rapid hiring surges, leading to high agency spend and chaotic candidate experiences.',
@@ -241,7 +245,7 @@ export const SOLUTIONS_DETAIL_MAP: Record<string, SolutionDetailData> = {
     ]
   },
   'bulk-hiring': {
-    title: '6. Bulk & Volume Sourcing Drives',
+    title: 'Bulk & Volume Sourcing Drives',
     tagline: 'Structured hiring drives deploying 20 to 100+ engineers with automated screening.',
     badge: 'RAPID SCALE CAMPAIGNS',
     problem: 'Hiring dozens of software engineers for expansion strains internal interviewers and leads to inconsistent quality.',
@@ -278,7 +282,7 @@ export const SOLUTIONS_DETAIL_MAP: Record<string, SolutionDetailData> = {
     ]
   },
   'niche-specialist': {
-    title: '7. Niche & Specialist Tech Search',
+    title: 'Niche & Specialist Tech Search',
     tagline: 'Targeted outreach and validation for hard-to-find, rare technical skill sets.',
     badge: 'RARE SKILL SOURCING',
     problem: 'Hard-to-find skills (Low-Latency C++, AI/LLM Kernel Engineers, FPGA, eBPF) are rarely available on public job boards.',
@@ -314,7 +318,7 @@ export const SOLUTIONS_DETAIL_MAP: Record<string, SolutionDetailData> = {
     ]
   },
   'talent-advisory': {
-    title: '8. Talent Advisory & Compensation Benchmarking',
+    title: 'Talent Advisory & Compensation Benchmarking',
     tagline: 'Data-driven market intelligence, salary benchmarking, and organizational design.',
     badge: 'STRATEGIC TALENT ADVISORY',
     problem: 'Engineering leaders lack ground-truth compensation data and realistic hiring feasibility metrics before budgeting new expansion initiatives.',
@@ -402,13 +406,15 @@ export function SolutionDetailPage() {
     return <Navigate to="/solutions" replace />;
   }
 
+  const displayTitle = stripNumberPrefix(data.title);
+
   return (
-    <div className="bg-white min-h-screen text-slate-900 font-sans relative overflow-x-clip">
+    <div className="bg-white min-h-screen text-black font-sans relative overflow-x-clip">
       {/* SEO & Meta Tags */}
       <SeoHead
-        title={`${data.title} | Nexa Talent IT Solutions`}
+        title={`${displayTitle} | NexaTalent IT Solutions`}
         description={`${data.tagline} ${data.approach} SLA: ${data.sla}`}
-        keywords={`${data.title}, ${data.badge}, Nexa Talent IT Solutions, IT staffing India`}
+        keywords={`${displayTitle}, ${data.badge}, NexaTalent IT Solutions, IT staffing India`}
         canonical={`/solutions/${slug}`}
       />
 
@@ -416,66 +422,79 @@ export function SolutionDetailPage() {
       <SiteNavbar />
 
       {/* ============================================================================
-       * HERO SECTION (CLEAN LIGHT THEME WITH BRAND BLUE ACCENTS)
+       * HERO / BANNER — premium gradient, breadcrumb, badge, trust row + clear CTAs
        * ============================================================================ */}
-      <section className="relative pt-32 pb-16 px-6 lg:px-16 bg-[#FAF8F5] border-b border-slate-200/80">
-        <div className="max-w-6xl mx-auto space-y-6">
+      <section className="relative overflow-hidden border-b border-slate-200/80 bg-gradient-to-b from-slate-50 via-white to-white pt-28 pb-14 px-6 lg:px-16">
+        {/* decorative washes */}
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-slate-100 blur-3xl opacity-80" />
+          <div className="absolute -top-16 right-[-80px] h-80 w-80 rounded-full bg-slate-100 blur-3xl opacity-70" />
+          <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+        </div>
+        <div className="relative max-w-6xl mx-auto space-y-6">
           
           {/* Breadcrumb Navigation */}
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
-            <Link to="/" className="hover:text-[#0265FF] transition-colors">Home</Link>
-            <ChevronRight size={14} className="text-slate-400" />
-            <Link to="/solutions" className="hover:text-[#0265FF] transition-colors">Solutions Catalog</Link>
-            <ChevronRight size={14} className="text-slate-400" />
-            <span className="text-[#0265FF] font-bold">{data.title}</span>
-          </div>
+          <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
+            <Link to="/" className="hover:text-black transition-colors">Home</Link>
+            <ChevronRight size={14} className="text-slate-400" aria-hidden />
+            <Link to="/solutions" className="hover:text-black transition-colors">Solutions</Link>
+            <ChevronRight size={14} className="text-slate-400" aria-hidden />
+            <span className="text-black font-bold">{displayTitle}</span>
+          </nav>
 
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#0265FF] text-xs font-bold uppercase tracking-wider"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black text-white text-[11px] font-bold uppercase tracking-[0.14em] shadow-sm"
           >
-            <Sparkles size={14} className="text-[#0265FF]" />
+            <Sparkles size={14} className="text-white" aria-hidden />
             <span>{data.badge}</span>
           </motion.div>
 
           <motion.h1
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.15]"
+            transition={{ delay: 0.08 }}
+            className="text-3xl sm:text-5xl lg:text-[3.4rem] font-extrabold text-black tracking-tight leading-[1.08] max-w-4xl"
           >
-            {data.title}
+            {displayTitle}
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
+            transition={{ delay: 0.16 }}
             className="text-base sm:text-xl text-slate-600 max-w-3xl font-normal leading-relaxed"
           >
             {data.tagline}
           </motion.p>
 
-          {/* Action CTAs */}
+          {/* trust row */}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-semibold text-slate-600">
+            <span className="inline-flex items-center gap-1.5"><ShieldCheck size={14} className="text-black" aria-hidden /> NDA-protected delivery</span>
+            <span className="inline-flex items-center gap-1.5"><Clock size={14} className="text-black" aria-hidden /> {data.sla.split(';')[0]}</span>
+            <span className="inline-flex items-center gap-1.5"><CheckCircle2 size={14} className="text-black" aria-hidden /> 90-day replacement cover</span>
+          </div>
+
+          {/* Action CTAs — clear English labels */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="flex flex-wrap items-center gap-4 pt-4"
+            transition={{ delay: 0.24 }}
+            className="flex flex-wrap items-center gap-3 pt-2"
           >
             <Link
               to="/employers"
-              className="px-8 py-4 rounded-full bg-[#0265FF] hover:bg-[#004FBF] text-white font-bold text-sm shadow-[0_10px_30px_rgba(2,101,255,0.25)] transition-all flex items-center gap-2"
+              className="group inline-flex min-h-[52px] items-center gap-2 rounded-full bg-black hover:bg-neutral-800 text-white font-bold text-sm px-8 shadow-[0_12px_32px_rgba(0,0,0,0.28)] transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
             >
-              <span>Deploy This Solution</span>
-              <ArrowRight size={16} />
+              <span>Get My Talent Shortlist</span>
+              <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" aria-hidden />
             </Link>
             <Link
               to="/contact"
-              className="px-8 py-4 rounded-full bg-white hover:bg-slate-50 text-slate-800 font-bold text-sm border border-slate-300 shadow-xs transition-all"
+              className="inline-flex min-h-[52px] items-center rounded-full bg-white hover:bg-neutral-100 text-black font-bold text-sm px-8 border border-slate-300 shadow-sm transition-all focus-visible:outline-2 focus-visible:outline-black"
             >
-              Schedule Practice Consultation
+              Talk to a Hiring Expert
             </Link>
           </motion.div>
 
@@ -488,9 +507,9 @@ export function SolutionDetailPage() {
       <section className="py-8 px-6 lg:px-16 bg-white border-b border-slate-200/80">
         <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
           {data.metrics.map((m, idx) => (
-            <div key={idx} className="p-4 rounded-2xl bg-[#FAF8F5] border border-slate-200 shadow-xs">
-              <div className="text-2xl sm:text-3xl font-extrabold text-[#0265FF]">{m.value}</div>
-              <div className="text-xs font-semibold text-slate-500 mt-1">{m.label}</div>
+            <div key={idx} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
+              <div className="text-2xl sm:text-3xl font-extrabold text-black">{m.value}</div>
+              <div className="text-xs font-semibold text-black mt-1">{m.label}</div>
             </div>
           ))}
         </div>
@@ -503,44 +522,44 @@ export function SolutionDetailPage() {
         <div className="max-w-6xl mx-auto space-y-12">
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 rounded-3xl bg-[#FAF8F5] border border-slate-200 space-y-3 shadow-xs">
-              <span className="text-xs font-bold text-red-600 uppercase tracking-wider bg-red-50 px-3 py-1 rounded-full border border-red-200 inline-block">
+            <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-3 shadow-xs">
+              <span className="text-xs font-bold text-black uppercase tracking-wider bg-white px-3 py-1 rounded-full border border-black inline-block">
                 THE CHALLENGE
               </span>
-              <h3 className="text-lg font-extrabold text-slate-900">Industry Problem</h3>
-              <p className="text-xs text-slate-600 leading-relaxed font-normal">
+              <h3 className="text-lg font-extrabold text-black">Industry Problem</h3>
+              <p className="text-xs text-black leading-relaxed font-normal">
                 {data.problem}
               </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-blue-50/50 border border-blue-200 space-y-3 shadow-xs">
-              <span className="text-xs font-bold text-[#0265FF] uppercase tracking-wider bg-white px-3 py-1 rounded-full border border-blue-200 inline-block">
+            <div className="p-6 rounded-3xl bg-white border border-black space-y-3 shadow-xs">
+              <span className="text-xs font-bold text-black uppercase tracking-wider bg-white px-3 py-1 rounded-full border border-black inline-block">
                 NEXA TALENT METHOD
               </span>
-              <h3 className="text-lg font-extrabold text-slate-900">Our Strategic Approach</h3>
-              <p className="text-xs text-slate-600 leading-relaxed font-normal">
+              <h3 className="text-lg font-extrabold text-black">Our Strategic Approach</h3>
+              <p className="text-xs text-black leading-relaxed font-normal">
                 {data.approach}
               </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-[#FAF8F5] border border-slate-200 space-y-3 shadow-xs">
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider bg-slate-100 px-3 py-1 rounded-full border border-slate-300 inline-block">
+            <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-3 shadow-xs">
+              <span className="text-xs font-bold text-black uppercase tracking-wider bg-white px-3 py-1 rounded-full border border-slate-300 inline-block">
                 TARGET PROFILE
               </span>
-              <h3 className="text-lg font-extrabold text-slate-900">Ideal Client Profile</h3>
-              <p className="text-xs text-slate-600 leading-relaxed font-normal">
+              <h3 className="text-lg font-extrabold text-black">Ideal Client Profile</h3>
+              <p className="text-xs text-black leading-relaxed font-normal">
                 {data.audience}
               </p>
             </div>
           </div>
 
           {/* Solution Capabilities Checklist */}
-          <div className="p-8 sm:p-12 rounded-3xl bg-[#FAF8F5] border border-slate-200 space-y-6 shadow-xs">
+          <div className="p-8 sm:p-12 rounded-3xl bg-white border border-slate-200 space-y-6 shadow-xs">
             <div className="space-y-2">
-              <span className="text-xs font-bold text-[#0265FF] uppercase tracking-wider bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">
+              <span className="text-xs font-bold text-black uppercase tracking-wider bg-white px-3.5 py-1 rounded-full border border-black">
                 DELIVERABLE SPECIFICATIONS
               </span>
-              <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-black tracking-tight">
                 Solution Capabilities & Core Deliverables
               </h2>
             </div>
@@ -548,8 +567,8 @@ export function SolutionDetailPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {data.capabilities.map((cap, i) => (
                 <div key={i} className="flex items-start gap-3 p-4 bg-white rounded-2xl border border-slate-200 shadow-xs">
-                  <CheckCircle2 size={18} className="text-[#0265FF] shrink-0 mt-0.5" />
-                  <span className="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed">
+                  <CheckCircle2 size={18} className="text-black shrink-0 mt-0.5" />
+                  <span className="text-xs sm:text-sm font-semibold text-black leading-relaxed">
                     {cap}
                   </span>
                 </div>
@@ -560,38 +579,38 @@ export function SolutionDetailPage() {
           {/* NEW SECTION 1: TARGET ROLES & SOURCING PROFILES MATRIX */}
           <div className="space-y-6">
             <div className="space-y-2">
-              <span className="text-xs font-bold text-[#0265FF] uppercase tracking-wider bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">
+              <span className="text-xs font-bold text-black uppercase tracking-wider bg-white px-3.5 py-1 rounded-full border border-black">
                 TALENT COVERAGE MATRIX
               </span>
-              <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-black tracking-tight">
                 Typical Engineering Roles & Sourcing Profiles
               </h2>
-              <p className="text-xs sm:text-sm text-slate-600">
+              <p className="text-xs sm:text-sm text-black">
                 Pre-calibrated candidate pools actively sourced under this delivery model.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {data.roles.map((r, i) => (
-                <div key={i} className="p-5 rounded-2xl bg-[#FAF8F5] border border-slate-200 space-y-3 flex flex-col justify-between shadow-xs">
+                <div key={i} className="p-5 rounded-2xl bg-white border border-slate-200 space-y-3 flex flex-col justify-between shadow-xs">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-[#0265FF] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                      <span className="text-[10px] font-bold text-black bg-white px-2.5 py-0.5 rounded-full border border-black">
                         {r.exp}
                       </span>
-                      <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
+                      <span className="text-[10px] font-bold text-black flex items-center gap-1">
                         <Clock size={12} />
                         {r.turnaround}
                       </span>
                     </div>
-                    <h4 className="font-extrabold text-sm text-slate-900">{r.title}</h4>
+                    <h4 className="font-extrabold text-sm text-black">{r.title}</h4>
                   </div>
 
                   <div className="pt-2 border-t border-slate-200 space-y-1">
-                    <span className="text-[10px] font-bold uppercase text-slate-400 block">Key Skill Tags:</span>
+                    <span className="text-[10px] font-bold uppercase text-black block">Key Skill Tags:</span>
                     <div className="flex flex-wrap gap-1">
                       {r.skills.map((s, idx) => (
-                        <span key={idx} className="text-[10px] font-semibold px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700">
+                        <span key={idx} className="text-[10px] font-semibold px-2 py-0.5 rounded bg-white border border-slate-200 text-black">
                           {s}
                         </span>
                       ))}
@@ -605,32 +624,32 @@ export function SolutionDetailPage() {
           {/* 5-Stage Execution Process Flow */}
           <div className="space-y-8">
             <div className="text-center max-w-2xl mx-auto space-y-2">
-              <span className="text-xs font-bold text-[#0265FF] uppercase tracking-wider bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">
+              <span className="text-xs font-bold text-black uppercase tracking-wider bg-white px-3.5 py-1 rounded-full border border-black">
                 DISCIPLINED EXECUTION
               </span>
-              <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-black tracking-tight">
                 Step-by-Step Delivery Workflow
               </h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
               {data.process.map((p) => (
-                <div key={p.step} className="p-5 bg-[#FAF8F5] rounded-2xl border border-slate-200 space-y-2 relative shadow-xs">
-                  <span className="text-2xl font-extrabold text-[#0265FF] block">{p.step}</span>
-                  <h4 className="font-extrabold text-sm text-slate-900">{p.title}</h4>
-                  <p className="text-xs text-slate-600 leading-relaxed font-normal">{p.desc}</p>
+                <div key={p.step} className="p-5 bg-white rounded-2xl border border-slate-200 space-y-2 relative shadow-xs">
+                  <span className="text-2xl font-extrabold text-black block">{p.step}</span>
+                  <h4 className="font-extrabold text-sm text-black">{p.title}</h4>
+                  <p className="text-xs text-black leading-relaxed font-normal">{p.desc}</p>
                 </div>
               ))}
             </div>
           </div>
 
           {/* NEW SECTION 2: COMPARATIVE ADVANTAGE MATRIX */}
-          <div className="p-8 sm:p-10 rounded-3xl bg-[#FAF8F5] border border-slate-200 space-y-6 shadow-xs">
+          <div className="p-8 sm:p-10 rounded-3xl bg-white border border-slate-200 space-y-6 shadow-xs">
             <div className="space-y-2">
-              <span className="text-xs font-bold text-[#0265FF] uppercase tracking-wider bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">
+              <span className="text-xs font-bold text-black uppercase tracking-wider bg-white px-3.5 py-1 rounded-full border border-black">
                 WHY NEXA TALENT IT SOLUTIONS
               </span>
-              <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-black tracking-tight">
                 Institutional Advantage & Service Benchmark
               </h2>
             </div>
@@ -638,43 +657,43 @@ export function SolutionDetailPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-slate-300 text-slate-700 font-extrabold">
+                  <tr className="border-b border-slate-300 text-black font-extrabold">
                     <th className="py-3 px-4">Evaluation Metric</th>
-                    <th className="py-3 px-4 text-[#0265FF]">Nexa Talent IT Solutions</th>
-                    <th className="py-3 px-4 text-slate-500">Traditional Agencies</th>
-                    <th className="py-3 px-4 text-slate-500">In-House TA Only</th>
+                    <th className="py-3 px-4 text-black">Nexa Talent IT Solutions</th>
+                    <th className="py-3 px-4 text-black">Traditional Agencies</th>
+                    <th className="py-3 px-4 text-black">In-House TA Only</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 text-slate-700">
+                <tbody className="divide-y divide-slate-200 text-black">
                   <tr>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">Average Time-to-Fill</td>
-                    <td className="py-3.5 px-4 font-extrabold text-[#0265FF]">5 - 18 Days</td>
-                    <td className="py-3.5 px-4 text-slate-500">45 - 90 Days</td>
-                    <td className="py-3.5 px-4 text-slate-500">60+ Days</td>
+                    <td className="py-3.5 px-4 font-bold text-black">Average Time-to-Fill</td>
+                    <td className="py-3.5 px-4 font-extrabold text-black">5 - 18 Days</td>
+                    <td className="py-3.5 px-4 text-black">45 - 90 Days</td>
+                    <td className="py-3.5 px-4 text-black">60+ Days</td>
                   </tr>
                   <tr>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">Technical Pre-Screening</td>
-                    <td className="py-3.5 px-4 font-extrabold text-[#0265FF]">Practitioner Code Vetting</td>
-                    <td className="py-3.5 px-4 text-slate-500">Keyword Resume Matching</td>
-                    <td className="py-3.5 px-4 text-slate-500">General Recruiter Screen</td>
+                    <td className="py-3.5 px-4 font-bold text-black">Technical Pre-Screening</td>
+                    <td className="py-3.5 px-4 font-extrabold text-black">Practitioner Code Vetting</td>
+                    <td className="py-3.5 px-4 text-black">Keyword Resume Matching</td>
+                    <td className="py-3.5 px-4 text-black">General Recruiter Screen</td>
                   </tr>
                   <tr>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">Candidate Replacement Guarantee</td>
-                    <td className="py-3.5 px-4 font-extrabold text-[#0265FF]">90-Day Unconditional</td>
-                    <td className="py-3.5 px-4 text-slate-500">30 Days or None</td>
-                    <td className="py-3.5 px-4 text-slate-500">N/A (Sunk Cost)</td>
+                    <td className="py-3.5 px-4 font-bold text-black">Candidate Replacement Guarantee</td>
+                    <td className="py-3.5 px-4 font-extrabold text-black">90-Day Unconditional</td>
+                    <td className="py-3.5 px-4 text-black">30 Days or None</td>
+                    <td className="py-3.5 px-4 text-black">N/A (Sunk Cost)</td>
                   </tr>
                   <tr>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">Statutory & Labor Compliance</td>
-                    <td className="py-3.5 px-4 font-extrabold text-[#0265FF]">100% PF, ESI, GST Governed</td>
-                    <td className="py-3.5 px-4 text-slate-500">Varies / Partial</td>
-                    <td className="py-3.5 px-4 text-slate-500">Internal HR Overhead</td>
+                    <td className="py-3.5 px-4 font-bold text-black">Statutory & Labor Compliance</td>
+                    <td className="py-3.5 px-4 font-extrabold text-black">100% PF, ESI, GST Governed</td>
+                    <td className="py-3.5 px-4 text-black">Varies / Partial</td>
+                    <td className="py-3.5 px-4 text-black">Internal HR Overhead</td>
                   </tr>
                   <tr>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">Cost Transparency</td>
-                    <td className="py-3.5 px-4 font-extrabold text-[#0265FF]">Cost-Plus Clear Billing</td>
-                    <td className="py-3.5 px-4 text-slate-500">Markups (30-50%)</td>
-                    <td className="py-3.5 px-4 text-slate-500">Fixed Overhead</td>
+                    <td className="py-3.5 px-4 font-bold text-black">Cost Transparency</td>
+                    <td className="py-3.5 px-4 font-extrabold text-black">Cost-Plus Clear Billing</td>
+                    <td className="py-3.5 px-4 text-black">Markups (30-50%)</td>
+                    <td className="py-3.5 px-4 text-black">Fixed Overhead</td>
                   </tr>
                 </tbody>
               </table>
@@ -684,54 +703,54 @@ export function SolutionDetailPage() {
           {/* NEW SECTION 3: ENTERPRISE RISK GOVERNANCE & COMPLIANCE */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-3 shadow-xs">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0265FF] flex items-center justify-center font-bold">
+              <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-bold">
                 <ShieldCheck size={20} />
               </div>
-              <h4 className="font-extrabold text-base text-slate-900">90-Day Replacement Safeguard</h4>
-              <p className="text-xs text-slate-600 leading-relaxed font-normal">
+              <h4 className="font-extrabold text-base text-black">90-Day Replacement Safeguard</h4>
+              <p className="text-xs text-black leading-relaxed font-normal">
                 Complete replacement warranty backed by dedicated rapid-response sourcing squads for any candidate attrition within 90 days.
               </p>
             </div>
 
             <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-3 shadow-xs">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0265FF] flex items-center justify-center font-bold">
+              <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-bold">
                 <Lock size={20} />
               </div>
-              <h4 className="font-extrabold text-base text-slate-900">100% IP Escrow & NDA Protection</h4>
-              <p className="text-xs text-slate-600 leading-relaxed font-normal">
+              <h4 className="font-extrabold text-base text-black">100% IP Escrow & NDA Protection</h4>
+              <p className="text-xs text-black leading-relaxed font-normal">
                 Strict non-disclosure protocols and legal assignment ensuring all code, IP, and proprietary assets belong 100% to your enterprise.
               </p>
             </div>
 
             <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-3 shadow-xs">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0265FF] flex items-center justify-center font-bold">
+              <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-bold">
                 <FileText size={20} />
               </div>
-              <h4 className="font-extrabold text-base text-slate-900">Zero Candidate Fee Integrity</h4>
-              <p className="text-xs text-slate-600 leading-relaxed font-normal">
+              <h4 className="font-extrabold text-base text-black">Zero Candidate Fee Integrity</h4>
+              <p className="text-xs text-black leading-relaxed font-normal">
                 Nexa Talent IT Solutions operates under a strict zero-candidate-fee code of ethics. Candidates are never charged recruitment fees.
               </p>
             </div>
           </div>
 
           {/* SLA & Commercial Terms Card */}
-          <div className="p-8 rounded-3xl bg-blue-50/70 border border-blue-200 grid grid-cols-1 md:grid-cols-3 gap-6 items-center shadow-xs">
+          <div className="p-8 rounded-3xl bg-white border border-black grid grid-cols-1 md:grid-cols-3 gap-6 items-center shadow-xs">
             <div className="space-y-1">
-              <div className="flex items-center gap-2 text-xs font-bold text-[#0265FF] uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-xs font-bold text-black uppercase tracking-wider">
                 <Clock size={16} />
                 <span>COMMITTED SLA</span>
               </div>
-              <p className="text-xs sm:text-sm font-bold text-slate-900 leading-relaxed">
+              <p className="text-xs sm:text-sm font-bold text-black leading-relaxed">
                 {data.sla}
               </p>
             </div>
 
             <div className="space-y-1">
-              <div className="flex items-center gap-2 text-xs font-bold text-[#0265FF] uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-xs font-bold text-black uppercase tracking-wider">
                 <ShieldCheck size={16} />
                 <span>COMMERCIAL STRUCTURE</span>
               </div>
-              <p className="text-xs sm:text-sm font-bold text-slate-900 leading-relaxed">
+              <p className="text-xs sm:text-sm font-bold text-black leading-relaxed">
                 {data.pricing}
               </p>
             </div>
@@ -739,9 +758,9 @@ export function SolutionDetailPage() {
             <div className="flex justify-start md:justify-end">
               <Link
                 to="/employers"
-                className="px-6 py-3.5 rounded-full bg-[#0265FF] hover:bg-[#004FBF] text-white font-bold text-xs shadow-md transition-all flex items-center gap-2"
+                className="px-6 py-3.5 rounded-full bg-black hover:bg-neutral-800 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2"
               >
-                <span>Request Commercial Proposal</span>
+                <span>Get Pricing & Proposal</span>
                 <ArrowRight size={14} />
               </Link>
             </div>

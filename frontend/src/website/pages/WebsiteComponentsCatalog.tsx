@@ -59,7 +59,7 @@ export const WebsiteComponentsCatalog: React.FC = () => {
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg)', color: 'var(--color-text)' }}>
+    <div className="font-sans" style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg)', color: 'var(--color-text)' }}>
       {/* Catalog Header */}
       <header
         style={{

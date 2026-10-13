@@ -54,6 +54,7 @@ export function CaseStudiesPage() {
 
   return (
     <div
+      className="font-sans"
       style={{
         position: 'relative',
         display: 'block',

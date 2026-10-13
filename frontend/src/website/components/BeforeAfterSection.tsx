@@ -43,7 +43,7 @@ export const BeforeAfterSection: React.FC<BeforeAfterSectionProps> = ({
   ];
 
   return (
-    <section style={{ padding: '5rem 2rem', position: 'relative' }}>
+    <section className="font-sans" style={{ padding: '5rem 2rem', position: 'relative', backgroundColor: '#ffffff' }}>
       <motion.div 
         style={{ maxWidth: '1100px', margin: '0 auto' }}
         initial="hidden"
@@ -67,17 +67,17 @@ export const BeforeAfterSection: React.FC<BeforeAfterSectionProps> = ({
             style={{
               fontSize: '0.8125rem',
               fontWeight: 700,
-              color: 'var(--color-primary-400)',
+              color: '#000000',
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
             }}
           >
             {badge}
           </span>
-          <h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: 'var(--color-text)', marginTop: '0.5rem' }}>
+          <h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: '#000000', marginTop: '0.5rem' }}>
             {title}
           </h2>
-          <p style={{ color: 'var(--color-text-secondary)', maxWidth: '640px', margin: '0.75rem auto 0 auto' }}>
+          <p style={{ color: '#000000', maxWidth: '640px', margin: '0.75rem auto 0 auto' }}>
             {subtitle}
           </p>
         </motion.div>
@@ -99,7 +99,7 @@ export const BeforeAfterSection: React.FC<BeforeAfterSectionProps> = ({
               top: '5%',
               bottom: '5%',
               width: '1px',
-              backgroundColor: 'var(--color-border)',
+              backgroundColor: '#e5e5e5',
               display: 'none', // Hidden on mobile, could be shown on md+
               transformOrigin: 'top center',
             }}
@@ -113,8 +113,8 @@ export const BeforeAfterSection: React.FC<BeforeAfterSectionProps> = ({
           <motion.div
             style={{
               borderRadius: 'var(--radius-xl)',
-              backgroundColor: 'rgba(15, 23, 42, 0.5)',
-              border: '1px solid rgba(239, 68, 68, 0.2)',
+              backgroundColor: '#ffffff',
+              border: '1px solid #000000',
               padding: '2.5rem 2rem',
             }}
             variants={{
@@ -124,11 +124,11 @@ export const BeforeAfterSection: React.FC<BeforeAfterSectionProps> = ({
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
               <motion.div 
-                style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#ef4444' }} 
+                style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#000000' }} 
                 animate={{ opacity: [0.5, 1, 0.5] }}
                 transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
               />
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text)' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#000000' }}>
                 Conventional Agencies
               </h3>
             </div>
@@ -137,17 +137,17 @@ export const BeforeAfterSection: React.FC<BeforeAfterSectionProps> = ({
               {comparisonItems.map((item, idx) => (
                 <motion.div 
                   key={idx} 
-                  style={{ paddingBottom: '1.25rem', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}
+                  style={{ paddingBottom: '1.25rem', borderBottom: '1px solid #e5e5e5' }}
                   variants={{
                     hidden: { opacity: 0, x: -20 },
                     visible: { opacity: 1, x: 0, transition: { duration: motionTokens.duration.standard } }
                   }}
                 >
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#000000', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
                     {item.factor}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', color: '#94a3b8', fontSize: '0.875rem', lineHeight: 1.5 }}>
-                    <XCircle size={16} color="#ef4444" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', color: '#000000', fontSize: '0.875rem', lineHeight: 1.5 }}>
+                    <XCircle size={16} color="#000000" style={{ flexShrink: 0, marginTop: '2px' }} />
                     <span>{item.legacy}</span>
                   </div>
                 </motion.div>
@@ -159,10 +159,10 @@ export const BeforeAfterSection: React.FC<BeforeAfterSectionProps> = ({
           <motion.div
             style={{
               borderRadius: 'var(--radius-xl)',
-              backgroundColor: 'var(--color-surface)',
-              border: '1px solid var(--color-primary)',
+              backgroundColor: '#ffffff',
+              border: '1px solid #000000',
               padding: '2.5rem 2rem',
-              boxShadow: '0 0 35px rgba(59, 130, 246, 0.2)',
+              boxShadow: '0 0 35px rgba(0, 0, 0, 0.12)',
               position: 'relative',
               overflow: 'hidden',
             }}
@@ -170,7 +170,7 @@ export const BeforeAfterSection: React.FC<BeforeAfterSectionProps> = ({
               hidden: { opacity: 0, x: 50 },
               visible: { opacity: 1, x: 0, transition: { duration: motionTokens.duration.slow, ease: motionTokens.ease.standard } }
             }}
-            whileHover={{ y: -5, boxShadow: '0 0 45px rgba(59, 130, 246, 0.3)' }}
+            whileHover={{ y: -5, boxShadow: '0 0 45px rgba(0, 0, 0, 0.18)' }}
             transition={motionTokens.spring.snappy}
           >
             <motion.div
@@ -178,7 +178,7 @@ export const BeforeAfterSection: React.FC<BeforeAfterSectionProps> = ({
                 position: 'absolute',
                 top: 0,
                 right: 0,
-                backgroundColor: 'var(--color-primary)',
+                backgroundColor: '#000000',
                 color: '#ffffff',
                 fontSize: '0.6875rem',
                 fontWeight: 700,
@@ -198,9 +198,9 @@ export const BeforeAfterSection: React.FC<BeforeAfterSectionProps> = ({
                 animate={{ rotate: [0, 15, -15, 0] }}
                 transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
               >
-                <Zap size={18} color="var(--color-primary-400)" />
+                <Zap size={18} color="#000000" />
               </motion.div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text)' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#000000' }}>
                 NexaTalent IT Solutions Platform
               </h3>
             </div>
@@ -209,22 +209,22 @@ export const BeforeAfterSection: React.FC<BeforeAfterSectionProps> = ({
               {comparisonItems.map((item, idx) => (
                 <motion.div 
                   key={idx} 
-                  style={{ paddingBottom: '1.25rem', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}
+                  style={{ paddingBottom: '1.25rem', borderBottom: '1px solid #e5e5e5' }}
                   variants={{
                     hidden: { opacity: 0, x: 20 },
                     visible: { opacity: 1, x: 0, transition: { duration: motionTokens.duration.standard } }
                   }}
                 >
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-primary-400)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#000000', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
                     {item.factor}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', color: 'var(--color-text)', fontSize: '0.875rem', lineHeight: 1.5, fontWeight: 500 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', color: '#000000', fontSize: '0.875rem', lineHeight: 1.5, fontWeight: 500 }}>
                     <motion.div
                       whileInView={{ scale: [0, 1.2, 1] }}
                       viewport={{ once: true }}
                       transition={{ delay: 0.2 + idx * motionTokens.stagger.small, ...motionTokens.spring.snappy }}
                     >
-                      <CheckCircle2 size={16} color="var(--color-success)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                      <CheckCircle2 size={16} color="#000000" style={{ flexShrink: 0, marginTop: '2px' }} />
                     </motion.div>
                     <span>{item.nexatalent}</span>
                   </div>

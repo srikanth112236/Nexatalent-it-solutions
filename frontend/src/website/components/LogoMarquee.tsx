@@ -9,15 +9,16 @@ const partners = [
 export const LogoMarquee: React.FC = () => {
   return (
     <motion.div
+      className="font-sans"
       initial={{ opacity: 0, filter: 'blur(10px)' }}
       whileInView={{ opacity: 1, filter: 'blur(0px)' }}
       viewport={{ once: true, margin: '-50px' }}
       transition={{ duration: motionTokens.duration.slow, ease: motionTokens.ease.outQuart }}
       style={{
         padding: '3rem 0',
-        backgroundColor: 'var(--color-surface)',
-        borderTop: '1px solid var(--color-border)',
-        borderBottom: '1px solid var(--color-border)',
+        backgroundColor: '#ffffff',
+        borderTop: '1px solid #e5e5e5',
+        borderBottom: '1px solid #e5e5e5',
         overflow: 'hidden',
         position: 'relative',
       }}
@@ -37,7 +38,7 @@ export const LogoMarquee: React.FC = () => {
           }
         `}
       </style>
-      <div style={{ textAlign: 'center', marginBottom: '1.5rem', fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-text-subtle)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+      <div style={{ textAlign: 'center', marginBottom: '1.5rem', fontSize: '0.8rem', fontWeight: 700, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
         Trusted by Engineering Teams & GCC Hubs Globally
       </div>
 
@@ -48,12 +49,12 @@ export const LogoMarquee: React.FC = () => {
           {[...partners, ...partners].map((name, i) => (
             <motion.div
               key={`top-${i}`}
-              whileHover={{ scale: 1.1, opacity: 1, color: 'var(--color-text)' }}
+              whileHover={{ scale: 1.1, opacity: 1, color: '#000000' }}
               transition={motionTokens.spring.snappy}
               style={{
                 fontSize: '1.1rem',
                 fontWeight: 800,
-                color: 'var(--color-text-subtle)',
+                color: '#000000',
                 letterSpacing: '0.05em',
                 opacity: 0.7,
                 cursor: 'default'
@@ -69,12 +70,12 @@ export const LogoMarquee: React.FC = () => {
           {[...partners, ...partners].reverse().map((name, i) => (
             <motion.div
               key={`bottom-${i}`}
-              whileHover={{ scale: 1.1, opacity: 1, color: 'var(--color-text)' }}
+              whileHover={{ scale: 1.1, opacity: 1, color: '#000000' }}
               transition={motionTokens.spring.snappy}
               style={{
                 fontSize: '1.1rem',
                 fontWeight: 800,
-                color: 'var(--color-text-subtle)',
+                color: '#000000',
                 letterSpacing: '0.05em',
                 opacity: 0.5,
                 cursor: 'default'

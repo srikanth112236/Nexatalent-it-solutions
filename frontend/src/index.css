@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -15,11 +16,11 @@
   --spec-border: #DCE5F0;
   /* ========================================================
      GLOBAL RESPONSIVE TITLE TYPOGRAPHY SYSTEM (STANDARDIZED)
-     - Manrope Font for Headings & Titles with Inter Fallback
+     - Geist Font for Headings & Titles (only font in the app)
      - Slightly reduced & balanced scale for clean UI
      ======================================================== */
-  --font-heading: 'Manrope', 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  --font-sans: 'Manrope', 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Geist', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
 
   --section-title-size: clamp(1.35rem, 0.8rem + 2.1vw, 2.25rem);
   --section-title-lh: 1.15;

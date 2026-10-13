@@ -44,7 +44,7 @@ const solutions = [
 
 export const SolutionCardGrid: React.FC = () => {
   return (
-    <section style={{ maxWidth: '1280px', margin: '5rem auto', padding: '0 2rem', position: 'relative' }}>
+    <section className="font-sans" style={{ maxWidth: '1280px', margin: '5rem auto', padding: '0 2rem', position: 'relative', backgroundColor: '#ffffff' }}>
       <motion.div
         animate={{ opacity: [0.3, 0.5, 0.3] }}
         transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
@@ -55,7 +55,7 @@ export const SolutionCardGrid: React.FC = () => {
           transform: 'translate(-50%, -50%)',
           width: '80%',
           height: '80%',
-          background: 'radial-gradient(circle, rgba(var(--color-primary-rgb), 0.05) 0%, transparent 70%)',
+          background: 'none',
           pointerEvents: 'none',
           zIndex: -1,
         }}
@@ -73,14 +73,14 @@ export const SolutionCardGrid: React.FC = () => {
           <motion.span 
             variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }}
             transition={{ duration: motionTokens.duration.standard, ease: motionTokens.ease.outQuart }}
-            style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+            style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.05em' }}
           >
             Hiring Capabilities
           </motion.span>
           <motion.h2 
             variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }}
             transition={{ duration: motionTokens.duration.standard, ease: motionTokens.ease.outQuart }}
-            style={{ fontSize: 'clamp(2rem, 3.5vw, 2.75rem)', fontWeight: 800, marginTop: '0.5rem' }}
+            style={{ fontSize: 'clamp(2rem, 3.5vw, 2.75rem)', fontWeight: 800, marginTop: '0.5rem', color: '#000000' }}
           >
             Tailored Solutions for Every Growth Horizon
           </motion.h2>
@@ -92,7 +92,7 @@ export const SolutionCardGrid: React.FC = () => {
           viewport={{ once: true }}
           transition={{ delay: 0.4, duration: motionTokens.duration.standard }}
         >
-          <Link to="/solutions" style={{ color: 'var(--color-primary)', fontWeight: 600, fontSize: '0.95rem', textDecoration: 'none' }}>
+          <Link to="/solutions" style={{ color: '#000000', fontWeight: 600, fontSize: '0.95rem', textDecoration: 'none' }}>
             Explore All Solutions &rarr;
           </Link>
         </motion.div>
@@ -111,15 +111,15 @@ export const SolutionCardGrid: React.FC = () => {
               whileHover={{ 
                 y: -8, 
                 scale: 1.02,
-                boxShadow: '0 10px 40px -10px rgba(var(--color-primary-rgb), 0.2)',
-                borderColor: 'var(--color-primary)'
+                boxShadow: '0 10px 40px -10px rgba(0, 0, 0, 0.25)',
+                borderColor: '#000000'
               }}
               transition={motionTokens.spring.snappy}
               style={{
                 height: '100%',
-                backgroundColor: 'var(--color-surface)',
+                backgroundColor: '#ffffff',
                 borderRadius: 'var(--radius-xl)',
-                border: '1px solid var(--color-border)',
+                border: '1px solid #e5e5e5',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
@@ -138,17 +138,17 @@ export const SolutionCardGrid: React.FC = () => {
                 }}
               >
                 <div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-accent)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     {sol.tag}
                   </span>
-                  <h3 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#ffffff', margin: '0.75rem 0 0.5rem 0' }}>
+                  <h3 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#000000', margin: '0.75rem 0 0.5rem 0' }}>
                     {sol.title}
                   </h3>
-                  <p style={{ color: 'var(--color-text-muted)', fontSize: '0.925rem', lineHeight: 1.6 }}>
+                  <p style={{ color: '#000000', fontSize: '0.925rem', lineHeight: 1.6 }}>
                     {sol.desc}
                   </p>
                 </div>
-                <div style={{ marginTop: '2rem', fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ marginTop: '2rem', fontSize: '0.875rem', fontWeight: 600, color: '#000000', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span>View Engagement Model</span>
                   <span>&rarr;</span>
                 </div>

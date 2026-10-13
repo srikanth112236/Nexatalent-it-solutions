@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { RefreshCw, Search, ExternalLink, Filter, ArrowUpRight, Eye } from 'lucide-react';
+import { RefreshCw, Search, ExternalLink, Filter, ArrowUpRight, Eye, Download } from 'lucide-react';
 import { salesApi } from '../../shared/enterprise/phaseApi';
 import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
 import { Modal } from '../../shared/ui/EnterpriseKit';
@@ -35,6 +35,7 @@ export function WebsiteLeadsPanel() {
   const [detail, setDetail] = useState<any>(null);
   const [activities, setActivities] = useState<any[]>([]);
   const [actLoading, setActLoading] = useState(false);
+  const [resumeBusy, setResumeBusy] = useState(false);
   const pipelineBase = location.pathname.startsWith('/employee') ? '/employee' : '/superadmin';
 
   useEffect(() => {
@@ -70,7 +71,7 @@ export function WebsiteLeadsPanel() {
       if (industryF && r.industry !== industryF) return false;
       if (stageF && r.stage !== stageF) return false;
       if (!term) return true;
-      return [r.contactName, r.companyName, r.email, r.phone, r.formName, r.service, r.industry, r.sourcePage, r.notes]
+      return [r.contactName, r.companyName, r.email, r.phone, r.formName, r.service, r.enquiryTopic, r.preferredOffice, r.budgetRange, r.timeline, r.industry, r.sourcePage, r.notes]
         .filter(Boolean)
         .some((v: any) => String(v).toLowerCase().includes(term));
     });
@@ -172,7 +173,7 @@ export function WebsiteLeadsPanel() {
         {loading ? (
           <InlineLoading message="Loading website leads…" />
         ) : filtered.length === 0 ? (
-          <EmptyState title="No website leads yet" message="Leads submitted from contact, mandate, modal and newsletter forms appear here in real time." />
+          <EmptyState title="No website leads yet" message="Leads submitted from contact, mandate, careers, modal and newsletter forms appear here in real time." />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
@@ -203,6 +204,11 @@ export function WebsiteLeadsPanel() {
                         <a href={`mailto:${l.email}`} className="block text-[11px] font-semibold text-[#0265FF] hover:underline">{l.email}</a>
                       )}
                       {l.phone && <p className="text-[11px] text-slate-500">{l.phone}</p>}
+                      {l.resumeRef || l.resumeName ? (
+                        <p className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                          <Download size={10} aria-hidden /> Resume attached
+                        </p>
+                      ) : null}
                     </td>
                     <td className="px-3 py-2.5 font-semibold text-slate-700">{l.companyName || '—'}</td>
                     <td className="px-3 py-2.5">
@@ -300,6 +306,10 @@ export function WebsiteLeadsPanel() {
               {[
                 ['Form', detail.formName || 'Website'],
                 ['Service', detail.service || '—'],
+                ['Topic', detail.enquiryTopic || '—'],
+                ['Preferred office', detail.preferredOffice || '—'],
+                ['Budget', detail.budgetRange || '—'],
+                ['Timeline', detail.timeline || '—'],
                 ['Industry', detail.industry || '—'],
                 ['Enquiry type', detail.enquiryType || '—'],
                 ['Source page', detail.sourcePage || '—'],
@@ -328,6 +338,44 @@ export function WebsiteLeadsPanel() {
                 <p className="mt-1 whitespace-pre-wrap text-[11.5px] leading-relaxed text-slate-700">{detail.notes || detail.hiringNeed || '—'}</p>
               </div>
             </div>
+
+            {/* resume (Careers / candidate applications) */}
+            {detail.resumeRef || detail.resumeName ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Attached resume</p>
+                  <p className="mt-0.5 text-[12px] font-bold text-slate-800">
+                    {detail.resumeName || 'Resume'}
+                    {detail.resumeSize ? <span className="font-semibold text-slate-500"> · {(Number(detail.resumeSize) / 1024).toFixed(0)} KB</span> : null}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={resumeBusy}
+                  onClick={async () => {
+                    setResumeBusy(true);
+                    try {
+                      const blob: Blob = await salesApi.leadResume(detail.id);
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = detail.resumeName || `resume-${detail.id}`;
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                      URL.revokeObjectURL(url);
+                    } catch {
+                      setError('Could not download resume — file may no longer be available.');
+                    } finally {
+                      setResumeBusy(false);
+                    }
+                  }}
+                  className="inline-flex min-h-[38px] items-center gap-1.5 rounded-lg bg-[#0265FF] px-4 text-xs font-bold text-white hover:bg-[#0055db] disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0265FF]"
+                >
+                  <Download size={14} aria-hidden /> {resumeBusy ? 'Preparing…' : 'Download resume'}
+                </button>
+              </div>
+            ) : null}
 
             {/* activities */}
             <div className="rounded-xl border border-slate-200 p-3">

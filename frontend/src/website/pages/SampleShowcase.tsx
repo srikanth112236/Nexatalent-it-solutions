@@ -171,25 +171,25 @@ const LightSectionDivider: React.FC<SectionBannerProps> = ({ index, id, name, te
   <div id={id} className="max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-6 scroll-mt-24">
     <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b-2 border-slate-200 gap-3">
       <div className="flex items-center gap-3.5">
-        <span className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-mono text-xs font-black flex items-center justify-center shrink-0 shadow-sm shadow-blue-500/20">
+        <span className="w-10 h-10 rounded-2xl bg-black text-white font-mono text-xs font-black flex items-center justify-center shrink-0 shadow-sm shadow-black/10">
           {typeof index === 'number' ? (index < 10 ? `0${index}` : index) : index}
         </span>
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-base sm:text-xl font-black text-slate-900 tracking-tight">
+            <h3 className="text-base sm:text-xl font-black text-black tracking-tight">
               {name}
             </h3>
             {isSpecial && (
-              <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
+              <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-white text-black font-bold border border-black">
                 SIGNATURE ARCHETYPE
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-500 font-normal mt-0.5">{description}</p>
+          <p className="text-xs text-black font-normal mt-0.5">{description}</p>
         </div>
       </div>
       <div className="flex items-center gap-2 font-mono text-xs shrink-0 self-start sm:self-auto">
-        <span className="px-3 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 font-semibold">
+        <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 text-black font-semibold">
           {tech}
         </span>
       </div>
@@ -240,27 +240,27 @@ export const SampleShowcase: React.FC = () => {
   return (
     <div
       data-theme="light"
-      className="theme-light min-h-screen bg-white text-slate-900 antialiased selection:bg-blue-100 selection:text-blue-900"
+      className="theme-light min-h-screen bg-white text-black antialiased selection:bg-white selection:text-black"
     >
       
       {/* Top Reading Progress Bar */}
       <motion.div
-        className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 origin-left z-50"
+        className="fixed top-0 left-0 right-0 h-1 origin-left z-50 bg-black"
         style={{ scaleX }}
       />
 
       {/* Hero Showcase Header */}
-      <header className="relative bg-gradient-to-b from-blue-50/60 via-white to-slate-50 pt-28 pb-20 px-6 border-b border-slate-200 overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-gradient-to-r from-blue-200/20 via-indigo-200/20 to-emerald-200/20 rounded-full blur-3xl pointer-events-none" />
+      <header className="relative pt-28 pb-20 px-6 border-b border-slate-200 overflow-hidden bg-white">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 rounded-full blur-3xl pointer-events-none bg-white" />
 
         <div className="max-w-5xl mx-auto text-center relative z-10">
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold mb-6 shadow-xs"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-black text-black text-xs font-bold mb-6 shadow-xs"
           >
-            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+            <Sparkles className="w-3.5 h-3.5 text-black" />
             <span>NexaTalent IT Solutions Production Motion Showcase ÔÇó 120 Complete Sections</span>
           </motion.div>
 
@@ -268,10 +268,10 @@ export const SampleShowcase: React.FC = () => {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-4xl sm:text-6xl font-black text-slate-900 tracking-tight leading-[1.1] mb-6"
+            className="text-4xl sm:text-6xl font-black text-black tracking-tight leading-[1.1] mb-6"
           >
             All 120 Modern Light-Theme <br className="hidden sm:inline" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600">
+            <span className="text-black">
               Animated & Parallax Sections
             </span>
           </motion.h1>
@@ -280,7 +280,7 @@ export const SampleShowcase: React.FC = () => {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed mb-10"
+            className="text-lg sm:text-xl text-black max-w-3xl mx-auto leading-relaxed mb-10"
           >
             Seamless production showcase: 40 core architecture components, 18 signature modules, 
             3 distinct 3D perspective depth corridors, multi-layer parallax sections, horizontal cards rails, full-screen dual pinned convergence, split curtains, and one-side & two-side sticky pin storytelling.
@@ -293,23 +293,23 @@ export const SampleShowcase: React.FC = () => {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 p-4 rounded-2xl bg-white border border-slate-200/80 shadow-lg shadow-slate-200/40 max-w-4xl mx-auto"
           >
-            <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
-              <Zap className="w-4 h-4 text-blue-600" />
+            <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-black">
+              <Zap className="w-4 h-4 text-black" />
               <span>120 Complete Sections</span>
             </div>
             <div className="w-1 h-1 rounded-full bg-slate-300 hidden sm:block" />
-            <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+            <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-black">
+              <CheckCircle2 className="w-4 h-4 text-black" />
               <span>3x 3D Depth Corridors</span>
             </div>
             <div className="w-1 h-1 rounded-full bg-slate-300 hidden sm:block" />
-            <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+            <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-black">
+              <CheckCircle2 className="w-4 h-4 text-black" />
               <span>Horizontal & Vertical Parallax</span>
             </div>
             <div className="w-1 h-1 rounded-full bg-slate-300 hidden sm:block" />
-            <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+            <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-black">
+              <CheckCircle2 className="w-4 h-4 text-black" />
               <span>One-Side & Two-Side Sticky Pins</span>
             </div>
           </motion.div>
@@ -322,15 +322,15 @@ export const SampleShowcase: React.FC = () => {
         {/* ========================================================================= */}
         {/* NEW 2026 SIGNATURE HERO COLLECTION (20 HEROES)                            */}
         {/* ========================================================================= */}
-        <div className="bg-slate-900 text-white py-14 px-6 border-y border-slate-800 my-8">
+        <div className="bg-white text-black py-14 px-6 border-y border-black my-8">
           <div className="max-w-7xl mx-auto text-center space-y-3">
-            <span className="text-xs font-mono uppercase tracking-widest text-cyan-400 font-bold">
+            <span className="text-xs font-mono uppercase tracking-widest text-black font-bold">
               ★ 20 NEW SIGNATURE HERO SECTIONS (2026 COLLECTION)
             </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-white">
+            <h2 className="text-2xl sm:text-4xl font-black text-black">
               Caliper Reveals, Full-Screen Vertical Parallax & Interactive Simulators
             </h2>
-            <p className="text-sm text-slate-400 max-w-2xl mx-auto font-light">
+            <p className="text-sm text-black max-w-2xl mx-auto font-light">
               Brand-new creative motion archetypes engineered with precision caliper split mechanics, vertical parallax filmstrips, CAD toggles, and live headcount calculators.
             </p>
           </div>
@@ -599,15 +599,15 @@ export const SampleShowcase: React.FC = () => {
         {/* ========================================================================= */}
         {/* EXISTING 120 PRODUCTION MOTION SECTIONS (SECTIONS 01 TO 120)              */}
         {/* ========================================================================= */}
-        <div className="bg-slate-100 text-slate-900 py-12 px-6 border-y border-slate-200 my-8">
+        <div className="bg-white text-black py-12 px-6 border-y border-slate-200 my-8">
           <div className="max-w-7xl mx-auto text-center space-y-3">
-            <span className="text-xs font-mono uppercase tracking-widest text-blue-600 font-bold">
+            <span className="text-xs font-mono uppercase tracking-widest text-black font-bold">
               ★ 120 PRODUCTION MOTION & CORRIDOR SECTIONS
             </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-slate-900">
+            <h2 className="text-2xl sm:text-4xl font-black text-black">
               Complete Living Component & Motion Showcase
             </h2>
-            <p className="text-sm text-slate-600 max-w-2xl mx-auto font-light">
+            <p className="text-sm text-black max-w-2xl mx-auto font-light">
               All 120 light-theme modern components with visible section title headers, technology badges, interactive corridors, sticky pins, and parallax systems.
             </p>
           </div>
@@ -1857,62 +1857,62 @@ export const SampleShowcase: React.FC = () => {
       </main>
 
       {/* Modern Light Theme Footer */}
-      <footer className="bg-slate-900 text-white pt-16 pb-12 border-t border-slate-800">
+      <footer className="bg-white text-black pt-16 pb-12 border-t border-black">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 pb-12 border-b border-slate-800">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 pb-12 border-b border-black">
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-black text-white text-base">
+                <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center font-black text-white text-base">
                   N
                 </div>
-                <span className="font-extrabold text-xl tracking-tight text-white">NexaTalent IT Solutions</span>
+                <span className="font-extrabold text-xl tracking-tight text-black">NexaTalent IT Solutions</span>
               </div>
-              <p className="text-slate-400 text-xs leading-relaxed">
+              <p className="text-black text-xs leading-relaxed">
                 The premier talent infrastructure and executive search firm for Global Capability Centers, 
                 Tier-1 technology platforms, and high-growth engineering organizations.
               </p>
             </div>
 
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-4">Engineering Practices</h4>
-              <ul className="space-y-2 text-xs text-slate-400">
-                <li className="hover:text-white transition-colors cursor-pointer">AI & Machine Learning Infrastructure</li>
-                <li className="hover:text-white transition-colors cursor-pointer">Ultra Low-Latency & Quant Systems</li>
-                <li className="hover:text-white transition-colors cursor-pointer">Cloud Platform & Distributed Systems</li>
-                <li className="hover:text-white transition-colors cursor-pointer">Enterprise Cyber & Cryptographic Security</li>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-black mb-4">Engineering Practices</h4>
+              <ul className="space-y-2 text-xs text-black">
+                <li className="hover:text-black transition-colors cursor-pointer">AI & Machine Learning Infrastructure</li>
+                <li className="hover:text-black transition-colors cursor-pointer">Ultra Low-Latency & Quant Systems</li>
+                <li className="hover:text-black transition-colors cursor-pointer">Cloud Platform & Distributed Systems</li>
+                <li className="hover:text-black transition-colors cursor-pointer">Enterprise Cyber & Cryptographic Security</li>
               </ul>
             </div>
 
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-4">Talent Hubs</h4>
-              <ul className="space-y-2 text-xs text-slate-400">
-                <li className="hover:text-white transition-colors cursor-pointer">Bangalore ÔÇó Indiranagar & Outer Ring Rd</li>
-                <li className="hover:text-white transition-colors cursor-pointer">Hyderabad ÔÇó HITEC City & Financial District</li>
-                <li className="hover:text-white transition-colors cursor-pointer">London ÔÇó Bank & Canary Wharf</li>
-                <li className="hover:text-white transition-colors cursor-pointer">San Francisco ÔÇó SoMa & Silicon Valley</li>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-black mb-4">Talent Hubs</h4>
+              <ul className="space-y-2 text-xs text-black">
+                <li className="hover:text-black transition-colors cursor-pointer">Bangalore ÔÇó Indiranagar & Outer Ring Rd</li>
+                <li className="hover:text-black transition-colors cursor-pointer">Hyderabad ÔÇó HITEC City & Financial District</li>
+                <li className="hover:text-black transition-colors cursor-pointer">London ÔÇó Bank & Canary Wharf</li>
+                <li className="hover:text-black transition-colors cursor-pointer">San Francisco ÔÇó SoMa & Silicon Valley</li>
               </ul>
             </div>
 
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-4">Motion Engineering</h4>
-              <p className="text-xs text-slate-400 leading-relaxed mb-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-black mb-4">Motion Engineering</h4>
+              <p className="text-xs text-black leading-relaxed mb-3">
                 All 120 components engineered with pure light design tokens, 60fps Framer Motion springs, and GSAP ScrollTrigger timeline pins.
               </p>
-              <div className="inline-flex items-center gap-2 text-xs font-mono text-blue-400">
+              <div className="inline-flex items-center gap-2 text-xs font-mono text-black">
                 <Code2 className="w-4 h-4" />
                 <span>120 of 120 Sections Verified</span>
               </div>
             </div>
           </div>
 
-          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-black">
             <div>
               ┬® 2026 NexaTalent IT Solutions Inc. All rights reserved. SOC 2 Type II & ISO 27001 Certified.
             </div>
             <div className="flex items-center gap-6">
-              <span className="hover:text-slate-300 cursor-pointer">Privacy Notice</span>
-              <span className="hover:text-slate-300 cursor-pointer">Terms of Representation</span>
-              <span className="hover:text-slate-300 cursor-pointer">Security Whitepaper</span>
+              <span className="hover:text-black cursor-pointer">Privacy Notice</span>
+              <span className="hover:text-black cursor-pointer">Terms of Representation</span>
+              <span className="hover:text-black cursor-pointer">Security Whitepaper</span>
             </div>
           </div>
         </div>
@@ -1926,7 +1926,7 @@ export const SampleShowcase: React.FC = () => {
           exit={{ opacity: 0, scale: 0.8 }}
           onClick={scrollToTop}
           aria-label="Scroll back to top"
-          className="fixed bottom-8 right-8 z-40 p-3.5 rounded-full bg-blue-600 text-white shadow-xl shadow-blue-600/30 hover:bg-blue-700 transition-all cursor-pointer"
+          className="fixed bottom-8 right-8 z-40 p-3.5 rounded-full bg-black text-white shadow-xl shadow-black/10 hover:bg-neutral-800 transition-all cursor-pointer"
         >
           <ArrowUp className="w-5 h-5" />
         </motion.button>

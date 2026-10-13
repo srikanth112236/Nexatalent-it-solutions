@@ -128,7 +128,7 @@ export const HorizontalScrollGallery: React.FC<HorizontalScrollGalleryProps> = (
   };
 
   return (
-    <section ref={sectionRef} style={{ padding: '5rem 2rem', position: 'relative', overflow: 'hidden' }}>
+    <section ref={sectionRef} className="font-sans" style={{ padding: '5rem 2rem', position: 'relative', overflow: 'hidden', backgroundColor: '#ffffff' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         {/* Header with Navigation Arrows */}
         <div
@@ -149,17 +149,17 @@ export const HorizontalScrollGallery: React.FC<HorizontalScrollGalleryProps> = (
                 gap: '0.4rem',
                 fontSize: '0.8125rem',
                 fontWeight: 600,
-                color: 'var(--color-primary-400)',
+                color: '#000000',
                 marginBottom: '0.75rem',
               }}
             >
-              <Sparkles size={14} />
+              <Sparkles size={14} color="#000000" />
               {badge}
             </div>
-            <h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: 'var(--color-text)' }}>
+            <h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: '#000000' }}>
               {title}
             </h2>
-            <p style={{ color: 'var(--color-text-secondary)', marginTop: '0.5rem', maxWidth: '640px' }}>
+            <p style={{ color: '#000000', marginTop: '0.5rem', maxWidth: '640px' }}>
               {subtitle}
             </p>
           </div>
@@ -173,17 +173,17 @@ export const HorizontalScrollGallery: React.FC<HorizontalScrollGalleryProps> = (
                   width: '42px',
                   height: '42px',
                   borderRadius: '50%',
-                  backgroundColor: 'var(--color-surface)',
-                  border: '1px solid var(--color-border)',
-                  color: 'var(--color-text)',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #000000',
+                  color: '#000000',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-surface)'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; }}
               >
                 <ChevronLeft size={20} />
               </button>
@@ -194,17 +194,17 @@ export const HorizontalScrollGallery: React.FC<HorizontalScrollGalleryProps> = (
                   width: '42px',
                   height: '42px',
                   borderRadius: '50%',
-                  backgroundColor: 'var(--color-surface)',
-                  border: '1px solid var(--color-border)',
-                  color: 'var(--color-text)',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #000000',
+                  color: '#000000',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-surface)'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; }}
               >
                 <ChevronRight size={20} />
               </button>
@@ -213,8 +213,8 @@ export const HorizontalScrollGallery: React.FC<HorizontalScrollGalleryProps> = (
         </div>
 
         {/* Progress Bar */}
-        <div style={{ width: '100%', height: '2px', backgroundColor: 'rgba(255,255,255,0.1)', marginBottom: '2rem', borderRadius: '1px' }}>
-          <div ref={progressRef} style={{ width: '0%', height: '100%', backgroundColor: 'var(--color-primary)', borderRadius: '1px' }} />
+        <div style={{ width: '100%', height: '2px', backgroundColor: '#e5e5e5', marginBottom: '2rem', borderRadius: '1px' }}>
+          <div ref={progressRef} style={{ width: '0%', height: '100%', backgroundColor: '#000000', borderRadius: '1px' }} />
         </div>
 
         {/* Scrollable Container (GSAP handles transform) */}
@@ -236,8 +236,8 @@ export const HorizontalScrollGallery: React.FC<HorizontalScrollGalleryProps> = (
                   width: '360px',
                   flexShrink: 0,
                   borderRadius: 'var(--radius-2xl)',
-                  backgroundColor: 'var(--color-surface)',
-                  border: '1px solid var(--color-border)',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e5e5e5',
                   padding: '2.25rem',
                   display: 'flex',
                   flexDirection: 'column',
@@ -254,8 +254,8 @@ export const HorizontalScrollGallery: React.FC<HorizontalScrollGalleryProps> = (
                       fontWeight: 700,
                       textTransform: 'uppercase',
                       letterSpacing: '0.06em',
-                      color: 'var(--color-primary-400)',
-                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                      color: '#ffffff',
+                      backgroundColor: '#000000',
                       padding: '0.25rem 0.625rem',
                       borderRadius: 'var(--radius-sm)',
                       display: 'inline-block',
@@ -269,7 +269,7 @@ export const HorizontalScrollGallery: React.FC<HorizontalScrollGalleryProps> = (
                     style={{
                       fontSize: '1.25rem',
                       fontWeight: 700,
-                      color: 'var(--color-text)',
+                      color: '#000000',
                       lineHeight: 1.35,
                       marginBottom: '0.75rem',
                     }}
@@ -280,7 +280,7 @@ export const HorizontalScrollGallery: React.FC<HorizontalScrollGalleryProps> = (
                   <p
                     style={{
                       fontSize: '0.875rem',
-                      color: 'var(--color-text-secondary)',
+                      color: '#000000',
                       lineHeight: 1.6,
                       marginBottom: '1.5rem',
                     }}
@@ -295,15 +295,15 @@ export const HorizontalScrollGallery: React.FC<HorizontalScrollGalleryProps> = (
                     style={{
                       padding: '1rem',
                       borderRadius: 'var(--radius-lg)',
-                      backgroundColor: 'rgba(15, 23, 42, 0.6)',
-                      border: '1px solid rgba(255, 255, 255, 0.05)',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #000000',
                       marginBottom: '1.25rem',
                     }}
                   >
-                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-text)', lineHeight: 1 }}>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#000000', lineHeight: 1 }}>
                       {item.stat}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', marginTop: '0.25rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#000000', marginTop: '0.25rem' }}>
                       {item.statLabel}
                     </div>
                   </div>
@@ -317,12 +317,12 @@ export const HorizontalScrollGallery: React.FC<HorizontalScrollGalleryProps> = (
                         gap: '0.35rem',
                         fontSize: '0.8125rem',
                         fontWeight: 600,
-                        color: 'var(--color-primary-400)',
+                        color: '#000000',
                         textDecoration: 'none',
                         transition: 'color 0.2s ease',
                       }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-primary)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-primary-400)'; }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = '#000000'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = '#000000'; }}
                     >
                       <span>Explore Practice</span>
                       <ArrowUpRight size={14} />

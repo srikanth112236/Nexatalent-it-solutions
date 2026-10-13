@@ -1,680 +1,395 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Sparkles,
-  CheckCircle2,
-  Clock,
-  ChevronDown,
-  ArrowRight,
-  Activity,
-  BarChart3,
-  Check,
-  Award,
-  TrendingUp,
-  Globe,
-  ShieldCheck,
-  Cpu,
-  HeartPulse,
-  ShoppingCart,
-  Compass,
-  Rocket,
-  Layers,
-  Zap,
-  Landmark,
-  Database,
-  Factory,
-  Car,
-  Radio,
-  Plane,
-  Sun,
-  Gamepad2,
-  Briefcase
-} from 'lucide-react';
-
-import { SiteNavbar, SiteFooter } from '../components/SiteChrome';
+import { ArrowUpRight, Check, Star } from 'lucide-react';
+import { SiteFooter } from '../components/SiteChrome';
+import { V2Navbar } from '../v2/components/V2Navbar';
 import { SeoHead } from '../components/SeoHead';
 
-export function AboutPage() {
-  const [activeFaq, setActiveFaq] = useState<number | null>(0);
-  const [faqCategory, setFaqCategory] = useState<'General' | 'Vetting' | 'GCC Hubs' | 'Support'>('General');
+/* White background · black text/buttons · full-color images · no overlays
+   Type synced with site scale (section-title tokens + 15px body). */
 
-  const faqs = {
-    General: [
-      { q: 'What is NexaTalent IT Solutions?', a: 'NexaTalent IT Solutions is a technology recruitment and staffing company helping organizations identify, attract, and hire skilled professionals across IT and business functions.' },
-      { q: 'How does NexaTalent IT Solutions differ from traditional recruitment agencies?', a: 'NexaTalent IT Solutions combines deep technology understanding with structured screening and dedicated recruitment support to deliver calibrated shortlists faster.' },
-      { q: 'Where does NexaTalent IT Solutions operate?', a: 'We serve corporate clients, enterprises, and recruitment partners across India and global markets.' },
-    ],
-    Vetting: [
-      { q: 'How does NexaTalent IT Solutions evaluate candidates?', a: 'Candidates are evaluated against role-specific technical skills, experience requirements, team culture fit, and soft skills before shortlist presentation.' },
-      { q: 'What recruitment models do you offer?', a: 'We support permanent recruitment, contract staffing, contract-to-hire, executive search, bulk volume hiring, and vendor empanelment.' },
-    ],
-    'GCC Hubs': [
-      { q: 'Do you support GCC and offshore talent hiring?', a: 'Yes. We support organizations with talent acquisition, engineering staffing, and leadership hiring for GCC and technology operations.' },
-    ],
-    Support: [
-      { q: 'How do I submit an employer hiring mandate?', a: 'You can click "Hire Talent" or "Submit Requirement" on our website or contact our recruitment team directly at info@nexatalentitsolutions.com.' },
-      { q: 'What is candidate data confidentiality policy?', a: 'All candidate and client information is handled under strict corporate data privacy standards in compliance with DPDP Act 2023.' },
-    ],
-  };
+function Dot() {
+  return <span className="inline-block h-[7px] w-[7px] rounded-full bg-black" />;
+}
 
+function Eyebrow({ children }: { children: string }) {
   return (
-    <div className="bg-white min-h-screen text-neutral-900 font-sans relative overflow-x-clip">
+    <p className="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-black">
+      <Dot /> {children}
+    </p>
+  );
+}
+
+/* Shared 85% container */
+const SHELL = 'mx-auto w-[85%] max-w-[1200px]';
+
+const CAPABILITIES: Array<{ n: string; title: string; desc: string }> = [
+  { n: '01', title: 'IT & Tech Recruitment', desc: 'Role-specific hiring across software, cloud, data, AI and cybersecurity.' },
+  { n: '02', title: 'Permanent Staffing', desc: 'End-to-end full-time hiring with screening and replacement cover.' },
+  { n: '03', title: 'Contract Staffing', desc: 'Flexible engineers for immediate bandwidth and project peaks.' },
+  { n: '04', title: 'Contract-to-Hire', desc: 'Evaluate fit on contract before making a permanent offer.' },
+  { n: '05', title: 'Executive Search', desc: 'Confidential search for CTO, VP, Director and Head roles.' },
+  { n: '06', title: 'Bulk & Volume Hiring', desc: 'Batch drives and pipelines for high-volume expansion.' },
+  { n: '07', title: 'GCC & Offshore Pods', desc: 'Dedicated pods for GCCs and global capability centres.' },
+  { n: '08', title: 'AI-Assisted Screening', desc: 'Skills benchmarking plus expert human panels per shortlist.' },
+  { n: '09', title: 'Vendor Empanelment', desc: 'Dependable sub-vendor and delivery partnerships.' },
+  { n: '10', title: 'Interview Coordination', desc: 'Scheduling, feedback loops and offer alignment end-to-end.' },
+  { n: '11', title: 'Onboarding & Joining', desc: 'Offer, documentation and joining follow-up, low drop-offs.' },
+  { n: '12', title: 'Retention & Success', desc: 'Post-joining check-ins, upskilling and engagement.' },
+];
+
+const CHECKS: Array<{ title: string; desc: string }> = [
+  { title: 'Talent-first hiring mindset', desc: 'Every shortlist blends stack depth with delivery context.' },
+  { title: 'Outcome-driven hiring solutions', desc: 'Measured on joining ratio and retention, not CV volume.' },
+  { title: 'Modern screening capabilities', desc: 'Structured evaluations, live discussions, portfolio checks.' },
+  { title: 'Deep expertise across stacks', desc: 'Specialist recruiters across 12+ practices.' },
+  { title: 'Agile and scalable delivery models', desc: 'From one specialist to full pods — scale on demand.' },
+  { title: 'Focus on measurable business impact', desc: 'Clear SLAs from day one, tracked through joining.' },
+  { title: 'Innovation that evolves with hiring science', desc: 'AI-assisted matching paired with human judgement.' },
+];
+
+const HUBS = [
+  {
+    tag: 'India',
+    city: 'Bengaluru',
+    country: 'India',
+    img: 'https://images.unsplash.com/photo-1596176530529-78163a4f7af2?auto=format&fit=crop&w=700&q=80',
+    addr: 'Outer Ring Road, Bellandur, Bengaluru, KA 560103, India',
+  },
+  {
+    tag: 'GCC · UAE',
+    city: 'Dubai',
+    country: 'UAE',
+    img: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=700&q=80',
+    addr: 'Dubai Silicon Oasis, DDP, Dubai, United Arab Emirates',
+  },
+  {
+    tag: 'USA',
+    city: 'New York',
+    country: 'United States',
+    img: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?auto=format&fit=crop&w=700&q=80',
+    addr: '418 Broadway, 2nd Floor, New York, NY 10013, United States',
+  },
+];
+
+export function AboutPage() {
+  return (
+    <div className="bg-white min-h-screen text-black font-sans antialiased overflow-x-clip">
       <SeoHead
-        title="About Us | NexaTalent IT Solutions — Engineering The Future of Work"
-        description="NexaTalent IT Solutions connects companies, recruitment partners, and technology professionals through an intelligent hiring ecosystem. Discover our vision, founding story, future roadmap, and target industries."
-        keywords="About NexaTalent IT Solutions, IT recruitment company Bengaluru, GCC tech hiring founders, AI vetting platform, target industries tech staffing"
+        title="About Us | NexaTalent IT Solutions — A Trusted Talent Partner"
+        description="NexaTalent IT Solutions is a trusted technology recruitment and staffing partner. Intelligence embedded across the entire hiring lifecycle."
+        keywords="About NexaTalent, IT recruitment company, tech staffing partner, GCC hiring"
         canonicalPath="/about"
       />
+      <V2Navbar />
 
-      <SiteNavbar />
-
-      {/* ============================================================================
-       * 1. HERO SECTION — Clean Modern Centered Layout with 3 Preview Cards
-       * ============================================================================ */}
-      <section className="relative pt-32 pb-20 px-6 lg:px-16 bg-white border-b border-neutral-200/80 text-center overflow-hidden">
-        <div className="max-w-5xl mx-auto space-y-6">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-[#0265FF] text-xs font-bold uppercase tracking-wider shadow-sm">
-            <Sparkles className="w-3.5 h-3.5 text-[#0265FF]" />
-            ✦ ABOUT NEXATALENT IT SOLUTIONS
-          </div>
-
-          <h1 className="text-4xl sm:text-6xl font-extrabold text-neutral-900 tracking-tight leading-[1.1] uppercase">
-            Building Teams. <br />
-            <span className="text-[#0265FF]">
-              Powering Growth.
-            </span>
+      {/* ============ 1. HERO ============ */}
+      <section className="bg-white pt-28 pb-10">
+        <div className={`${SHELL} text-center`}>
+          <Eyebrow>About NexaTalent</Eyebrow>
+          <h1 className="mx-auto mt-4 max-w-3xl text-4xl sm:text-5xl font-extrabold leading-[1.08] tracking-tight text-black">
+            We don&apos;t just fill roles.
+            <br />
+            <span className="text-black">We engineer possibilities.</span>
           </h1>
-
-          <p className="text-base sm:text-lg text-neutral-600 max-w-3xl mx-auto font-medium leading-relaxed">
-            NexaTalent IT Solutions is a technology recruitment and staffing partner helping organizations identify, evaluate, and hire skilled professionals across permanent, contract, executive search, and talent solutions.
+          <p className="mx-auto mt-5 max-w-2xl text-[15px] sm:text-base leading-relaxed text-black">
+            NexaTalent IT Solutions is an AI-assisted talent company helping
+            enterprises hire dependable technology professionals across
+            permanent, contract and leadership roles — faster and with certainty.
           </p>
+          <div className="mt-6 flex items-center justify-center gap-3">
+            <Link
+              to="/contact"
+              className="rounded-full bg-black px-6 py-3 text-sm font-semibold text-white hover:bg-neutral-800"
+            >
+              Start a conversation
+            </Link>
+            <Link
+              to="/employers"
+              className="rounded-full border border-neutral-300 bg-white px-6 py-3 text-sm font-semibold text-black hover:border-black"
+            >
+              Explore our services
+            </Link>
+          </div>
+        </div>
 
-          {/* 3 Visual Image Cards Grid with Increased Height & Relevant Tech Recruitment Images */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 max-w-5xl mx-auto text-left">
-            <div className="relative group overflow-hidden rounded-3xl border border-neutral-200 shadow-xl bg-white transition-all hover:-translate-y-1.5 hover:shadow-2xl">
-              <img
-                src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80"
-                alt="HR & Tech Group Discussion"
-                className="w-full h-60 object-cover object-center group-hover:scale-105 transition-transform duration-500"
-              />
-              <div className="p-6 space-y-1.5">
-                <span className="px-3.5 py-1 bg-blue-50 text-[#0265FF] text-[11px] font-bold rounded-full border border-blue-200 inline-block">
-                  HR & Tech Group Discussion
-                </span>
-                <h4 className="font-extrabold text-base text-neutral-900 pt-1">Technical Candidate Screening</h4>
-                <p className="text-xs text-neutral-600 leading-relaxed font-normal">Role-specific technical evaluation, panel interviews, and candidate shortlisting.</p>
-              </div>
-            </div>
-
-            <div className="relative group overflow-hidden rounded-3xl border border-neutral-200 shadow-xl bg-white transition-all hover:-translate-y-1.5 hover:shadow-2xl">
-              <img
-                src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=800&q=80"
-                alt="Vendor & Partnership Alliance"
-                className="w-full h-60 object-cover object-center group-hover:scale-105 transition-transform duration-500"
-              />
-              <div className="p-6 space-y-1.5">
-                <span className="px-3.5 py-1 bg-blue-50 text-[#0265FF] text-[11px] font-bold rounded-full border border-blue-200 inline-block">
-                  Partnership Alliance
-                </span>
-                <h4 className="font-extrabold text-base text-neutral-900 pt-1">Vendor Empanelment</h4>
-                <p className="text-xs text-neutral-600 leading-relaxed font-normal">Collaborating with enterprises and staffing partners for dependable talent delivery.</p>
-              </div>
-            </div>
-
-            <div className="relative group overflow-hidden rounded-3xl border border-neutral-200 shadow-xl bg-white transition-all hover:-translate-y-1.5 hover:shadow-2xl">
-              <img
-                src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=800&q=80"
-                alt="Permanent & Contract Staffing"
-                className="w-full h-60 object-cover object-center group-hover:scale-105 transition-transform duration-500"
-              />
-              <div className="p-6 space-y-1.5">
-                <span className="px-3.5 py-1 bg-blue-50 text-[#0265FF] text-[11px] font-bold rounded-full border border-blue-200 inline-block">
-                  Permanent & Contract Staffing
-                </span>
-                <h4 className="font-extrabold text-base text-neutral-900 pt-1">Flexible Engagement Models</h4>
-                <p className="text-xs text-neutral-600 leading-relaxed font-normal">Permanent recruitment, contract staffing, and executive search solutions.</p>
-              </div>
-            </div>
+        {/* full-color images — no overlays */}
+        <div className={`${SHELL} mt-10 grid grid-cols-1 gap-3 sm:grid-cols-12`}>
+          <div className="overflow-hidden rounded-2xl border border-neutral-200 sm:col-span-5">
+            <img
+              src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=900&q=80"
+              alt="NexaTalent office"
+              className="aspect-[4/3] w-full object-cover object-center"
+            />
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-neutral-200 sm:col-span-4">
+            <img
+              src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=900&q=80"
+              alt="NexaTalent professionals"
+              className="aspect-[4/3] w-full object-cover object-center"
+            />
+          </div>
+          <div className="flex flex-col justify-between rounded-2xl border border-neutral-200 bg-white p-6 sm:col-span-3">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-black">
+              ● Talent-native by design
+            </p>
+            <p className="mt-8 text-[15px] font-semibold leading-snug text-black">
+              Intelligence embedded across the entire hiring lifecycle.
+            </p>
           </div>
         </div>
       </section>
 
-      {/* ============================================================================
-       * 2. MISSION STATEMENT & KEY METRICS ROW
-       * ============================================================================ */}
-      <section className="py-16 px-6 lg:px-16 bg-[#FAF8F5] border-b border-neutral-200/80">
-        <div className="max-w-5xl mx-auto space-y-10 text-center">
-          <div className="space-y-4 max-w-3xl mx-auto">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 leading-relaxed">
-              We are on a mission to help organizations hire the <strong className="text-[#0265FF]">right talent</strong> through transparent, structured, and <strong className="text-[#0265FF]">dependable recruitment solutions</strong>.
-            </h2>
-          </div>
+      {/* ============ 2. WHO WE ARE ============ */}
+      <section className="bg-white py-14">
+        <div className={`${SHELL} text-center`}>
+          <Eyebrow>Who we are</Eyebrow>
+          <h2 className="mx-auto mt-3 max-w-2xl text-3xl sm:text-4xl font-extrabold leading-[1.15] tracking-tight text-black">
+            A trusted talent partner for organizations navigating rapid change
+          </h2>
+        </div>
 
-          {/* 4 Crisp Key Metric Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 text-center">
-            <div className="p-6 bg-white rounded-2xl border border-neutral-200/80 shadow-md">
-              <div className="text-2xl sm:text-3xl font-extrabold text-neutral-900">India & Global</div>
-              <div className="text-xs font-bold text-neutral-500 mt-2">Talent Delivery Reach</div>
-            </div>
-            <div className="p-6 bg-white rounded-2xl border border-neutral-200/80 shadow-md">
-              <div className="text-2xl sm:text-3xl font-extrabold text-[#0265FF]">6 Core</div>
-              <div className="text-xs font-bold text-neutral-500 mt-2">Technology Practices</div>
-            </div>
-            <div className="p-6 bg-white rounded-2xl border border-neutral-200/80 shadow-md">
-              <div className="text-2xl sm:text-3xl font-extrabold text-[#0265FF]">90 Days</div>
-              <div className="text-xs font-bold text-neutral-500 mt-2">Replacement Commitment</div>
-            </div>
-            <div className="p-6 bg-white rounded-2xl border border-neutral-200/80 shadow-md">
-              <div className="text-2xl sm:text-3xl font-extrabold text-[#0265FF]">100%</div>
-              <div className="text-xs font-bold text-neutral-500 mt-2">Candidate Zero-Fee Policy</div>
-            </div>
+        <div className={`${SHELL} mt-10 grid grid-cols-1 items-start gap-8 md:grid-cols-2`}>
+          <div className="overflow-hidden rounded-2xl border border-neutral-200">
+            <img
+              src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1000&q=80"
+              alt="Team reviewing profiles"
+              className="aspect-[4/3] w-full object-cover object-center"
+            />
           </div>
+          <div className="space-y-4 text-[15px] leading-7 text-black">
+            <p>
+              We partner with organizations that are navigating rapid technological
+              change and need dependable engineering capacity — without the cost of
+              mis-hires and long vacancies. We bring deep expertise across
+              technology hiring, structured screening and onboarding success.
+            </p>
+            <p>
+              We believe the future belongs to businesses that can combine technology,
+              data and verified human capability. So we help enterprises turn hiring
+              from a bottleneck into an advantage — every shortlist calibrated to
+              your stack, culture and timelines.
+            </p>
+            <p>
+              As organizations move from experimental pilots to scaled adoption, we
+              bridge the gap between ambition and execution — with pre-evaluated
+              engineers, transparent SLAs and retention-backed delivery.
+            </p>
+            <p className="border-l-2 border-black pl-4 text-base font-bold leading-relaxed text-black">
+              Inspired by the industry&apos;s shift toward talent-native hiring, we embed
+              intelligence across the entire talent lifecycle.
+            </p>
+          </div>
+        </div>
+
+        <div className={`${SHELL} mt-12 grid grid-cols-2 gap-6 md:grid-cols-4`}>
+          {[
+            { big: '100+', small: 'Enterprise partners with hiring delivered' },
+            { big: '250+', small: 'Vetted professionals placed' },
+            { big: '12+', small: 'Hiring capabilities under one roof' },
+            { big: '3', small: 'Delivery hubs across regions' },
+          ].map((s) => (
+            <div key={s.big} className="text-left">
+              <p className="text-4xl font-extrabold tracking-tight text-black">{s.big}</p>
+              <p className="mt-1.5 max-w-[200px] text-[13px] leading-snug text-black">{s.small}</p>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* ============================================================================
-       * 3. NEW SECTION: VISION & MISSION DUAL PILLARS
-       * ============================================================================ */}
-      <section className="py-20 px-6 lg:px-16 bg-white border-b border-neutral-200/80">
-        <div className="max-w-6xl mx-auto space-y-12">
-          <div className="text-center max-w-2xl mx-auto space-y-3">
-            <span className="text-xs font-bold text-[#0265FF] uppercase tracking-widest bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">
-              PURPOSE & PHILOSOPHY
-            </span>
-            <h2 className="text-3xl sm:text-5xl font-extrabold text-neutral-900 tracking-tight">
-              Our Vision & Core Mission
-            </h2>
-            <p className="text-base text-neutral-600">
-              Pioneering the global AI-vetted tech workforce corridor with empirical rigor and human empathy.
+      {/* ============ 3. WHAT WE DELIVER ============ */}
+      <section className="border-y border-neutral-200 bg-white py-14">
+        <div className={SHELL}>
+          <div className="grid grid-cols-1 items-end gap-4 md:grid-cols-2">
+            <div>
+              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-black">
+                <Dot /> What we deliver
+              </p>
+              <h2 className="mt-3 text-3xl sm:text-4xl font-extrabold leading-tight tracking-tight text-black">
+                Deep capability across the full talent lifecycle
+              </h2>
+            </div>
+            <p className="text-[15px] leading-relaxed text-black md:text-right">
+              One partner spanning sourcing, screening and onboarding — so hiring
+              never slows delivery. We take you through the gaps.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="p-8 bg-slate-50 border border-slate-200 rounded-3xl space-y-6 shadow-md hover:shadow-xl transition-all">
-              <div className="w-12 h-12 rounded-2xl bg-[#0265FF] text-white flex items-center justify-center font-bold">
-                <Compass className="w-6 h-6" />
-              </div>
-              <h3 className="text-2xl font-bold text-neutral-900">Our Strategic Vision</h3>
-              <p className="text-sm text-neutral-600 leading-relaxed font-normal">
-                To become the global gold standard for technical talent matchmaking — creating a frictionless corridor where enterprise CTOs and scaleups can deploy pre-evaluated 1% engineering pods anywhere in the world within 72 hours.
-              </p>
-              <div className="pt-2 flex flex-wrap gap-2 text-xs font-bold text-[#0265FF]">
-                <span className="px-3 py-1 bg-white border rounded-full">✓ Zero Hiring Friction</span>
-                <span className="px-3 py-1 bg-white border rounded-full">✓ Global Corridor Scale</span>
-              </div>
-            </div>
-
-            <div className="p-8 bg-blue-50/60 border border-blue-200 rounded-3xl space-y-6 shadow-md hover:shadow-xl transition-all">
-              <div className="w-12 h-12 rounded-2xl bg-[#0265FF] text-white flex items-center justify-center font-bold">
-                <Rocket className="w-6 h-6" />
-              </div>
-              <h3 className="text-2xl font-bold text-neutral-900">Our Core Mission</h3>
-              <p className="text-sm text-neutral-600 leading-relaxed font-normal">
-                To eliminate traditional recruiting latencies by pairing automated AI code benchmarks with expert human panel defenses — providing full transparency, 60% payroll cost arbitrage, and 99.4% engineering retention.
-              </p>
-              <div className="pt-2 flex flex-wrap gap-2 text-xs font-bold text-[#0265FF]">
-                <span className="px-3 py-1 bg-white border rounded-full">✓ Empirical Code Rigor</span>
-                <span className="px-3 py-1 bg-white border rounded-full">✓ 99.4% Retention Pledge</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================================
-       * 4. NEW SECTION: OUR FOUNDING STORY — HOW WE STARTED
-       * ============================================================================ */}
-      <section className="py-20 px-6 lg:px-16 bg-[#FAF8F5] border-b border-neutral-200/80">
-        <div className="max-w-6xl mx-auto space-y-12">
-          <div className="text-center max-w-2xl mx-auto space-y-3">
-            <span className="text-xs font-bold text-[#0265FF] uppercase tracking-wider bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">FOUNDING STORY</span>
-            <h2 className="text-3xl sm:text-5xl font-extrabold text-neutral-900 tracking-tight">
-              How NexaTalent IT Solutions Started
-            </h2>
-            <p className="text-base text-neutral-600">
-              Born from the frustration of 90-day hiring cycles and mismatched tech profiles.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {[
-              {
-                year: '2021',
-                title: 'The Sourcing Friction',
-                desc: 'Our founders — veteran tech leads in Bangalore & Dubai — saw tech teams struggle with 60-90 day agency hiring delays and high attrition.'
-              },
-              {
-                year: '2023',
-                title: 'Deterministic AI Vetting',
-                desc: 'We built our proprietary automated benchmark suite to evaluate algorithm efficiency (O(1) memory) and live system architecture defense.'
-              },
-              {
-                year: '2024',
-                title: 'GCC Regional Corridors',
-                desc: 'Established physical and legal offshore hubs across Dubai Silicon Oasis, Riyadh KAFD, and Bangalore Outer Ring Road.'
-              },
-              {
-                year: 'Today',
-                title: '50,000+ Vetted Network',
-                desc: 'Serving 100+ global enterprises and scaleups with 72-hour candidate matching and 99.4% retention.'
-              },
-            ].map((milestone, idx) => (
-              <div key={idx} className="p-6 bg-white rounded-3xl border border-neutral-200/80 shadow-md space-y-3 hover:shadow-xl transition-all">
-                <span className="text-3xl font-black text-[#0265FF] block">{milestone.year}</span>
-                <h4 className="font-bold text-base text-neutral-900">{milestone.title}</h4>
-                <p className="text-xs text-neutral-600 leading-relaxed font-normal">{milestone.desc}</p>
+          <div className="mt-10 grid grid-cols-1 gap-x-8 gap-y-7 sm:grid-cols-2 lg:grid-cols-3">
+            {CAPABILITIES.map((c) => (
+              <div key={c.n} className="border-b border-neutral-200 pb-4">
+                <p className="text-xs font-bold text-black">{c.n}</p>
+                <h3 className="mt-1.5 text-[15px] font-bold text-black">{c.title}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-black">{c.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ============================================================================
-       * 5. NEW SECTION: FUTURE ROADMAP — HOW WE ARE GOING FORWARD
-       * ============================================================================ */}
-      <section className="py-20 px-6 lg:px-16 bg-white border-b border-neutral-200/80">
-        <div className="max-w-6xl mx-auto space-y-12">
-          <div className="text-center max-w-2xl mx-auto space-y-3">
-            <span className="text-xs font-bold text-[#0265FF] uppercase tracking-widest bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">
-              STRATEGIC GROWTH
-            </span>
-            <h2 className="text-3xl sm:text-5xl font-extrabold text-neutral-900 tracking-tight">
-              How We Are Going Forward
-            </h2>
-            <p className="text-base text-neutral-600">
-              Accelerating innovation across global talent networks and autonomous AI verification.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="p-6 bg-slate-50 border border-slate-200 rounded-3xl space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-[#0265FF] text-white flex items-center justify-center font-bold">
-                <TrendingUp className="w-5 h-5" />
-              </div>
-              <h4 className="font-bold text-base text-neutral-900">AI Match Engine V5</h4>
-              <p className="text-xs text-neutral-600 leading-relaxed font-normal">
-                Sub-second conversational candidate matching parsing live repo codebases directly.
-              </p>
-            </div>
-
-            <div className="p-6 bg-slate-50 border border-slate-200 rounded-3xl space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-[#0265FF] text-white flex items-center justify-center font-bold">
-                <Globe className="w-5 h-5" />
-              </div>
-              <h4 className="font-bold text-base text-neutral-900">GCC Corridor Expansion</h4>
-              <p className="text-xs text-neutral-600 leading-relaxed font-normal">
-                Launching physical hub presence in Qatar, Abu Dhabi, and Oman by Q4.
-              </p>
-            </div>
-
-            <div className="p-6 bg-slate-50 border border-slate-200 rounded-3xl space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-[#0265FF] text-white flex items-center justify-center font-bold">
-                <ShieldCheck className="w-5 h-5" />
-              </div>
-              <h4 className="font-bold text-base text-neutral-900">Zero-Trust Desks</h4>
-              <p className="text-xs text-neutral-600 leading-relaxed font-normal">
-                Pre-configured hardware-encrypted remote workstations with SOC2 Type II isolation.
-              </p>
-            </div>
-
-            <div className="p-6 bg-slate-50 border border-slate-200 rounded-3xl space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-[#0265FF] text-white flex items-center justify-center font-bold">
-                <Layers className="w-5 h-5" />
-              </div>
-              <h4 className="font-bold text-base text-neutral-900">100,000+ Vetted Pool</h4>
-              <p className="text-xs text-neutral-600 leading-relaxed font-normal">
-                Expanding our pre-evaluated senior engineer database across 50+ modern stacks.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================================
-       * 6. SPECIALIZED TALENT SOLUTIONS ACROSS 16 CORE INDUSTRIES (6 IN A ROW SMALL CARDS)
-       * ============================================================================ */}
-      <section className="py-20 px-6 lg:px-12 bg-[#FAF8F5] border-b border-neutral-200/80">
-        <div className="max-w-7xl mx-auto space-y-10">
-          <div className="text-center max-w-3xl mx-auto space-y-3">
-            <span className="text-xs font-bold text-[#0265FF] uppercase tracking-widest bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">
-              16 DEDICATED DOMAIN PRACTICES
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-neutral-900 tracking-tight">
-              Specialized Talent Solutions Across <span className="text-[#0265FF]">16 Core Industries</span>
-            </h2>
-            <p className="text-sm text-neutral-600 max-w-2xl mx-auto">
-              Domain-specialized engineering recruitment teams led by tech architects and former engineering practitioners.
-            </p>
-          </div>
-
-          {/* 6 in a row responsive grid of small cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
-            {[
-              { title: 'FinTech & Trading', desc: 'Low-Latency C++ & FPGA', icon: Landmark, href: '/industries/bfsi' },
-              { title: 'Generative AI & LLMs', desc: 'vLLM, PyTorch & RAG', icon: Zap, href: '/industries/ai-ml' },
-              { title: 'Cloud & DevOps', desc: 'K8s, Multi-Region IaC', icon: Database, href: '/industries/cloud' },
-              { title: 'Turnkey GCC Pods', desc: 'BOT Pods in 75 Days', icon: Globe, href: '/industries/gcc' },
-              { title: 'Cyber & eBPF', desc: 'Zero-Trust & SOC2', icon: ShieldCheck, href: '/industries/security' },
-              { title: 'Data Engineering', desc: 'Kafka, Flink & Snowflake', icon: Layers, href: '/industries/data' },
-              { title: 'Enterprise SaaS', desc: 'Microservices & Scaling', icon: Cpu, href: '/industries/technology' },
-              { title: 'Healthcare & MedTech', desc: 'HIPAA & FHIR Platforms', icon: HeartPulse, href: '/industries/healthcare' },
-              { title: 'Industrial IoT', desc: 'Industry 4.0 & Embedded', icon: Factory, href: '/industries/manufacturing' },
-              { title: 'Retail & E-Commerce', desc: 'Checkout & Warehouse ML', icon: ShoppingCart, href: '/industries/retail' },
-              { title: 'Automotive & EV', desc: 'AUTOSAR & ADAS Vision', icon: Car, href: '/industries/automotive' },
-              { title: 'Telecom & 5G Edge', desc: 'OpenRAN & 5G Core', icon: Radio, href: '/industries/telecom' },
-              { title: 'Aerospace & Defense', desc: 'DO-178C Avionics', icon: Plane, href: '/industries/aerospace' },
-              { title: 'Energy & CleanTech', desc: 'Smart Grid Telemetry', icon: Sun, href: '/industries/energy' },
-              { title: 'Gaming & Streaming', desc: 'Unreal 5 & WebRTC', icon: Gamepad2, href: '/industries/media' },
-              { title: 'IT Advisory', desc: 'Digital Transformation', icon: Briefcase, href: '/industries/professional-services' },
-            ].map((ind, idx) => {
-              const IconComp = ind.icon;
-              return (
-                <div
-                  key={idx}
-                  className="bg-white rounded-2xl border border-neutral-200/90 p-4 shadow-sm hover:shadow-lg hover:border-blue-400 hover:-translate-y-1 transition-all duration-200 flex flex-col justify-between group"
-                >
-                  <div className="space-y-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#0265FF] group-hover:bg-[#0265FF] group-hover:text-white flex items-center justify-center transition-colors">
-                      <IconComp className="w-4 h-4" />
-                    </div>
-
-                    <div>
-                      <h4 className="font-bold text-xs text-neutral-900 leading-tight group-hover:text-[#0265FF] transition-colors">
-                        {ind.title}
-                      </h4>
-                      <p className="text-[11px] text-neutral-500 mt-1 leading-snug line-clamp-2">
-                        {ind.desc}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Simple Effective Call */}
-                  <Link
-                    to={ind.href}
-                    className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-bold text-[#0265FF] group-hover:text-[#004FBF] transition-colors"
-                  >
-                    <span>View Spec</span>
-                    <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                  </Link>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Simple Effective Section Call-to-Action Bar */}
-          <div className="p-4 sm:p-6 bg-white rounded-2xl border border-neutral-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-[#0265FF] shrink-0">
-                <Sparkles className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="font-bold text-sm text-neutral-900">Need domain-specific tech talent for your stack?</h4>
-                <p className="text-xs text-neutral-500">Get 3 verified candidate dossiers in 72 hours under our 14-day zero-risk trial.</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2.5 shrink-0">
-              <Link
-                to="/employers"
-                className="px-5 py-2.5 rounded-full bg-[#0265FF] hover:bg-[#004FBF] text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5"
-              >
-                <span>Hire Talent Now</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-              <Link
-                to="/industries"
-                className="px-4 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 text-neutral-700 font-bold text-xs transition-colors"
-              >
-                Explore All Practices
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================================
-       * 7. FEATURE BLOCK 1: Deterministic Talent Verification In Action
-       * ============================================================================ */}
-      <section className="py-20 px-6 lg:px-16 bg-white border-b border-neutral-200/80">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          <div className="lg:col-span-6 space-y-6">
-            <span className="px-3.5 py-1 bg-blue-50 text-[#0265FF] text-xs font-bold rounded-full uppercase tracking-wider border border-blue-200">
-              SOLUTION 01
-            </span>
-            <h2 className="text-3xl sm:text-5xl font-extrabold text-neutral-900 tracking-tight leading-tight">
-              Delivering Certainty — <br />
-              <span className="text-[#0265FF]">Deterministic Talent Verification In Action</span>
-            </h2>
-            <p className="text-base text-neutral-600 leading-relaxed font-normal">
-              NexaTalent IT Solutions replaces subjective resume screening with empirical code benchmarks. Every candidate is evaluated on live memory allocation efficiency, concurrent stress handling, and system architecture defense.
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
-                <div className="flex items-center gap-2 font-bold text-sm text-neutral-900">
-                  <Clock className="w-4 h-4 text-[#0265FF]" /> Faster Decision
-                </div>
-                <p className="text-xs text-neutral-500">Real-time data insights to act quickly and respond to changing conditions.</p>
-              </div>
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
-                <div className="flex items-center gap-2 font-bold text-sm text-neutral-900">
-                  <BarChart3 className="w-4 h-4 text-[#0265FF]" /> Sustainable Growth
-                </div>
-                <p className="text-xs text-neutral-500">Supporting long-term growth while maintaining engineering resilience.</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-6 bg-slate-900 text-white p-8 rounded-3xl space-y-6 shadow-2xl relative overflow-hidden">
-            <div className="flex items-center justify-between border-b border-neutral-800 pb-4">
-              <div className="flex items-center gap-2 text-blue-400 font-mono text-xs font-bold">
-                <Activity className="w-4 h-4 animate-pulse" />
-                <span>NEXA_VERIFICATION_BENCHMARK_SUITE</span>
-              </div>
-              <span className="text-xs font-mono text-neutral-400">PASSED 100%</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <div className="p-5 bg-neutral-800/80 rounded-2xl border border-neutral-700">
-                <div className="text-3xl font-extrabold text-blue-400">10x</div>
-                <div className="text-xs text-neutral-400 mt-1">Faster Match Decisions</div>
-              </div>
-              <div className="p-5 bg-neutral-800/80 rounded-2xl border border-neutral-700">
-                <div className="text-3xl font-extrabold text-blue-400">98.4%</div>
-                <div className="text-xs text-neutral-400 mt-1">Code Benchmark Pass</div>
-              </div>
-            </div>
-
-            <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-2xl text-xs text-blue-300 font-mono">
-              ✓ Algorithmic Competency: Top 1% Percentile Verified
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================================
-       * 8. FEATURE BLOCK 2: Algorithmic Rigor Backed by Human Empathy
-       * ============================================================================ */}
-      <section className="py-20 px-6 lg:px-16 bg-slate-50 border-b border-slate-200/80">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          <div className="lg:col-span-6 bg-white p-8 rounded-3xl border border-slate-200 shadow-xl space-y-6">
-            <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-              <div className="text-xs font-bold text-[#0265FF] uppercase">Human Assessment Panel</div>
-              <h4 className="font-bold text-lg text-neutral-900">Expert Technical Panel Safeguards</h4>
-              <p className="text-xs text-neutral-600 leading-relaxed font-normal">
-                Technology alone cannot gauge teamwork or cultural adaptability. We blend empirical code benchmarks with human panel defenses to ensure engineers thrive in your team.
-              </p>
-            </div>
-
-            <div className="space-y-2 text-xs text-neutral-600">
-              <div className="flex items-center gap-2 font-semibold">
-                <CheckCircle2 className="w-4 h-4 text-[#0265FF]" /> Deep Industry Expertise: 18+ years building global tech hubs
-              </div>
-              <div className="flex items-center gap-2 font-semibold">
-                <CheckCircle2 className="w-4 h-4 text-[#0265FF]" /> Consistent Performance Outcomes with zero candidate dropouts
-              </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-6 space-y-6">
-            <span className="px-3.5 py-1 bg-blue-50 text-[#0265FF] text-xs font-bold rounded-full uppercase tracking-wider border border-blue-200">
-              SOLUTION 02
-            </span>
-            <h2 className="text-3xl sm:text-5xl font-extrabold text-neutral-900 tracking-tight leading-tight">
-              Unparalleled Experience — <br />
-              <span className="text-[#0265FF]">Algorithmic Rigor Backed by Human Empathy</span>
-            </h2>
-            <p className="text-base text-neutral-600 leading-relaxed font-normal">
-              We bring 40 years of combined recruitment expertise delivering strong results, faster value, and measurable ROI across global clients. Automated vetting is paired with dedicated candidate success managers to maintain high morale and commitment.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================================
-       * 9. FEATURE BLOCK 3: How We Maintain 99.4% Engineering Retention
-       * ============================================================================ */}
-      <section className="py-20 px-6 lg:px-16 bg-white border-b border-neutral-200/80">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          <div className="lg:col-span-6 space-y-6">
-            <span className="px-3.5 py-1 bg-blue-50 text-[#0265FF] text-xs font-bold rounded-full uppercase tracking-wider border border-blue-200">
-              SOLUTION 03
-            </span>
-            <h2 className="text-3xl sm:text-5xl font-extrabold text-neutral-900 tracking-tight leading-tight">
-              Long-Term Success — <br />
-              <span className="text-[#0265FF]">How We Maintain 99.4% Engineering Retention</span>
-            </h2>
-            <p className="text-base text-neutral-600 leading-relaxed font-normal">
-              High retention is not luck; it's a structured methodology. From rigorous 14-day trial alignment to ongoing career development and transparent compensation benchmarking, we ensure engineers stay engaged for the long haul.
-            </p>
-
-            <div className="space-y-3 pt-2">
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-start gap-3">
-                <Check className="w-5 h-5 text-[#0265FF] shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="font-bold text-sm text-neutral-900">14-Day Zero-Risk Trial Alignment</h4>
-                  <p className="text-xs text-neutral-500">Immediate feedback loop during the first 14 days to resolve technical or workflow friction early.</p>
-                </div>
-              </div>
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-start gap-3">
-                <Check className="w-5 h-5 text-[#0265FF] shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="font-bold text-sm text-neutral-900">Continuous Career Pathway & Upskilling</h4>
-                  <p className="text-xs text-neutral-500">Engineers receive continuous access to advanced AI, Cloud, and System Design courses.</p>
-                </div>
-              </div>
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-start gap-3">
-                <Check className="w-5 h-5 text-[#0265FF] shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="font-bold text-sm text-neutral-900">2-Year Placement Pledge</h4>
-                  <p className="text-xs text-neutral-500">We guarantee continuous performance monitoring and replacement backing for 24 months.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-6 bg-slate-900 text-white p-8 rounded-3xl space-y-6 shadow-2xl text-center">
-            <Award className="w-12 h-12 text-blue-400 mx-auto" />
-            <h3 className="text-3xl font-extrabold">99.4% 2-Year Retention Record</h3>
-            <p className="text-xs text-slate-300 max-w-md mx-auto leading-relaxed font-normal">
-              Our holistic human-centric talent management keeps attrition virtually zero across all enterprise offshore pods in Dubai, Riyadh, and Bangalore.
-            </p>
-            <div className="p-4 bg-blue-600/20 border border-blue-500/40 rounded-2xl text-xs text-blue-300 font-mono font-bold">
-              ✓ Verified Across 500+ Engineering Placements
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================================
-       * 10. FREQUENTLY ASKED QUESTIONS (CATEGORIZED TABS & EXPANDABLE ACCORDION)
-       * ============================================================================ */}
-      <section className="py-20 px-6 lg:px-16 bg-white border-b border-neutral-200/80">
-        <div className="max-w-4xl mx-auto space-y-10">
-          <div className="text-center space-y-3">
-            <h2 className="text-3xl sm:text-5xl font-extrabold text-neutral-900 tracking-tight">
-              Frequently Asked Questions
-            </h2>
-            <p className="text-base text-neutral-600">
-              Clear answers to common questions about our platform, features, and support.
-            </p>
-
-            {/* Categorized Tabs */}
-            <div className="flex justify-center gap-2 pt-4">
-              {(['General', 'Vetting', 'GCC Hubs', 'Support'] as const).map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => {
-                    setFaqCategory(cat);
-                    setActiveFaq(0);
-                  }}
-                  className={`px-5 py-2 rounded-full text-xs font-bold transition-all ${
-                    faqCategory === cat
-                      ? 'bg-[#0265FF] text-white shadow-md'
-                      : 'bg-slate-100 text-neutral-700 hover:bg-slate-200'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Accordion Questions List */}
-          <div className="space-y-4">
-            {faqs[faqCategory].map((faq, idx) => {
-              const isOpen = activeFaq === idx;
-              return (
-                <div
-                  key={idx}
-                  className="bg-slate-50 border border-slate-200/80 rounded-2xl overflow-hidden transition-all shadow-sm"
-                >
-                  <button
-                    onClick={() => setActiveFaq(isOpen ? null : idx)}
-                    className="w-full text-left p-6 flex items-center justify-between font-bold text-base text-neutral-900"
-                  >
-                    <span>{faq.q}</span>
-                    <ChevronDown className={`w-5 h-5 text-neutral-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  {isOpen && (
-                    <div className="p-6 pt-0 text-sm text-neutral-600 leading-relaxed border-t border-slate-200/60 bg-white">
-                      {faq.a}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================================
-       * 11. FINAL HIGH-CONVERSION CTA BANNER (SOLID BRAND BLUE #0265FF)
-       * ============================================================================ */}
-      <section className="py-20 px-6 lg:px-16 bg-[#0265FF] text-white text-center">
-        <div className="max-w-4xl mx-auto space-y-6">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 backdrop-blur border border-white/20 text-xs font-bold uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5 text-white" /> Start Building Your Team
-          </div>
-          <h2 className="text-4xl sm:text-6xl font-extrabold tracking-tight">
-            Ready to Scale Your Technology Organization?
+      {/* ============ 4. VISION / MISSION / PURPOSE ============ */}
+      <section className="bg-white py-16">
+        <div className={`${SHELL} text-center`}>
+          <Eyebrow>What drives us</Eyebrow>
+          <h2 className="mt-3 text-3xl sm:text-4xl font-extrabold leading-tight tracking-tight text-black">
+            Vision, mission, and the
+            <br />
+            purpose behind the work
           </h2>
-          <p className="text-base sm:text-lg text-blue-100 max-w-2xl mx-auto">
-            Get matched with pre-vetted senior candidates within 72 hours under our 14-day zero-risk trial guarantee.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
-            <Link
-              to="/employers"
-              className="px-8 py-4 bg-white text-[#0265FF] font-bold text-sm rounded-full shadow-2xl hover:bg-slate-100 transition-all flex items-center gap-2"
-            >
-              Get Matched Candidates Now <ArrowRight className="w-4 h-4" />
-            </Link>
+        </div>
+        <div className={`${SHELL} mt-10 grid grid-cols-1 gap-4 md:grid-cols-3`}>
+          {[
+            { t: 'Our Vision', d: 'To become a globally trusted talent corridor where enterprises deploy pre-evaluated technology teams in days, not quarters.' },
+            { t: 'Our Mission', d: 'To remove hiring uncertainty by pairing structured matching with expert human panels — transparent and retention-backed.' },
+            { t: 'Our Purpose', d: 'We exist to turn hiring into momentum: dependable people, honest process and measurable outcomes for every client.' },
+          ].map((c) => (
+            <div key={c.t} className="rounded-2xl border border-neutral-200 bg-white p-7 text-left shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
+              <div className="h-9 w-9 rounded-[10px] bg-black" />
+              <h3 className="mt-4 text-base font-bold text-black">{c.t}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-black">{c.d}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ============ 5. WHY US ============ */}
+      <section className="bg-white py-14">
+        <div className={`${SHELL} grid grid-cols-1 items-center gap-10 md:grid-cols-2`}>
+          <div className="overflow-hidden rounded-2xl border border-neutral-200">
+            <img
+              src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=80"
+              alt="NexaTalent team"
+              className="aspect-[4/3] w-full object-cover object-center"
+            />
+          </div>
+          <div>
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-black">
+              <Dot /> What makes us different
+            </p>
+            <h2 className="mt-3 text-3xl sm:text-4xl font-extrabold leading-tight tracking-tight text-black">
+              A talent partner built for outcomes
+            </h2>
+            <ul className="mt-6 space-y-4">
+              {CHECKS.map((c) => (
+                <li key={c.title} className="flex gap-3">
+                  <Check className="mt-0.5 h-5 w-5 shrink-0 text-black" strokeWidth={3} />
+                  <div>
+                    <p className="text-[15px] font-bold leading-snug text-black">{c.title}</p>
+                    <p className="text-sm leading-snug text-black">{c.desc}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ 6. THREE HUBS ============ */}
+      <section className="bg-white pb-14">
+        <div className={SHELL}>
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-black">
+                <Dot /> Global presence
+              </p>
+              <h2 className="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight text-black">
+                Three hubs, one team
+              </h2>
+            </div>
+            <p className="max-w-sm text-[15px] leading-relaxed text-black md:text-right">
+              Across three time zones and two regions, NexaTalent works as a single
+              connected team — so coverage never sleeps.
+            </p>
+          </div>
+
+          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {HUBS.map((h) => (
+              <div key={h.city} className="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+                <img src={h.img} alt={h.city} className="aspect-[16/10] w-full object-cover object-center" loading="lazy" />
+                <div className="p-5">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-black">{h.tag}</p>
+                  <p className="mt-1.5 text-[15px] font-extrabold text-black">
+                    {h.city} <span className="font-medium text-black">{h.country}</span>
+                  </p>
+                  <p className="mt-1.5 text-[13px] leading-relaxed text-black">{h.addr}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 flex flex-col items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white px-6 py-4 sm:flex-row">
+            <p className="text-sm text-black">
+              Prefer email? Reach us directly at{' '}
+              <a href="mailto:info@nexatalentitsolutions.com" className="font-bold text-black underline underline-offset-2">
+                info@nexatalentitsolutions.com →
+              </a>
+            </p>
             <Link
               to="/contact"
-              className="px-8 py-4 bg-white/10 border border-white/30 text-white font-bold text-sm rounded-full hover:bg-white/20 transition-all"
+              className="rounded-full bg-black px-6 py-3 text-sm font-semibold text-white hover:bg-neutral-800"
             >
-              Schedule Founder Consultation
+              Start a conversation
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ 7. CTA ============ */}
+      <section className="bg-white py-14 text-center">
+        <div className={`${SHELL} max-w-3xl`}>
+          <h2 className="text-3xl sm:text-4xl font-extrabold leading-snug tracking-tight text-black">
+            Where talent, technology, and process converge to create the next
+            generation of intelligent teams.
+          </h2>
+          <Link
+            to="/contact"
+            className="mt-6 inline-block rounded-full bg-black px-6 py-3 text-sm font-semibold text-white hover:bg-neutral-800"
+          >
+            Start a conversation
+          </Link>
+        </div>
+      </section>
+
+      {/* ============ 8. PROOF ============ */}
+      <section className="border-t border-neutral-200 bg-white pb-14 pt-14">
+        <div className={`${SHELL} text-center`}>
+          <Eyebrow>Client proof</Eyebrow>
+          <h2 className="mt-3 text-3xl sm:text-4xl font-extrabold leading-tight tracking-tight text-black">
+            Powering hiring
+            <br />
+            transformation at scale
+          </h2>
+          <div className="mt-10 grid grid-cols-1 gap-4 text-left md:grid-cols-2">
+            <div className="rounded-2xl border border-neutral-200 bg-white p-7">
+              <div className="flex gap-1">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star key={i} className="h-4 w-4 fill-black text-black" />
+                ))}
+              </div>
+              <p className="mt-4 text-[15px] font-semibold leading-relaxed text-black">
+                &ldquo;NexaTalent gave us the screening rigour and shortlist speed we
+                needed. Critical hires closed in days — engineers who ramped fast
+                and stayed.&rdquo;
+              </p>
+              <Link to="/case-studies" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-black hover:text-black">
+                Read client stories <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <div className="rounded-2xl border border-neutral-200 bg-white p-7">
+              <img
+                src="https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=900&q=80"
+                alt="Delivery team"
+                className="aspect-[16/10] w-full rounded-xl object-cover object-center"
+                loading="lazy"
+              />
+              <div className="mt-5 text-center">
+                <Link
+                  to="/contact"
+                  className="inline-block rounded-full bg-black px-6 py-3 text-sm font-bold text-white hover:bg-neutral-800"
+                >
+                  Contact NexaTalent
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </section>

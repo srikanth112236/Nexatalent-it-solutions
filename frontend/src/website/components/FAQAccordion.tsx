@@ -75,7 +75,7 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
   };
 
   return (
-    <section style={{ padding: '5rem 2rem', position: 'relative' }}>
+    <section className="font-sans" style={{ padding: '5rem 2rem', position: 'relative', backgroundColor: '#ffffff' }}>
       <div style={{ maxWidth: '880px', margin: '0 auto' }}>
         <motion.div 
           variants={headerVariants}
@@ -92,7 +92,7 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
               gap: '0.4rem',
               fontSize: '0.8125rem',
               fontWeight: 600,
-              color: 'var(--color-primary-400)',
+              color: '#000000',
               marginBottom: '0.75rem',
             }}
           >
@@ -101,13 +101,13 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
           </motion.div>
           <motion.h2 
             variants={headerVariants}
-            style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: 'var(--color-text)' }}
+            style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: '#000000' }}
           >
             {title}
           </motion.h2>
           <motion.p 
             variants={headerVariants}
-            style={{ color: 'var(--color-text-secondary)', marginTop: '0.5rem', lineHeight: 1.6 }}
+            style={{ color: '#000000', marginTop: '0.5rem', lineHeight: 1.6 }}
           >
             {subtitle}
           </motion.p>
@@ -121,13 +121,13 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
                 position: 'relative',
                 maxWidth: '480px',
                 margin: '2rem auto 0 auto',
-                boxShadow: isSearchFocused ? '0 0 0 2px rgba(59, 130, 246, 0.3)' : 'none',
+                boxShadow: isSearchFocused ? '0 0 0 2px rgba(0, 0, 0, 0.4)' : 'none',
                 borderRadius: 'var(--radius-lg)',
               }}
             >
               <Search
                 size={18}
-                color="var(--color-text-tertiary)"
+                color="#000000"
                 style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }}
               />
               <input
@@ -141,9 +141,9 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
                   width: '100%',
                   padding: '0.75rem 1rem 0.75rem 2.75rem',
                   borderRadius: 'var(--radius-lg)',
-                  backgroundColor: 'var(--color-surface)',
-                  border: '1px solid var(--color-border)',
-                  color: 'var(--color-text)',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #000000',
+                  color: '#000000',
                   fontSize: '0.9375rem',
                   outline: 'none',
                   transition: 'border-color 0.2s ease',
@@ -167,10 +167,10 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
                   transition={{ delay: idx * motionTokens.stagger.small, duration: motionTokens.duration.standard }}
                   style={{
                     borderRadius: 'var(--radius-lg)',
-                    backgroundColor: 'var(--color-surface)',
-                    border: isOpen ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid var(--color-border)',
+                    backgroundColor: '#ffffff',
+                    border: isOpen ? '1px solid #000000' : '1px solid #e5e5e5',
                     overflow: 'hidden',
-                    boxShadow: isOpen ? '0 4px 20px -10px rgba(59, 130, 246, 0.15)' : 'none',
+                    boxShadow: isOpen ? '0 4px 20px -10px rgba(0, 0, 0, 0.25)' : 'none',
                   }}
                 >
                   <button
@@ -185,7 +185,7 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
                       border: 'none',
                       textAlign: 'left',
                       cursor: 'pointer',
-                      color: 'var(--color-text)',
+                      color: '#000000',
                       fontSize: '1.0625rem',
                       fontWeight: 600,
                     }}
@@ -196,7 +196,7 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
                       transition={motionTokens.spring.snappy}
                       style={{ flexShrink: 0, marginLeft: '1rem' }}
                     >
-                      <ChevronDown size={20} color={isOpen ? "var(--color-primary-400)" : "var(--color-text-secondary)"} />
+                      <ChevronDown size={20} color={isOpen ? "#000000" : "#000000"} />
                     </motion.div>
                   </button>
 
@@ -214,10 +214,10 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
                           transition={{ delay: 0.1, duration: motionTokens.duration.standard }}
                           style={{
                             padding: '0 1.5rem 1.5rem 1.5rem',
-                            color: 'var(--color-text-secondary)',
+                            color: '#000000',
                             fontSize: '0.9375rem',
                             lineHeight: 1.6,
-                            borderTop: '1px solid rgba(255, 255, 255, 0.04)',
+                            borderTop: '1px solid #e5e5e5',
                             paddingTop: '1rem',
                           }}
                         >

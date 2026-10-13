@@ -67,14 +67,14 @@ export const JobCard: React.FC<JobCardProps> = ({
       whileHover={{ y: -6, scale: 1.02 }}
       style={{
         borderRadius: 'var(--radius-xl)',
-        backgroundColor: 'var(--color-surface)',
-        border: featured ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid var(--color-border)',
+        backgroundColor: '#ffffff',
+        border: featured ? '1px solid #000000' : '1px solid #e5e5e5',
         padding: '1.5rem',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
         position: 'relative',
-        boxShadow: featured ? '0 10px 25px -5px rgba(59, 130, 246, 0.15)' : 'var(--shadow-sm)',
+        boxShadow: featured ? '0 10px 25px -5px rgba(0, 0, 0, 0.2)' : 'var(--shadow-sm)',
       }}
     >
       <div>
@@ -91,9 +91,9 @@ export const JobCard: React.FC<JobCardProps> = ({
                   fontWeight: 700,
                   padding: '0.2rem 0.5rem',
                   borderRadius: '9999px',
-                  backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                  color: 'var(--color-primary-400)',
-                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  backgroundColor: '#000000',
+                  color: '#ffffff',
+                  border: '1px solid #000000',
                 }}
               >
                 Featured
@@ -109,9 +109,9 @@ export const JobCard: React.FC<JobCardProps> = ({
                   fontWeight: 700,
                   padding: '0.2rem 0.5rem',
                   borderRadius: '9999px',
-                  backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                  color: '#f87171',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  backgroundColor: '#ffffff',
+                  color: '#000000',
+                  border: '1px solid #000000',
                 }}
               >
                 Priority SLA
@@ -126,8 +126,9 @@ export const JobCard: React.FC<JobCardProps> = ({
                 fontWeight: 600,
                 padding: '0.2rem 0.5rem',
                 borderRadius: '9999px',
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                color: 'var(--color-text-secondary)',
+                backgroundColor: '#ffffff',
+                color: '#000000',
+                border: '1px solid #e5e5e5',
               }}
             >
               Verified Role
@@ -142,7 +143,7 @@ export const JobCard: React.FC<JobCardProps> = ({
               background: 'none',
               border: 'none',
               cursor: 'pointer',
-              color: saved ? 'var(--color-primary-400)' : 'var(--color-text-tertiary)',
+              color: saved ? '#000000' : '#000000',
               padding: '0.25rem',
               display: 'flex',
               alignItems: 'center',
@@ -161,7 +162,7 @@ export const JobCard: React.FC<JobCardProps> = ({
             style={{
               fontSize: '1.25rem',
               fontWeight: 700,
-              color: 'var(--color-text)',
+              color: '#000000',
               marginBottom: '0.25rem',
               lineHeight: 1.3,
             }}
@@ -169,7 +170,7 @@ export const JobCard: React.FC<JobCardProps> = ({
             {title}
           </h3>
         </Link>
-        <div style={{ fontSize: '0.9375rem', color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>
+        <div style={{ fontSize: '0.9375rem', color: '#000000', marginBottom: '1rem' }}>
           {company}
         </div>
 
@@ -180,23 +181,23 @@ export const JobCard: React.FC<JobCardProps> = ({
             flexWrap: 'wrap',
             gap: '1rem',
             fontSize: '0.8125rem',
-            color: 'var(--color-text-secondary)',
+            color: '#000000',
             marginBottom: '1.25rem',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <MapPin size={14} color="var(--color-text-tertiary)" />
+            <MapPin size={14} color="#000000" />
             <span>{location} · {type}</span>
           </div>
           <motion.div 
             whileHover={{ scale: 1.05 }}
             style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'default' }}
           >
-            <DollarSign size={14} color="var(--color-success)" />
-            <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>{salary}</span>
+            <DollarSign size={14} color="#000000" />
+            <span style={{ color: '#000000', fontWeight: 600 }}>{salary}</span>
           </motion.div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <Briefcase size={14} color="var(--color-text-tertiary)" />
+            <Briefcase size={14} color="#000000" />
             <span>{experience}</span>
           </div>
         </div>
@@ -214,9 +215,9 @@ export const JobCard: React.FC<JobCardProps> = ({
                 fontSize: '0.75rem',
                 padding: '0.2rem 0.5rem',
                 borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                color: 'var(--color-text-secondary)',
-                border: '1px solid rgba(255, 255, 255, 0.05)',
+                backgroundColor: '#ffffff',
+                color: '#000000',
+                border: '1px solid #e5e5e5',
               }}
             >
               {tag}
@@ -232,10 +233,10 @@ export const JobCard: React.FC<JobCardProps> = ({
           justifyContent: 'space-between',
           alignItems: 'center',
           paddingTop: '1rem',
-          borderTop: '1px solid var(--color-border)',
+          borderTop: '1px solid #e5e5e5',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: '#000000' }}>
           <Clock size={12} />
           <span>{postedAt}</span>
         </div>
@@ -246,7 +247,7 @@ export const JobCard: React.FC<JobCardProps> = ({
             style={{
               fontSize: '0.8125rem',
               fontWeight: 600,
-              color: 'var(--color-text-secondary)',
+              color: '#000000',
               textDecoration: 'none',
               padding: '0.4rem 0.75rem',
             }}
@@ -257,7 +258,7 @@ export const JobCard: React.FC<JobCardProps> = ({
             ref={buttonRef}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
-            whileHover={{ boxShadow: '0 0 15px rgba(59, 130, 246, 0.5)' }}
+            whileHover={{ boxShadow: '0 0 15px rgba(0, 0, 0, 0.35)' }}
             style={{ x: magneticX, y: magneticY, display: 'inline-block' }}
             onClick={() => onApply?.(id)}
           >
@@ -267,9 +268,9 @@ export const JobCard: React.FC<JobCardProps> = ({
               gap: '0.35rem',
               padding: '0.4rem 0.875rem',
               borderRadius: 'var(--radius-md)',
-              backgroundColor: 'var(--color-primary)',
+              backgroundColor: '#000000',
               color: '#ffffff',
-              border: 'none',
+              border: '1px solid #000000',
               fontSize: '0.8125rem',
               fontWeight: 600,
               cursor: 'pointer',

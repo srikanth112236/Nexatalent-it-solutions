@@ -34,6 +34,7 @@ export function AllShowcase() {
 
   return (
     <div
+      className="font-sans"
       style={{
         position: 'relative',
         display: 'block',

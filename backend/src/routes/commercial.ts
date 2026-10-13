@@ -197,6 +197,13 @@ commercialRouter.get('/invoices', requireAuth(), denyFinanceUnlessGranted, (req,
   if (q) rows = rows.filter((i) => `${i.id} ${i.number} ${i.orgId} ${i.status} ${i.agreementId || ''}`.toLowerCase().includes(q));
   const status = String(req.query.status || '');
   if (status) rows = rows.filter((i) => (status === 'Overdue' ? !!i.overdue : i.status === status));
+  // `view` = saved searches the UI offers as sub-menus (all | open | overdue | paid | draft | void).
+  const view = String(req.query.view || '');
+  if (view === 'open') rows = rows.filter((i) => Number(i.balance || 0) > 0 && ['Issued', 'Partially Paid'].includes(i.status));
+  else if (view === 'overdue') rows = rows.filter((i) => !!i.overdue);
+  else if (view === 'paid') rows = rows.filter((i) => i.status === 'Paid');
+  else if (view === 'draft') rows = rows.filter((i) => i.status === 'Draft');
+  else if (view === 'void') rows = rows.filter((i) => ['Void', 'Credited'].includes(i.status));
   const type = String(req.query.type || '');
   if (type) rows = rows.filter((i) => (i.invoiceType || 'one_time') === type);
   const { page, pageSize } = paginate.parse(req.query);
@@ -316,10 +323,44 @@ function fillAgreementHtml(tpl: any, ag: any, org: any): Array<{ h?: boolean; t:
     .map((t) => (/^(Placement Services Agreement|Agreement|1\.|2\.|3\.|4\.|5\.|6\.|7\.)/.test(t) && t.length < 80 ? { h: true, t } : { t }));
 }
 // ---- Invoice reminders (due-soon + overdue → superadmin/finance notifications) ----
+// Reminder rows exist in two shapes: seeded queue rows ({ channel, status, dueDate, createdAt })
+// and runtime reminder logs ({ kind, daysOverdue, daysToDue, balance, sentAt, by }). Normalise
+// both against the live invoice so the UI never has to guess (it previously rendered
+// "due in undefinedd" and ₹0 for seeded rows).
+function normalizeReminder(r: any, inv: any): any {
+  const dueMs = new Date(r.dueDate ?? inv?.dueDate).getTime();
+  const days = Number.isFinite(dueMs) ? Math.floor((dueMs - Date.now()) / 864e5) : null;
+  const open = Number(inv?.balance ?? r.balance ?? 0) > 0;
+  const kind = r.kind || (days === null ? 'due-soon' : days < 0 ? 'overdue' : 'due-soon');
+  return {
+    ...r,
+    number: r.number ?? inv?.number ?? null,
+    orgId: r.orgId ?? inv?.orgId ?? null,
+    kind,
+    daysToDue: days === null ? null : Math.max(0, days),
+    daysOverdue: days === null ? 0 : Math.max(0, -days),
+    dueDate: r.dueDate ?? inv?.dueDate ?? null,
+    total: inv?.total ?? null,
+    amountPaid: inv?.amountPaid ?? null,
+    balance: inv?.balance ?? r.balance ?? 0,
+    invoiceStatus: inv?.status ?? null,
+    settled: !open,
+    // Seeded queue rows have no send log — treat createdAt as queued-at and label the actor.
+    sentAt: r.sentAt ?? r.createdAt ?? null,
+    by: r.by ?? (r.channel ? `queued (${r.channel})` : 'system'),
+  };
+}
 commercialRouter.get('/invoice-reminders', requireAuth(), denyFinanceUnlessGranted, (req, res) => {
-  const ctx = ctxOf(req); let rows = loadDb().invoiceReminders as any[];
-  if (!['superadmin','platform_owner','finance_admin'].includes(ctx.role)) rows = rows.filter((r) => r.orgId === ctx.tenantId);
-  res.json({ success: true, data: rows.slice(0, 200) });
+  const db = loadDb(); const ctx = ctxOf(req);
+  const byId = new Map((db.invoices as any[]).map((i: any) => [i.id, i]));
+  let rows = (db.invoiceReminders as any[]).map((r: any) => normalizeReminder(r, byId.get(r.invoiceId)));
+  if (!(FINANCE_VIEWERS as readonly string[]).includes(ctx.role)) rows = rows.filter((r) => r.orgId === ctx.tenantId);
+  const q = String(req.query.q || '').trim().toLowerCase();
+  if (q) rows = rows.filter((r) => `${r.id} ${r.number || ''} ${r.invoiceId} ${r.orgId} ${r.kind} ${r.by}`.toLowerCase().includes(q));
+  const kind = String(req.query.kind || '');
+  if (kind) rows = rows.filter((r) => r.kind === kind);
+  const { page, pageSize } = paginate.parse(req.query);
+  res.json({ success: true, ...paged(rows, page, pageSize) });
 });
 commercialRouter.post('/invoice-reminders/run', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('manage_billing'), (req, res) => {
   const db = loadDb(); const today = nowIso().slice(0, 10);

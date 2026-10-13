@@ -49,6 +49,7 @@ export function ArticleDetailPage() {
 
   return (
     <div
+      className="font-sans"
       style={{
         position: 'relative',
         display: 'block',
@@ -91,24 +92,24 @@ export function ArticleDetailPage() {
         position: 'relative', 
         paddingTop: '8rem', 
         paddingBottom: '4rem', 
-        background: 'linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%)',
+        background: '#ffffff',
         borderBottom: '1px solid #E2E8F0'
       }}>
         <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 1.5rem' }}>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#64748B', marginBottom: '1.5rem' }}>
-            <Link to="/" style={{ color: '#64748B', textDecoration: 'none' }}>Home</Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#000000', marginBottom: '1.5rem' }}>
+            <Link to="/" style={{ color: '#000000', textDecoration: 'none' }}>Home</Link>
             <ChevronRight size={14} />
-            <Link to="/insights" style={{ color: '#64748B', textDecoration: 'none' }}>Insights</Link>
+            <Link to="/insights" style={{ color: '#000000', textDecoration: 'none' }}>Insights</Link>
             <ChevronRight size={14} />
-            <span style={{ color: '#4361EE', fontWeight: 600 }}>{article.category}</span>
+            <span style={{ color: '#000000', fontWeight: 600 }}>{article.category}</span>
           </div>
 
           <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', marginBottom: '1.25rem' }}>
-            <span style={{ padding: '0.3rem 0.8rem', borderRadius: '6px', backgroundColor: '#EEF2FF', color: '#4361EE', fontSize: '0.8rem', fontWeight: 700 }}>
+            <span style={{ padding: '0.3rem 0.8rem', borderRadius: '6px', backgroundColor: '#ffffff', color: '#000000', fontSize: '0.8rem', fontWeight: 700 }}>
               {article.tag}
             </span>
-            <span style={{ padding: '0.3rem 0.8rem', borderRadius: '6px', backgroundColor: '#F1F5F9', color: '#475569', fontSize: '0.8rem', fontWeight: 600 }}>
+            <span style={{ padding: '0.3rem 0.8rem', borderRadius: '6px', backgroundColor: '#ffffff', color: '#000000', fontSize: '0.8rem', fontWeight: 600 }}>
               {article.category}
             </span>
           </div>
@@ -117,16 +118,16 @@ export function ArticleDetailPage() {
             fontSize: 'clamp(2.2rem, 4.5vw, 3.25rem)',
             fontWeight: 800,
             letterSpacing: '-0.03em',
-            color: '#0B132B',
+            color: '#000000',
             lineHeight: 1.2,
             marginBottom: '1.5rem'
           }}>
             {article.title}
           </h1>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap', color: '#64748B', fontSize: '0.85rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap', color: '#000000', fontSize: '0.85rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <User size={15} color="#4361EE" />
+              <User size={15} color="#000000" />
               <span>{article.author}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -147,33 +148,33 @@ export function ArticleDetailPage() {
         
         {/* Executive Takeaways Box */}
         <div style={{
-          backgroundColor: '#F8FAFC',
+          backgroundColor: '#ffffff',
           borderRadius: '20px',
           border: '1px solid #E2E8F0',
           padding: '2rem',
           marginBottom: '3rem'
         }}>
-          <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0B132B', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Sparkles size={18} color="#4361EE" />
+          <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#000000', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Sparkles size={18} color="#000000" />
             <span>Executive Summary & Key Takeaways</span>
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {article.highlights.map((h) => (
               <div key={h} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
-                <CheckCircle2 size={16} color="#10B981" style={{ flexShrink: 0, marginTop: '3px' }} />
-                <span style={{ fontSize: '0.95rem', color: '#334155', lineHeight: 1.5, fontWeight: 600 }}>{h}</span>
+                <CheckCircle2 size={16} color="#000000" style={{ flexShrink: 0, marginTop: '3px' }} />
+                <span style={{ fontSize: '0.95rem', color: '#000000', lineHeight: 1.5, fontWeight: 600 }}>{h}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Long-form Content */}
-        <div style={{ fontSize: '1.1rem', color: '#334155', lineHeight: 1.8, display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+        <div style={{ fontSize: '1.1rem', color: '#000000', lineHeight: 1.8, display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
           <p>
             {article.excerpt} In modern technology organizations, competitive advantage is governed entirely by the velocity with which high-performing engineering squads are identified, calibrated, and deployed.
           </p>
 
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0B132B', marginTop: '1rem' }}>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#000000', marginTop: '1rem' }}>
             1. The Structural Shift in Talent Calibration
           </h2>
           <p>
@@ -182,24 +183,24 @@ export function ArticleDetailPage() {
 
           <div style={{
             padding: '1.75rem',
-            backgroundColor: '#EEF2FF',
-            borderLeft: '4px solid #4361EE',
+            backgroundColor: '#ffffff',
+            borderLeft: '4px solid #000000',
             borderRadius: '0 12px 12px 0',
             margin: '1.5rem 0'
           }}>
-            <p style={{ fontSize: '1rem', fontWeight: 600, color: '#1E1B4B', fontStyle: 'italic', margin: 0 }}>
+            <p style={{ fontSize: '1rem', fontWeight: 600, color: '#000000', fontStyle: 'italic', margin: 0 }}>
               "Vetting must take place before candidate dossiers reach hiring managers. When candidate pre-qualification includes hands-on architectural design checks, the offer-to-joiner conversion rate escalates from 58% to over 94%."
             </p>
           </div>
 
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0B132B', marginTop: '1rem' }}>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#000000', marginTop: '1rem' }}>
             2. Ground-Truth Compensation Reality
           </h2>
           <p>
             Our benchmark data indicates a distinct bifurcation between conventional IT services bands and product-engineering compensation structures. Tier-1 product organizations across Bengaluru and Hyderabad are actively bidding for Staff and Principal backend engineers with compensation envelopes scaling 30-40% higher than median industry benchmarks.
           </p>
 
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0B132B', marginTop: '1rem' }}>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#000000', marginTop: '1rem' }}>
             3. Institutional Recommendations
           </h2>
           <p>
@@ -209,10 +210,10 @@ export function ArticleDetailPage() {
 
         {/* Download Full PDF Whitepaper Card */}
         <div style={{
-          backgroundColor: '#0B132B',
+          backgroundColor: '#ffffff',
           borderRadius: '20px',
           padding: '2.5rem',
-          color: '#ffffff',
+          color: '#000000',
           marginTop: '3.5rem',
           display: 'flex',
           justifyContent: 'space-between',
@@ -221,11 +222,11 @@ export function ArticleDetailPage() {
           gap: '1.5rem'
         }}>
           <div>
-            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#93C5FD', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#000000', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
               Full Research Whitepaper Available
             </div>
             <div style={{ fontSize: '1.3rem', fontWeight: 800 }}>Download the Unabridged 48-Page PDF Report</div>
-            <div style={{ fontSize: '0.85rem', color: '#94A3B8', marginTop: '0.25rem' }}>Includes complete compensation percentiles and GCC setup checklists.</div>
+            <div style={{ fontSize: '0.85rem', color: '#000000', marginTop: '0.25rem' }}>Includes complete compensation percentiles and GCC setup checklists.</div>
           </div>
           <Link
             to="/contact"
@@ -235,7 +236,7 @@ export function ArticleDetailPage() {
               gap: '0.5rem',
               padding: '0.85rem 1.5rem',
               borderRadius: '12px',
-              backgroundColor: '#4361EE',
+              backgroundColor: '#000000',
               color: '#ffffff',
               fontWeight: 700,
               fontSize: '0.9rem',

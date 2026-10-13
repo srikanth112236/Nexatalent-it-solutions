@@ -91,8 +91,8 @@ export const JobFilterDrawer: React.FC<JobFilterDrawerProps> = ({
               width: '100%',
               maxWidth: '440px',
               height: '100%',
-              backgroundColor: 'var(--color-surface)',
-              borderLeft: '1px solid var(--color-border)',
+              backgroundColor: '#ffffff',
+              borderLeft: '1px solid #000000',
               display: 'flex',
               flexDirection: 'column',
               boxShadow: 'var(--shadow-xl)',
@@ -105,17 +105,17 @@ export const JobFilterDrawer: React.FC<JobFilterDrawerProps> = ({
             <div
               style={{
                 padding: '1.5rem',
-                borderBottom: '1px solid var(--color-border)',
+                borderBottom: '1px solid #e5e5e5',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
               }}
             >
               <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-text)' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#000000' }}>
                   Filter Mandates
                 </h3>
-                <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+                <p style={{ fontSize: '0.8125rem', color: '#000000' }}>
                   Refine your exact career parameters
                 </p>
               </div>
@@ -127,7 +127,7 @@ export const JobFilterDrawer: React.FC<JobFilterDrawerProps> = ({
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: 'var(--color-text-secondary)',
+                  color: '#000000',
                   cursor: 'pointer',
                   padding: '0.25rem',
                 }}
@@ -145,7 +145,7 @@ export const JobFilterDrawer: React.FC<JobFilterDrawerProps> = ({
             >
               {/* Work Mode */}
               <motion.div variants={sectionVariants}>
-                <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.75rem' }}>
+                <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#000000', marginBottom: '0.75rem' }}>
                   Work Mode
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -158,7 +158,7 @@ export const JobFilterDrawer: React.FC<JobFilterDrawerProps> = ({
                         alignItems: 'center',
                         gap: '0.625rem',
                         fontSize: '0.875rem',
-                        color: 'var(--color-text-secondary)',
+                        color: '#000000',
                         cursor: 'pointer',
                       }}
                     >
@@ -167,7 +167,7 @@ export const JobFilterDrawer: React.FC<JobFilterDrawerProps> = ({
                         type="checkbox"
                         checked={selectedWorkModes.includes(mode)}
                         onChange={() => toggleItem(selectedWorkModes, setSelectedWorkModes, mode)}
-                        style={{ accentColor: 'var(--color-primary)', transform: 'scale(1.1)' }}
+                        style={{ accentColor: '#000000', transform: 'scale(1.1)' }}
                       />
                       <span>{mode}</span>
                     </motion.label>
@@ -177,7 +177,7 @@ export const JobFilterDrawer: React.FC<JobFilterDrawerProps> = ({
 
               {/* Experience Range */}
               <motion.div variants={sectionVariants}>
-                <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.75rem' }}>
+                <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#000000', marginBottom: '0.75rem' }}>
                   Experience Level
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -190,7 +190,7 @@ export const JobFilterDrawer: React.FC<JobFilterDrawerProps> = ({
                         alignItems: 'center',
                         gap: '0.625rem',
                         fontSize: '0.875rem',
-                        color: 'var(--color-text-secondary)',
+                        color: '#000000',
                         cursor: 'pointer',
                       }}
                     >
@@ -199,7 +199,7 @@ export const JobFilterDrawer: React.FC<JobFilterDrawerProps> = ({
                         type="checkbox"
                         checked={selectedExperience.includes(exp)}
                         onChange={() => toggleItem(selectedExperience, setSelectedExperience, exp)}
-                        style={{ accentColor: 'var(--color-primary)', transform: 'scale(1.1)' }}
+                        style={{ accentColor: '#000000', transform: 'scale(1.1)' }}
                       />
                       <span>{exp}</span>
                     </motion.label>
@@ -209,7 +209,7 @@ export const JobFilterDrawer: React.FC<JobFilterDrawerProps> = ({
 
               {/* Compensation Bands */}
               <motion.div variants={sectionVariants}>
-                <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.75rem' }}>
+                <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#000000', marginBottom: '0.75rem' }}>
                   Compensation Band
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -222,7 +222,7 @@ export const JobFilterDrawer: React.FC<JobFilterDrawerProps> = ({
                         alignItems: 'center',
                         gap: '0.625rem',
                         fontSize: '0.875rem',
-                        color: 'var(--color-text-secondary)',
+                        color: '#000000',
                         cursor: 'pointer',
                       }}
                     >
@@ -231,7 +231,7 @@ export const JobFilterDrawer: React.FC<JobFilterDrawerProps> = ({
                         type="checkbox"
                         checked={selectedCompBands.includes(comp)}
                         onChange={() => toggleItem(selectedCompBands, setSelectedCompBands, comp)}
-                        style={{ accentColor: 'var(--color-primary)', transform: 'scale(1.1)' }}
+                        style={{ accentColor: '#000000', transform: 'scale(1.1)' }}
                       />
                       <span>{comp}</span>
                     </motion.label>
@@ -241,7 +241,7 @@ export const JobFilterDrawer: React.FC<JobFilterDrawerProps> = ({
 
               {/* Company Stage */}
               <motion.div variants={sectionVariants}>
-                <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.75rem' }}>
+                <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#000000', marginBottom: '0.75rem' }}>
                   Company Scale
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -254,7 +254,7 @@ export const JobFilterDrawer: React.FC<JobFilterDrawerProps> = ({
                         alignItems: 'center',
                         gap: '0.625rem',
                         fontSize: '0.875rem',
-                        color: 'var(--color-text-secondary)',
+                        color: '#000000',
                         cursor: 'pointer',
                       }}
                     >
@@ -263,7 +263,7 @@ export const JobFilterDrawer: React.FC<JobFilterDrawerProps> = ({
                         type="checkbox"
                         checked={selectedStages.includes(stage)}
                         onChange={() => toggleItem(selectedStages, setSelectedStages, stage)}
-                        style={{ accentColor: 'var(--color-primary)', transform: 'scale(1.1)' }}
+                        style={{ accentColor: '#000000', transform: 'scale(1.1)' }}
                       />
                       <span>{stage}</span>
                     </motion.label>
@@ -279,10 +279,10 @@ export const JobFilterDrawer: React.FC<JobFilterDrawerProps> = ({
               transition={{ delay: 0.4, ...motionTokens.spring.snappy }}
               style={{
                 padding: '1.25rem 1.5rem',
-                borderTop: '1px solid var(--color-border)',
+                borderTop: '1px solid #e5e5e5',
                 display: 'flex',
                 gap: '1rem',
-                backgroundColor: 'rgba(15, 23, 42, 0.4)',
+                backgroundColor: '#ffffff',
               }}
             >
               <motion.button
@@ -297,9 +297,9 @@ export const JobFilterDrawer: React.FC<JobFilterDrawerProps> = ({
                   gap: '0.4rem',
                   padding: '0.75rem',
                   borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--color-border)',
-                  backgroundColor: 'transparent',
-                  color: 'var(--color-text-secondary)',
+                  border: '1px solid #000000',
+                  backgroundColor: '#ffffff',
+                  color: '#000000',
                   fontWeight: 600,
                   fontSize: '0.875rem',
                   cursor: 'pointer',
@@ -310,7 +310,7 @@ export const JobFilterDrawer: React.FC<JobFilterDrawerProps> = ({
               </motion.button>
 
               <motion.button
-                whileHover={{ scale: 1.05, boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)' }}
+                whileHover={{ scale: 1.05, boxShadow: '0 4px 15px rgba(0, 0, 0, 0.35)' }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleApply}
                 style={{
@@ -321,8 +321,8 @@ export const JobFilterDrawer: React.FC<JobFilterDrawerProps> = ({
                   gap: '0.4rem',
                   padding: '0.75rem',
                   borderRadius: 'var(--radius-md)',
-                  border: 'none',
-                  backgroundColor: 'var(--color-primary)',
+                  border: '1px solid #000000',
+                  backgroundColor: '#000000',
                   color: '#ffffff',
                   fontWeight: 700,
                   fontSize: '0.875rem',

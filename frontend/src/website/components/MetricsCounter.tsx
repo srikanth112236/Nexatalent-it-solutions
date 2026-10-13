@@ -54,13 +54,13 @@ export const MetricsCounter: React.FC = () => {
   ];
 
   return (
-    <section style={{ maxWidth: '1280px', margin: '4rem auto', padding: '0 2rem' }}>
+    <section className="font-sans" style={{ maxWidth: '1280px', margin: '4rem auto', padding: '0 2rem' }}>
       <motion.div
-        initial={{ opacity: 0, y: 40, boxShadow: '0 0 0 rgba(var(--color-primary-rgb), 0)' }}
+        initial={{ opacity: 0, y: 40, boxShadow: '0 0 0 rgba(0, 0, 0, 0)' }}
         whileInView={{ 
           opacity: 1, 
           y: 0,
-          boxShadow: '0 20px 40px -20px rgba(var(--color-primary-rgb), 0.3)'
+          boxShadow: '0 20px 40px -20px rgba(0, 0, 0, 0.25)'
         }}
         viewport={{ once: true, margin: '-100px' }}
         transition={{ duration: motionTokens.duration.slow, ease: motionTokens.ease.outQuart }}
@@ -69,11 +69,11 @@ export const MetricsCounter: React.FC = () => {
           gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
           gap: '2rem',
           padding: '3rem 2.5rem',
-          backgroundColor: 'rgba(var(--color-surface-rgb), 0.7)',
+          backgroundColor: '#ffffff',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
           borderRadius: 'var(--radius-2xl)',
-          border: '1px solid rgba(var(--color-border-rgb), 0.5)',
+          border: '1px solid #e5e5e5',
           position: 'relative',
           overflow: 'hidden'
         }}
@@ -88,7 +88,7 @@ export const MetricsCounter: React.FC = () => {
             position: 'absolute',
             inset: 0,
             borderRadius: 'inherit',
-            border: '2px solid var(--color-primary)',
+            border: '2px solid #000000',
             pointerEvents: 'none',
             opacity: 0.1
           }}
@@ -103,13 +103,13 @@ export const MetricsCounter: React.FC = () => {
             transition={{ delay: 0.2 + (idx * motionTokens.stagger.medium), duration: motionTokens.duration.standard, ...motionTokens.spring.snappy }}
             style={{ textAlign: 'center', zIndex: 1 }}
           >
-            <div style={{ fontSize: 'clamp(2.5rem, 4vw, 3.5rem)', fontWeight: 800, color: 'var(--color-primary)', lineHeight: 1 }}>
+            <div style={{ fontSize: 'clamp(2.5rem, 4vw, 3.5rem)', fontWeight: 800, color: '#000000', lineHeight: 1 }}>
               <AnimatedNumber valueStr={s.value} />
             </div>
-            <div style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', marginTop: '0.75rem', marginBottom: '0.25rem' }}>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: '#000000', marginTop: '0.75rem', marginBottom: '0.25rem' }}>
               {s.label}
             </div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+            <div style={{ fontSize: '0.8rem', color: '#000000' }}>
               {s.detail}
             </div>
           </motion.div>

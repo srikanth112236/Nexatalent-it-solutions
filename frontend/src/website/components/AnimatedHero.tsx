@@ -31,15 +31,16 @@ export const AnimatedHero: React.FC<AnimatedHeroProps> = ({
 }) => {
   return (
     <section
+      className="font-sans"
       style={{
         position: 'relative',
         padding: '7rem 2rem 5rem 2rem',
         overflow: 'hidden',
         textAlign: 'center',
-        background: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59, 130, 246, 0.18), transparent 70%)',
+        backgroundColor: '#ffffff',
       }}
     >
-      {/* Background Grid Pattern (Aceternity style with breathing glow) */}
+      {/* Background Grid Pattern (Aceternity style) */}
       <motion.div
         animate={{
           opacity: [0.6, 0.9, 0.6],
@@ -53,7 +54,7 @@ export const AnimatedHero: React.FC<AnimatedHeroProps> = ({
         style={{
           position: 'absolute',
           inset: 0,
-          backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px)',
+          backgroundImage: 'radial-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1px)',
           backgroundSize: '24px 24px',
           maskImage: 'radial-gradient(ellipse 60% 50% at 50% 0%, #000 70%, transparent 100%)',
           WebkitMaskImage: 'radial-gradient(ellipse 60% 50% at 50% 0%, #000 70%, transparent 100%)',
@@ -73,20 +74,20 @@ export const AnimatedHero: React.FC<AnimatedHeroProps> = ({
             gap: '0.625rem',
             padding: '0.4rem 1.25rem',
             borderRadius: 'var(--radius-pill)',
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-            border: '1px solid rgba(59, 130, 246, 0.35)',
-            color: 'var(--color-primary-400)',
+            backgroundColor: '#000000',
+            border: '1px solid #000000',
+            color: '#ffffff',
             fontSize: '0.8125rem',
             fontWeight: 700,
             letterSpacing: '0.04em',
             marginBottom: '2rem',
-            boxShadow: '0 0 25px rgba(59, 130, 246, 0.25)',
+            boxShadow: '0 0 25px rgba(0, 0, 0, 0.25)',
           }}
         >
           <motion.span
             animate={{ scale: [1, 1.35, 1], opacity: [0.7, 1, 0.7] }}
             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-primary)' }}
+            style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#ffffff' }}
           />
           <span>{badgeText}</span>
         </motion.div>
@@ -102,8 +103,7 @@ export const AnimatedHero: React.FC<AnimatedHeroProps> = ({
             lineHeight: 1.1,
             letterSpacing: '-0.035em',
             marginBottom: '1.5rem',
-            color: '#ffffff',
-            textShadow: '0 4px 30px rgba(0, 0, 0, 0.5)',
+            color: '#000000',
           }}
         >
           {headline}
@@ -116,7 +116,7 @@ export const AnimatedHero: React.FC<AnimatedHeroProps> = ({
           transition={{ duration: 0.7, delay: 0.28, ease: motionTokens.ease.standard }}
           style={{
             fontSize: 'clamp(1.05rem, 1.8vw, 1.25rem)',
-            color: 'var(--color-text-muted)',
+            color: '#000000',
             lineHeight: 1.6,
             maxWidth: '720px',
             margin: '0 auto 2.5rem auto',
@@ -160,12 +160,12 @@ export const AnimatedHero: React.FC<AnimatedHeroProps> = ({
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: '1.5rem',
             padding: '1.75rem 2rem',
-            backgroundColor: 'rgba(17, 23, 38, 0.75)',
+            backgroundColor: '#ffffff',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
             borderRadius: 'var(--radius-xl)',
-            border: '1px solid var(--color-border)',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+            border: '1px solid #000000',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
           }}
         >
           {metrics.map((m, idx) => (
@@ -178,10 +178,10 @@ export const AnimatedHero: React.FC<AnimatedHeroProps> = ({
               whileHover={{ y: -3 }}
               style={{ textAlign: 'center' }}
             >
-              <div style={{ fontSize: '2.25rem', fontWeight: 900, color: '#ffffff', marginBottom: '0.25rem', letterSpacing: '-0.02em' }}>
+              <div style={{ fontSize: '2.25rem', fontWeight: 900, color: '#000000', marginBottom: '0.25rem', letterSpacing: '-0.02em' }}>
                 {m.value}
               </div>
-              <div style={{ fontSize: '0.8125rem', color: 'var(--color-primary-400)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+              <div style={{ fontSize: '0.8125rem', color: '#000000', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
                 {m.label}
               </div>
             </motion.div>

@@ -359,7 +359,7 @@ export function JobDetailPage() {
   const relatedJobs = Object.values(JOBS_DATABASE).filter((j) => j.id !== job.id);
 
   return (
-    <div className="bg-white min-h-screen text-slate-900 font-sans relative overflow-x-clip">
+    <div className="bg-white min-h-screen text-black font-sans relative overflow-x-clip">
       {/* SEO Head */}
       <SeoHead
         title={`${job.title} | Nexa Talent IT Solutions`}
@@ -373,18 +373,18 @@ export function JobDetailPage() {
 
       {/* Phase 7: verified live posting (eligible only) with a real apply path */}
       {liveJob && (
-        <section className="px-6 lg:px-16 bg-emerald-50/70 border-b border-emerald-200">
+        <section className="px-6 lg:px-16 bg-white border-b border-black">
           <div className="max-w-6xl mx-auto py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <div className="text-[11px] font-extrabold text-emerald-700 uppercase tracking-wider">Verified live opening • {liveJob.id}</div>
-              <div className="text-lg font-extrabold text-slate-900">{liveJob.title}</div>
-              <div className="text-xs text-slate-600 font-medium">
+              <div className="text-[11px] font-extrabold text-black uppercase tracking-wider">Verified live opening • {liveJob.id}</div>
+              <div className="text-lg font-extrabold text-black">{liveJob.title}</div>
+              <div className="text-xs text-black font-medium">
                 {[liveJob.companyName, liveJob.location, liveJob.employmentType].filter(Boolean).join(' • ')}
               </div>
             </div>
             <Link
               to={`/candidate/jobs/${encodeURIComponent(liveJob.id)}`}
-              className="px-6 py-3 rounded-xl bg-emerald-700 text-white font-bold text-sm text-center hover:bg-emerald-800"
+              className="px-6 py-3 rounded-xl bg-black text-white font-bold text-sm text-center hover:bg-neutral-800"
             >
               View & Apply →
             </Link>
@@ -393,27 +393,27 @@ export function JobDetailPage() {
       )}
 
       {/* Hero Header */}
-      <section className="relative pt-32 pb-16 px-6 lg:px-16 bg-[#FAF8F5] border-b border-slate-200">
+      <section className="relative pt-32 pb-16 px-6 lg:px-16 bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto space-y-6">
           
           {/* Breadcrumb Navigation */}
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
-            <Link to="/" className="hover:text-[#0265FF] transition-colors">Home</Link>
-            <ChevronRight size={14} className="text-slate-400" />
-            <Link to="/jobs" className="hover:text-[#0265FF] transition-colors">Jobs & Mandates</Link>
-            <ChevronRight size={14} className="text-slate-400" />
-            <span className="text-[#0265FF] font-bold">{job.title}</span>
+          <div className="flex items-center gap-2 text-xs font-semibold text-black">
+            <Link to="/" className="hover:text-black transition-colors">Home</Link>
+            <ChevronRight size={14} className="text-black" />
+            <Link to="/jobs" className="hover:text-black transition-colors">Jobs & Mandates</Link>
+            <ChevronRight size={14} className="text-black" />
+            <span className="text-black font-bold">{job.title}</span>
           </div>
 
           {/* Department & Urgency Badges */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-3.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#0265FF] text-xs font-extrabold uppercase tracking-wider">
+            <span className="px-3.5 py-1 rounded-full bg-white border border-black text-black text-xs font-extrabold uppercase tracking-wider">
               {job.department}
             </span>
-            <span className="px-3.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-extrabold uppercase tracking-wider">
+            <span className="px-3.5 py-1 rounded-full bg-white border border-black text-black text-xs font-extrabold uppercase tracking-wider">
               {job.clientType}
             </span>
-            <span className="px-3.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-extrabold uppercase tracking-wider">
+            <span className="px-3.5 py-1 rounded-full bg-white border border-black text-black text-xs font-extrabold uppercase tracking-wider">
               {job.urgency}
             </span>
           </div>
@@ -421,21 +421,21 @@ export function JobDetailPage() {
           {/* Job Title & Actions */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="space-y-3">
-              <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
+              <h1 className="text-3xl sm:text-5xl font-extrabold text-black tracking-tight leading-tight">
                 {job.title}
               </h1>
 
-              <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-slate-600 font-semibold">
+              <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-black font-semibold">
                 <span className="flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4 text-[#0265FF]" />
+                  <MapPin className="w-4 h-4 text-black" />
                   <span>{job.location} ({job.workMode})</span>
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <Clock className="w-4 h-4 text-[#0265FF]" />
+                  <Clock className="w-4 h-4 text-black" />
                   <span>{job.exp} Experience</span>
                 </span>
-                <span className="flex items-center gap-1.5 text-emerald-700 font-extrabold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-                  <IndianRupee className="w-4 h-4 text-emerald-600" />
+                <span className="flex items-center gap-1.5 text-black font-extrabold bg-white px-3 py-1 rounded-full border border-black">
+                  <IndianRupee className="w-4 h-4 text-black" />
                   <span>{job.ctc}</span>
                 </span>
               </div>
@@ -447,17 +447,17 @@ export function JobDetailPage() {
                 type="button"
                 onClick={() => setSaved(!saved)}
                 className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
-                  saved ? 'bg-blue-50 border-blue-300 text-[#0265FF]' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
+                  saved ? 'bg-black border-black text-white' : 'bg-white border-slate-300 text-black hover:bg-neutral-100'
                 }`}
                 title={saved ? 'Mandate Saved' : 'Save Mandate'}
               >
-                <Bookmark className="w-5 h-5" fill={saved ? '#0265FF' : 'none'} />
+                <Bookmark className="w-5 h-5" fill={saved ? '#ffffff' : 'none'} />
               </button>
 
               <button
                 type="button"
                 onClick={() => setApplyModalOpen(true)}
-                className="px-8 py-4 rounded-2xl bg-[#0265FF] hover:bg-[#004FBF] text-white font-bold text-sm shadow-[0_10px_30px_rgba(2,101,255,0.25)] transition-all flex items-center gap-2 cursor-pointer"
+                className="px-8 py-4 rounded-2xl bg-black hover:bg-neutral-800 text-white font-bold text-sm shadow-[0_10px_30px_rgba(0,0,0,0.25)] transition-all flex items-center gap-2 cursor-pointer"
               >
                 <span>Apply for this Mandate</span>
                 <ArrowRight className="w-4 h-4" />
@@ -477,18 +477,18 @@ export function JobDetailPage() {
             
             {/* Overview */}
             <div className="space-y-3">
-              <h2 className="text-2xl font-extrabold text-slate-900">Role Overview & Objective</h2>
-              <p className="text-base text-slate-700 leading-relaxed font-normal">
+              <h2 className="text-2xl font-extrabold text-black">Role Overview & Objective</h2>
+              <p className="text-base text-black leading-relaxed font-normal">
                 {job.summary}
               </p>
             </div>
 
             {/* Tech Stack Tags */}
             <div className="space-y-3">
-              <h3 className="text-lg font-extrabold text-slate-900">Required Technical Competencies</h3>
+              <h3 className="text-lg font-extrabold text-black">Required Technical Competencies</h3>
               <div className="flex flex-wrap gap-2">
                 {job.skills.map((s) => (
-                  <span key={s} className="px-3.5 py-1.5 rounded-xl bg-blue-50 border border-blue-200 text-[#0265FF] text-xs font-extrabold">
+                  <span key={s} className="px-3.5 py-1.5 rounded-xl bg-white border border-black text-black text-xs font-extrabold">
                     {s}
                   </span>
                 ))}
@@ -497,12 +497,12 @@ export function JobDetailPage() {
 
             {/* Key Responsibilities */}
             <div className="space-y-4">
-              <h3 className="text-lg font-extrabold text-slate-900">Key Responsibilities & Deliverables</h3>
+              <h3 className="text-lg font-extrabold text-black">Key Responsibilities & Deliverables</h3>
               <div className="space-y-3">
                 {job.responsibilities.map((r, i) => (
-                  <div key={i} className="flex items-start gap-3 p-4 rounded-2xl bg-[#FAF8F5] border border-slate-200">
-                    <CheckCircle2 className="w-5 h-5 text-[#0265FF] shrink-0 mt-0.5" />
-                    <span className="text-sm text-slate-800 leading-relaxed font-semibold">{r}</span>
+                  <div key={i} className="flex items-start gap-3 p-4 rounded-2xl bg-white border border-slate-200">
+                    <CheckCircle2 className="w-5 h-5 text-black shrink-0 mt-0.5" />
+                    <span className="text-sm text-black leading-relaxed font-semibold">{r}</span>
                   </div>
                 ))}
               </div>
@@ -510,39 +510,39 @@ export function JobDetailPage() {
 
             {/* Qualifications */}
             <div className="space-y-4">
-              <h3 className="text-lg font-extrabold text-slate-900">Candidate Experience & Qualifications</h3>
+              <h3 className="text-lg font-extrabold text-black">Candidate Experience & Qualifications</h3>
               <div className="space-y-3">
                 {job.requirements.map((req, i) => (
-                  <div key={i} className="flex items-start gap-3 p-4 rounded-2xl bg-[#FAF8F5] border border-slate-200">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                    <span className="text-sm text-slate-800 leading-relaxed font-semibold">{req}</span>
+                  <div key={i} className="flex items-start gap-3 p-4 rounded-2xl bg-white border border-slate-200">
+                    <CheckCircle2 className="w-5 h-5 text-black shrink-0 mt-0.5" />
+                    <span className="text-sm text-black leading-relaxed font-semibold">{req}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Interview Process Roadmap */}
-            <div className="p-8 rounded-3xl bg-[#FAF8F5] border border-slate-200 space-y-6 shadow-xs">
+            <div className="p-8 rounded-3xl bg-white border border-slate-200 space-y-6 shadow-xs">
               <div className="space-y-1">
-                <span className="text-xs font-extrabold text-[#0265FF] uppercase tracking-wider bg-blue-50 px-3 py-1 rounded-full border border-blue-200 inline-block">
+                <span className="text-xs font-extrabold text-black uppercase tracking-wider bg-white px-3 py-1 rounded-full border border-black inline-block">
                   TRANSPARENT PROCESS
                 </span>
-                <h3 className="text-2xl font-extrabold text-slate-900">4-Stage Candidate Evaluation Process</h3>
+                <h3 className="text-2xl font-extrabold text-black">4-Stage Candidate Evaluation Process</h3>
               </div>
 
               <div className="space-y-3">
                 {job.interviewStages.map((stg) => (
                   <div key={stg.step} className="p-5 rounded-2xl bg-white border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
                     <div className="flex items-center gap-3">
-                      <span className="w-8 h-8 rounded-xl bg-blue-50 text-[#0265FF] font-black flex items-center justify-center text-sm shrink-0">
+                      <span className="w-8 h-8 rounded-xl bg-white text-black font-black flex items-center justify-center text-sm shrink-0">
                         {stg.step}
                       </span>
                       <div>
-                        <h4 className="font-extrabold text-sm text-slate-900">{stg.name}</h4>
-                        <p className="text-xs text-slate-500 font-medium mt-0.5">Focus: {stg.focus}</p>
+                        <h4 className="font-extrabold text-sm text-black">{stg.name}</h4>
+                        <p className="text-xs text-black font-medium mt-0.5">Focus: {stg.focus}</p>
                       </div>
                     </div>
-                    <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full shrink-0">
+                    <span className="text-xs font-bold text-black bg-white px-3 py-1 rounded-full shrink-0">
                       {stg.duration}
                     </span>
                   </div>
@@ -556,14 +556,14 @@ export function JobDetailPage() {
           <div className="lg:col-span-4 space-y-6">
             
             {/* Express Apply Card */}
-            <div className="p-8 rounded-3xl bg-white border-2 border-[#0265FF] shadow-xl shadow-blue-500/10 space-y-5">
+            <div className="p-8 rounded-3xl bg-white border-2 border-black shadow-xl shadow-black/10 space-y-5">
               <div className="space-y-2">
-                <div className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#0265FF] uppercase tracking-wider">
+                <div className="inline-flex items-center gap-1.5 text-xs font-extrabold text-black uppercase tracking-wider">
                   <Sparkles className="w-4 h-4" />
                   <span>DIRECT CANDIDATE DESK</span>
                 </div>
-                <h3 className="text-xl font-extrabold text-slate-900">Apply for this Mandate</h3>
-                <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                <h3 className="text-xl font-extrabold text-black">Apply for this Mandate</h3>
+                <p className="text-xs text-black leading-relaxed font-normal">
                   Applications are reviewed directly by our senior practice leaders. Zero candidate fees.
                 </p>
               </div>
@@ -571,25 +571,25 @@ export function JobDetailPage() {
               <button
                 type="button"
                 onClick={() => setApplyModalOpen(true)}
-                className="w-full py-4 rounded-2xl bg-[#0265FF] hover:bg-[#004FBF] text-white font-bold text-sm shadow-lg shadow-blue-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-4 rounded-2xl bg-black hover:bg-neutral-800 text-white font-bold text-sm shadow-lg shadow-black/10 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Express Application (60s)</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
-              <div className="pt-2 border-t border-slate-100 flex items-center gap-2 text-xs text-emerald-700 font-semibold">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div className="pt-2 border-t border-slate-100 flex items-center gap-2 text-xs text-black font-semibold">
+                <ShieldCheck className="w-4 h-4 text-black shrink-0" />
                 <span>100% Confidential & Direct Engagement</span>
               </div>
             </div>
 
             {/* Approved Benefits Box */}
-            <div className="p-6 rounded-3xl bg-[#FAF8F5] border border-slate-200 space-y-4 shadow-xs">
-              <h4 className="font-extrabold text-base text-slate-900">Approved Compensation & Perks</h4>
-              <div className="space-y-3 text-xs text-slate-700 font-medium">
+            <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-4 shadow-xs">
+              <h4 className="font-extrabold text-base text-black">Approved Compensation & Perks</h4>
+              <div className="space-y-3 text-xs text-black font-medium">
                 {job.benefits.map((b, i) => (
                   <div key={i} className="flex items-start gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-black shrink-0 mt-0.5" />
                     <span>{b}</span>
                   </div>
                 ))}
@@ -598,12 +598,12 @@ export function JobDetailPage() {
 
             {/* Direct Contact Desk Card */}
             <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-3 shadow-xs">
-              <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">PRACTICE LEAD CONTACT</span>
-              <div className="space-y-2 text-xs font-semibold text-slate-800">
-                <div className="font-bold text-sm text-slate-900">Nexa Talent IT Solutions Executive Desk</div>
-                <div className="text-slate-600">Email: <a href="mailto:info@nexatalentitsolutions.com" className="text-[#0265FF] font-bold">info@nexatalentitsolutions.com</a></div>
-                <div className="text-slate-600">Hotline: <a href="tel:+917019696166" className="text-slate-900 font-bold">+91 70196 96166</a></div>
-                <div className="text-slate-500 text-[11px] pt-1">Corporate HQ: Skyline Icon, Marol, Andheri East, Mumbai 400059</div>
+              <span className="text-[10px] font-extrabold uppercase text-black tracking-wider">PRACTICE LEAD CONTACT</span>
+              <div className="space-y-2 text-xs font-semibold text-black">
+                <div className="font-bold text-sm text-black">Nexa Talent IT Solutions Executive Desk</div>
+                <div className="text-black">Email: <a href="mailto:info@nexatalentitsolutions.com" className="text-black font-bold">info@nexatalentitsolutions.com</a></div>
+                <div className="text-black">Hotline: <a href="tel:+917019696166" className="text-black font-bold">+91 70196 96166</a></div>
+                <div className="text-black text-[11px] pt-1">Corporate HQ: Skyline Icon, Marol, Andheri East, Mumbai 400059</div>
               </div>
             </div>
 
@@ -614,16 +614,16 @@ export function JobDetailPage() {
         {/* ============================================================================
          * DYNAMIC JOB-SPECIFIC VETTING METHODOLOGY SECTION
          * ============================================================================ */}
-        <div className="p-8 sm:p-12 rounded-3xl bg-[#FAF8F5] border border-slate-200 space-y-8 shadow-xs">
+        <div className="p-8 sm:p-12 rounded-3xl bg-white border border-slate-200 space-y-8 shadow-xs">
           <div className="text-center max-w-3xl mx-auto space-y-3">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#0265FF] text-xs font-extrabold uppercase tracking-wider">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white border border-black text-black text-xs font-extrabold uppercase tracking-wider">
               <Sparkles size={14} />
               <span>RIGOROUS MANDATE VETTING METHODOLOGY</span>
             </div>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-black tracking-tight">
               Deterministic Candidate Evaluation for {job.title}
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600">
+            <p className="text-xs sm:text-sm text-black">
               Our practitioner evaluation framework customized specifically for {job.department} hiring.
             </p>
           </div>
@@ -633,10 +633,10 @@ export function JobDetailPage() {
             {/* Left Interactive Phase Selector */}
             <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 space-y-4 shadow-sm">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold bg-[#0265FF] text-white px-2.5 py-1 rounded-md">
+                <span className="text-xs font-bold bg-white text-black px-2.5 py-1 rounded-md">
                   {currentVetting.phase}
                 </span>
-                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                <span className="text-xs font-bold text-black bg-white px-2.5 py-0.5 rounded-full border border-black">
                   ● ACTIVE FOCUS ({activeVettingPhase + 1}/4)
                 </span>
               </div>
@@ -649,8 +649,8 @@ export function JobDetailPage() {
                     onClick={() => setActiveVettingPhase(idx)}
                     className={`w-full p-3.5 rounded-xl text-left text-xs font-bold transition-all cursor-pointer flex items-center justify-between ${
                       activeVettingPhase === idx
-                        ? 'bg-blue-50 text-[#0265FF] border border-blue-200 shadow-xs'
-                        : 'bg-[#FAF8F5] text-slate-700 hover:bg-slate-100 border border-slate-200'
+                        ? 'bg-black text-white border border-black shadow-xs'
+                        : 'bg-white text-black hover:bg-neutral-100 border border-slate-200'
                     }`}
                   >
                     <span>{idx + 1}. {v.title}</span>
@@ -659,31 +659,31 @@ export function JobDetailPage() {
                 ))}
               </div>
 
-              <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-200 space-y-1">
-                <div className="text-[10px] font-extrabold uppercase text-slate-500">Phase Metric SLA</div>
-                <div className="text-2xl font-black text-[#0265FF]">{currentVetting.metric}</div>
-                <div className="text-xs font-bold text-emerald-700">✓ {currentVetting.metricLabel}</div>
+              <div className="p-4 rounded-xl bg-white border border-black space-y-1">
+                <div className="text-[10px] font-extrabold uppercase text-black">Phase Metric SLA</div>
+                <div className="text-2xl font-black text-black">{currentVetting.metric}</div>
+                <div className="text-xs font-bold text-black">✓ {currentVetting.metricLabel}</div>
               </div>
             </div>
 
             {/* Right Detailed Phase Rubric */}
             <div className="lg:col-span-7 bg-white p-8 rounded-2xl border border-slate-200 space-y-5 shadow-sm">
               <div>
-                <span className="text-xs font-extrabold text-[#0265FF] uppercase tracking-wider block mb-1">
+                <span className="text-xs font-extrabold text-black uppercase tracking-wider block mb-1">
                   {currentVetting.phase} EVALUATION CONSOLE
                 </span>
-                <h3 className="text-xl font-extrabold text-slate-900">{currentVetting.title}</h3>
+                <h3 className="text-xl font-extrabold text-black">{currentVetting.title}</h3>
               </div>
 
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              <p className="text-xs sm:text-sm text-black leading-relaxed">
                 {currentVetting.description}
               </p>
 
               <div className="space-y-2 pt-4 border-t border-slate-100">
-                <span className="text-xs font-bold text-slate-900 block">Vetting Verification Criteria:</span>
+                <span className="text-xs font-bold text-black block">Vetting Verification Criteria:</span>
                 {currentVetting.rubricItems.map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-2.5 text-xs font-semibold text-slate-700">
-                    <CheckCircle2 className="w-4 h-4 text-[#0265FF] shrink-0" />
+                  <div key={idx} className="flex items-center gap-2.5 text-xs font-semibold text-black">
+                    <CheckCircle2 className="w-4 h-4 text-black shrink-0" />
                     <span>{item}</span>
                   </div>
                 ))}
@@ -698,41 +698,41 @@ export function JobDetailPage() {
          * ============================================================================ */}
         <div className="space-y-6">
           <div className="space-y-2">
-            <span className="text-xs font-bold text-[#0265FF] uppercase tracking-wider bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">
+            <span className="text-xs font-bold text-black uppercase tracking-wider bg-white px-3.5 py-1 rounded-full border border-black">
               EXPLORE SIMILAR MANDATES
             </span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-black tracking-tight">
               Related Retained Mandates in {job.department}
             </h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {relatedJobs.map((rel) => (
-              <div key={rel.id} className="p-6 rounded-3xl bg-[#FAF8F5] border border-slate-200 space-y-4 hover:border-[#0265FF] hover:shadow-xl transition-all shadow-xs flex flex-col justify-between">
+              <div key={rel.id} className="p-6 rounded-3xl bg-white border border-slate-200 space-y-4 hover:border-black hover:shadow-xl transition-all shadow-xs flex flex-col justify-between">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-blue-50 text-[#0265FF] border border-blue-200">
+                    <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-white text-black border border-black">
                       {rel.urgency}
                     </span>
-                    <span className="text-xs font-bold text-slate-500">{rel.clientType}</span>
+                    <span className="text-xs font-bold text-black">{rel.clientType}</span>
                   </div>
 
-                  <h3 className="font-extrabold text-slate-900 text-lg">{rel.title}</h3>
+                  <h3 className="font-extrabold text-black text-lg">{rel.title}</h3>
 
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 font-semibold">
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-black font-semibold">
                     <span className="flex items-center gap-1">
-                      <MapPin size={14} className="text-[#0265FF]" />
+                      <MapPin size={14} className="text-black" />
                       {rel.location}
                     </span>
-                    <span className="flex items-center gap-1 text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                      <IndianRupee size={14} className="text-emerald-600" />
+                    <span className="flex items-center gap-1 text-black font-bold bg-white px-2 py-0.5 rounded border border-black">
+                      <IndianRupee size={14} className="text-black" />
                       {rel.ctc}
                     </span>
                   </div>
 
                   <div className="flex flex-wrap gap-1.5 pt-2">
                     {rel.skills.slice(0, 3).map((sk, idx) => (
-                      <span key={idx} className="text-[10px] font-bold px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700">
+                      <span key={idx} className="text-[10px] font-bold px-2 py-0.5 rounded bg-white border border-slate-200 text-black">
                         {sk}
                       </span>
                     ))}
@@ -740,10 +740,10 @@ export function JobDetailPage() {
                 </div>
 
                 <div className="pt-4 border-t border-slate-200 flex items-center justify-between">
-                  <span className="text-xs text-slate-500 font-bold">Exp: {rel.exp}</span>
+                  <span className="text-xs text-black font-bold">Exp: {rel.exp}</span>
                   <Link
                     to={`/jobs/${rel.id}`}
-                    className="px-4 py-2 rounded-xl bg-[#0265FF] hover:bg-[#004FBF] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer text-decoration-none"
+                    className="px-4 py-2 rounded-xl bg-black hover:bg-neutral-800 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer text-decoration-none"
                   >
                     <span>View Mandate Details</span>
                     <ArrowRight size={14} />
@@ -762,7 +762,7 @@ export function JobDetailPage() {
       {/* Interactive Resume Upload & Candidate Details Application Drawer / Modal */}
       <AnimatePresence>
         {applyModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -771,32 +771,32 @@ export function JobDetailPage() {
             >
               {submitted ? (
                 <div className="text-center py-6 space-y-5">
-                  <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center mx-auto shadow-sm">
-                    <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+                  <div className="w-16 h-16 rounded-full bg-white text-black border border-black flex items-center justify-center mx-auto shadow-sm">
+                    <CheckCircle2 className="w-10 h-10 text-black" />
                   </div>
 
                   <div className="space-y-2">
-                    <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 uppercase tracking-wider">
+                    <span className="text-xs font-extrabold text-black bg-white px-3 py-1 rounded-full border border-black uppercase tracking-wider">
                       ● REQUEST RECEIVED
                     </span>
-                    <h3 className="text-2xl font-black text-slate-900">Interest noted!</h3>
+                    <h3 className="text-2xl font-black text-black">Interest noted!</h3>
                     {appReferenceId && (
-                      <div className="text-xs font-mono font-bold text-[#0265FF] bg-blue-50 py-1 px-3 rounded-lg inline-block border border-blue-200">
+                      <div className="text-xs font-mono font-bold text-black bg-white py-1 px-3 rounded-lg inline-block border border-black">
                         Enquiry ID: {appReferenceId}
                       </div>
                     )}
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-slate-200 text-left text-xs text-slate-700 space-y-2">
-                    <p className="font-semibold text-slate-900">What happens next?</p>
+                  <div className="p-4 rounded-2xl bg-white border border-slate-200 text-left text-xs text-black space-y-2">
+                    <p className="font-semibold text-black">What happens next?</p>
                     <p>1. Our practice team will review your interest in <strong>{liveJob?.title || job.title}</strong> and reach out on your email.</p>
                     <p>2. For a tracked application with status updates, sign in to the candidate portal and apply directly.</p>
-                    <p className="text-slate-500 pt-1 border-t border-slate-200">Direct Desk: <strong className="text-slate-900">info@nexatalentitsolutions.com</strong> | Phone: <strong className="text-slate-900">+91 70196 96166</strong></p>
+                    <p className="text-black pt-1 border-t border-slate-200">Direct Desk: <strong className="text-black">info@nexatalentitsolutions.com</strong> | Phone: <strong className="text-black">+91 70196 96166</strong></p>
                   </div>
 
                   <Link
                     to={liveJob ? `/candidate/jobs/${encodeURIComponent(liveJob.id)}` : '/candidate/jobs'}
-                    className="w-full py-3.5 rounded-2xl bg-emerald-700 text-white font-bold text-sm shadow-md cursor-pointer text-center block hover:bg-emerald-800"
+                    className="w-full py-3.5 rounded-2xl bg-black text-white font-bold text-sm shadow-md cursor-pointer text-center block hover:bg-neutral-800"
                   >
                     Sign in & apply with tracking →
                   </Link>
@@ -807,7 +807,7 @@ export function JobDetailPage() {
                       setSubmitted(false);
                       setApplyModalOpen(false);
                     }}
-                    className="w-full py-3.5 rounded-2xl bg-[#0265FF] text-white font-bold text-sm shadow-md cursor-pointer"
+                    className="w-full py-3.5 rounded-2xl bg-black text-white font-bold text-sm shadow-md cursor-pointer"
                   >
                     Done
                   </button>
@@ -818,15 +818,15 @@ export function JobDetailPage() {
                   {/* Header */}
                   <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                     <div>
-                      <span className="text-[10px] font-extrabold text-[#0265FF] uppercase tracking-wider block mb-0.5">
+                      <span className="text-[10px] font-extrabold text-black uppercase tracking-wider block mb-0.5">
                         DIRECT MANDATE APPLICATION
                       </span>
-                      <h3 className="text-xl font-extrabold text-slate-900">{job.title}</h3>
+                      <h3 className="text-xl font-extrabold text-black">{job.title}</h3>
                     </div>
                     <button
                       type="button"
                       onClick={() => setApplyModalOpen(false)}
-                      className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:text-slate-900 flex items-center justify-center font-bold text-sm cursor-pointer"
+                      className="w-8 h-8 rounded-full bg-white text-black hover:text-black flex items-center justify-center font-bold text-sm cursor-pointer"
                     >
                       ✕
                     </button>
@@ -835,14 +835,14 @@ export function JobDetailPage() {
                   {/* Candidate Form */}
                   <form onSubmit={handleApplicationSubmit} className="space-y-4 text-xs">
                     {applyError && (
-                      <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 font-bold" role="alert">
+                      <div className="p-3 rounded-xl bg-white border border-black text-black font-bold" role="alert">
                         {applyError}
                       </div>
                     )}
                     
                     <div>
-                      <label className="block font-bold text-slate-800 mb-1 flex items-center gap-1">
-                        <User size={13} className="text-[#0265FF]" />
+                      <label className="block font-bold text-black mb-1 flex items-center gap-1">
+                        <User size={13} className="text-black" />
                         <span>Full Name *</span>
                       </label>
                       <input
@@ -851,14 +851,14 @@ export function JobDetailPage() {
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         placeholder="e.g. Rahul Sharma"
-                        className="w-full p-3 rounded-xl bg-[#FAF8F5] border border-slate-200 text-slate-900 font-semibold focus:outline-none focus:border-[#0265FF] focus:bg-white transition-all text-xs"
+                        className="w-full p-3 rounded-xl bg-white border border-slate-200 text-black font-semibold focus:outline-none focus:border-black focus:bg-white transition-all text-xs"
                       />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block font-bold text-slate-800 mb-1 flex items-center gap-1">
-                          <Mail size={13} className="text-[#0265FF]" />
+                        <label className="block font-bold text-black mb-1 flex items-center gap-1">
+                          <Mail size={13} className="text-black" />
                           <span>Email Address *</span>
                         </label>
                         <input
@@ -867,13 +867,13 @@ export function JobDetailPage() {
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           placeholder="rahul@domain.com"
-                          className="w-full p-3 rounded-xl bg-[#FAF8F5] border border-slate-200 text-slate-900 font-semibold focus:outline-none focus:border-[#0265FF] focus:bg-white transition-all text-xs"
+                          className="w-full p-3 rounded-xl bg-white border border-slate-200 text-black font-semibold focus:outline-none focus:border-black focus:bg-white transition-all text-xs"
                         />
                       </div>
 
                       <div>
-                        <label className="block font-bold text-slate-800 mb-1 flex items-center gap-1">
-                          <Phone size={13} className="text-[#0265FF]" />
+                        <label className="block font-bold text-black mb-1 flex items-center gap-1">
+                          <Phone size={13} className="text-black" />
                           <span>Phone / WhatsApp *</span>
                         </label>
                         <input
@@ -882,21 +882,21 @@ export function JobDetailPage() {
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
                           placeholder="+91 98765 43210"
-                          className="w-full p-3 rounded-xl bg-[#FAF8F5] border border-slate-200 text-slate-900 font-semibold focus:outline-none focus:border-[#0265FF] focus:bg-white transition-all text-xs"
+                          className="w-full p-3 rounded-xl bg-white border border-slate-200 text-black font-semibold focus:outline-none focus:border-black focus:bg-white transition-all text-xs"
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
-                        <label className="block font-bold text-slate-800 mb-1 flex items-center gap-1">
-                          <Calendar size={13} className="text-[#0265FF]" />
+                        <label className="block font-bold text-black mb-1 flex items-center gap-1">
+                          <Calendar size={13} className="text-black" />
                           <span>Notice Period *</span>
                         </label>
                         <select
                           value={noticePeriod}
                           onChange={(e) => setNoticePeriod(e.target.value)}
-                          className="w-full p-3 rounded-xl bg-[#FAF8F5] border border-slate-200 text-slate-900 font-semibold focus:outline-none focus:border-[#0265FF] focus:bg-white transition-all text-xs"
+                          className="w-full p-3 rounded-xl bg-white border border-slate-200 text-black font-semibold focus:outline-none focus:border-black focus:bg-white transition-all text-xs"
                         >
                           <option>Immediate / Serving Notice</option>
                           <option>15 - 30 Days</option>
@@ -906,8 +906,8 @@ export function JobDetailPage() {
                       </div>
 
                       <div>
-                        <label className="block font-bold text-slate-800 mb-1 flex items-center gap-1">
-                          <IndianRupee size={13} className="text-[#0265FF]" />
+                        <label className="block font-bold text-black mb-1 flex items-center gap-1">
+                          <IndianRupee size={13} className="text-black" />
                           <span>Current CTC</span>
                         </label>
                         <input
@@ -915,13 +915,13 @@ export function JobDetailPage() {
                           value={currentCtc}
                           onChange={(e) => setCurrentCtc(e.target.value)}
                           placeholder="e.g. ₹28 LPA"
-                          className="w-full p-3 rounded-xl bg-[#FAF8F5] border border-slate-200 text-slate-900 font-semibold focus:outline-none focus:border-[#0265FF] focus:bg-white transition-all text-xs"
+                          className="w-full p-3 rounded-xl bg-white border border-slate-200 text-black font-semibold focus:outline-none focus:border-black focus:bg-white transition-all text-xs"
                         />
                       </div>
 
                       <div>
-                        <label className="block font-bold text-slate-800 mb-1 flex items-center gap-1">
-                          <IndianRupee size={13} className="text-emerald-600" />
+                        <label className="block font-bold text-black mb-1 flex items-center gap-1">
+                          <IndianRupee size={13} className="text-black" />
                           <span>Expected CTC</span>
                         </label>
                         <input
@@ -929,19 +929,19 @@ export function JobDetailPage() {
                           value={expectedCtc}
                           onChange={(e) => setExpectedCtc(e.target.value)}
                           placeholder="e.g. ₹38 LPA"
-                          className="w-full p-3 rounded-xl bg-[#FAF8F5] border border-slate-200 text-slate-900 font-semibold focus:outline-none focus:border-[#0265FF] focus:bg-white transition-all text-xs"
+                          className="w-full p-3 rounded-xl bg-white border border-slate-200 text-black font-semibold focus:outline-none focus:border-black focus:bg-white transition-all text-xs"
                         />
                       </div>
                     </div>
 
                     {/* Drag & Drop File Upload */}
                     <div>
-                      <label className="block font-bold text-slate-800 mb-1 flex items-center gap-1">
-                        <FileText size={13} className="text-[#0265FF]" />
+                      <label className="block font-bold text-black mb-1 flex items-center gap-1">
+                        <FileText size={13} className="text-black" />
                         <span>Upload Resume (PDF / DOCX) *</span>
                       </label>
 
-                      <label className="relative flex flex-col items-center justify-center p-5 rounded-2xl border-2 border-dashed border-slate-300 hover:border-[#0265FF] bg-[#FAF8F5] hover:bg-blue-50/50 transition-all cursor-pointer">
+                      <label className="relative flex flex-col items-center justify-center p-5 rounded-2xl border-2 border-dashed border-slate-300 hover:border-black bg-white hover:bg-neutral-100 transition-all cursor-pointer">
                         <input
                           type="file"
                           required
@@ -949,11 +949,11 @@ export function JobDetailPage() {
                           onChange={handleFileChange}
                           className="absolute inset-0 opacity-0 cursor-pointer"
                         />
-                        <Upload className="w-6 h-6 text-[#0265FF] mb-1.5" />
-                        <span className="font-bold text-slate-800">
+                        <Upload className="w-6 h-6 text-black mb-1.5" />
+                        <span className="font-bold text-black">
                           {resumeFile ? resumeFile.name : 'Click to Upload or Drag & Drop Resume'}
                         </span>
-                        <span className="text-[10px] text-slate-500 mt-0.5">
+                        <span className="text-[10px] text-black mt-0.5">
                           {resumeFile ? `${(resumeFile.size / 1024 / 1024).toFixed(2)} MB • Selected` : 'PDF, DOCX up to 10MB'}
                         </span>
                       </label>
@@ -963,7 +963,7 @@ export function JobDetailPage() {
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full py-4 rounded-2xl bg-[#0265FF] hover:bg-[#004FBF] text-white font-bold text-sm shadow-lg shadow-blue-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
+                      className="w-full py-4 rounded-2xl bg-black hover:bg-neutral-800 text-white font-bold text-sm shadow-lg shadow-black/10 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
                     >
                       {isSubmitting ? (
                         <span>Encrypting & Dispatching Application...</span>

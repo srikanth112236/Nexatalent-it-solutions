@@ -40,7 +40,7 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
   };
 
   return (
-    <section style={{ padding: '5rem 2rem', position: 'relative' }}>
+    <section className="font-sans" style={{ padding: '5rem 2rem', position: 'relative', backgroundColor: '#ffffff' }}>
       <motion.div 
         style={{ maxWidth: '1200px', margin: '0 auto' }}
         initial="hidden"
@@ -53,17 +53,17 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
             style={{
               fontSize: '0.8125rem',
               fontWeight: 700,
-              color: 'var(--color-primary-400)',
+              color: '#000000',
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
             }}
           >
             {badge}
           </span>
-          <h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: 'var(--color-text)', marginTop: '0.5rem' }}>
+          <h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: '#000000', marginTop: '0.5rem' }}>
             {title}
           </h2>
-          <p style={{ color: 'var(--color-text-secondary)', maxWidth: '640px', margin: '0.75rem auto 0 auto' }}>
+          <p style={{ color: '#000000', maxWidth: '640px', margin: '0.75rem auto 0 auto' }}>
             {subtitle}
           </p>
         </motion.div>
@@ -83,13 +83,12 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
             style={{
               gridColumn: 'span 7',
               borderRadius: 'var(--radius-2xl)',
-              backgroundColor: 'var(--color-surface)',
-              border: '1px solid var(--color-border)',
+              backgroundColor: '#ffffff',
+              border: '1px solid #e5e5e5',
               padding: '2.5rem',
               position: 'relative',
               overflow: 'hidden',
               boxShadow: 'var(--shadow-md)',
-              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.8) 100%)',
               perspective: 1000,
               transformStyle: 'preserve-3d',
             }}
@@ -99,8 +98,8 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
                 width: '44px',
                 height: '44px',
                 borderRadius: 'var(--radius-lg)',
-                backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                color: 'var(--color-primary-400)',
+                backgroundColor: '#000000',
+                color: '#ffffff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -111,34 +110,34 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
             >
               <Cpu size={24} />
             </motion.div>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-text)', marginBottom: '0.75rem' }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#000000', marginBottom: '0.75rem' }}>
               Semantic Vector Matching Engine
             </h3>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+            <p style={{ color: '#000000', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
               We do not query buzzwords. Our proprietary indexing parses GitHub contributions, system concurrency limits, architecture publications, and validated compensation expectations across 45,000+ engineers.
             </p>
 
             {/* Terminal snippet mockup */}
             <motion.div
               style={{
-                backgroundColor: 'rgba(10, 15, 29, 0.8)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+                backgroundColor: '#ffffff',
+                border: '1px solid #000000',
                 borderRadius: 'var(--radius-lg)',
                 padding: '1rem',
-                fontFamily: 'monospace',
+                fontFamily: 'var(--font-family-mono, monospace)',
                 fontSize: '0.75rem',
-                color: '#94a3b8',
+                color: '#000000',
               }}
               initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.5 }}
               viewport={{ once: true }}
             >
-              <div style={{ color: '#22c55e', marginBottom: '0.25rem' }}>
+              <div style={{ color: '#000000', marginBottom: '0.25rem' }}>
                 $ nexatalent calibrate --role "Principal SRE" --stack "Rust, K8s, eBPF"
               </div>
               <motion.div 
-                style={{ color: 'var(--color-text-tertiary)' }}
+                style={{ color: '#000000' }}
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
                 transition={{ delay: 0.8 }}
@@ -156,8 +155,8 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
             style={{
               gridColumn: 'span 5',
               borderRadius: 'var(--radius-2xl)',
-              backgroundColor: 'var(--color-surface)',
-              border: '1px solid var(--color-border)',
+              backgroundColor: '#ffffff',
+              border: '1px solid #e5e5e5',
               padding: '2.5rem',
               display: 'flex',
               flexDirection: 'column',
@@ -172,8 +171,8 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
                   width: '44px',
                   height: '44px',
                   borderRadius: 'var(--radius-lg)',
-                  backgroundColor: 'rgba(34, 197, 94, 0.15)',
-                  color: 'var(--color-success)',
+                  backgroundColor: '#000000',
+                  color: '#ffffff',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -184,14 +183,14 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
               >
                 <ShieldCheck size={24} />
               </motion.div>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-text)', marginBottom: '0.75rem' }}>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#000000', marginBottom: '0.75rem' }}>
                 90-Day Unconditional Guarantee
               </h3>
-              <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9375rem', lineHeight: 1.6 }}>
+              <p style={{ color: '#000000', fontSize: '0.9375rem', lineHeight: 1.6 }}>
                 Every senior and executive placement is insured with our strict 90-day replacement commitment. If a candidate is not the right fit, we remount the search immediately at zero additional expense.
               </p>
             </div>
-            <div style={{ fontSize: '0.8125rem', color: 'var(--color-success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '1rem' }}>
+            <div style={{ fontSize: '0.8125rem', color: '#000000', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '1rem' }}>
               <span>100% Contractually Enforced</span>
             </div>
           </motion.div>
@@ -203,8 +202,8 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
             style={{
               gridColumn: 'span 5',
               borderRadius: 'var(--radius-2xl)',
-              backgroundColor: 'var(--color-surface)',
-              border: '1px solid var(--color-border)',
+              backgroundColor: '#ffffff',
+              border: '1px solid #e5e5e5',
               padding: '2.5rem',
               boxShadow: 'var(--shadow-md)',
               display: 'flex',
@@ -219,8 +218,8 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
                   width: '44px',
                   height: '44px',
                   borderRadius: 'var(--radius-lg)',
-                  backgroundColor: 'rgba(168, 85, 247, 0.15)',
-                  color: '#c084fc',
+                  backgroundColor: '#000000',
+                  color: '#ffffff',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -231,14 +230,14 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
               >
                 <Globe size={24} />
               </motion.div>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-text)', marginBottom: '0.75rem' }}>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#000000', marginBottom: '0.75rem' }}>
                 Global Cross-Border Footprint
               </h3>
-              <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9375rem', lineHeight: 1.6 }}>
+              <p style={{ color: '#000000', fontSize: '0.9375rem', lineHeight: 1.6 }}>
                 Connecting enterprise clients across the United States, United Kingdom, and the premier Indian engineering hubs of Bangalore, Hyderabad, and Pune.
               </p>
             </div>
-            <div style={{ fontSize: '0.8125rem', color: 'var(--color-primary-400)', fontWeight: 600 }}>
+            <div style={{ fontSize: '0.8125rem', color: '#000000', fontWeight: 600 }}>
               6 Jurisdictions · Global Relocation Support
             </div>
           </motion.div>
@@ -250,11 +249,10 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
             style={{
               gridColumn: 'span 7',
               borderRadius: 'var(--radius-2xl)',
-              backgroundColor: 'var(--color-surface)',
-              border: '1px solid var(--color-border)',
+              backgroundColor: '#ffffff',
+              border: '1px solid #e5e5e5',
               padding: '2.5rem',
               boxShadow: 'var(--shadow-md)',
-              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.4) 100%)',
               perspective: 1000,
             }}
           >
@@ -263,8 +261,8 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
                 width: '44px',
                 height: '44px',
                 borderRadius: 'var(--radius-lg)',
-                backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                color: 'var(--color-primary-400)',
+                backgroundColor: '#000000',
+                color: '#ffffff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -275,10 +273,10 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
             >
               <Activity size={24} />
             </motion.div>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-text)', marginBottom: '0.75rem' }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#000000', marginBottom: '0.75rem' }}>
               Real-Time Client SLA Portal
             </h3>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+            <p style={{ color: '#000000', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
               Never wonder where your candidates stand. Access a private, encrypted dashboard with live candidate status, feedback submission, video recording links, and SLA clocks.
             </p>
             <Link
@@ -289,7 +287,7 @@ export const BentoContentGrid: React.FC<BentoContentGridProps> = ({
                 gap: '0.4rem',
                 fontSize: '0.875rem',
                 fontWeight: 600,
-                color: 'var(--color-primary-400)',
+                color: '#000000',
                 textDecoration: 'none',
               }}
             >

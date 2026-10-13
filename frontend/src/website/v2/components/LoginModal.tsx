@@ -41,7 +41,7 @@ export function LoginModal({
         type="button"
         aria-label="Close login"
         onClick={onClose}
-        className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm focus-visible:outline-none"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm focus-visible:outline-none"
       />
 
       {/* dialog */}
@@ -57,20 +57,20 @@ export function LoginModal({
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-2 focus-visible:outline-[#0265FF]"
+          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full text-black transition-colors hover:bg-slate-100 hover:text-black focus-visible:outline-2 focus-visible:outline-black"
         >
           <X size={18} aria-hidden />
         </button>
 
-        <span className="inline-block rounded-full bg-[#0265FF]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#0265FF]">
+        <span className="inline-block rounded-full bg-black/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-black">
           Sign in to apply
         </span>
-        <h2 id="login-modal-title" className="mt-3 text-xl font-extrabold tracking-tight text-slate-950">
+        <h2 id="login-modal-title" className="mt-3 text-xl font-extrabold tracking-tight text-black">
           Login to your account
         </h2>
         {jobTitle ? (
-          <p className="mt-1.5 text-sm text-slate-600">
-            Applying for <strong className="text-slate-900">{jobTitle}</strong>
+          <p className="mt-1.5 text-sm text-black">
+            Applying for <strong className="text-black">{jobTitle}</strong>
           </p>
         ) : null}
 
@@ -82,57 +82,57 @@ export function LoginModal({
           }}
         >
           <div>
-            <label htmlFor="login-email" className="mb-1.5 block text-xs font-bold text-slate-700">
+            <label htmlFor="login-email" className="mb-1.5 block text-xs font-bold text-black">
               Email or mobile
             </label>
-            <div className="flex min-h-[46px] items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 focus-within:border-[#0265FF] focus-within:ring-2 focus-within:ring-[#0265FF]/15">
-              <Mail size={16} className="shrink-0 text-slate-400" aria-hidden />
+            <div className="flex min-h-[46px] items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 focus-within:border-black focus-within:ring-2 focus-within:ring-black/15">
+              <Mail size={16} className="shrink-0 text-black" aria-hidden />
               <input
                 id="login-email"
                 type="text"
                 autoComplete="username"
                 placeholder="you@company.com"
-                className="min-h-[42px] w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+                className="min-h-[42px] w-full bg-transparent text-sm outline-none placeholder:text-black"
               />
             </div>
           </div>
 
           <div>
             <div className="mb-1.5 flex items-center justify-between">
-              <label htmlFor="login-password" className="block text-xs font-bold text-slate-700">
+              <label htmlFor="login-password" className="block text-xs font-bold text-black">
                 Password
               </label>
-              <Link to="/forgot-password" className="text-xs font-bold text-[#0265FF] hover:underline">
+              <Link to="/forgot-password" className="text-xs font-bold text-black hover:underline">
                 Forgot password?
               </Link>
             </div>
-            <div className="flex min-h-[46px] items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 focus-within:border-[#0265FF] focus-within:ring-2 focus-within:ring-[#0265FF]/15">
-              <Lock size={16} className="shrink-0 text-slate-400" aria-hidden />
+            <div className="flex min-h-[46px] items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 focus-within:border-black focus-within:ring-2 focus-within:ring-black/15">
+              <Lock size={16} className="shrink-0 text-black" aria-hidden />
               <input
                 id="login-password"
                 type="password"
                 autoComplete="current-password"
                 placeholder="••••••••"
-                className="min-h-[42px] w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+                className="min-h-[42px] w-full bg-transparent text-sm outline-none placeholder:text-black"
               />
             </div>
           </div>
 
           <button
             type="submit"
-            className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full bg-[#0265FF] text-sm font-bold text-white shadow-lg shadow-[#0265FF]/25 transition-colors hover:bg-[#0055db] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0265FF]"
+            className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full bg-black text-sm font-bold text-white shadow-lg shadow-black/25 transition-colors hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
           >
             Sign in & apply <ArrowRight size={15} aria-hidden />
           </button>
         </form>
 
-        <p className="mt-5 text-center text-sm text-slate-600">
+        <p className="mt-5 text-center text-sm text-black">
           New to NexaTalent?{' '}
-          <Link to="/candidate/register" className="font-bold text-[#0265FF] hover:underline">
+          <Link to="/candidate/register" className="font-bold text-black hover:underline">
             Create a free profile
           </Link>
         </p>
-        <p className="mt-2 text-center text-[11px] leading-relaxed text-slate-400">
+        <p className="mt-2 text-center text-[11px] leading-relaxed text-black">
           One profile applies to every matched mandate — no spam, ever.
         </p>
       </div>

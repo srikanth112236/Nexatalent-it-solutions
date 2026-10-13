@@ -131,24 +131,24 @@ export const RecruitmentJourneyMap: React.FC<RecruitmentJourneyMapProps> = ({
   }, [activeTrack]);
 
   return (
-    <section ref={sectionRef} style={{ padding: '5rem 2rem', position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center' }}>
+    <section ref={sectionRef} className="font-sans" style={{ padding: '5rem 2rem', position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', backgroundColor: '#ffffff' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
           <span
             style={{
               fontSize: '0.8125rem',
               fontWeight: 700,
-              color: 'var(--color-primary-400)',
+              color: '#000000',
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
             }}
           >
             {badge}
           </span>
-          <h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: 'var(--color-text)', marginTop: '0.5rem' }}>
+          <h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: '#000000', marginTop: '0.5rem' }}>
             {title}
           </h2>
-          <p style={{ color: 'var(--color-text-secondary)', maxWidth: '640px', margin: '0.75rem auto 2rem auto' }}>
+          <p style={{ color: '#000000', maxWidth: '640px', margin: '0.75rem auto 2rem auto' }}>
             {subtitle}
           </p>
 
@@ -158,8 +158,8 @@ export const RecruitmentJourneyMap: React.FC<RecruitmentJourneyMapProps> = ({
               display: 'inline-flex',
               padding: '0.375rem',
               borderRadius: '9999px',
-              backgroundColor: 'rgba(17, 23, 38, 0.8)',
-              border: '1px solid var(--color-border)',
+              backgroundColor: '#ffffff',
+              border: '1px solid #000000',
               gap: '0.35rem',
             }}
           >
@@ -172,8 +172,8 @@ export const RecruitmentJourneyMap: React.FC<RecruitmentJourneyMapProps> = ({
                 padding: '0.625rem 1.25rem',
                 borderRadius: '9999px',
                 border: 'none',
-                backgroundColor: activeTrack === 'employer' ? 'var(--color-primary)' : 'transparent',
-                color: activeTrack === 'employer' ? 'var(--nt-surface, #ffffff)' : 'var(--color-text-secondary)',
+                backgroundColor: activeTrack === 'employer' ? '#000000' : 'transparent',
+                color: activeTrack === 'employer' ? '#ffffff' : '#000000',
                 fontWeight: 600,
                 fontSize: '0.875rem',
                 cursor: 'pointer',
@@ -193,8 +193,8 @@ export const RecruitmentJourneyMap: React.FC<RecruitmentJourneyMapProps> = ({
                 padding: '0.625rem 1.25rem',
                 borderRadius: '9999px',
                 border: 'none',
-                backgroundColor: activeTrack === 'candidate' ? 'var(--color-primary)' : 'transparent',
-                color: activeTrack === 'candidate' ? 'var(--nt-surface, #ffffff)' : 'var(--color-text-secondary)',
+                backgroundColor: activeTrack === 'candidate' ? '#000000' : 'transparent',
+                color: activeTrack === 'candidate' ? '#ffffff' : '#000000',
                 fontWeight: 600,
                 fontSize: '0.875rem',
                 cursor: 'pointer',
@@ -222,8 +222,8 @@ export const RecruitmentJourneyMap: React.FC<RecruitmentJourneyMapProps> = ({
               className="journey-card"
               style={{
                 borderRadius: 'var(--radius-xl)',
-                backgroundColor: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
+                backgroundColor: '#ffffff',
+                border: '1px solid #e5e5e5',
                 padding: '1.75rem 1.5rem',
                 display: 'flex',
                 flexDirection: 'column',
@@ -239,7 +239,7 @@ export const RecruitmentJourneyMap: React.FC<RecruitmentJourneyMapProps> = ({
                     style={{
                       fontSize: '1.25rem',
                       fontWeight: 900,
-                      color: 'var(--color-primary-400)',
+                      color: '#000000',
                     }}
                   >
                     {m.step}
@@ -248,8 +248,9 @@ export const RecruitmentJourneyMap: React.FC<RecruitmentJourneyMapProps> = ({
                     style={{
                       fontSize: '0.6875rem',
                       fontWeight: 700,
-                      color: 'var(--color-text-tertiary)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                      color: '#000000',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #000000',
                       padding: '0.2rem 0.5rem',
                       borderRadius: 'var(--radius-sm)',
                     }}
@@ -264,7 +265,7 @@ export const RecruitmentJourneyMap: React.FC<RecruitmentJourneyMapProps> = ({
                     fontWeight: 700,
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
-                    color: 'var(--color-text-secondary)',
+                    color: '#000000',
                     marginBottom: '0.35rem',
                   }}
                 >
@@ -275,7 +276,7 @@ export const RecruitmentJourneyMap: React.FC<RecruitmentJourneyMapProps> = ({
                   style={{
                     fontSize: '1.0625rem',
                     fontWeight: 700,
-                    color: 'var(--color-text)',
+                    color: '#000000',
                     lineHeight: 1.3,
                     marginBottom: '0.75rem',
                   }}
@@ -286,7 +287,7 @@ export const RecruitmentJourneyMap: React.FC<RecruitmentJourneyMapProps> = ({
                 <p
                   style={{
                     fontSize: '0.8125rem',
-                    color: 'var(--color-text-secondary)',
+                    color: '#000000',
                     lineHeight: 1.5,
                   }}
                 >
@@ -300,14 +301,14 @@ export const RecruitmentJourneyMap: React.FC<RecruitmentJourneyMapProps> = ({
                   alignItems: 'center',
                   gap: '0.35rem',
                   fontSize: '0.75rem',
-                  color: 'var(--color-success)',
+                  color: '#000000',
                   fontWeight: 600,
                   marginTop: '1.5rem',
                   paddingTop: '0.75rem',
-                  borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                  borderTop: '1px solid #e5e5e5',
                 }}
               >
-                <CheckCircle2 size={13} />
+                <CheckCircle2 size={13} color="#000000" />
                 <span>Verified Milestone</span>
               </div>
             </div>

@@ -1,14 +1,14 @@
 import React, { useState, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  ChevronDown, 
-  Menu, 
-  X, 
-  Briefcase, 
-  Building2, 
-  Users, 
-  Layers, 
-  ShieldCheck, 
+import {
+  ChevronDown,
+  Menu,
+  X,
+  Briefcase,
+  Building2,
+  Users,
+  Layers,
+  ShieldCheck,
   ArrowRight,
   TrendingUp,
   Cpu,
@@ -18,7 +18,7 @@ import {
   BookOpen,
   Award,
   PhoneCall,
-  CheckCircle2
+  BadgeCheck,
 } from 'lucide-react';
 import { Logo } from './Logo';
 
@@ -230,31 +230,29 @@ export const StandardNavbar: React.FC = () => {
     <>
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:bg-[#0060E6] focus:text-white focus:rounded-lg focus:shadow-xl focus:font-semibold focus:outline-none"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:bg-black focus:text-white focus:rounded-lg focus:shadow-xl focus:font-semibold focus:outline-none"
       >
         Skip to content
       </a>
 
       <header
         role="banner"
-        className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-[0_4px_20px_-4px_rgba(0,37,89,0.06)] transition-all"
+        className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-neutral-200 shadow-[0_1px_12px_rgba(0,0,0,0.05)] transition-all"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[76px] flex items-center justify-between gap-6">
-          
-          {/* Brand Logo - Made larger and prominent */}
+        <div className="mx-auto w-[85%] max-w-[1200px] h-[68px] flex items-center justify-between gap-6">
           <Link
             to="/"
             aria-label="NexaTalent IT Solutions Home"
-            className="flex items-center shrink-0 focus-visible:ring-2 focus-visible:ring-[#0060E6] focus-visible:ring-offset-2 rounded-lg py-1 outline-none"
+            className="flex items-center shrink-0 focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 rounded-lg py-1 outline-none"
             onClick={() => setActiveMenu(null)}
           >
-            <Logo height={48} />
+            <Logo height={40} />
           </Link>
 
-          {/* Desktop Navigation - Exactly 4 items with clean hover menus */}
+          {/* Desktop Navigation — black-only */}
           <nav
             aria-label="Primary Navigation"
-            className="hidden lg:flex items-center gap-1.5"
+            className="hidden lg:flex items-center gap-1"
             onMouseLeave={handleMouseLeave}
           >
             {NAV_SECTIONS.map((section) => {
@@ -272,42 +270,38 @@ export const StandardNavbar: React.FC = () => {
                     aria-expanded={isOpen}
                     aria-haspopup="true"
                     onClick={() => setActiveMenu(isOpen ? null : section.id)}
-                    className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[14.5px] font-semibold tracking-[-0.01em] transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#0060E6] ${
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[13.5px] font-semibold tracking-[-0.01em] transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-black ${
                       isOpen || isActive
-                        ? 'text-[#0060E6] bg-blue-50/80 shadow-xs'
-                        : 'text-[#002559] hover:text-[#0060E6] hover:bg-slate-100/70'
+                        ? 'text-white bg-black'
+                        : 'text-black hover:bg-neutral-100'
                     }`}
                   >
                     <span>{section.label}</span>
                     <ChevronDown
                       className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                        isOpen ? 'rotate-180 text-[#0060E6]' : 'text-slate-400 group-hover:text-[#0060E6]'
+                        isOpen ? 'rotate-180' : 'text-black'
                       }`}
                     />
                   </button>
 
-                  {/* Accessible Hover Bridge & Dropdown Menu */}
                   {isOpen && (
                     <div
                       role="region"
                       aria-label={`${section.label} menu`}
-                      className="absolute left-1/2 -translate-x-1/2 top-full pt-2 w-[620px] z-50"
+                      className="absolute left-1/2 -translate-x-1/2 top-full pt-2 w-[600px] z-50"
                       onMouseEnter={() => handleMouseEnter(section.id)}
                       onMouseLeave={handleMouseLeave}
                     >
-                      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-[0_22px_50px_-10px_rgba(0,37,89,0.14),0_0_1px_rgba(0,37,89,0.08)] overflow-hidden transition-all animate-in fade-in slide-in-from-top-2 duration-150">
-                        
-                        {/* Section Header */}
-                        <div className="px-5 py-2.5 bg-slate-50/90 border-b border-slate-100 flex items-center justify-between">
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#0060E6] font-mono">
+                      <div className="bg-white rounded-xl border border-neutral-200 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.25)] overflow-hidden">
+                        <div className="px-5 py-2.5 bg-neutral-50 border-b border-neutral-200 flex items-center justify-between">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-black font-mono">
                             {section.badge}
                           </span>
-                          <span className="text-[11px] font-medium text-slate-500">
-                            Enterprise Tech Solutions
+                          <span className="text-[11px] font-medium text-black">
+                            NexaTalent
                           </span>
                         </div>
 
-                        {/* Two-Column Grid of Navigation Items */}
                         <div className="p-3 grid grid-cols-2 gap-1.5">
                           {section.items.map((item) => {
                             const Icon = item.icon;
@@ -318,30 +312,34 @@ export const StandardNavbar: React.FC = () => {
                                 key={item.to}
                                 to={item.to}
                                 onClick={() => setActiveMenu(null)}
-                                className={`flex items-start gap-3 p-2.5 rounded-xl transition-all group ${
+                                className={`flex items-start gap-3 p-2.5 rounded-lg transition-all group ${
                                   isCurrent
-                                    ? 'bg-blue-50/90 text-[#0060E6]'
-                                    : 'hover:bg-slate-50 text-[#002559]'
+                                    ? 'bg-black text-white'
+                                    : 'hover:bg-neutral-100 text-black'
                                 }`}
                               >
                                 <div
                                   className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
                                     isCurrent
-                                      ? 'bg-[#0060E6] text-white'
-                                      : 'bg-blue-50 text-[#0060E6] group-hover:bg-[#0060E6] group-hover:text-white'
+                                      ? 'bg-white text-black'
+                                      : 'bg-neutral-200 text-black group-hover:bg-black group-hover:text-white'
                                   }`}
                                 >
                                   <Icon className="w-4 h-4" />
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <div
-                                    className={`text-[13.5px] font-semibold leading-snug group-hover:text-[#0060E6] transition-colors ${
-                                      isCurrent ? 'text-[#0060E6]' : 'text-[#002559]'
+                                    className={`text-[13px] font-semibold leading-snug ${
+                                      isCurrent ? 'text-white' : 'text-black'
                                     }`}
                                   >
                                     {item.label}
                                   </div>
-                                  <p className="text-[11.5px] text-[#475569] leading-tight mt-0.5 line-clamp-2">
+                                  <p
+                                    className={`text-[11px] leading-tight mt-0.5 line-clamp-2 ${
+                                      isCurrent ? 'text-white' : 'text-black'
+                                    }`}
+                                  >
                                     {item.desc}
                                   </p>
                                 </div>
@@ -350,22 +348,20 @@ export const StandardNavbar: React.FC = () => {
                           })}
                         </div>
 
-                        {/* Dropdown Footer CTA Band */}
-                        <div className="px-5 py-3 bg-[#F8FAFC] border-t border-slate-100 flex items-center justify-between">
+                        <div className="px-5 py-3 bg-neutral-50 border-t border-neutral-200 flex items-center justify-between">
                           <Link
                             to={section.footerLink.to}
                             onClick={() => setActiveMenu(null)}
-                            className="text-xs font-bold text-[#0060E6] hover:text-[#0047AB] flex items-center gap-1.5 transition-colors group"
+                            className="text-xs font-bold text-black flex items-center gap-1.5 transition-colors group"
                           >
                             <span>{section.footerLink.label}</span>
                             <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
                           </Link>
-                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                            ISO & SOC 2 Ready
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-black bg-white px-2 py-0.5 rounded-full border border-neutral-300">
+                            <BadgeCheck className="w-3 h-3" />
+                            Verified Partner
                           </span>
                         </div>
-
                       </div>
                     </div>
                   )}
@@ -374,132 +370,127 @@ export const StandardNavbar: React.FC = () => {
             })}
           </nav>
 
-          {/* Quick Right Action Area - Clean, High Contrast, Web Standards */}
-          <div className="flex items-center gap-3">
-            
+          {/* Right actions — black-only */}
+          <div className="flex items-center gap-2">
             <Link
               to="/login"
-              className="hidden md:inline-flex px-3.5 py-2 text-sm font-semibold text-[#002559] hover:text-[#0060E6] transition-colors rounded-lg focus-visible:ring-2 focus-visible:ring-[#0060E6] outline-none"
+              className="hidden md:inline-flex px-3.5 py-2 text-[13px] font-semibold text-black transition-colors rounded-lg focus-visible:ring-2 focus-visible:ring-black outline-none"
             >
               Sign In
             </Link>
 
             <Link
               to="/request-talent"
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-[#0060E6] hover:bg-[#004FBF] text-white text-sm font-bold shadow-[0_4px_14px_rgba(0,96,230,0.28)] hover:shadow-[0_6px_20px_rgba(0,96,230,0.36)] transition-all active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#0060E6] focus-visible:ring-offset-2"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-black hover:bg-neutral-800 text-white text-[13px] font-bold shadow-[0_4px_14px_rgba(0,0,0,0.25)] transition-all active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
             >
               <span>Hire Talent</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
 
-            {/* Mobile Navigation Toggle Button */}
             <button
               type="button"
               aria-label={mobileOpen ? 'Close Navigation Menu' : 'Open Navigation Menu'}
               aria-expanded={mobileOpen}
               onClick={() => setMobileOpen((o) => !o)}
-              className="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-xl text-[#002559] hover:bg-slate-100 transition-colors focus-visible:ring-2 focus-visible:ring-[#0060E6] outline-none cursor-pointer"
+              className="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-xl text-black hover:bg-neutral-100 transition-colors focus-visible:ring-2 focus-visible:ring-black outline-none cursor-pointer"
             >
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
-
         </div>
 
-        {/* Mobile Navigation Drawer */}
+        {/* Mobile drawer — black-only */}
         {mobileOpen && (
-          <div className="lg:hidden bg-white border-t border-slate-200 px-4 py-5 shadow-2xl max-h-[82vh] overflow-y-auto">
-            {/* Quick Mobile Action Buttons */}
-            <div className="grid grid-cols-2 gap-2.5 mb-5">
-              <Link
-                to="/request-talent"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#0060E6] text-white font-bold text-xs text-center shadow-sm"
-              >
-                <Briefcase className="w-4 h-4" />
-                <span>Hire Talent</span>
-              </Link>
-              <Link
-                to="/jobs"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#002559] font-bold text-xs text-center border border-slate-200"
-              >
-                <Search className="w-4 h-4" />
-                <span>Browse Jobs</span>
-              </Link>
+          <div className="lg:hidden bg-white border-t border-neutral-200 px-4 py-5 shadow-2xl max-h-[82vh] overflow-y-auto">
+            <div className="mx-auto w-[85%] max-w-[1200px]">
+              <div className="grid grid-cols-2 gap-2.5 mb-5">
+                <Link
+                  to="/request-talent"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-black text-white font-bold text-xs text-center"
+                >
+                  <Briefcase className="w-4 h-4" />
+                  <span>Hire Talent</span>
+                </Link>
+                <Link
+                  to="/jobs"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-black font-bold text-xs text-center border border-neutral-200"
+                >
+                  <Search className="w-4 h-4" />
+                  <span>Browse Jobs</span>
+                </Link>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                {NAV_SECTIONS.map((section) => {
+                  const isExpanded = mobileExpandedSection === section.id;
+
+                  return (
+                    <div key={section.id} className="border-b border-neutral-200 last:border-0 pb-1">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setMobileExpandedSection(isExpanded ? null : section.id)
+                        }
+                        className="w-full flex items-center justify-between py-3 px-2 rounded-lg text-black font-bold text-sm hover:bg-neutral-100 transition-colors"
+                      >
+                        <span>{section.label}</span>
+                        <ChevronDown
+                          className={`w-4 h-4 text-black transition-transform ${
+                            isExpanded ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </button>
+
+                      {isExpanded && (
+                        <div className="pl-3 pr-1 py-1 flex flex-col gap-1 bg-neutral-50 rounded-xl mb-2">
+                          {section.items.map((item) => {
+                            const Icon = item.icon;
+                            return (
+                              <Link
+                                key={item.to}
+                                to={item.to}
+                                onClick={() => setMobileOpen(false)}
+                                className="flex items-center gap-2.5 py-2 px-2.5 rounded-lg text-xs font-semibold text-black hover:bg-white transition-colors"
+                              >
+                                <Icon className="w-3.5 h-3.5 shrink-0" />
+                                <span>{item.label}</span>
+                              </Link>
+                            );
+                          })}
+                          <Link
+                            to={section.footerLink.to}
+                            onClick={() => setMobileOpen(false)}
+                            className="mt-1 py-2 px-2.5 text-xs font-bold text-black flex items-center gap-1 border-t border-neutral-200"
+                          >
+                            <span>{section.footerLink.label}</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-5 pt-4 border-t border-neutral-200 flex flex-col gap-2">
+                <Link
+                  to="/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="w-full text-center py-2.5 rounded-xl border border-neutral-300 text-xs font-bold text-black hover:bg-neutral-50 transition-colors"
+                >
+                  Sign In to Platform
+                </Link>
+                <Link
+                  to="/candidate/register"
+                  onClick={() => setMobileOpen(false)}
+                  className="w-full text-center py-2.5 rounded-xl bg-neutral-100 text-black text-xs font-bold hover:bg-neutral-200 transition-colors"
+                >
+                  Join Candidate Talent Network
+                </Link>
+              </div>
             </div>
-
-            {/* 4 Main Accordions */}
-            <div className="flex flex-col gap-1.5">
-              {NAV_SECTIONS.map((section) => {
-                const isExpanded = mobileExpandedSection === section.id;
-
-                return (
-                  <div key={section.id} className="border-b border-slate-100 last:border-0 pb-1">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setMobileExpandedSection(isExpanded ? null : section.id)
-                      }
-                      className="w-full flex items-center justify-between py-3 px-2 rounded-lg text-[#002559] font-bold text-sm hover:bg-slate-50 transition-colors"
-                    >
-                      <span>{section.label}</span>
-                      <ChevronDown
-                        className={`w-4 h-4 text-slate-400 transition-transform ${
-                          isExpanded ? 'rotate-180 text-[#0060E6]' : ''
-                        }`}
-                      />
-                    </button>
-
-                    {isExpanded && (
-                      <div className="pl-3 pr-1 py-1 flex flex-col gap-1 bg-slate-50/70 rounded-xl mb-2">
-                        {section.items.map((item) => {
-                          const Icon = item.icon;
-                          return (
-                            <Link
-                              key={item.to}
-                              to={item.to}
-                              onClick={() => setMobileOpen(false)}
-                              className="flex items-center gap-2.5 py-2 px-2.5 rounded-lg text-xs font-semibold text-[#002559] hover:text-[#0060E6] hover:bg-white transition-colors"
-                            >
-                              <Icon className="w-3.5 h-3.5 text-[#0060E6] shrink-0" />
-                              <span>{item.label}</span>
-                            </Link>
-                          );
-                        })}
-                        <Link
-                          to={section.footerLink.to}
-                          onClick={() => setMobileOpen(false)}
-                          className="mt-1 py-2 px-2.5 text-xs font-bold text-[#0060E6] flex items-center gap-1 border-t border-slate-200"
-                        >
-                          <span>{section.footerLink.label}</span>
-                          <ArrowRight className="w-3 h-3" />
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Mobile Sign In & Candidate Talent Network */}
-            <div className="mt-5 pt-4 border-t border-slate-200 flex flex-col gap-2">
-              <Link
-                to="/login"
-                onClick={() => setMobileOpen(false)}
-                className="w-full text-center py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-[#002559] hover:bg-slate-50 transition-colors"
-              >
-                Sign In to Platform
-              </Link>
-              <Link
-                to="/candidate/register"
-                onClick={() => setMobileOpen(false)}
-                className="w-full text-center py-2.5 rounded-xl bg-blue-50 text-[#0060E6] text-xs font-bold hover:bg-blue-100 transition-colors"
-              >
-                Join Candidate Talent Network
-              </Link>
-            </div>
-
           </div>
         )}
       </header>

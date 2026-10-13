@@ -41,10 +41,12 @@ export const CTASection: React.FC<CTASectionProps> = ({
   return (
     <section
       ref={containerRef}
+      className="font-sans"
       style={{
         padding: '5rem 2rem',
         position: 'relative',
         overflow: 'hidden',
+        backgroundColor: '#ffffff',
       }}
     >
       <motion.div
@@ -56,16 +58,16 @@ export const CTASection: React.FC<CTASectionProps> = ({
           maxWidth: '1100px',
           margin: '0 auto',
           borderRadius: 'var(--radius-2xl)',
-          border: '1px solid rgba(59, 130, 246, 0.3)',
-          background: 'linear-gradient(135deg, rgba(30, 58, 138, 0.4) 0%, rgba(15, 23, 42, 0.95) 70%)',
+          border: '1px solid #000000',
+          backgroundColor: '#ffffff',
           padding: '4rem 2.5rem',
           textAlign: 'center',
           position: 'relative',
-          boxShadow: '0 25px 50px -12px rgba(59, 130, 246, 0.25)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           overflow: 'hidden'
         }}
       >
-        {/* Glow ambient background spot with Parallax */}
+        {/* Ambient background spot with Parallax */}
         <motion.div
           animate={{
             scale: [1, 1.1, 1],
@@ -84,7 +86,7 @@ export const CTASection: React.FC<CTASectionProps> = ({
             y: yBackground,
             width: '600px',
             height: '300px',
-            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, transparent 70%)',
+            background: 'none',
             filter: 'blur(60px)',
             pointerEvents: 'none',
           }}
@@ -102,9 +104,9 @@ export const CTASection: React.FC<CTASectionProps> = ({
               gap: '0.4rem',
               padding: '0.35rem 1rem',
               borderRadius: '9999px',
-              backgroundColor: 'rgba(59, 130, 246, 0.15)',
-              border: '1px solid rgba(59, 130, 246, 0.3)',
-              color: 'var(--color-primary-400)',
+              backgroundColor: '#000000',
+              border: '1px solid #000000',
+              color: '#ffffff',
               fontSize: '0.8125rem',
               fontWeight: 600,
               marginBottom: '1.25rem',
@@ -118,7 +120,7 @@ export const CTASection: React.FC<CTASectionProps> = ({
             style={{
               fontSize: 'clamp(2rem, 4vw, 3rem)',
               fontWeight: 800,
-              color: 'var(--color-text)',
+              color: '#000000',
               maxWidth: '850px',
               margin: '0 auto 1.25rem auto',
               lineHeight: 1.2,
@@ -148,7 +150,7 @@ export const CTASection: React.FC<CTASectionProps> = ({
             transition={{ delay: 0.8, duration: motionTokens.duration.slow }}
             style={{
               fontSize: '1.0625rem',
-              color: 'var(--color-text-secondary)',
+              color: '#000000',
               maxWidth: '650px',
               margin: '0 auto 2.5rem auto',
               lineHeight: 1.6,
@@ -184,13 +186,13 @@ export const CTASection: React.FC<CTASectionProps> = ({
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '0.5rem',
-                    backgroundColor: 'var(--color-primary)',
+                    backgroundColor: '#000000',
                     color: '#ffffff',
                     padding: '0.875rem 1.875rem',
                     borderRadius: 'var(--radius-lg)',
                     fontWeight: 700,
                     fontSize: '1rem',
-                    boxShadow: '0 4px 20px rgba(59, 130, 246, 0.5)',
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.35)',
                   }}
                 >
                   <span>{primaryCtaText}</span>
@@ -210,15 +212,15 @@ export const CTASection: React.FC<CTASectionProps> = ({
                 style={{ textDecoration: 'none' }}
               >
                 <motion.div
-                  whileHover={{ scale: 1.05, backgroundColor: 'rgba(255,255,255,0.1)' }}
+                  whileHover={{ scale: 1.05, backgroundColor: 'rgba(0,0,0,0.05)' }}
                   whileTap={{ scale: 0.95 }}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '0.5rem',
-                    backgroundColor: 'rgba(15, 23, 42, 0.7)',
-                    border: '1px solid var(--color-border)',
-                    color: 'var(--color-text)',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #000000',
+                    color: '#000000',
                     padding: '0.875rem 1.75rem',
                     borderRadius: 'var(--radius-lg)',
                     fontWeight: 600,
@@ -239,7 +241,7 @@ export const CTASection: React.FC<CTASectionProps> = ({
               flexWrap: 'wrap',
               gap: '1.5rem',
               fontSize: '0.875rem',
-              color: 'var(--color-text-secondary)',
+              color: '#000000',
             }}
           >
             {highlights.map((h, idx) => (
@@ -251,7 +253,7 @@ export const CTASection: React.FC<CTASectionProps> = ({
                 transition={{ delay: 1.2 + idx * motionTokens.stagger.small, ...motionTokens.spring.gentle }}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
               >
-                <CheckCircle2 size={16} color="var(--color-success)" />
+                <CheckCircle2 size={16} color="#000000" />
                 <span>{h}</span>
               </motion.div>
             ))}

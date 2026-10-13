@@ -7,9 +7,11 @@ import { apiClient } from '../../shared/api-client';
 import { jobsApi, requisitionsApi, applicationsApi, directoryApi } from '../../shared/enterprise/phaseApi';
 import {
   RequisitionsPanel, ApplicationsPanel, InterviewsPanel, ChatPanel, TalentPoolsPanel,
-  CandidateSearchPanel, OutreachPanel, BillingPanel, InvoicesPanel, OffersPlacementsPanel, RequirementCreatePage,
+  CandidateSearchPanel, OutreachPanel, EmployerBillingWorkspace, OffersPlacementsPanel, RequirementCreatePage,
   SubmissionsPanel, NotificationsPanel, TimesheetsPanel, syncAll,
+  ActivityTimeline, AssignRecruiterModal, auditLabel, sortActivity,
 } from '../common/EnterprisePanels';
+import type { ActivityItem } from '../common/EnterprisePanels';
 import { getTenantId, getActiveRole } from '../../shared/auth/session';
 import { ConfirmDialog, RowMenu } from '../../shared/ui/EnterpriseKit';
 import type { MenuItem } from '../../shared/ui/EnterpriseKit';
@@ -169,7 +171,43 @@ export function EmployerPortal() {
   const [jobActionError, setJobActionError] = useState('');
   const [jobDetail, setJobDetail] = useState<any>(null);
   const jobDetailId = jobDetail?.id;
+  const [jobLogs, setJobLogs] = useState<any[]>([]);
+  const [jobDetailLoading, setJobDetailLoading] = useState(false);
+  const [reqAssignFor, setReqAssignFor] = useState<any>(null);
+  const [reqAssignBusy, setReqAssignBusy] = useState(false);
   useEffect(() => { setDrawerTab('overview'); }, [jobDetailId]);
+  // Full job record (history, expiry) + the tenant audit trail for this posting.
+  useEffect(() => {
+    setJobLogs([]);
+    if (!jobDetailId) return;
+    let live = true;
+    (async () => {
+      setJobDetailLoading(true);
+      const [jRes, aRes] = await Promise.all([
+        jobsApi.detail(jobDetailId).catch(() => null),
+        directoryApi.auditLogs(`?recordId=${encodeURIComponent(jobDetailId)}&page=1&pageSize=50`).catch(() => null),
+      ]);
+      if (!live) return;
+      const full = (jRes as { data?: any })?.data;
+      if (full?.id) setJobDetail((prev: any) => (prev && prev.id === full.id ? { ...prev, ...full } : prev));
+      const d = (aRes as { data?: any })?.data;
+      setJobLogs(Array.isArray(d) ? d : Array.isArray(d?.data) ? d.data : []);
+      setJobDetailLoading(false);
+    })();
+    return () => { live = false; };
+  }, [jobDetailId]);
+  /** Assign a recruiter to the requirement behind this posting (shared modal). */
+  const openJobAssign = async () => {
+    const rid = jobDetail?.requisitionId;
+    if (!rid) return;
+    setReqAssignBusy(true);
+    try {
+      const res = await requisitionsApi.get(rid);
+      const row = (res as { data?: any })?.data;
+      setReqAssignFor(row?.id ? row : { id: rid, title: jobDetail?.title || rid });
+    } catch { setReqAssignFor({ id: rid, title: jobDetail?.title || rid }); }
+    finally { setReqAssignBusy(false); }
+  };
 
   const openNewJob = () => {
     setEditingJob(null);
@@ -403,7 +441,7 @@ export function EmployerPortal() {
         {currentTab === 'schedule' && <InterviewsPanel />}
         {currentTab === 'submissions' && <SubmissionsPanel canReview />}
         {currentTab === 'timesheets' && <TimesheetsPanel canApprove />}
-        {currentTab === 'billing' && (<div className="space-y-6"><InvoicesPanel /><BillingPanel /></div>)}
+        {currentTab === 'billing' && <EmployerBillingWorkspace />}
         {currentTab === 'messages' && <ChatPanel />}
         {currentTab === 'security' && <MfaPanel />}
         {currentTab === 'notifications' && <NotificationsPanel />}
@@ -859,6 +897,12 @@ export function EmployerPortal() {
               </div>
             </div>
             <div className="flex gap-2 flex-wrap items-center">
+              {jobDetail.requisitionId && (
+                <button type="button" onClick={() => { void openJobAssign(); }} disabled={reqAssignBusy}
+                  className="px-3.5 py-2 rounded-xl bg-white border border-blue-300 text-blue-800 font-bold text-xs disabled:opacity-60">
+                  {reqAssignBusy ? 'Loading…' : 'Assign recruiter…'}
+                </button>
+              )}
               <RowMenu label="Manage job" items={manageItems(jobDetail, true)} />
               {jobDetail.status === 'Published' && <span className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">Live — editing locked. Pause to edit, close to end.</span>}
               {jobDetail.status === 'Paused' && <span className="text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1.5">Frozen — pipeline stopped. Resume to continue.</span>}
@@ -889,12 +933,26 @@ export function EmployerPortal() {
             )}
             {(() => {
               const jobApps = allApplications.filter((a: any) => a.jobId === jobDetail.id);
+              // Activity = status history + applications + audit rows the history already covers.
+              const jobActivity: ActivityItem[] = (() => {
+                const items: ActivityItem[] = [];
+                (jobDetail.history || []).forEach((h: any) => items.push({
+                  at: h.at, title: `${h.from || '—'} → ${h.to}`,
+                  meta: h.reason ? `${h.by || '—'} • ${h.reason}` : (h.by || '—'),
+                  tone: h.to === 'Closed' ? 'bad' : h.to === 'Published' ? 'ok' : 'info',
+                }));
+                jobApps.forEach((a: any) => items.push({ at: a.createdAt, title: 'Application received', meta: `${a.candidateEmail || ''}${a.stage ? ` • now ${a.stage}` : ''}`, tone: 'neutral' }));
+                jobLogs.filter((l: any) => !/(_STATUS:|_CREATED:)/.test(String(l.action)))
+                  .forEach((l: any) => items.push({ at: l.timestamp, title: auditLabel(String(l.action)), meta: l.actor, tone: 'neutral' }));
+                if (jobDetail.createdAt) items.push({ at: jobDetail.createdAt, title: 'Posting created', meta: jobDetail.createdBy || '—', tone: 'info' });
+                return sortActivity(items);
+              })();
               const tabs = [
                 ['overview', 'Overview'],
                 ['role', 'Role & pay'],
                 ['setup', 'Hiring setup'],
                 ['applicants', `Applicants (${jobApps.length})`],
-                ['activity', 'Activity'],
+                ['activity', `Activity (${jobActivity.length})`],
               ] as const;
               return (
               <div className="space-y-3">
@@ -956,21 +1014,27 @@ export function EmployerPortal() {
                   <JobApplicantsATS job={jobDetail} apps={jobApps} candidates={candidates} onFullBoard={() => navigate('/employer/candidates')} />
                 )}
                 {drawerTab === 'activity' && (
-                  <div className="space-y-1.5">
-                    {(jobDetail.history || []).length === 0 && <div className="text-[11px] text-slate-500 font-medium p-3 rounded-xl bg-slate-50 border border-slate-200">No recorded transitions yet.</div>}
-                    {[...(jobDetail.history || [])].reverse().map((h: any, i: number) => (
-                      <div key={i} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-                        <span className="font-extrabold text-slate-900">{h.from} → {h.to}</span>
-                        <span className="text-slate-500 font-medium"> • {h.by || '—'} • {String(h.at || '').slice(0, 16).replace('T', ' ')}</span>
-                        {h.reason ? <div className="text-slate-600 font-medium mt-0.5">{h.reason}</div> : null}
-                      </div>
-                    ))}
+                  <div className="space-y-2">
+                    {jobDetailLoading && <InlineLoading message="Loading full record…" />}
+                    <ActivityTimeline items={jobActivity}
+                      empty="No activity yet — publish, pause or receive an application to start the trail." />
                   </div>
                 )}
               </div>
               );
             })()}
           </DetailDrawer>
+        )}
+        {reqAssignFor && (
+          <AssignRecruiterModal open={true} targets={[reqAssignFor]} rows={requisitions}
+            onClose={() => setReqAssignFor(null)}
+            onDone={(updated) => {
+              const u = updated[0];
+              if (u?.id) setRequisitions((rs: any[]) => rs.map((r: any) => (r.id === u.id ? { ...r, ...u } : r)));
+              setJobDetail((j: any) => (j ? { ...j, recruiter: u?.recruiter ?? j.recruiter } : j));
+              setReqAssignFor(null);
+              syncAll();
+            }} />
         )}
 
         {/* TAB 5: INTERVIEWS & FEEDBACK — shared panel: 4-col cards, 40/page, detail drawer + full schedule/track/score flow */}

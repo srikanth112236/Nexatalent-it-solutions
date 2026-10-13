@@ -26,14 +26,14 @@ export function V2JobsFaq() {
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {ROLES.map((r) => (
           <li key={r.title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-700">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-black px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white">
               <Briefcase size={11} aria-hidden /> {r.type}
             </span>
-            <h3 className="mt-2.5 text-sm font-extrabold leading-snug text-slate-900">{r.title}</h3>
-            <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
+            <h3 className="mt-2.5 text-sm font-extrabold leading-snug text-black">{r.title}</h3>
+            <p className="mt-1 flex items-center gap-1 text-xs text-black">
               <MapPin size={12} aria-hidden /> {r.meta}
             </p>
-            <Link to="/jobs" className="mt-3 inline-flex min-h-[44px] items-center gap-1 text-xs font-bold text-[#0265FF] focus-visible:outline-2 focus-visible:outline-[#0265FF]">
+            <Link to="/jobs" className="mt-3 inline-flex min-h-[44px] items-center gap-1 text-xs font-bold text-black focus-visible:outline-2 focus-visible:outline-black">
               View & apply <ArrowRight size={14} aria-hidden />
             </Link>
           </li>
@@ -45,17 +45,17 @@ export function V2JobsFaq() {
       </div>
 
       <div className="mx-auto mt-10 max-w-3xl">
-        <h3 className="text-center text-lg font-extrabold text-slate-900">Questions, answered</h3>
+        <h3 className="text-center text-lg font-extrabold text-black">Questions, answered</h3>
         <div className="mt-4 space-y-2.5">
           {FAQS.map((f) => (
             <details key={f.q} className="group rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-              <summary className="cursor-pointer list-none text-sm font-bold text-slate-900 focus-visible:outline-2 focus-visible:outline-[#0265FF] [&::-webkit-details-marker]:hidden">
+              <summary className="cursor-pointer list-none text-sm font-bold text-black focus-visible:outline-2 focus-visible:outline-black [&::-webkit-details-marker]:hidden">
                 <span className="flex items-center justify-between gap-3">
                   {f.q}
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition-transform group-open:rotate-45" aria-hidden>+</span>
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 text-black transition-transform group-open:rotate-45" aria-hidden>+</span>
                 </span>
               </summary>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600">{f.a}</p>
+              <p className="mt-2 text-sm leading-relaxed text-black">{f.a}</p>
             </details>
           ))}
         </div>

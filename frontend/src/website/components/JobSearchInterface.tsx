@@ -48,8 +48,8 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
       transition={{ duration: motionTokens.duration.slow, ease: motionTokens.ease.standard }}
       style={{
         borderRadius: 'var(--radius-2xl)',
-        backgroundColor: 'var(--color-surface)',
-        border: '1px solid var(--color-border)',
+        backgroundColor: '#ffffff',
+        border: '1px solid #e5e5e5',
         padding: '2rem',
         boxShadow: 'var(--shadow-lg)',
         maxWidth: '1100px',
@@ -72,14 +72,14 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
           {/* Keyword Input */}
           <div style={{ position: 'relative' }}>
             <motion.div 
-              animate={isFocused ? { rotate: 90, scale: 1.1, color: 'var(--color-primary-400)' } : { rotate: 0, scale: 1, color: 'var(--color-text-tertiary)' }}
+              animate={isFocused ? { rotate: 90, scale: 1.1, color: '#000000' } : { rotate: 0, scale: 1, color: '#000000' }}
               transition={motionTokens.spring.snappy}
               style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center' }}
             >
               <Search size={18} />
             </motion.div>
             <motion.input
-              whileFocus={{ scale: 1.02, backgroundColor: 'rgba(15, 23, 42, 0.9)', borderColor: 'var(--color-primary)' }}
+              whileFocus={{ scale: 1.02, backgroundColor: '#ffffff', borderColor: '#000000' }}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
               type="text"
@@ -90,9 +90,9 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
                 width: '100%',
                 padding: '0.8125rem 1rem 0.8125rem 2.75rem',
                 borderRadius: 'var(--radius-lg)',
-                backgroundColor: 'rgba(15, 23, 42, 0.7)',
-                border: '1px solid var(--color-border)',
-                color: 'var(--color-text)',
+                backgroundColor: '#ffffff',
+                border: '1px solid #000000',
+                color: '#000000',
                 fontSize: '0.9375rem',
                 outline: 'none',
                 transition: 'all 0.2s ease'
@@ -102,7 +102,7 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
 
           {/* Location Select */}
           <motion.div whileHover={{ scale: 1.02 }} style={{ position: 'relative' }}>
-            <MapPin size={18} color="var(--color-text-tertiary)" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
+            <MapPin size={18} color="#000000" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
             <select
               value={location}
               onChange={(e) => setLocation(e.target.value)}
@@ -110,9 +110,9 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
                 width: '100%',
                 padding: '0.8125rem 1rem 0.8125rem 2.75rem',
                 borderRadius: 'var(--radius-lg)',
-                backgroundColor: 'rgba(15, 23, 42, 0.7)',
-                border: '1px solid var(--color-border)',
-                color: 'var(--color-text)',
+                backgroundColor: '#ffffff',
+                border: '1px solid #000000',
+                color: '#000000',
                 fontSize: '0.9375rem',
                 outline: 'none',
                 cursor: 'pointer',
@@ -130,7 +130,7 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
 
           {/* Department Select */}
           <motion.div whileHover={{ scale: 1.02 }} style={{ position: 'relative' }}>
-            <Briefcase size={18} color="var(--color-text-tertiary)" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
+            <Briefcase size={18} color="#000000" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
             <select
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
@@ -138,9 +138,9 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
                 width: '100%',
                 padding: '0.8125rem 1rem 0.8125rem 2.75rem',
                 borderRadius: 'var(--radius-lg)',
-                backgroundColor: 'rgba(15, 23, 42, 0.7)',
-                border: '1px solid var(--color-border)',
-                color: 'var(--color-text)',
+                backgroundColor: '#ffffff',
+                border: '1px solid #000000',
+                color: '#000000',
                 fontSize: '0.9375rem',
                 outline: 'none',
                 cursor: 'pointer',
@@ -157,15 +157,15 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
 
           {/* Search Button */}
           <motion.button
-            whileHover={{ scale: 1.05, boxShadow: '0 6px 20px rgba(59, 130, 246, 0.6)' }}
+            whileHover={{ scale: 1.05, boxShadow: '0 6px 20px rgba(0, 0, 0, 0.4)' }}
             whileTap={{ scale: 0.95 }}
             type="submit"
             style={{
               padding: '0.8125rem 1.5rem',
               borderRadius: 'var(--radius-lg)',
-              backgroundColor: 'var(--color-primary)',
+              backgroundColor: '#000000',
               color: '#ffffff',
-              border: 'none',
+              border: '1px solid #000000',
               fontWeight: 700,
               fontSize: '0.9375rem',
               cursor: 'pointer',
@@ -173,7 +173,7 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               gap: '0.4rem',
-              boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)',
+              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.35)',
             }}
           >
             <span>Search</span>
@@ -190,11 +190,11 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
             flexWrap: 'wrap',
             gap: '1rem',
             paddingTop: '0.75rem',
-            borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+            borderTop: '1px solid #e5e5e5',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-tertiary)' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#000000' }}>
               Quick Filters:
             </span>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -214,9 +214,9 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
                       fontWeight: 600,
                       padding: '0.25rem 0.625rem',
                       borderRadius: '9999px',
-                      border: active ? '1px solid transparent' : '1px solid var(--color-border)',
-                      backgroundColor: 'transparent',
-                      color: active ? 'var(--color-primary-400)' : 'var(--color-text-secondary)',
+                      border: active ? '1px solid #000000' : '1px solid #000000',
+                      backgroundColor: active ? '#000000' : 'transparent',
+                      color: active ? '#ffffff' : '#000000',
                       cursor: 'pointer',
                       outline: 'none'
                     }}
@@ -227,8 +227,8 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
                         style={{
                           position: 'absolute',
                           inset: 0,
-                          backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                          border: '1px solid var(--color-primary)',
+                          backgroundColor: '#000000',
+                          border: '1px solid #000000',
                           borderRadius: '9999px',
                           zIndex: -1
                         }}
@@ -248,13 +248,13 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
             transition={{ delay: 0.5 }}
             style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}
           >
-            <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
-              <strong style={{ color: 'var(--color-text)' }}>{totalRolesCount}</strong> Mandates Active
+            <span style={{ fontSize: '0.8125rem', color: '#000000' }}>
+              <strong style={{ color: '#000000' }}>{totalRolesCount}</strong> Mandates Active
             </span>
 
             {onOpenFilterDrawer && (
               <motion.button
-                whileHover={{ scale: 1.05, color: 'var(--color-primary)' }}
+                whileHover={{ scale: 1.05, color: '#000000' }}
                 whileTap={{ scale: 0.95 }}
                 type="button"
                 onClick={onOpenFilterDrawer}
@@ -263,7 +263,7 @@ export const JobSearchInterface: React.FC<JobSearchInterfaceProps> = ({
                   alignItems: 'center',
                   gap: '0.35rem',
                   fontSize: '0.8125rem',
-                  color: 'var(--color-primary-400)',
+                  color: '#000000',
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',

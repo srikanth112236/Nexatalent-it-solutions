@@ -41,8 +41,8 @@ export const InsightCard: React.FC<InsightCardProps> = ({
       whileHover={{ y: -6, scale: 1.015 }}
       style={{
         borderRadius: 'var(--radius-xl)',
-        backgroundColor: 'var(--color-surface)',
-        border: featured ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid var(--color-border)',
+        backgroundColor: '#ffffff',
+        border: featured ? '1px solid #000000' : '1px solid #e5e5e5',
         padding: '2rem',
         display: 'flex',
         flexDirection: 'column',
@@ -53,13 +53,13 @@ export const InsightCard: React.FC<InsightCardProps> = ({
       }}
       onHoverStart={(e) => {
         const target = e.currentTarget as HTMLElement;
-        target.style.boxShadow = '0 10px 30px -10px rgba(59, 130, 246, 0.3)';
-        target.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+        target.style.boxShadow = '0 10px 30px -10px rgba(0, 0, 0, 0.3)';
+        target.style.borderColor = '#000000';
       }}
       onHoverEnd={(e) => {
         const target = e.currentTarget as HTMLElement;
         target.style.boxShadow = 'var(--shadow-sm)';
-        target.style.borderColor = featured ? 'rgba(59, 130, 246, 0.4)' : 'var(--color-border)';
+        target.style.borderColor = featured ? '#000000' : '#e5e5e5';
       }}
     >
       <div>
@@ -75,7 +75,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
               fontWeight: 700,
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
-              color: 'var(--color-primary-400)',
+              color: '#000000',
             }}
           >
             {category}
@@ -90,7 +90,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
               alignItems: 'center',
               gap: '0.35rem',
               fontSize: '0.75rem',
-              color: 'var(--color-text-tertiary)',
+              color: '#000000',
             }}
           >
             <Clock size={12} />
@@ -104,7 +104,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
             style={{
               fontSize: '1.25rem',
               fontWeight: 700,
-              color: 'var(--color-text)',
+              color: '#000000',
               lineHeight: 1.35,
               marginBottom: '0.75rem',
             }}
@@ -117,7 +117,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
         <p
           style={{
             fontSize: '0.875rem',
-            color: 'var(--color-text-secondary)',
+            color: '#000000',
             lineHeight: 1.6,
             marginBottom: '1.75rem',
           }}
@@ -133,7 +133,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
           justifyContent: 'space-between',
           alignItems: 'center',
           paddingTop: '1rem',
-          borderTop: '1px solid var(--color-border)',
+          borderTop: '1px solid #e5e5e5',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
@@ -142,8 +142,8 @@ export const InsightCard: React.FC<InsightCardProps> = ({
               width: '32px',
               height: '32px',
               borderRadius: '50%',
-              backgroundColor: 'rgba(59, 130, 246, 0.2)',
-              color: 'var(--color-primary-400)',
+              backgroundColor: '#000000',
+              color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -154,10 +154,10 @@ export const InsightCard: React.FC<InsightCardProps> = ({
             {author.name[0]}
           </div>
           <div>
-            <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)' }}>
+            <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#000000' }}>
               {author.name}
             </div>
-            <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-tertiary)' }}>
+            <div style={{ fontSize: '0.6875rem', color: '#000000' }}>
               {date}
             </div>
           </div>
@@ -168,7 +168,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            color: 'var(--color-primary-400)',
+            color: '#000000',
             textDecoration: 'none',
             overflow: 'hidden',
           }}

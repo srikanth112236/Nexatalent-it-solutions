@@ -109,7 +109,7 @@ export const ProcessTimeline: React.FC<ProcessTimelineProps> = ({
         const iconNode = el.querySelector('.timeline-icon-node');
         if (iconNode) {
           gsap.to(iconNode, {
-            boxShadow: '0 0 25px rgba(59, 130, 246, 0.6)',
+            boxShadow: '0 0 25px rgba(0, 0, 0, 0.4)',
             repeat: -1,
             yoyo: true,
             duration: 1.5,
@@ -131,7 +131,7 @@ export const ProcessTimeline: React.FC<ProcessTimelineProps> = ({
   }, []);
 
   return (
-    <section ref={sectionRef} style={{ padding: '5rem 2rem', position: 'relative' }}>
+    <section ref={sectionRef} className="font-sans" style={{ padding: '5rem 2rem', position: 'relative', backgroundColor: '#ffffff' }}>
       <div ref={containerRef} style={{ maxWidth: '1000px', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
           <div
@@ -141,21 +141,21 @@ export const ProcessTimeline: React.FC<ProcessTimelineProps> = ({
               gap: '0.4rem',
               fontSize: '0.8125rem',
               fontWeight: 600,
-              color: 'var(--color-primary-400)',
-              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              color: '#ffffff',
+              backgroundColor: '#000000',
               padding: '0.35rem 0.875rem',
               borderRadius: '9999px',
-              border: '1px solid rgba(59, 130, 246, 0.25)',
+              border: '1px solid #000000',
               marginBottom: '1rem',
             }}
           >
-            <Zap size={14} />
+            <Zap size={14} color="#ffffff" />
             {badge}
           </div>
-          <h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: 'var(--color-text)' }}>
+          <h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: '#000000' }}>
             {title}
           </h2>
-          <p style={{ color: 'var(--color-text-secondary)', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
+          <p style={{ color: '#000000', maxWidth: '640px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
             {subtitle}
           </p>
         </div>
@@ -170,7 +170,7 @@ export const ProcessTimeline: React.FC<ProcessTimelineProps> = ({
               bottom: '2rem',
               left: '28px',
               width: '2px',
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              backgroundColor: '#e5e5e5',
               zIndex: 0,
             }}
           />
@@ -183,7 +183,7 @@ export const ProcessTimeline: React.FC<ProcessTimelineProps> = ({
               bottom: '2rem',
               left: '28px',
               width: '2px',
-              backgroundColor: 'var(--color-primary)',
+              backgroundColor: '#000000',
               zIndex: 0,
             }}
           />
@@ -206,17 +206,17 @@ export const ProcessTimeline: React.FC<ProcessTimelineProps> = ({
                   width: '56px',
                   height: '56px',
                   borderRadius: '50%',
-                  backgroundColor: 'var(--color-surface)',
-                  border: '2px solid var(--color-primary)',
+                  backgroundColor: '#000000',
+                  border: '2px solid #000000',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
-                  boxShadow: '0 0 15px rgba(59, 130, 246, 0.2)',
+                  boxShadow: '0 0 15px rgba(0, 0, 0, 0.25)',
                   transition: 'background-color 0.3s ease',
                 }}
               >
-                <Clock size={20} color="var(--color-primary-400)" />
+                <Clock size={20} color="#ffffff" />
               </div>
 
               {/* Milestone Content Card */}
@@ -224,8 +224,8 @@ export const ProcessTimeline: React.FC<ProcessTimelineProps> = ({
                 style={{
                   flex: 1,
                   borderRadius: 'var(--radius-xl)',
-                  backgroundColor: 'var(--color-surface)',
-                  border: '1px solid var(--color-border)',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e5e5e5',
                   padding: '2rem',
                   boxShadow: 'var(--shadow-sm)',
                 }}
@@ -244,7 +244,7 @@ export const ProcessTimeline: React.FC<ProcessTimelineProps> = ({
                     style={{
                       fontSize: '0.8125rem',
                       fontWeight: 800,
-                      color: 'var(--color-primary-400)',
+                      color: '#000000',
                       letterSpacing: '0.05em',
                       textTransform: 'uppercase',
                     }}
@@ -256,11 +256,11 @@ export const ProcessTimeline: React.FC<ProcessTimelineProps> = ({
                       style={{
                         fontSize: '0.75rem',
                         fontWeight: 700,
-                        color: 'var(--color-success)',
-                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        color: '#ffffff',
+                        backgroundColor: '#000000',
                         padding: '0.2rem 0.6rem',
                         borderRadius: 'var(--radius-sm)',
-                        border: '1px solid rgba(34, 197, 94, 0.25)',
+                        border: '1px solid #000000',
                       }}
                     >
                       {milestone.slaHighlight}
@@ -268,29 +268,29 @@ export const ProcessTimeline: React.FC<ProcessTimelineProps> = ({
                   )}
                 </div>
 
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#000000', marginBottom: '0.5rem' }}>
                   {milestone.title}
                 </h3>
-                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+                <p style={{ color: '#000000', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '1.25rem' }}>
                   {milestone.description}
                 </p>
 
                 {/* Deliverables List */}
                 <div
                   style={{
-                    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+                    backgroundColor: '#ffffff',
                     borderRadius: 'var(--radius-lg)',
                     padding: '1rem',
-                    border: '1px solid rgba(255, 255, 255, 0.04)',
+                    border: '1px solid #e5e5e5',
                   }}
                 >
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#000000', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
                     Key Deliverables
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.5rem' }}>
                     {milestone.deliverables.map((del, dIdx) => (
-                      <div key={dIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8125rem', color: 'var(--color-text)' }}>
-                        <CheckCircle2 size={13} color="var(--color-primary-400)" />
+                      <div key={dIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8125rem', color: '#000000' }}>
+                        <CheckCircle2 size={13} color="#000000" />
                         <span>{del}</span>
                       </div>
                     ))}

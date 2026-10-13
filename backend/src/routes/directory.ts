@@ -5,9 +5,20 @@ import { paginate, paged } from '../validate/schemas.js';
 
 export const directoryRouter = Router();
 
+/** Platform-wide directory readers — everyone else gets tenant-scoped rows. */
+const TENANTS_PLATFORM_ROLES = ['superadmin', 'platform_owner', 'operations_admin', 'employee'];
+const USERS_PLATFORM_ROLES = ['superadmin', 'platform_owner', 'operations_admin', 'sales_admin'];
+const AUDIT_PLATFORM_ROLES = ['superadmin', 'platform_owner', 'operations_admin'];
+/** Company-side readers: own-org directory only (users, orgs, audit trail). */
+const COMPANY_DIRECTORY_ROLES = ['employer', 'company_admin', 'hiring_manager', 'company_recruiter', 'internal_recruiter', 'agency_admin', 'agency_recruiter', 'recruiter', 'vendor'];
+
 // Tenants/organizations
-directoryRouter.get('/tenants', requireAuth(['superadmin','platform_owner','operations_admin','employee']), (_req, res) => {
-  res.json({ success: true, data: loadDb().organizations });
+directoryRouter.get('/tenants', requireAuth([...TENANTS_PLATFORM_ROLES, 'employer', 'company_admin', 'hiring_manager', 'company_recruiter']), (req, res) => {
+  const ctx = ctxOf(req);
+  const orgs = loadDb().organizations as any[];
+  if (TENANTS_PLATFORM_ROLES.includes(ctx.role)) return res.json({ success: true, data: orgs });
+  // Company roles resolve only their own organization (drives company filters).
+  res.json({ success: true, data: orgs.filter((o: any) => o.id === ctx.tenantId || o.tenantId === ctx.tenantId) });
 });
 directoryRouter.post('/tenants', requireAuth(['superadmin','platform_owner']), (req: Request, res: Response) => {
   const b: any = req.body || {};
@@ -105,10 +116,15 @@ directoryRouter.get('/tenants/:id/360', requireAuth(['superadmin','platform_owne
 });
 
 // Users (+suspend/reactivate with reassignment note)
-directoryRouter.get('/users', requireAuth(['superadmin','platform_owner','operations_admin','sales_admin']), (req, res) => {
+// Read is tenant-scoped for company roles so hiring teams can resolve recruiters
+// for assignment; writes stay platform-only.
+directoryRouter.get('/users', requireAuth([...USERS_PLATFORM_ROLES, ...COMPANY_DIRECTORY_ROLES]), (req, res) => {
   const db = loadDb();
+  const ctx = ctxOf(req);
   const { page, pageSize, q } = paginate.parse(req.query);
   let rows = db.users as any[];
+  const platform = USERS_PLATFORM_ROLES.includes(ctx.role);
+  if (!platform) rows = rows.filter((u: any) => u.tenantId === ctx.tenantId);
   // P1-5: field-scoped search (was JSON.stringify over all fields incl. PII).
   if (q) { const s = String(q).toLowerCase(); rows = rows.filter((u) => `${u.id || ''} ${u.name || ''} ${u.email || ''} ${u.role || ''} ${u.tenantId || ''} ${u.status || ''}`.toLowerCase().includes(s)); }
   // never leak password hashes or MFA secrets — expose only the enabled flag
@@ -685,11 +701,15 @@ directoryRouter.patch('/directory/candidates/:id/deletion-requests/:reqId', requ
   audit(ctx.email, `CANDIDATE_DELETION_${r.status.toUpperCase()}:${r.candidateId}`, 'TNT-GLOBAL', 'candidate', r.candidateId, req.ip); persist();
   res.json({ success: true, data: { request: r, anonymized } });
 });
-// Audit logs with filters
-directoryRouter.get('/audit-logs', requireAuth(['superadmin','platform_owner','operations_admin']), (req, res) => {
+// Audit logs with filters (company roles read their own tenant trail only)
+directoryRouter.get('/audit-logs', requireAuth([...AUDIT_PLATFORM_ROLES, ...COMPANY_DIRECTORY_ROLES]), (req, res) => {
+  const ctx = ctxOf(req);
   let rows = loadDb().auditLogs as any[];
+  if (!AUDIT_PLATFORM_ROLES.includes(ctx.role)) rows = rows.filter((l) => l.tenantId === ctx.tenantId);
   if (req.query.actor) rows = rows.filter((l) => String(l.actor).includes(String(req.query.actor)));
   if (req.query.action) rows = rows.filter((l) => String(l.action).includes(String(req.query.action)));
+  if (req.query.recordId) rows = rows.filter((l) => String(l.recordId) === String(req.query.recordId));
+  if (req.query.resource) rows = rows.filter((l) => String(l.resource) === String(req.query.resource));
   const { page, pageSize } = paginate.parse(req.query);
   res.json({ success: true, ...paged(rows, page, pageSize) });
 });

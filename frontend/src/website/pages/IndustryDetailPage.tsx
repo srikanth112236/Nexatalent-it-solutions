@@ -89,7 +89,7 @@ export function IndustryDetailPage() {
   ];
 
   return (
-    <div className="bg-white min-h-screen text-slate-900 font-sans relative overflow-x-clip">
+    <div className="bg-white min-h-screen text-black font-sans relative overflow-x-clip">
       {/* SEO & Meta Tags */}
       <SeoHead
         title={`${industry.title} Recruitment Practice | Nexa Talent IT Solutions`}
@@ -104,25 +104,25 @@ export function IndustryDetailPage() {
       {/* ============================================================================
        * HERO SECTION (CLEAN LIGHT THEME WITH BRAND BLUE ACCENTS)
        * ============================================================================ */}
-      <section className="relative pt-32 pb-16 px-6 lg:px-16 bg-[#FAF8F5] border-b border-slate-200/80">
+      <section className="relative pt-32 pb-16 px-6 lg:px-16 bg-white border-b border-slate-200/80">
         <div className="max-w-6xl mx-auto space-y-6">
           
           {/* Breadcrumb Navigation */}
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
-            <Link to="/" className="hover:text-[#0265FF] transition-colors">Home</Link>
-            <ChevronRight size={14} className="text-slate-400" />
-            <Link to="/industries" className="hover:text-[#0265FF] transition-colors">Industries Vertical Catalog</Link>
-            <ChevronRight size={14} className="text-slate-400" />
-            <span className="text-[#0265FF] font-bold">{industry.title}</span>
+          <div className="flex items-center gap-2 text-xs font-semibold text-black">
+            <Link to="/" className="hover:text-black transition-colors">Home</Link>
+            <ChevronRight size={14} className="text-black" />
+            <Link to="/industries" className="hover:text-black transition-colors">Industries Vertical Catalog</Link>
+            <ChevronRight size={14} className="text-black" />
+            <span className="text-black font-bold">{industry.title}</span>
           </div>
 
           {/* Practice Badge */}
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#0265FF] text-xs font-bold uppercase tracking-wider"
+            className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white border border-black text-black text-xs font-bold uppercase tracking-wider"
           >
-            <Icon size={14} className="text-[#0265FF]" />
+            <Icon size={14} className="text-black" />
             <span>Dedicated Industry Practice • {industry.metrics.placed}</span>
           </motion.div>
 
@@ -131,9 +131,9 @@ export function IndustryDetailPage() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.15]"
+            className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-black tracking-tight leading-[1.15]"
           >
-            Talent & Engineering Solutions for <span className="text-[#0265FF]">{industry.title}</span>
+            Talent & Engineering Solutions for <span className="text-black">{industry.title}</span>
           </motion.h1>
 
           {/* Subtitle */}
@@ -141,7 +141,7 @@ export function IndustryDetailPage() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-base sm:text-xl text-slate-600 max-w-3xl font-normal leading-relaxed"
+            className="text-base sm:text-xl text-black max-w-3xl font-normal leading-relaxed"
           >
             {industry.tagline}. {industry.description}
           </motion.p>
@@ -155,16 +155,16 @@ export function IndustryDetailPage() {
           >
             <Link
               to="/employers"
-              className="px-8 py-4 rounded-full bg-[#0265FF] hover:bg-[#004FBF] text-white font-bold text-sm shadow-[0_10px_30px_rgba(2,101,255,0.25)] transition-all flex items-center gap-2"
+              className="px-8 py-4 rounded-full bg-black hover:bg-neutral-800 text-white font-bold text-sm shadow-[0_10px_30px_rgba(0,0,0,0.25)] transition-all flex items-center gap-2"
             >
-              <span>Deploy Squad in {industry.title}</span>
+              <span>Get Talent for {industry.title}</span>
               <ArrowRight size={16} />
             </Link>
             <Link
               to="/contact"
-              className="px-8 py-4 rounded-full bg-white hover:bg-slate-50 text-slate-800 font-bold text-sm border border-slate-300 shadow-xs transition-all"
+              className="px-8 py-4 rounded-full bg-white hover:bg-neutral-100 text-black font-bold text-sm border border-slate-300 shadow-xs transition-all"
             >
-              Schedule Practice Consultation
+              Talk to a Hiring Expert
             </Link>
           </motion.div>
 
@@ -176,21 +176,21 @@ export function IndustryDetailPage() {
        * ============================================================================ */}
       <section className="py-8 px-6 lg:px-16 bg-white border-b border-slate-200/80">
         <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-          <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-slate-200 shadow-xs">
-            <div className="text-2xl sm:text-3xl font-extrabold text-[#0265FF]">{industry.metrics.placed}</div>
-            <div className="text-xs font-semibold text-slate-500 mt-1">Domain Placements</div>
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
+            <div className="text-2xl sm:text-3xl font-extrabold text-black">{industry.metrics.placed}</div>
+            <div className="text-xs font-semibold text-black mt-1">Domain Placements</div>
           </div>
-          <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-slate-200 shadow-xs">
-            <div className="text-2xl sm:text-3xl font-extrabold text-[#0265FF]">{industry.metrics.avgSla}</div>
-            <div className="text-xs font-semibold text-slate-500 mt-1">Average Shortlist SLA</div>
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
+            <div className="text-2xl sm:text-3xl font-extrabold text-black">{industry.metrics.avgSla}</div>
+            <div className="text-xs font-semibold text-black mt-1">Average Shortlist SLA</div>
           </div>
-          <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-slate-200 shadow-xs">
-            <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600">{industry.metrics.retention}</div>
-            <div className="text-xs font-semibold text-slate-500 mt-1">1-Year Retention Rate</div>
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
+            <div className="text-2xl sm:text-3xl font-extrabold text-black">{industry.metrics.retention}</div>
+            <div className="text-xs font-semibold text-black mt-1">1-Year Retention Rate</div>
           </div>
-          <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-slate-200 shadow-xs">
-            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900">90 Days</div>
-            <div className="text-xs font-semibold text-slate-500 mt-1">Replacement Guarantee</div>
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
+            <div className="text-2xl sm:text-3xl font-extrabold text-black">90 Days</div>
+            <div className="text-xs font-semibold text-black mt-1">Replacement Guarantee</div>
           </div>
         </div>
       </section>
@@ -203,27 +203,27 @@ export function IndustryDetailPage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Bottlenecks Card */}
-            <div className="p-8 rounded-3xl bg-red-50/50 border border-red-200 space-y-4 shadow-xs">
-              <span className="text-xs font-bold text-red-700 uppercase tracking-wider bg-white px-3.5 py-1 rounded-full border border-red-200 inline-block">
+            <div className="p-8 rounded-3xl bg-white border border-black space-y-4 shadow-xs">
+              <span className="text-xs font-bold text-black uppercase tracking-wider bg-white px-3.5 py-1 rounded-full border border-black inline-block">
                 INDUSTRY TALENT CHALLENGE
               </span>
-              <h3 className="text-xl font-extrabold text-slate-900">
+              <h3 className="text-xl font-extrabold text-black">
                 Core Hiring Bottlenecks in {industry.title}
               </h3>
-              <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">
+              <p className="text-xs sm:text-sm text-black leading-relaxed font-normal">
                 {industry.challenges}
               </p>
             </div>
 
             {/* Nexa Solution Card */}
-            <div className="p-8 rounded-3xl bg-blue-50/50 border border-blue-200 space-y-4 shadow-xs">
-              <span className="text-xs font-bold text-[#0265FF] uppercase tracking-wider bg-white px-3.5 py-1 rounded-full border border-blue-200 inline-block">
+            <div className="p-8 rounded-3xl bg-white border border-black space-y-4 shadow-xs">
+              <span className="text-xs font-bold text-black uppercase tracking-wider bg-white px-3.5 py-1 rounded-full border border-black inline-block">
                 NEXA TALENT METHODOLOGY
               </span>
-              <h3 className="text-xl font-extrabold text-slate-900">
+              <h3 className="text-xl font-extrabold text-black">
                 Our Delivery Architecture
               </h3>
-              <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">
+              <p className="text-xs sm:text-sm text-black leading-relaxed font-normal">
                 {industry.nexaSolution}
               </p>
             </div>
@@ -232,39 +232,39 @@ export function IndustryDetailPage() {
           {/* High-Demand Roles Matrix */}
           <div className="space-y-6">
             <div className="space-y-2">
-              <span className="text-xs font-bold text-[#0265FF] uppercase tracking-wider bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">
+              <span className="text-xs font-bold text-black uppercase tracking-wider bg-white px-3.5 py-1 rounded-full border border-black">
                 TALENT SOURCING COVERAGE
               </span>
-              <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-black tracking-tight">
                 High-Demand Engineering & Leadership Roles
               </h2>
-              <p className="text-xs sm:text-sm text-slate-600">
+              <p className="text-xs sm:text-sm text-black">
                 Pre-evaluated candidate pipelines actively maintained for {industry.title} mandates.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {industry.roles.map((r, i) => (
-                <div key={i} className="p-6 rounded-3xl bg-[#FAF8F5] border border-slate-200 space-y-4 flex flex-col justify-between shadow-xs hover:border-blue-300 transition-all">
+                <div key={i} className="p-6 rounded-3xl bg-white border border-slate-200 space-y-4 flex flex-col justify-between shadow-xs hover:border-black transition-all">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-extrabold text-[#0265FF] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 uppercase">
+                      <span className="text-[10px] font-extrabold text-black bg-white px-2.5 py-0.5 rounded-full border border-black uppercase">
                         Active Pool
                       </span>
-                      <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
+                      <span className="text-[10px] font-bold text-black flex items-center gap-1">
                         <Clock size={12} />
                         SLA: {industry.metrics.avgSla}
                       </span>
                     </div>
-                    <h4 className="font-extrabold text-base text-slate-900">{r}</h4>
+                    <h4 className="font-extrabold text-base text-black">{r}</h4>
                   </div>
 
-                  <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-600 font-semibold">
-                    <span className="flex items-center gap-1 text-[#0265FF]">
+                  <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-xs text-black font-semibold">
+                    <span className="flex items-center gap-1 text-black">
                       <CheckCircle2 size={14} />
                       Practitioner Assessed
                     </span>
-                    <span className="text-slate-400">Vetted</span>
+                    <span className="text-black">Vetted</span>
                   </div>
                 </div>
               ))}
@@ -272,12 +272,12 @@ export function IndustryDetailPage() {
           </div>
 
           {/* Institutional Advantage Table */}
-          <div className="p-8 sm:p-10 rounded-3xl bg-[#FAF8F5] border border-slate-200 space-y-6 shadow-xs">
+          <div className="p-8 sm:p-10 rounded-3xl bg-white border border-slate-200 space-y-6 shadow-xs">
             <div className="space-y-2">
-              <span className="text-xs font-bold text-[#0265FF] uppercase tracking-wider bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">
+              <span className="text-xs font-bold text-black uppercase tracking-wider bg-white px-3.5 py-1 rounded-full border border-black">
                 SERVICE BENCHMARK
               </span>
-              <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-black tracking-tight">
                 Institutional Advantage & Service Delivery
               </h2>
             </div>
@@ -285,37 +285,37 @@ export function IndustryDetailPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-slate-300 text-slate-700 font-extrabold">
+                  <tr className="border-b border-slate-300 text-black font-extrabold">
                     <th className="py-3 px-4">Evaluation Criteria</th>
-                    <th className="py-3 px-4 text-[#0265FF]">Nexa Talent Practice Pod</th>
-                    <th className="py-3 px-4 text-slate-500">General Recruitment Agencies</th>
-                    <th className="py-3 px-4 text-slate-500">In-House TA Only</th>
+                    <th className="py-3 px-4 text-black">Nexa Talent Practice Pod</th>
+                    <th className="py-3 px-4 text-black">General Recruitment Agencies</th>
+                    <th className="py-3 px-4 text-black">In-House TA Only</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 text-slate-700">
+                <tbody className="divide-y divide-slate-200 text-black">
                   <tr>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">Domain Vetting Depth</td>
-                    <td className="py-3.5 px-4 font-extrabold text-[#0265FF]">Practitioner Architectural Screen</td>
-                    <td className="py-3.5 px-4 text-slate-500">Keyword Resume Scanning</td>
-                    <td className="py-3.5 px-4 text-slate-500">General Recruiter Screen</td>
+                    <td className="py-3.5 px-4 font-bold text-black">Domain Vetting Depth</td>
+                    <td className="py-3.5 px-4 font-extrabold text-black">Practitioner Architectural Screen</td>
+                    <td className="py-3.5 px-4 text-black">Keyword Resume Scanning</td>
+                    <td className="py-3.5 px-4 text-black">General Recruiter Screen</td>
                   </tr>
                   <tr>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">Average Shortlist SLA</td>
-                    <td className="py-3.5 px-4 font-extrabold text-[#0265FF]">{industry.metrics.avgSla}</td>
-                    <td className="py-3.5 px-4 text-slate-500">30 - 60 Days</td>
-                    <td className="py-3.5 px-4 text-slate-500">45+ Days</td>
+                    <td className="py-3.5 px-4 font-bold text-black">Average Shortlist SLA</td>
+                    <td className="py-3.5 px-4 font-extrabold text-black">{industry.metrics.avgSla}</td>
+                    <td className="py-3.5 px-4 text-black">30 - 60 Days</td>
+                    <td className="py-3.5 px-4 text-black">45+ Days</td>
                   </tr>
                   <tr>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">Replacement Guarantee</td>
-                    <td className="py-3.5 px-4 font-extrabold text-[#0265FF]">90-Day Unconditional Warranty</td>
-                    <td className="py-3.5 px-4 text-slate-500">30 Days or None</td>
-                    <td className="py-3.5 px-4 text-slate-500">N/A (Re-hiring Overhead)</td>
+                    <td className="py-3.5 px-4 font-bold text-black">Replacement Guarantee</td>
+                    <td className="py-3.5 px-4 font-extrabold text-black">90-Day Unconditional Warranty</td>
+                    <td className="py-3.5 px-4 text-black">30 Days or None</td>
+                    <td className="py-3.5 px-4 text-black">N/A (Re-hiring Overhead)</td>
                   </tr>
                   <tr>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">Statutory & Legal Compliance</td>
-                    <td className="py-3.5 px-4 font-extrabold text-[#0265FF]">100% PF, ESI, GST Governed</td>
-                    <td className="py-3.5 px-4 text-slate-500">Varies / Partial</td>
-                    <td className="py-3.5 px-4 text-slate-500">Internal HR Overhead</td>
+                    <td className="py-3.5 px-4 font-bold text-black">Statutory & Legal Compliance</td>
+                    <td className="py-3.5 px-4 font-extrabold text-black">100% PF, ESI, GST Governed</td>
+                    <td className="py-3.5 px-4 text-black">Varies / Partial</td>
+                    <td className="py-3.5 px-4 text-black">Internal HR Overhead</td>
                   </tr>
                 </tbody>
               </table>
@@ -325,31 +325,31 @@ export function IndustryDetailPage() {
           {/* Risk Governance Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-3 shadow-xs">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0265FF] flex items-center justify-center font-bold">
+              <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-bold">
                 <ShieldCheck size={20} />
               </div>
-              <h4 className="font-extrabold text-base text-slate-900">90-Day Placement Warranty</h4>
-              <p className="text-xs text-slate-600 leading-relaxed font-normal">
+              <h4 className="font-extrabold text-base text-black">90-Day Placement Warranty</h4>
+              <p className="text-xs text-black leading-relaxed font-normal">
                 Complete replacement warranty backed by dedicated rapid-response sourcing squads for any candidate attrition within 90 days.
               </p>
             </div>
 
             <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-3 shadow-xs">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0265FF] flex items-center justify-center font-bold">
+              <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-bold">
                 <Lock size={20} />
               </div>
-              <h4 className="font-extrabold text-base text-slate-900">100% IP Escrow & Legal Assignment</h4>
-              <p className="text-xs text-slate-600 leading-relaxed font-normal">
+              <h4 className="font-extrabold text-base text-black">100% IP Escrow & Legal Assignment</h4>
+              <p className="text-xs text-black leading-relaxed font-normal">
                 Strict non-disclosure protocols and legal assignment ensuring all code, IP, and domain knowledge belong 100% to your enterprise.
               </p>
             </div>
 
             <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-3 shadow-xs">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0265FF] flex items-center justify-center font-bold">
+              <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-bold">
                 <FileText size={20} />
               </div>
-              <h4 className="font-extrabold text-base text-slate-900">Zero Candidate Fee Ethics</h4>
-              <p className="text-xs text-slate-600 leading-relaxed font-normal">
+              <h4 className="font-extrabold text-base text-black">Zero Candidate Fee Ethics</h4>
+              <p className="text-xs text-black leading-relaxed font-normal">
                 Nexa Talent IT Solutions operates under a strict zero-candidate-fee code of ethics. Candidates are never charged recruitment fees.
               </p>
             </div>
@@ -367,14 +367,14 @@ export function IndustryDetailPage() {
       {/* ============================================================================
        * DOMAIN FAQ ACCORDION SECTION
        * ============================================================================ */}
-      <section className="py-20 px-6 lg:px-16 bg-[#FAF8F5] border-b border-slate-200/80">
+      <section className="py-20 px-6 lg:px-16 bg-white border-b border-slate-200/80">
         <div className="max-w-4xl mx-auto space-y-8">
           <div className="text-center space-y-3">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#0265FF] text-xs font-extrabold uppercase tracking-wider">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white border border-black text-black text-xs font-extrabold uppercase tracking-wider">
               <HelpCircle size={14} />
               <span>PRACTICE FAQ</span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
+            <h2 className="text-3xl md:text-4xl font-extrabold text-black tracking-tight">
               Frequently Asked Questions on {industry.title} Hiring
             </h2>
           </div>
@@ -382,10 +382,10 @@ export function IndustryDetailPage() {
           <div className="space-y-4">
             {industryFaqs.map((faq, idx) => (
               <div key={idx} className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
-                <h4 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                  <span className="text-[#0265FF]">Q:</span> {faq.q}
+                <h4 className="text-base font-extrabold text-black flex items-center gap-2">
+                  <span className="text-black">Q:</span> {faq.q}
                 </h4>
-                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed pl-6">
+                <p className="text-xs sm:text-sm text-black leading-relaxed pl-6">
                   {faq.a}
                 </p>
               </div>

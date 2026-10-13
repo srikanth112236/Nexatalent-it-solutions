@@ -5,10 +5,12 @@
 
 export const V2_HERO = {
   eyebrow: 'Your Trusted Technology & Talent Partner',
-  title: 'Connect the right talent with the right organization',
-  sub: 'Your Talent | Our Technology | A Better Tomorrow — permanent recruitment, contract staffing, executive search and vendor empanelment from sourcing to onboarding.',
-  primaryCta: { label: 'Talk to an expert', href: '/#contact' },
-  secondaryCta: { label: 'Explore solutions', href: '/solutions' },
+  titleLine1: 'Your talent is our technology',
+  titleLine2: 'for a better tomorrow',
+  sub: 'Permanent recruitment, contract staffing, executive search and vendor empanelment — from sourcing to onboarding.',
+  trustLine: 'Trusted by GCCs, BFSI & SaaS hiring teams',
+  primaryCta: { label: 'Talk to a Hiring Expert', href: '/#contact' },
+  secondaryCta: { label: 'Explore Hiring Solutions', href: '/solutions' },
   images: [
     'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=70',
     'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=70',
@@ -102,6 +104,43 @@ export const V2_OFFICES = {
     { city: 'Bengaluru', country: 'India', note: 'Technology hub — SaaS, AI and GCC engineering pods', image: 'https://images.unsplash.com/photo-1596176530529-78163a4f7af2?auto=format&fit=crop&w=700&q=70' },
     { city: 'Dubai', country: 'UAE', note: 'Enterprise delivery support — GCC and global mandates', image: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=700&q=70' },
   ],
+};
+
+export const V2_CONTACT = {
+  title: 'Send us a message',
+  slaNote: 'Usually 1 business day',
+  cards: [
+    {
+      title: 'Support',
+      contact: 'info@nexatalentitsolutions.com',
+      href: 'mailto:info@nexatalentitsolutions.com',
+      desc: 'Stuck on something, or just need a quick answer? Our team is on standby around the clock.',
+    },
+    {
+      title: 'Sales',
+      contact: '+91 70196 96166',
+      href: 'tel:+917019696166',
+      desc: "Want to know if NexaTalent fits? Reach out and we'll walk you through engagement models and tailored options.",
+    },
+    {
+      title: 'Careers',
+      contact: 'Find open roles →',
+      href: '/candidates',
+      desc: 'Want to build with us? Register your profile with a note on what you do best, and our team will be in touch.',
+    },
+  ],
+  topics: [
+    'Choose a topic',
+    'Sales — new project / engagement',
+    'Partnership',
+    'Support — existing customer',
+    'Press / media',
+    'Careers',
+    'Something else',
+  ],
+  offices: ['No preference', 'Mumbai, India', 'Bengaluru, India', 'Hyderabad, India', 'Chennai, India', 'Dubai, UAE', 'New York, USA'],
+  budgets: ['Not sure yet', 'Under $25k', '$25k – $100k', '$100k – $500k', '$500k+'],
+  timelines: ['Just exploring', 'ASAP — within 2 weeks', '1 – 3 months', '3 – 6 months', '6+ months'],
 };
 
 export const V2_WHY = {

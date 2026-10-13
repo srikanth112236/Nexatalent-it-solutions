@@ -140,6 +140,7 @@ export function InsightsPage() {
 
   return (
     <div
+      className="font-sans"
       style={{
         position: 'relative',
         display: 'block',
@@ -170,7 +171,7 @@ export function InsightsPage() {
         position: 'relative', 
         paddingTop: '8rem', 
         paddingBottom: '4.5rem', 
-        background: 'linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%)',
+        background: '#ffffff',
         borderBottom: '1px solid #E2E8F0'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem', textAlign: 'center' }}>
@@ -184,9 +185,9 @@ export function InsightsPage() {
               gap: '0.5rem',
               padding: '0.4rem 1rem',
               borderRadius: '9999px',
-              backgroundColor: '#EEF2FF',
-              border: '1px solid #C7D2FE',
-              color: '#3730A3',
+              backgroundColor: '#ffffff',
+              border: '1px solid #000000',
+              color: '#000000',
               fontSize: '0.85rem',
               fontWeight: 600,
               marginBottom: '1.25rem'
@@ -204,12 +205,12 @@ export function InsightsPage() {
               fontSize: 'clamp(2.2rem, 5vw, 3.75rem)',
               fontWeight: 800,
               letterSpacing: '-0.03em',
-              color: '#0B132B',
+              color: '#000000',
               lineHeight: 1.15,
               marginBottom: '1.25rem'
             }}
           >
-            Engineering Talent <span style={{ color: '#4361EE' }}>Intelligence & Reports</span>
+            Engineering Talent <span style={{ color: '#000000' }}>Intelligence & Reports</span>
           </motion.h1>
 
           <motion.p
@@ -218,7 +219,7 @@ export function InsightsPage() {
             transition={{ delay: 0.2 }}
             style={{
               fontSize: 'clamp(1rem, 2vw, 1.2rem)',
-              color: '#475569',
+              color: '#000000',
               maxWidth: '820px',
               margin: '0 auto 2.5rem',
               lineHeight: 1.6
@@ -235,7 +236,7 @@ export function InsightsPage() {
             display: 'flex',
             alignItems: 'center'
           }}>
-            <Search size={18} color="#94A3B8" style={{ position: 'absolute', left: '1.25rem' }} />
+            <Search size={18} color="#000000" style={{ position: 'absolute', left: '1.25rem' }} />
             <input
               type="text"
               placeholder="Search reports, salary guides, playbooks..."
@@ -245,7 +246,7 @@ export function InsightsPage() {
                 width: '100%',
                 padding: '0.9rem 1rem 0.9rem 3rem',
                 borderRadius: '14px',
-                border: '1px solid #CBD5E1',
+                border: '1px solid #000000',
                 fontSize: '0.95rem',
                 outline: 'none',
                 boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
@@ -255,14 +256,14 @@ export function InsightsPage() {
           </div>
 
           {/* Newsletter Subscription Strip */}
-          <div className="mt-8 max-w-2xl mx-auto p-4 rounded-2xl bg-blue-50 border border-blue-200 text-left flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
+          <div className="mt-8 max-w-2xl mx-auto p-4 rounded-2xl bg-white border border-black text-left flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
             <div>
-              <div className="text-xs font-bold text-blue-900">Subscribe to Monthly Talent Intelligence</div>
-              <div className="text-[11px] text-slate-600">Join 14,000+ VPs of Engineering & CHROs receiving ground-truth compensation data.</div>
+              <div className="text-xs font-bold text-black">Subscribe to Monthly Talent Intelligence</div>
+              <div className="text-[11px] text-black">Join 14,000+ VPs of Engineering & CHROs receiving ground-truth compensation data.</div>
             </div>
             <form onSubmit={(e) => { e.preventDefault(); alert('Subscribed to Nexa Talent Intelligence Insights!'); }} className="flex gap-2 w-full sm:w-auto">
-              <input type="email" required placeholder="work@company.com" className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white text-slate-900 flex-1 sm:w-48" />
-              <button type="submit" className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs">Join</button>
+              <input type="email" required placeholder="work@company.com" className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white text-black flex-1 sm:w-48" />
+              <button type="submit" className="px-4 py-1.5 rounded-lg bg-black hover:bg-neutral-800 text-white font-bold text-xs">Join</button>
             </form>
           </div>
 
@@ -288,9 +289,9 @@ export function InsightsPage() {
               style={{
                 padding: '0.6rem 1.25rem',
                 borderRadius: '9999px',
-                border: selectedCategory === c ? '2px solid #4361EE' : '1px solid #E2E8F0',
-                backgroundColor: selectedCategory === c ? '#EEF2FF' : '#ffffff',
-                color: selectedCategory === c ? '#4361EE' : '#64748B',
+                border: selectedCategory === c ? '2px solid #000000' : '1px solid #E2E8F0',
+                backgroundColor: selectedCategory === c ? '#000000' : '#ffffff',
+                color: selectedCategory === c ? '#ffffff' : '#000000',
                 fontWeight: 700,
                 fontSize: '0.85rem',
                 cursor: 'pointer',
@@ -321,27 +322,27 @@ export function InsightsPage() {
             >
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4361EE', backgroundColor: '#EEF2FF', padding: '0.25rem 0.65rem', borderRadius: '6px' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#000000', backgroundColor: '#ffffff', padding: '0.25rem 0.65rem', borderRadius: '6px' }}>
                     {art.tag}
                   </span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: '#94A3B8' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: '#000000' }}>
                     <Clock size={12} />
                     <span>{art.readTime}</span>
                   </div>
                 </div>
 
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0B132B', lineHeight: 1.35, marginBottom: '0.75rem' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#000000', lineHeight: 1.35, marginBottom: '0.75rem' }}>
                   {art.title}
                 </h3>
 
-                <p style={{ fontSize: '0.9rem', color: '#64748B', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+                <p style={{ fontSize: '0.9rem', color: '#000000', lineHeight: 1.6, marginBottom: '1.25rem' }}>
                   {art.excerpt}
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1.5rem' }}>
                   {art.highlights.map((h) => (
-                    <div key={h} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: '#334155' }}>
-                      <CheckCircle2 size={14} color="#10B981" />
+                    <div key={h} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: '#000000' }}>
+                      <CheckCircle2 size={14} color="#000000" />
                       <span>{h}</span>
                     </div>
                   ))}
@@ -353,9 +354,9 @@ export function InsightsPage() {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 paddingTop: '1.25rem',
-                borderTop: '1px solid #F1F5F9'
+                borderTop: '1px solid #E2E8F0'
               }}>
-                <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>{art.date}</span>
+                <span style={{ fontSize: '0.75rem', color: '#000000', fontWeight: 600 }}>{art.date}</span>
                 <Link
                   to={`/insights/${art.slug}`}
                   style={{
@@ -364,7 +365,7 @@ export function InsightsPage() {
                     gap: '0.4rem',
                     fontSize: '0.85rem',
                     fontWeight: 700,
-                    color: '#4361EE',
+                    color: '#000000',
                     textDecoration: 'none'
                   }}
                 >

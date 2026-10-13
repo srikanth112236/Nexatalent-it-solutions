@@ -63,8 +63,8 @@ export const ContactForm: React.FC<ContactFormProps> = ({
       variants={containerVariants}
       style={{
         borderRadius: 'var(--radius-2xl)',
-        backgroundColor: 'var(--color-surface)',
-        border: '1px solid var(--color-border)',
+        backgroundColor: '#ffffff',
+        border: '1px solid #e5e5e5',
         padding: '3rem 2.5rem',
         maxWidth: '700px',
         margin: '0 auto',
@@ -72,10 +72,10 @@ export const ContactForm: React.FC<ContactFormProps> = ({
       }}
     >
       <motion.div variants={itemVariants} style={{ marginBottom: '2rem', textAlign: 'center' }}>
-        <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-text)', marginBottom: '0.5rem' }}>
+        <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#000000', marginBottom: '0.5rem' }}>
           {title}
         </h2>
-        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9375rem', lineHeight: 1.5 }}>
+        <p style={{ color: '#000000', fontSize: '0.9375rem', lineHeight: 1.5 }}>
           {subtitle}
         </p>
       </motion.div>
@@ -90,9 +90,9 @@ export const ContactForm: React.FC<ContactFormProps> = ({
             style={{
               padding: '2.5rem',
               textAlign: 'center',
-              backgroundColor: 'rgba(34, 197, 94, 0.08)',
+              backgroundColor: '#ffffff',
               borderRadius: 'var(--radius-xl)',
-              border: '1px solid rgba(34, 197, 94, 0.25)',
+              border: '1px solid #000000',
             }}
           >
             <motion.div
@@ -103,8 +103,8 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                 width: '56px',
                 height: '56px',
                 borderRadius: '50%',
-                backgroundColor: 'rgba(34, 197, 94, 0.2)',
-                color: 'var(--color-success)',
+                backgroundColor: '#000000',
+                color: '#ffffff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -113,11 +113,11 @@ export const ContactForm: React.FC<ContactFormProps> = ({
             >
               <CheckCircle2 size={32} />
             </motion.div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.5rem' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#000000', marginBottom: '0.5rem' }}>
               Inquiry Dispatched Successfully
             </h3>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9375rem', lineHeight: 1.5 }}>
-              Thank you, {formData.fullName}. A senior practice director has been assigned to your request and will reach out via <strong style={{ color: 'var(--color-text)' }}>{formData.workEmail}</strong> shortly.
+            <p style={{ color: '#000000', fontSize: '0.9375rem', lineHeight: 1.5 }}>
+              Thank you, {formData.fullName}. A senior practice director has been assigned to your request and will reach out via <strong style={{ color: '#000000' }}>{formData.workEmail}</strong> shortly.
             </p>
           </motion.div>
         ) : (
@@ -131,7 +131,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
           >
             {/* Inquiry Type Radio / Pill */}
             <motion.div variants={itemVariants}>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#000000', marginBottom: '0.5rem' }}>
                 I am interested in:
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.5rem' }}>
@@ -150,9 +150,9 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                     style={{
                       padding: '0.625rem 0.75rem',
                       borderRadius: 'var(--radius-md)',
-                      border: formData.inquiryType === type.id ? '1px solid var(--color-primary)' : '1px solid var(--color-border)',
-                      backgroundColor: formData.inquiryType === type.id ? 'rgba(59, 130, 246, 0.15)' : 'rgba(15, 23, 42, 0.5)',
-                      color: formData.inquiryType === type.id ? 'var(--color-primary-400)' : 'var(--color-text-secondary)',
+                      border: formData.inquiryType === type.id ? '1px solid #000000' : '1px solid #000000',
+                      backgroundColor: formData.inquiryType === type.id ? '#000000' : '#ffffff',
+                      color: formData.inquiryType === type.id ? '#ffffff' : '#000000',
                       fontSize: '0.8125rem',
                       fontWeight: 600,
                       cursor: 'pointer',
@@ -168,13 +168,13 @@ export const ContactForm: React.FC<ContactFormProps> = ({
             {/* Full Name & Work Email */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
               <motion.div variants={itemVariants}>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.375rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#000000', marginBottom: '0.375rem' }}>
                   Full Name *
                 </label>
                 <div style={{ position: 'relative' }}>
-                  <User size={16} color="var(--color-text-tertiary)" style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)' }} />
+                  <User size={16} color="#000000" style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)' }} />
                   <motion.input
-                    whileFocus={{ scale: 1.01, borderColor: 'var(--color-primary)' }}
+                    whileFocus={{ scale: 1.01, borderColor: '#000000' }}
                     required
                     type="text"
                     placeholder="e.g. Natasha Rao"
@@ -184,9 +184,9 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                       width: '100%',
                       padding: '0.75rem 1rem 0.75rem 2.5rem',
                       borderRadius: 'var(--radius-md)',
-                      backgroundColor: 'rgba(15, 23, 42, 0.7)',
-                      border: '1px solid var(--color-border)',
-                      color: 'var(--color-text)',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #000000',
+                      color: '#000000',
                       fontSize: '0.9375rem',
                       outline: 'none',
                       transition: 'border-color 0.2s',
@@ -196,13 +196,13 @@ export const ContactForm: React.FC<ContactFormProps> = ({
               </motion.div>
 
               <motion.div variants={itemVariants}>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.375rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#000000', marginBottom: '0.375rem' }}>
                   Work Email *
                 </label>
                 <div style={{ position: 'relative' }}>
-                  <Mail size={16} color="var(--color-text-tertiary)" style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)' }} />
+                  <Mail size={16} color="#000000" style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)' }} />
                   <motion.input
-                    whileFocus={{ scale: 1.01, borderColor: 'var(--color-primary)' }}
+                    whileFocus={{ scale: 1.01, borderColor: '#000000' }}
                     required
                     type="email"
                     placeholder="natasha@company.com"
@@ -212,9 +212,9 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                       width: '100%',
                       padding: '0.75rem 1rem 0.75rem 2.5rem',
                       borderRadius: 'var(--radius-md)',
-                      backgroundColor: 'rgba(15, 23, 42, 0.7)',
-                      border: '1px solid var(--color-border)',
-                      color: 'var(--color-text)',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #000000',
+                      color: '#000000',
                       fontSize: '0.9375rem',
                       outline: 'none',
                       transition: 'border-color 0.2s',
@@ -227,13 +227,13 @@ export const ContactForm: React.FC<ContactFormProps> = ({
             {/* Company & Phone */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
               <motion.div variants={itemVariants}>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.375rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#000000', marginBottom: '0.375rem' }}>
                   Organization / Company
                 </label>
                 <div style={{ position: 'relative' }}>
-                  <Building size={16} color="var(--color-text-tertiary)" style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)' }} />
+                  <Building size={16} color="#000000" style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)' }} />
                   <motion.input
-                    whileFocus={{ scale: 1.01, borderColor: 'var(--color-primary)' }}
+                    whileFocus={{ scale: 1.01, borderColor: '#000000' }}
                     type="text"
                     placeholder="e.g. Apex Global Systems"
                     value={formData.company}
@@ -242,9 +242,9 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                       width: '100%',
                       padding: '0.75rem 1rem 0.75rem 2.5rem',
                       borderRadius: 'var(--radius-md)',
-                      backgroundColor: 'rgba(15, 23, 42, 0.7)',
-                      border: '1px solid var(--color-border)',
-                      color: 'var(--color-text)',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #000000',
+                      color: '#000000',
                       fontSize: '0.9375rem',
                       outline: 'none',
                       transition: 'border-color 0.2s',
@@ -254,13 +254,13 @@ export const ContactForm: React.FC<ContactFormProps> = ({
               </motion.div>
 
               <motion.div variants={itemVariants}>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.375rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#000000', marginBottom: '0.375rem' }}>
                   Direct Phone / WhatsApp
                 </label>
                 <div style={{ position: 'relative' }}>
-                  <Phone size={16} color="var(--color-text-tertiary)" style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)' }} />
+                  <Phone size={16} color="#000000" style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)' }} />
                   <motion.input
-                    whileFocus={{ scale: 1.01, borderColor: 'var(--color-primary)' }}
+                    whileFocus={{ scale: 1.01, borderColor: '#000000' }}
                     type="tel"
                     placeholder="+91 98765 43210"
                     value={formData.phone}
@@ -269,9 +269,9 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                       width: '100%',
                       padding: '0.75rem 1rem 0.75rem 2.5rem',
                       borderRadius: 'var(--radius-md)',
-                      backgroundColor: 'rgba(15, 23, 42, 0.7)',
-                      border: '1px solid var(--color-border)',
-                      color: 'var(--color-text)',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #000000',
+                      color: '#000000',
                       fontSize: '0.9375rem',
                       outline: 'none',
                       transition: 'border-color 0.2s',
@@ -283,11 +283,11 @@ export const ContactForm: React.FC<ContactFormProps> = ({
 
             {/* Message Area */}
             <motion.div variants={itemVariants}>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.375rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#000000', marginBottom: '0.375rem' }}>
                 Brief Mandate Scope or Specific Objectives
               </label>
               <motion.textarea
-                whileFocus={{ scale: 1.01, borderColor: 'var(--color-primary)' }}
+                whileFocus={{ scale: 1.01, borderColor: '#000000' }}
                 rows={4}
                 placeholder="Tell us about the roles, seniority, tech stack, or headcount goals..."
                 value={formData.message}
@@ -296,9 +296,9 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                   width: '100%',
                   padding: '0.75rem 1rem',
                   borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'rgba(15, 23, 42, 0.7)',
-                  border: '1px solid var(--color-border)',
-                  color: 'var(--color-text)',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #000000',
+                  color: '#000000',
                   fontSize: '0.9375rem',
                   outline: 'none',
                   resize: 'vertical',
@@ -310,7 +310,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
             {/* Submit Button & SLA Assurance */}
             <motion.div variants={itemVariants} style={{ marginTop: '0.5rem' }}>
               <motion.button
-                whileHover={{ scale: 1.02, boxShadow: '0 0 20px rgba(59, 130, 246, 0.6)' }}
+                whileHover={{ scale: 1.02, boxShadow: '0 0 20px rgba(0, 0, 0, 0.4)' }}
                 whileTap={{ scale: 0.98 }}
                 type="submit"
                 disabled={loading}
@@ -322,13 +322,13 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                   gap: '0.5rem',
                   padding: '0.875rem',
                   borderRadius: 'var(--radius-lg)',
-                  backgroundColor: 'var(--color-primary)',
+                  backgroundColor: '#000000',
                   color: '#ffffff',
-                  border: 'none',
+                  border: '1px solid #000000',
                   fontSize: '1rem',
                   fontWeight: 700,
                   cursor: loading ? 'wait' : 'pointer',
-                  boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)',
+                  boxShadow: '0 4px 14px rgba(0, 0, 0, 0.3)',
                   transition: 'background-color 0.2s',
                 }}
               >
@@ -344,16 +344,16 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                   gap: '1rem',
                   marginTop: '1rem',
                   fontSize: '0.75rem',
-                  color: 'var(--color-text-tertiary)',
+                  color: '#000000',
                 }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <Clock size={12} color="var(--color-primary-400)" />
+                  <Clock size={12} color="#000000" />
                   Response within 4 business hours
                 </span>
                 <span>•</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <ShieldCheck size={12} color="var(--color-success)" />
+                  <ShieldCheck size={12} color="#000000" />
                   Strict NDA Protected
                 </span>
               </div>

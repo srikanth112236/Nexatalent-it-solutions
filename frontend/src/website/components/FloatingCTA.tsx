@@ -51,11 +51,11 @@ export const FloatingCTA: React.FC<FloatingCTAProps> = ({
             width: 'calc(100% - 2rem)',
             maxWidth: '860px',
             borderRadius: 'var(--radius-xl)',
-            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backgroundColor: '#ffffff',
             backdropFilter: 'blur(24px)',
             WebkitBackdropFilter: 'blur(24px)',
-            border: '1px solid rgba(59, 130, 246, 0.4)',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(59, 130, 246, 0.2)',
+            border: '1px solid #000000',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)',
             padding: '0.875rem 1.25rem',
             display: 'flex',
             alignItems: 'center',
@@ -67,7 +67,7 @@ export const FloatingCTA: React.FC<FloatingCTAProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
             <motion.div
               animate={{ 
-                boxShadow: ['0 0 10px var(--color-success)', '0 0 20px var(--color-success)', '0 0 10px var(--color-success)'],
+                boxShadow: ['0 0 10px rgba(0, 0, 0, 0.6)', '0 0 20px rgba(0, 0, 0, 0.6)', '0 0 10px rgba(0, 0, 0, 0.6)'],
                 opacity: [1, 0.7, 1]
               }}
               transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
@@ -75,17 +75,17 @@ export const FloatingCTA: React.FC<FloatingCTAProps> = ({
                 width: '10px',
                 height: '10px',
                 borderRadius: '50%',
-                backgroundColor: 'var(--color-success)',
+                backgroundColor: '#000000',
                 flexShrink: 0,
               }}
             />
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-primary-400)', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#000000', textTransform: 'uppercase' }}>
                   {badge}
                 </span>
               </div>
-              <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--color-text)', whiteSpace: 'nowrap' }}>
+              <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#000000', whiteSpace: 'nowrap' }}>
                 {headline}
               </div>
             </div>
@@ -97,7 +97,7 @@ export const FloatingCTA: React.FC<FloatingCTAProps> = ({
               to={secondaryLink}
               style={{
                 fontSize: '0.8125rem',
-                color: 'var(--color-text-secondary)',
+                color: '#000000',
                 textDecoration: 'none',
                 fontWeight: 600,
                 padding: '0.4rem 0.75rem',
@@ -114,14 +114,14 @@ export const FloatingCTA: React.FC<FloatingCTAProps> = ({
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 animate={{ 
-                  boxShadow: ['0 4px 12px rgba(59, 130, 246, 0.4)', '0 4px 20px rgba(59, 130, 246, 0.8)', '0 4px 12px rgba(59, 130, 246, 0.4)'] 
+                  boxShadow: ['0 4px 12px rgba(0, 0, 0, 0.4)', '0 4px 20px rgba(0, 0, 0, 0.6)', '0 4px 12px rgba(0, 0, 0, 0.4)'] 
                 }}
                 transition={{ duration: 3, repeat: Infinity }}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.4rem',
-                  backgroundColor: 'var(--color-primary)',
+                  backgroundColor: '#000000',
                   color: '#ffffff',
                   padding: '0.5rem 1rem',
                   borderRadius: 'var(--radius-md)',
@@ -136,14 +136,14 @@ export const FloatingCTA: React.FC<FloatingCTAProps> = ({
             </Link>
 
             <motion.button
-              whileHover={{ scale: 1.1, backgroundColor: 'rgba(255,255,255,0.1)' }}
+              whileHover={{ scale: 1.1, backgroundColor: 'rgba(0,0,0,0.05)' }}
               whileTap={{ scale: 0.9 }}
               onClick={() => setVisible(false)}
               aria-label="Dismiss banner"
               style={{
                 background: 'none',
                 border: 'none',
-                color: 'var(--color-text-tertiary)',
+                color: '#000000',
                 cursor: 'pointer',
                 padding: '0.25rem',
                 borderRadius: '50%',
