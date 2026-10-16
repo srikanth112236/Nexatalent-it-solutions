@@ -39,7 +39,19 @@ const LEGAL_SECTIONS = [
         text: 'Personal records are stored in enterprise-grade cloud environments located within India, protected by AES-256 encryption at rest and TLS 1.3 encryption in transit. Records are retained only for the duration necessary to satisfy recruitment mandates or statutory taxation obligations, after which data is purged.'
       },
       {
-        heading: '5. Grievance Redressal & Data Protection Officer',
+        heading: '5. Candidate Rights: Access, Correction & Erasure',
+        text: 'Every candidate may request a copy of their stored profile, correct inaccurate fields (skills, experience, compensation, notice period), or demand complete erasure from our talent graph at any time. Nominated requests are actioned within 15 working days. Erasure requests are honoured unless retention is mandated by applicable law.'
+      },
+      {
+        heading: '6. Employer & Partner Data',
+        text: 'Enterprise client data — company registration, GST/CIN, requisition specifications and billing contacts — is processed strictly for mandate delivery, invoicing and statutory compliance. Client dossiers are never shared with competing organisations and are covered by mutual non-disclosure terms in every Master Services Agreement.'
+      },
+      {
+        heading: '7. Cookies, Analytics & Tracking',
+        text: 'We use strictly essential session tokens for portal sign-in and anonymised analytics to measure page performance. We deploy no third-party advertising trackers. Full disclosures sit in our Cookie Policy.'
+      },
+      {
+        heading: '8. Grievance Redressal & Data Protection Officer',
         text: 'In accordance with the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021 and DPDP Act 2023, the appointed Data Protection Officer is: Executive Compliance Desk, NEXA TALENT IT SOLUTIONS PRIVATE LIMITED, 4th and 7th Floor, Skyline Icon, Andheri - Kurla Rd, Marol, Andheri East, Mumbai 400059. Direct Grievance Email: info@nexatalentitsolutions.com. Phone: +91 70196 96166. Acknowledgement SLA: within 24 hours; resolution within 15 working days.'
       }
     ]
@@ -66,6 +78,18 @@ const LEGAL_SECTIONS = [
       {
         heading: '4. Candidate Representations & Integrity Verification',
         text: 'Candidates warrant that all information provided—including employment tenure, educational degrees, and CTC slips—is true, complete, and verifiable. Falsification of credentials results in immediate termination of representation and permanent blacklisting across the Nexa partner ecosystem.'
+      },
+      {
+        heading: '5. Commercial Terms & Fee Structure',
+        text: 'Placement fees, retainer milestones and payment schedules are defined per engagement in the executed MSA/SOW. All fees are levied exclusively on the employer — NexaTalent IT Solutions never charges candidates. Invoices are raised with GST as applicable; payment terms are 15 days from invoice unless agreed otherwise in writing.'
+      },
+      {
+        heading: '6. Confidentiality & IP Assignment',
+        text: 'Client requisitions, compensation bands and interview assessments shared during an engagement are treated as confidential. All code, IP and proprietary assets created by deployed professionals belong 100% to the client enterprise under the executed agreements.'
+      },
+      {
+        heading: '7. Limitation of Liability & Governing Law',
+        text: 'To the maximum extent permitted by law, NexaTalent IT Solutions liability per engagement is capped at the fees paid for that engagement. These terms are governed by the laws of India with exclusive jurisdiction of the courts at Mumbai, Maharashtra.'
       }
     ]
   },
@@ -83,6 +107,14 @@ const LEGAL_SECTIONS = [
       {
         heading: '2. Cookie Taxonomy',
         text: 'Strictly Essential Cookies: required for secure login, OTP verification, and CSRF protection. Analytics Cookies: anonymized Google Analytics (GA4) telemetry measuring page load speed and search performance. We do not deploy third-party advertising tracking cookies.'
+      },
+      {
+        heading: '3. Managing Your Preferences',
+        text: 'Essential cookies cannot be disabled without breaking sign-in. Analytics cookies can be blocked through your browser settings with no loss of core functionality. Clearing site data signs you out of all portals.'
+      },
+      {
+        heading: '4. Retention of Cookie Data',
+        text: 'Session tokens expire on logout or after 24 hours of inactivity. Aggregated analytics are retained for 14 months and contain no personally identifiable information.'
       }
     ]
   },
@@ -100,6 +132,14 @@ const LEGAL_SECTIONS = [
       {
         heading: '2. Technical Conformance',
         text: 'Our web application implements semantic HTML landmarks, ARIA labeling, high-contrast text color ratios (exceeding 4.5:1), keyboard-accessible navigation traps, and screen-reader navigable candidate scorecards.'
+      },
+      {
+        heading: '3. Feedback & Assistance',
+        text: 'Encountered an accessibility barrier? Write to info@nexatalentitsolutions.com with the page URL and assistive technology used — we acknowledge within 2 business days and prioritise remediation.'
+      },
+      {
+        heading: '4. Ongoing Review',
+        text: 'Accessibility is reviewed on every release cycle, including keyboard-only walkthroughs and contrast audits of new templates, forms and portal workspaces.'
       }
     ]
   },
@@ -117,6 +157,18 @@ const LEGAL_SECTIONS = [
       {
         heading: '2. Bilateral Anti-Poaching Guarantee',
         text: 'NexaTalent IT Solutions strictly honors enterprise anti-poaching commitments. We do not proactively recruit, solicit, or headhunt employees from active enterprise clients with whom an operative MSA is in place.'
+      },
+      {
+        heading: '3. Candidate Dossier Confidentiality',
+        text: 'Candidate dossiers — resumes, compensation records, assessment transcripts — are shared with a prospective employer only after explicit candidate consent, and solely for evaluating that specific mandate.'
+      },
+      {
+        heading: '4. Data Security Controls',
+        text: 'Role-based portal access, audit-logged dossier views, encrypted storage and NDAs for every recruiter and sub-vendor protect enterprise and candidate data end to end.'
+      },
+      {
+        heading: '5. Reporting Misuse',
+        text: 'Suspected misuse of confidential hiring data can be reported to info@nexatalentitsolutions.com. Verified breaches trigger contractual remedies and, where applicable, criminal proceedings under the IT Act, 2000.'
       }
     ]
   },
@@ -138,6 +190,10 @@ const LEGAL_SECTIONS = [
       {
         heading: '3. No Guarantee of Placement',
         text: 'Participation in NexaTalent IT Solutions candidate screening, resume parsing, or interview scheduling does not constitute an express or implied guarantee of employment, visa issuance, or offer release. Final hiring decisions rest exclusively with the respective employer organization.'
+      },
+      {
+        heading: '4. Information Accuracy',
+        text: 'Salary benchmarks, hiring timelines and market insights published on this website are directional guidance compiled from live mandate data — not offers, quotations or contractual commitments. Confirm specifics with your practice lead before budgeting.'
       }
     ]
   }
@@ -183,10 +239,10 @@ export function LegalPage() {
       <SiteNavbar />
 
       {/* Hero Header */}
-      <section style={{ 
-        position: 'relative', 
-        paddingTop: '7.5rem', 
-        paddingBottom: '3.5rem', 
+      <section style={{
+        position: 'relative',
+        paddingTop: '5.5rem',
+        paddingBottom: '2rem',
         background: '#ffffff',
         borderBottom: '1px solid #E2E8F0'
       }}>
@@ -227,7 +283,7 @@ export function LegalPage() {
                 {activeDoc.title}
               </h1>
               <p style={{ color: '#000000', fontSize: '0.95rem' }}>
-                Governing Entity: NexaTalent IT Solutions Pvt. Ltd. (CIN: U72200KA2021PTC145678) • Last Revised: September 2026
+                Governing Entity: NexaTalent IT Solutions Pvt. Ltd. (CIN: U72200MH2021PTC145678) • Last Revised: October 2026
               </p>
             </div>
 
@@ -257,8 +313,8 @@ export function LegalPage() {
       </section>
 
       {/* Main Layout */}
-      <section style={{ padding: '4rem 1.5rem', maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '3rem', alignItems: 'start' }}>
+      <section style={{ padding: '2.5rem 1.5rem', maxWidth: '1200px', margin: '0 auto' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', alignItems: 'start' }}>
           
           {/* Left Sidebar Menu */}
           <div style={{
@@ -340,15 +396,15 @@ export function LegalPage() {
             backgroundColor: '#ffffff',
             borderRadius: '24px',
             border: '1px solid #E2E8F0',
-            padding: '3rem',
+            padding: '2rem',
             boxShadow: '0 4px 25px rgba(0,0,0,0.03)'
           }}>
             <div style={{
-              padding: '1.25rem',
+              padding: '1rem 1.25rem',
               borderRadius: '14px',
               backgroundColor: '#ffffff',
               border: '1px solid #000000',
-              marginBottom: '2.5rem',
+              marginBottom: '1.75rem',
               color: '#000000',
               fontSize: '0.95rem',
               fontWeight: 500,
@@ -357,13 +413,13 @@ export function LegalPage() {
               {activeDoc.summary}
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
               {activeDoc.content.map((sec, idx) => (
                 <div key={sec.heading} id={`clause-${idx}`} style={{ scrollMarginTop: '6rem' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#000000', marginBottom: '0.75rem' }}>
+                  <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#000000', marginBottom: '0.5rem' }}>
                     {sec.heading}
                   </h2>
-                  <p style={{ fontSize: '1rem', color: '#000000', lineHeight: 1.8 }}>
+                  <p style={{ fontSize: '0.95rem', color: '#000000', lineHeight: 1.75 }}>
                     {sec.text}
                   </p>
                 </div>
@@ -371,8 +427,8 @@ export function LegalPage() {
             </div>
 
             <div style={{
-              marginTop: '3.5rem',
-              paddingTop: '2rem',
+              marginTop: '2.5rem',
+              paddingTop: '1.5rem',
               borderTop: '1px solid #E2E8F0',
               display: 'flex',
               justifyContent: 'space-between',
@@ -381,7 +437,7 @@ export function LegalPage() {
               gap: '1rem'
             }}>
               <div style={{ fontSize: '0.8rem', color: '#000000' }}>
-                Jurisdiction: High Court of Karnataka, Bengaluru, India. Governed under the laws of the Republic of India.
+                Jurisdiction: High Court of Bombay, Mumbai, Maharashtra, India. Governed under the laws of the Republic of India.
               </div>
               <Link
                 to="/contact"

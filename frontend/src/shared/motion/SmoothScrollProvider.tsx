@@ -25,6 +25,10 @@ export const SmoothScrollProvider: React.FC<SmoothScrollProviderProps> = ({ chil
       orientation: 'vertical',
       gestureOrientation: 'vertical',
       smoothWheel: true,
+      // Let nested native scrollers (job feeds, sticky form cards, dropdown
+      // menus, modals) consume wheel events themselves instead of the page.
+      // Explicit [data-lenis-prevent] markers act as backup.
+      allowNestedScroll: true,
     });
 
     lenisRef.current = lenis;

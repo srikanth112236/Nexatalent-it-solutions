@@ -80,30 +80,30 @@ export const LightServiceTierComparison: React.FC = () => {
   const [billingCycle, setBillingCycle] = useState<'annual' | 'flexible'>('flexible');
 
   return (
-    <section className="py-24 bg-slate-50 border-b border-slate-200 relative overflow-hidden">
+    <section className="py-24 bg-white border-b border-neutral-200 relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-6 relative z-10">
         
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-14">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold mb-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-neutral-200 text-black text-xs font-semibold mb-4">
             <Layers className="w-3.5 h-3.5" />
             <span>Tailored Engagement Frameworks</span>
           </div>
-          <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-4">
+          <h2 className="text-3xl md:text-5xl font-extrabold text-black tracking-tight mb-4">
             Commercial Models Engineered for Growth
           </h2>
-          <p className="text-lg text-slate-600">
+          <p className="text-lg text-black">
             Choose the engagement model that matches your hiring velocity, organizational complexity, and geographic expansion strategy.
           </p>
 
           {/* Toggle */}
-          <div className="mt-8 inline-flex items-center p-1.5 bg-slate-200/80 rounded-2xl">
+          <div className="mt-8 inline-flex items-center p-1.5 bg-neutral-200 rounded-2xl">
             <button
               onClick={() => setBillingCycle('flexible')}
               className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${
                 billingCycle === 'flexible'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white text-black shadow-sm'
+                  : 'text-black hover:text-black'
               }`}
             >
               Standard Engagement
@@ -112,12 +112,12 @@ export const LightServiceTierComparison: React.FC = () => {
               onClick={() => setBillingCycle('annual')}
               className={`px-5 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5 ${
                 billingCycle === 'annual'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white text-black shadow-sm'
+                  : 'text-black hover:text-black'
               }`}
             >
               Enterprise Retainer
-              <span className="px-1.5 py-0.5 text-[10px] uppercase font-extrabold rounded bg-emerald-100 text-emerald-700">
+              <span className="px-1.5 py-0.5 text-[10px] uppercase font-extrabold rounded bg-neutral-100 text-black">
                 15% Savings
               </span>
             </button>
@@ -133,12 +133,12 @@ export const LightServiceTierComparison: React.FC = () => {
               transition={{ duration: 0.2 }}
               className={`relative rounded-3xl p-8 flex flex-col justify-between border transition-all ${
                 tier.popular
-                  ? 'bg-white border-2 border-blue-600 shadow-2xl shadow-blue-500/10 ring-4 ring-blue-50'
-                  : 'bg-white border-slate-200 shadow-lg shadow-slate-100'
+                  ? 'bg-white border-2 border-neutral-600 shadow-2xl shadow-black/10 ring-4 ring-neutral-50'
+                  : 'bg-white border-neutral-200 shadow-lg shadow-slate-100'
               }`}
             >
               {tier.popular && (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs font-extrabold uppercase px-4 py-1 rounded-full tracking-wider shadow">
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-black text-white text-xs font-extrabold uppercase px-4 py-1 rounded-full tracking-wider shadow">
                   <span className="flex items-center gap-1">
                     <Sparkles className="w-3.5 h-3.5" />
                     Recommended for Scale
@@ -150,38 +150,38 @@ export const LightServiceTierComparison: React.FC = () => {
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
                   <span className={`text-xs font-extrabold uppercase px-3 py-1 rounded-full ${
-                    tier.popular ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'
+                    tier.popular ? 'bg-neutral-200 text-black' : 'bg-white text-black'
                   }`}>
                     {tier.badge}
                   </span>
-                  <span className="text-xs font-semibold text-slate-500">
+                  <span className="text-xs font-semibold text-black">
                     {tier.recommendedFor}
                   </span>
                 </div>
 
-                <h3 className="text-2xl font-extrabold text-slate-900 mb-2">
+                <h3 className="text-2xl font-extrabold text-black mb-2">
                   {tier.name}
                 </h3>
-                <p className="text-xs font-semibold text-blue-600 mb-4">
+                <p className="text-xs font-semibold text-black mb-4">
                   {tier.headline}
                 </p>
-                <p className="text-sm text-slate-600 leading-relaxed mb-6">
+                <p className="text-sm text-black leading-relaxed mb-6">
                   {tier.description}
                 </p>
 
                 {/* Key Metrics */}
-                <div className="grid grid-cols-2 gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-100 mb-6">
+                <div className="grid grid-cols-2 gap-3 p-4 rounded-2xl bg-white border border-neutral-100 mb-6">
                   <div>
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">First Shortlist</span>
-                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1 mt-0.5">
-                      <Zap className="w-3.5 h-3.5 text-amber-500" />
+                    <span className="text-[11px] font-bold text-black uppercase tracking-wider block">First Shortlist</span>
+                    <span className="text-xs font-bold text-black flex items-center gap-1 mt-0.5">
+                      <Zap className="w-3.5 h-3.5 text-black" />
                       {tier.sla}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Warranty</span>
-                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1 mt-0.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                    <span className="text-[11px] font-bold text-black uppercase tracking-wider block">Warranty</span>
+                    <span className="text-xs font-bold text-black flex items-center gap-1 mt-0.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-black" />
                       {tier.warranty}
                     </span>
                   </div>
@@ -189,12 +189,12 @@ export const LightServiceTierComparison: React.FC = () => {
 
                 {/* Feature List */}
                 <div className="space-y-3 mb-8">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-900 block">
+                  <span className="text-xs font-bold uppercase tracking-wider text-black block">
                     What is Included:
                   </span>
                   {tier.features.map((feat, fIdx) => (
-                    <div key={fIdx} className="flex items-start gap-2.5 text-sm text-slate-600">
-                      <div className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <div key={fIdx} className="flex items-start gap-2.5 text-sm text-black">
+                      <div className="w-5 h-5 rounded-full bg-neutral-50 text-black flex items-center justify-center shrink-0 mt-0.5">
                         <Check className="w-3.5 h-3.5" />
                       </div>
                       <span>{feat}</span>
@@ -208,14 +208,14 @@ export const LightServiceTierComparison: React.FC = () => {
                 <button
                   className={`w-full py-3.5 px-6 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
                     tier.popular
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30'
-                      : 'bg-slate-900 hover:bg-slate-800 text-white'
+                      ? 'bg-black hover:bg-neutral-800 text-white shadow-lg shadow-black/30'
+                      : 'bg-black hover:bg-neutral-800 text-white'
                   }`}
                 >
                   <span>Engage Under This Framework</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
-                <p className="text-center text-[11px] text-slate-400 mt-2.5">
+                <p className="text-center text-[11px] text-black mt-2.5">
                   {tier.commitment}
                 </p>
               </div>

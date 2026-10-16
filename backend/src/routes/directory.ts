@@ -140,7 +140,7 @@ directoryRouter.get('/users', requireAuth([...USERS_PLATFORM_ROLES, ...COMPANY_D
 directoryRouter.post('/users', requireAuth(['superadmin','platform_owner']), requirePermission('assign'), async (req: Request, res: Response) => {
   const { name, email, role, tenantId, password, phone, startDate, endDate } = req.body || {};
   if (!email || !String(email).includes('@')) return res.status(400).json({ success: false, message: 'Valid email required.' });
-  if (!password || String(password).length < 8) return res.status(400).json({ success: false, message: '8-char password required.' });
+  if (!password || String(password).length < 10) return res.status(400).json({ success: false, message: '10-char password required.' });
   if (!tenantId) return res.status(400).json({ success: false, message: 'tenantId required.' });
   if (role && !(ALL_ROLES as readonly string[]).includes(role)) return res.status(400).json({ success: false, message: `Unknown role '${role}'.` });
   const db = loadDb();
@@ -323,7 +323,7 @@ directoryRouter.delete('/roles/:id', requireAuth(['superadmin','platform_owner']
 // ---- Bulk import with duplicate handling (preview then commit) ----
 directoryRouter.post('/bulk-import', requireAuth(['superadmin','platform_owner','operations_admin','employee']), (req: Request, res: Response) => {
   const { collection, rows, mode } = req.body || {};
-  if (!['skills', 'roles'].includes(collection)) return res.status(400).json({ success: false, message: 'collection must be skills|roles.' });
+  if (!['skills', 'roles', 'candidates', 'leads'].includes(collection)) return res.status(400).json({ success: false, message: 'collection must be skills|roles|candidates|leads.' });
   if (!Array.isArray(rows) || rows.length === 0) return res.status(400).json({ success: false, message: 'rows[] required.' });
   if (rows.length > 1000) return res.status(400).json({ success: false, message: 'Max 1000 rows per import.' });
   const preview = mode !== 'commit';
@@ -339,6 +339,36 @@ directoryRouter.post('/bulk-import', requireAuth(['superadmin','platform_owner',
       seen.add(`skill:${key}`);
       if (!preview) db.skills.unshift({ id: uid('SKL'), name, category: String(raw?.category || 'General').slice(0, 60), createdAt: nowIso(), by: ctxOf(req).email });
       out.push({ row: ix + 1, status: preview ? 'valid' : 'created', message: name });
+    } else if (collection === 'candidates') {
+      const email = String(raw?.email || '').trim().toLowerCase();
+      const name = String(raw?.name || '').trim();
+      if (!/.+@.+\..+/.test(email)) { out.push({ row: ix + 1, status: 'error', message: 'valid email required' }); continue; }
+      if (!name) { out.push({ row: ix + 1, status: 'error', message: 'name required' }); continue; }
+      const key = `cand:${email}`;
+      const dup = db.candidateProfiles.find((c: any) => String(c.email).toLowerCase() === email) || seen.has(key);
+      if (dup) { out.push({ row: ix + 1, status: 'duplicate', message: `“${email}” already exists — skipped` }); continue; }
+      seen.add(key);
+      if (!preview) {
+        const now = nowIso();
+        db.candidateProfiles.unshift({ id: uid('CAND'), email, name, phone: String(raw?.phone || '').slice(0, 30), roleTitle: String(raw?.roleTitle || raw?.headline || '').slice(0, 160), location: String(raw?.location || '').slice(0, 120), experienceYears: Number(raw?.experienceYears || 0) || 0, skills: String(raw?.skills || '').slice(0, 1000), status: 'Active', visibility: 'standard', source: 'bulk-import', createdAt: now, updatedAt: now });
+        db.consents.unshift({ id: uid('CON'), email, candidateEmail: email, purpose: 'placement-processing', status: 'granted', marketing: false, visibility: 'standard', withdrawn: false, createdAt: now });
+      }
+      out.push({ row: ix + 1, status: preview ? 'valid' : 'created', message: email });
+    } else if (collection === 'leads') {
+      const contactName = String(raw?.contactName || raw?.name || '').trim();
+      const companyName = String(raw?.companyName || raw?.company || '').trim();
+      const email = String(raw?.email || raw?.workEmail || '').trim().toLowerCase();
+      if (!contactName || !companyName) { out.push({ row: ix + 1, status: 'error', message: 'contactName + companyName required' }); continue; }
+      if (!/.+@.+\..+/.test(email)) { out.push({ row: ix + 1, status: 'error', message: 'valid email required' }); continue; }
+      const key = `lead:${email}::${companyName.toLowerCase()}`;
+      const dup = db.leads.find((l: any) => String(l.email || '').toLowerCase() === email && String(l.companyName || '').toLowerCase() === companyName.toLowerCase()) || seen.has(key);
+      if (dup) { out.push({ row: ix + 1, status: 'duplicate', message: `“${email} @ ${companyName}” already exists — skipped` }); continue; }
+      seen.add(key);
+      if (!preview) {
+        const now = nowIso();
+        db.leads.unshift({ id: uid('LEAD'), contactName, companyName, email, phone: String(raw?.phone || '').slice(0, 30), source: String(raw?.source || 'Bulk import').slice(0, 80), stage: 'New', priority: 'Medium', owner: ctxOf(req).email, notes: String(raw?.notes || '').slice(0, 4000), createdAt: now, history: [{ stage: 'New', at: now }] });
+      }
+      out.push({ row: ix + 1, status: preview ? 'valid' : 'created', message: `${email} @ ${companyName}` });
     } else {
       const key = String(raw?.id || raw?.name || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
       if (!key) { out.push({ row: ix + 1, status: 'error', message: 'id/name required' }); continue; }
@@ -353,18 +383,82 @@ directoryRouter.post('/bulk-import', requireAuth(['superadmin','platform_owner',
   const summary = { total: out.length, created: out.filter((o) => o.status === 'created').length, valid: out.filter((o) => o.status === 'valid').length, duplicates: out.filter((o) => o.status === 'duplicate').length, errors: out.filter((o) => o.status === 'error').length };
   res.json({ success: true, data: { mode: preview ? 'preview' : 'commit', summary, rows: out } });
 });
-// Export audit trail (§4.3 — every CSV export is actor-stamped)
+// Export audit trail (§4.3 — every CSV export is actor-stamped) + CSV download (Phase 6.1).
+function csvCell(v: unknown): string {
+  const s = String(v ?? '');
+  return `"${s.replace(/"/g, '""')}"`;
+}
+function toCsv(columns: string[], rows: Record<string, unknown>[]): string {
+  return [columns.map(csvCell).join(','), ...rows.map((r) => columns.map((c) => csvCell(r[c])).join(','))].join('\n');
+}
 directoryRouter.post('/exports/log', requireAuth(), requirePermission('export'), (req, res) => {
-  const { resource, count, filters, columns } = req.body || {};
+  const { resource, count, filters, columns, format } = req.body || {};
   if (!resource) return res.status(400).json({ success: false, message: 'resource required.' });
   const ctx = ctxOf(req);
+  const canSeeSensitive = ctx.permissions.includes('view_sensitive_fields');
   // Phase C: the audit row carries the visible scope, not just a count.
   const safeMeta = {
     filters: filters && typeof filters === 'object' ? JSON.stringify(filters).slice(0, 1000) : '',
     columns: Array.isArray(columns) ? columns.map(String).slice(0, 40) : [],
   };
   audit(ctx.email, `EXPORT:${resource}x${Number(count || 0)}`, ctx.tenantId, 'export', String(resource), req.ip, safeMeta); persist();
-  res.status(201).json({ success: true, message: 'Logged.' });
+  // Phase 6.1: same endpoint returns a real CSV when format:'csv' (scoped, capped at 2000 rows).
+  if (format !== 'csv') return res.status(201).json({ success: true, message: 'Logged.' });
+  const ALLOWED: Record<string, { cols: string[]; rows: () => Record<string, unknown>[] }> = {
+    candidates: {
+      cols: ['id', 'name', 'email', 'phone', 'roleTitle', 'location', 'experienceYears', 'status'],
+      rows: () => {
+        let list = loadDb().candidateProfiles as any[];
+        if (!['superadmin', 'platform_owner', 'operations_admin', 'employee', 'internal_recruiter', 'support_admin'].includes(ctx.role)) {
+          return [];
+        }
+        return list.slice(0, 2000).map((c: any) => canSeeSensitive ? { id: c.id, name: c.name, email: c.email, phone: c.phone, roleTitle: c.roleTitle, location: c.location, experienceYears: c.experienceYears, status: c.status } : { id: c.id, name: c.name, email: String(c.email || '').replace(/(^.).*(@.*$)/, '$1***$2'), phone: '**********', roleTitle: c.roleTitle, location: c.location, experienceYears: c.experienceYears, status: c.status });
+      },
+    },
+    applications: {
+      cols: ['id', 'jobId', 'jobTitle', 'candidateEmail', 'stage', 'orgId', 'createdAt', 'updatedAt'],
+      rows: () => {
+        const db = loadDb(); let list = db.applications as any[];
+        if (ctx.role === 'candidate') list = list.filter((a: any) => String(a.candidateEmail).toLowerCase() === ctx.email.toLowerCase());
+        else if (!['superadmin', 'platform_owner', 'operations_admin', 'employee', 'internal_recruiter'].includes(ctx.role)) list = list.filter((a: any) => a.orgId === ctx.tenantId);
+        return list.slice(0, 2000).map((a: any) => ({ id: a.id, jobId: a.jobId, jobTitle: a.jobTitle, candidateEmail: a.candidateEmail, stage: a.stage, orgId: a.orgId, createdAt: a.createdAt, updatedAt: a.updatedAt }));
+      },
+    },
+    jobs: {
+      cols: ['id', 'title', 'companyName', 'location', 'status', 'employmentType', 'createdAt'],
+      rows: () => {
+        const db = loadDb(); let list = db.jobs as any[];
+        if (!['superadmin', 'platform_owner', 'operations_admin', 'employee'].includes(ctx.role)) list = list.filter((j: any) => j.orgId === ctx.tenantId || j.status === 'Published');
+        return list.slice(0, 2000).map((j: any) => ({ id: j.id, title: j.title, companyName: j.companyName, location: j.location, status: j.status, employmentType: j.employmentType, createdAt: j.createdAt }));
+      },
+    },
+    leads: {
+      cols: ['id', 'contactName', 'companyName', 'email', 'stage', 'owner', 'createdAt'],
+      rows: () => {
+        const db = loadDb(); let list = db.leads as any[];
+        if (['bda', 'employee'].includes(ctx.role)) list = list.filter((l: any) => !l.owner || l.owner === ctx.email);
+        else if (!['superadmin', 'platform_owner', 'operations_admin', 'sales_admin', 'sales_manager'].includes(ctx.role)) return [];
+        return list.slice(0, 2000).map((l: any) => ({ id: l.id, contactName: l.contactName, companyName: l.companyName, email: l.email, stage: l.stage, owner: l.owner, createdAt: l.createdAt }));
+      },
+    },
+    invoices: {
+      cols: ['id', 'number', 'orgId', 'status', 'total', 'balance', 'dueDate'],
+      rows: () => {
+        const db = loadDb(); let list = db.invoices as any[];
+        if (!['superadmin', 'platform_owner', 'finance_admin', 'finance_staff', 'operations_admin', 'employee'].includes(ctx.role)) list = list.filter((i: any) => i.orgId === ctx.tenantId);
+        return list.slice(0, 2000).map((i: any) => ({ id: i.id, number: i.number, orgId: i.orgId, status: i.status, total: i.total, balance: i.balance, dueDate: i.dueDate }));
+      },
+    },
+  };
+  const def = ALLOWED[String(resource)];
+  if (!def) return res.status(400).json({ success: false, message: 'CSV export supports: candidates|applications|jobs|leads|invoices.' });
+  const data = def.rows();
+  if (resource === 'candidates' && data.length === 0 && !['superadmin', 'platform_owner', 'operations_admin', 'employee', 'internal_recruiter', 'support_admin'].includes(ctx.role)) {
+    return res.status(403).json({ success: false, message: 'Candidate bulk export is limited to platform and delivery roles.' });
+  }
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', `attachment; filename="${String(resource)}-export.csv"`);
+  res.send(toCsv(def.cols, data));
 });
 
 // Branches
@@ -442,7 +536,7 @@ export function completenessOf(c: any): number {
   const filled = COMPLETENESS_FIELDS.filter((f) => String(c[f] ?? '').trim() !== '').length;
   return Math.round((filled / COMPLETENESS_FIELDS.length) * 100);
 }
-directoryRouter.get('/directory/candidates', requireAuth(['superadmin','platform_owner','operations_admin','support_admin']), (req, res) => {
+directoryRouter.get('/directory/candidates', requireAuth(['superadmin','platform_owner','operations_admin','support_admin','internal_recruiter','employee']), (req, res) => {
   const db = loadDb();
   const canSee = ctxOf(req).permissions.includes('view_sensitive_fields');
   const q = req.query as Record<string, string>;
@@ -654,13 +748,24 @@ directoryRouter.patch('/directory/candidates/:id/info-requests/:reqId', requireA
   res.json({ success: true, data: r });
 });
 // Privacy deletion requests (§6.3 — approve anonymizes PII, preserves financial/audit records)
-directoryRouter.get('/directory/candidates/:id/deletion-requests', requireAuth(['superadmin','platform_owner','operations_admin']), (req, res) => {
+directoryRouter.get('/directory/candidates/:id/deletion-requests', requireAuth(['superadmin','platform_owner','operations_admin','candidate']), (req, res) => {
+  const c: any = loadDb().candidateProfiles.find((x: any) => x.id === req.params.id);
+  if (!c) return res.status(404).json({ success: false, message: 'Not found.' });
+  const ctx = ctxOf(req);
+  if (ctx.role === 'candidate' && String(c.email || '').toLowerCase() !== String(ctx.email).toLowerCase()) {
+    return res.status(404).json({ success: false, message: 'Not found.' });
+  }
   if (!loadDb().candidateProfiles.some((x: any) => x.id === req.params.id)) return res.status(404).json({ success: false, message: 'Not found.' });
   res.json({ success: true, data: (loadDb().privacyRequests as any[]).filter((r) => r.candidateId === req.params.id) });
 });
-directoryRouter.post('/directory/candidates/:id/deletion-request', requireAuth(['superadmin','platform_owner']), (req: Request, res: Response) => {
+directoryRouter.post('/directory/candidates/:id/deletion-request', requireAuth(['superadmin','platform_owner','candidate']), (req: Request, res: Response) => {
   const db = loadDb(); const c: any = db.candidateProfiles.find((x: any) => x.id === req.params.id);
   if (!c) return res.status(404).json({ success: false, message: 'Not found.' });
+  const ctx = ctxOf(req);
+  // Phase 5.2: candidates may request deletion of their OWN profile only; staff use the admin path.
+  if (ctx.role === 'candidate' && String(c.email || '').toLowerCase() !== String(ctx.email).toLowerCase()) {
+    return res.status(404).json({ success: false, message: 'Not found.' });
+  }
   const { reason } = req.body || {};
   if (!reason || !String(reason).trim()) return res.status(400).json({ success: false, message: 'reason required.' });
   if ((db.privacyRequests as any[]).some((r) => r.candidateId === c.id && r.status === 'Pending')) {

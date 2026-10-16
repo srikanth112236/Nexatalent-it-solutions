@@ -14,7 +14,7 @@ interface Props {
 type Step = 'detail' | 'form' | 'done';
 
 const field =
-  'min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3.5 text-[13px] outline-none placeholder:text-black focus:border-black focus:ring-2 focus:ring-black/15';
+  'min-h-[44px] w-full rounded-xl border border-neutral-200 bg-white px-3.5 text-[13px] outline-none placeholder:text-black focus:border-black focus:ring-2 focus:ring-black/15';
 
 /**
  * Interactive service/industry detail modal:
@@ -103,7 +103,7 @@ export function ServiceDetailModal({ detail, onClose }: Props) {
         className="relative max-h-[92vh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-3xl bg-white shadow-2xl outline-none sm:rounded-3xl"
       >
         {/* header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white/95 px-5 py-3.5 backdrop-blur sm:px-7">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-100 bg-white/95 px-5 py-3.5 backdrop-blur sm:px-7">
           <div className="flex items-center gap-3">
             <span className="rounded-full bg-black/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-black">
               {detail.kind === 'solution' ? 'Solution' : 'Industry'}
@@ -118,7 +118,7 @@ export function ServiceDetailModal({ detail, onClose }: Props) {
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="flex h-9 w-9 items-center justify-center rounded-full text-black transition-colors hover:bg-slate-100 hover:text-black focus-visible:outline-2 focus-visible:outline-black"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-black transition-colors hover:bg-neutral-100 hover:text-black focus-visible:outline-2 focus-visible:outline-black"
           >
             <X size={18} aria-hidden />
           </button>
@@ -126,7 +126,7 @@ export function ServiceDetailModal({ detail, onClose }: Props) {
 
         {/* progress bar (form + done steps) */}
         {step !== 'detail' && (
-          <div className="h-1.5 w-full bg-slate-100" role="progressbar" aria-valuenow={step === 'done' ? 100 : progress} aria-valuemin={0} aria-valuemax={100} aria-label="Form progress">
+          <div className="h-1.5 w-full bg-neutral-100" role="progressbar" aria-valuenow={step === 'done' ? 100 : progress} aria-valuemin={0} aria-valuemax={100} aria-label="Form progress">
             <div
               className="h-full rounded-full bg-black transition-all duration-500"
               style={{ width: `${step === 'done' ? 100 : progress}%` }}
@@ -145,7 +145,7 @@ export function ServiceDetailModal({ detail, onClose }: Props) {
 
               <dl className="mt-5 grid grid-cols-3 gap-3">
                 {detail.stats.map(([v, l]) => (
-                  <div key={l} className="rounded-xl border border-slate-200 bg-white p-3 text-center">
+                  <div key={l} className="rounded-xl border border-neutral-200 bg-white p-3 text-center">
                     <dt className="text-[9px] font-bold uppercase tracking-wider text-black">{l}</dt>
                     <dd className="mt-0.5 text-sm font-black tabular-nums text-black">{v}</dd>
                   </div>
@@ -186,14 +186,14 @@ export function ServiceDetailModal({ detail, onClose }: Props) {
                   className="group inline-flex min-h-[48px] items-center gap-3 rounded-full bg-black py-1.5 pl-6 pr-1.5 text-sm font-bold text-white shadow-lg shadow-black/25 transition-all hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
                 >
                   Get My Talent Shortlist
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-black transition-transform group-hover:translate-x-0.5">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-black transition-transform group-hover:tranneutral-x-0.5">
                     <ArrowRight size={15} aria-hidden />
                   </span>
                 </button>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="min-h-[44px] rounded-full border border-slate-300 bg-white px-5 text-xs font-bold text-black hover:border-slate-400 focus-visible:outline-2 focus-visible:outline-black"
+                  className="min-h-[44px] rounded-full border border-neutral-300 bg-white px-5 text-xs font-bold text-black hover:border-neutral-400 focus-visible:outline-2 focus-visible:outline-black"
                 >
                   Talk to a Hiring Expert
                 </button>
@@ -249,7 +249,7 @@ export function ServiceDetailModal({ detail, onClose }: Props) {
               <EnquirySelect id="sd-timeline" label="Timeline" value={form.timeline} onChange={(v) => setForm({ ...form, timeline: v })} options={ENQUIRY_TIMELINES} />
             </div>
             {/* Shared enquiry fields — same in every form, synced to Website Leads */}
-            <div className="mt-3.5 grid gap-3.5 sm:grid-cols-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3.5">
+            <div className="mt-3.5 grid gap-3.5 sm:grid-cols-3 rounded-xl border border-neutral-200 bg-neutral-50/60 p-3.5">
               <EnquirySelect id="sd-topic" label="What is this about?" value={form.topic} onChange={(v) => setForm({ ...form, topic: v })} options={ENQUIRY_TOPICS} />
               <EnquirySelect id="sd-office" label="Preferred office" value={form.office} onChange={(v) => setForm({ ...form, office: v })} options={ENQUIRY_OFFICES} />
               <EnquirySelect id="sd-budget" label="Project budget" value={form.budget} onChange={(v) => setForm({ ...form, budget: v })} options={ENQUIRY_BUDGETS} />
@@ -265,7 +265,7 @@ export function ServiceDetailModal({ detail, onClose }: Props) {
                 placeholder={`Roles, stack, budget band for ${detail.label.toLowerCase()}…`}
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
-                className="w-full rounded-xl border border-slate-200 bg-white p-3.5 text-[13px] leading-relaxed outline-none placeholder:text-black focus:border-black focus:ring-2 focus:ring-black/15"
+                className="w-full rounded-xl border border-neutral-200 bg-white p-3.5 text-[13px] leading-relaxed outline-none placeholder:text-black focus:border-black focus:ring-2 focus:ring-black/15"
               />
             </div>
 
@@ -298,7 +298,7 @@ export function ServiceDetailModal({ detail, onClose }: Props) {
             <button
               type="button"
               onClick={onClose}
-              className="mt-6 inline-flex min-h-[44px] items-center rounded-full border border-slate-300 bg-white px-6 text-xs font-bold text-black hover:border-slate-400 focus-visible:outline-2 focus-visible:outline-black"
+              className="mt-6 inline-flex min-h-[44px] items-center rounded-full border border-neutral-300 bg-white px-6 text-xs font-bold text-black hover:border-neutral-400 focus-visible:outline-2 focus-visible:outline-black"
             >
               Keep browsing
             </button>

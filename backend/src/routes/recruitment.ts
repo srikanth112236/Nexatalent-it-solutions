@@ -688,6 +688,32 @@ recruitmentRouter.get('/interviews/:id/feedback', requireAuth(['employer','super
   }
   res.json({ success: true, data: db.feedback.filter((f: any) => f.interviewId === iv.id) });
 });
+// Phase 6.3: calendar download — same visibility as the interview itself, .ics for any client.
+recruitmentRouter.get('/interviews/:id/ics', requireAuth(), (req, res) => {
+  const db = loadDb(); const ctx = ctxOf(req);
+  const iv: any = db.interviews.find((x: any) => x.id === req.params.id);
+  if (!iv) return res.status(404).json({ success: false, message: 'Interview not found.' });
+  if (ctx.role === 'candidate' && String(iv.candidateEmail || '').toLowerCase() !== String(ctx.email).toLowerCase()) {
+    return res.status(404).json({ success: false, message: 'Interview not found.' });
+  }
+  if (ctx.role !== 'candidate' && !['superadmin','platform_owner','employee','operations_admin'].includes(ctx.role) && iv.companyId !== ctx.tenantId && iv.orgId !== ctx.tenantId) {
+    if (ctx.role === 'internal_recruiter') {
+      const app: any = db.applications.find((a: any) => a.id === iv.applicationId);
+      if (!app || !appAssignedTo(db, app, emailOf(ctx))) return res.status(404).json({ success: false, message: 'Interview not found.' });
+    } else if (!(AGENCY_ROLES.includes(ctx.role) && agencyLinkedAppIds(db, ctx).has(iv.applicationId))) {
+      return res.status(404).json({ success: false, message: 'Interview not found.' });
+    }
+  }
+  const startRaw = iv.scheduledAt || iv.date || iv.createdAt;
+  const start = new Date(startRaw);
+  const dt = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const end = new Date((Number.isFinite(start.getTime()) ? start.getTime() : Date.now()) + 60 * 60 * 1000);
+  const esc = (s: string) => String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n').slice(0, 500);
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//NexaTalent//Interviews//EN', 'BEGIN:VEVENT', `UID:${iv.id}@nexatalent`, `DTSTAMP:${dt(new Date())}`, `DTSTART:${dt(Number.isFinite(start.getTime()) ? start : new Date())}`, `DTEND:${dt(end)}`, `SUMMARY:${esc(`Interview — ${iv.round || iv.jobTitle || iv.applicationId || iv.id}`)}`, `DESCRIPTION:${esc(`${iv.mode || ''} ${iv.meetingLink || iv.meetLink || iv.venue || ''} ${iv.instructions || ''}`.trim())}`, `LOCATION:${esc(iv.mode === 'video' ? (iv.meetingLink || iv.meetLink || 'Video') : (iv.venue || ''))}`, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+  res.setHeader('Content-Type', 'text/calendar');
+  res.setHeader('Content-Disposition', `attachment; filename="interview-${iv.id}.ics"`);
+  res.send(ics);
+});
 
 // ---- Offers & placements ----
 // Candidate-scoped offer inbox (§7 offers): own offers enriched with job + placement status.
@@ -766,6 +792,34 @@ recruitmentRouter.post('/offers', requireAuth(['employer','superadmin','company_
   audit(ctxOf(req).email, `OFFER_ISSUED:${offer.id}`, app.orgId, 'offer', offer.id, req.ip); persist();
   emit('application.stage', { ...app, stage: 'Offer' }, app.orgId, ctxOf(req).email);
   res.status(201).json({ success: true, data: offer });
+});
+// Phase 1.5: employer-scoped offer inbox + withdraw (unblocks re-issue after 409 OFFER_EXISTS).
+recruitmentRouter.get('/offers', requireAuth(['employer','superadmin','company_admin','hiring_manager','company_recruiter','internal_recruiter','operations_admin','employee']), (req, res) => {
+  const db = loadDb(); const ctx = ctxOf(req);
+  let rows = db.offers as any[];
+  if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role)) {
+    rows = rows.filter((o: any) => o.orgId === ctx.tenantId);
+  }
+  const { page, pageSize } = paginate.parse(req.query);
+  res.json({ success: true, ...paged(rows, page, pageSize) });
+});
+recruitmentRouter.post('/offers/:id/withdraw', requireAuth(['employer','superadmin','company_admin','hiring_manager']), (req: Request, res: Response) => {
+  const db = loadDb(); const ctx = ctxOf(req);
+  const offer: any = db.offers.find((o: any) => o.id === req.params.id);
+  if (!offer) return res.status(404).json({ success: false, message: 'Offer not found.' });
+  if (!['superadmin','platform_owner'].includes(ctx.role) && offer.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Offer not found.' });
+  if (offer.status !== 'Issued') return res.status(409).json({ success: false, message: 'Only Issued offers can be withdrawn.' });
+  const reason = String(req.body?.reason || '').slice(0, 1000);
+  if (!reason.trim()) return res.status(400).json({ success: false, message: 'Withdraw reason required (audit).' });
+  offer.status = 'Withdrawn'; offer.withdrawnAt = nowIso(); offer.withdrawReason = reason.trim(); offer.withdrawnBy = ctx.email;
+  const app: any = db.applications.find((a: any) => a.id === offer.applicationId);
+  if (app && app.stage === 'Offer') {
+    app.stage = 'Selected'; app.updatedAt = nowIso();
+    app.history = [...(app.history || []), { from: 'Offer', to: 'Selected', by: ctx.email, reason: 'Offer withdrawn', at: nowIso() }];
+  }
+  db.notifications.unshift({ id: uid('NOTIF'), recipient: offer.candidateEmail, kind: 'offer', body: 'Offer withdrawn', channel: 'in-app', status: 'queued', createdAt: nowIso(), tenantId: offer.orgId });
+  audit(ctx.email, 'OFFER_WITHDRAWN:' + offer.id, offer.orgId, 'offer', offer.id, req.ip); persist();
+  res.json({ success: true, data: offer });
 });
 recruitmentRouter.post('/placements', requireAuth(['employer','superadmin','company_admin','employee','operations_admin','internal_recruiter']), async (req: Request, res: Response) => {
   const db = loadDb(); const { applicationId, joinDate, feeBasis } = req.body || {};
@@ -1100,6 +1154,59 @@ recruitmentRouter.patch('/talent-pools/:id', requireAuth(['employer','superadmin
   p.updatedAt = nowIso();
   audit(ctx.email, `TALENT_POOL_UPDATED:${p.id}`, p.orgId, 'talent-pool', p.id, req.ip); persist();
   res.json({ success: true, data: p });
+});
+// Phase 6.2: pool delete — empty pools are removed, pools with members archive instead.
+recruitmentRouter.delete('/talent-pools/:id', requireAuth(['employer','superadmin','company_admin']), (req, res) => {
+  const db = loadDb(); const p: any = db.talentPools.find((x: any) => x.id === req.params.id);
+  if (!p) return res.status(404).json({ success: false, message: 'Pool not found.' });
+  const ctx = ctxOf(req);
+  if (!['superadmin','platform_owner'].includes(ctx.role) && p.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Pool not found.' });
+  const members = db.talentPoolMembers.filter((m: any) => m.poolId === p.id);
+  if (members.length > 0) {
+    p.status = 'Archived'; p.updatedAt = nowIso();
+    audit(ctx.email, `TALENT_POOL_ARCHIVED:${p.id}`, p.orgId, 'talent-pool', p.id, req.ip); persist();
+    return res.json({ success: true, data: p, message: `Pool has ${members.length} member(s) — archived instead of deleted.` });
+  }
+  db.talentPools.splice(db.talentPools.findIndex((x: any) => x.id === p.id), 1);
+  audit(ctx.email, `TALENT_POOL_DELETED:${p.id}`, p.orgId, 'talent-pool', p.id, req.ip); persist();
+  res.json({ success: true, data: p });
+});
+// Phase 6.2: bulk shortlist — shortlists many pool members to one live job, per-member results.
+recruitmentRouter.post('/talent-pools/:id/shortlist-bulk', requireAuth(['employer','superadmin','platform_owner','company_admin','hiring_manager','company_recruiter','employee','operations_admin']), (req, res) => {
+  const db = loadDb(); const ctx = ctxOf(req);
+  const pool: any = poolOf(db, req, ctx);
+  if (!pool) return res.status(404).json({ success: false, message: 'Pool not found.' });
+  const memberIds: string[] = Array.isArray(req.body?.memberIds) ? req.body.memberIds.map(String) : [];
+  const jobId = String(req.body?.jobId || '');
+  if (memberIds.length === 0 || !jobId) return res.status(400).json({ success: false, message: 'memberIds[] + jobId required.' });
+  if (memberIds.length > 50) return res.status(400).json({ success: false, message: 'Max 50 members per bulk shortlist.' });
+  const job: any = db.jobs.find((j: any) => j.id === jobId);
+  if (!job || (!['superadmin','platform_owner','employee','operations_admin'].includes(ctx.role) && job.orgId !== ctx.tenantId)) {
+    return res.status(404).json({ success: false, message: 'Job not found.' });
+  }
+  if (job.status !== 'Published' || (job.expiryDate && new Date(job.expiryDate) <= new Date())) {
+    return res.status(422).json({ success: false, code: 'PIPELINE_FROZEN', message: `Job ${job.id} is ${job.status} — resume it to shortlist.` });
+  }
+  const results: any[] = [];
+  for (const mid of memberIds) {
+    const m: any = db.talentPoolMembers.find((x: any) => x.id === mid && x.poolId === pool.id);
+    if (!m) { results.push({ memberId: mid, status: 'error', message: 'Member not found.' }); continue; }
+    const key = String(m.candidateId || m.candidateEmail || '').toLowerCase();
+    const cand: any = db.candidateProfiles.find((x: any) => x.id === m.candidateId || String(x.email || '').toLowerCase() === key);
+    if (!cand) { results.push({ memberId: mid, status: 'error', message: 'Profile no longer on file.' }); continue; }
+    const appKey = `${jobId}::${String(cand.email).toLowerCase()}`;
+    const dup: any = db.applications.find((a: any) => a.key === appKey);
+    if (dup) { results.push({ memberId: mid, status: 'duplicate', message: 'Already in pipeline.', applicationId: dup.id }); continue; }
+    const app = { id: uid('APP'), key: appKey, jobId, jobTitle: job.title, orgId: job.orgId, requisitionId: job.requisitionId, candidateEmail: cand.email, candidateName: cand.name, stage: 'Applied', source: `pool:${pool.id}:${m.id}`, poolId: pool.id, createdAt: nowIso(), updatedAt: nowIso() };
+    db.applications.unshift(app);
+    pushHistory(db.stageHistory, { id: uid('STG'), applicationId: app.id, from: '-', to: 'Applied', actor: ctx.email, reason: `Bulk shortlisted from pool ${pool.id}`, createdAt: nowIso() });
+    job.applicantsCount = (job.applicantsCount || 0) + 1;
+    m.applicationId = app.id; m.updatedAt = nowIso();
+    results.push({ memberId: mid, status: 'created', message: cand.email, applicationId: app.id });
+  }
+  audit(ctx.email, `POOL_BULK_SHORTLIST:${pool.id}:${results.filter((r) => r.status === 'created').length}`, pool.orgId, 'talent-pool', pool.id, req.ip);
+  persist();
+  res.status(201).json({ success: true, data: { results, summary: { total: results.length, created: results.filter((r) => r.status === 'created').length, duplicates: results.filter((r) => r.status === 'duplicate').length, errors: results.filter((r) => r.status === 'error').length } } });
 });
 recruitmentRouter.delete('/talent-pools/:id/members/:memberId', requireAuth(['employer','superadmin','company_admin']), (req, res) => {
   const db = loadDb();

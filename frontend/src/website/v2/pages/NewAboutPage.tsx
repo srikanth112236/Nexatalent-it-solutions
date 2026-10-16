@@ -119,7 +119,7 @@ export function NewAboutPage() {
       <main id="main-content">
         {/* ============ HERO ============ */}
         <section className="relative overflow-hidden px-4 pb-16 pt-16 sm:px-6 sm:pt-20" aria-label="About banner">
-          {/* soft blue aura — clean, light, no dark panels */}
+          {/* clean white banner — no tinted panels */}
           <div
             aria-hidden
             className="pointer-events-none absolute inset-x-0 -top-32 h-[420px] opacity-70"

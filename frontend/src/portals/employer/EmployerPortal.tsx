@@ -8,7 +8,7 @@ import { jobsApi, requisitionsApi, applicationsApi, directoryApi } from '../../s
 import {
   RequisitionsPanel, ApplicationsPanel, InterviewsPanel, ChatPanel, TalentPoolsPanel,
   CandidateSearchPanel, OutreachPanel, EmployerBillingWorkspace, OffersPlacementsPanel, RequirementCreatePage,
-  SubmissionsPanel, NotificationsPanel, TimesheetsPanel, syncAll,
+  SubmissionsPanel, NotificationsPanel, TimesheetsPanel, BranchesPanel, syncAll,
   ActivityTimeline, AssignRecruiterModal, auditLabel, sortActivity,
 } from '../common/EnterprisePanels';
 import type { ActivityItem } from '../common/EnterprisePanels';
@@ -34,8 +34,10 @@ const navItems = [
   { label: 'Billing & Usage', path: '/employer/billing', group: 'Commercial' },
   { label: 'Messages', path: '/employer/messages', group: 'Workspace' },
   { label: 'Hiring Reports', path: '/employer/reports', group: 'Workspace' },
+  { label: 'Activity Log', path: '/employer/activity', group: 'Workspace' },
   { label: 'Security', path: '/employer/security', group: 'Workspace' },
   { label: 'Notifications', path: '/employer/notifications', group: 'Workspace' },
+  { label: 'Settings', path: '/employer/settings', group: 'Workspace' },
 ];
 
 export function EmployerPortal() {
@@ -60,6 +62,8 @@ export function EmployerPortal() {
     if (p.includes('/timesheets')) return 'timesheets';
     if (p.includes('/billing')) return 'billing';
     if (p.includes('/messages') || p.includes('/chat')) return 'messages';
+    if (p.includes('/activity')) return 'activity';
+    if (p.includes('/settings')) return 'settings';
     if (p.includes('/security')) return 'security';
     if (p.includes('/notifications')) return 'notifications';
     if (p.includes('/reports')) return 'reports';
@@ -77,6 +81,39 @@ export function EmployerPortal() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [saveError, setSaveError] = useState('');
+  // Phase 3.1/3.2: company-scoped audit trail + team roster (lazy-loaded per tab)
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditError, setAuditError] = useState('');
+  const [auditQuery, setAuditQuery] = useState('');
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [teamLoading, setTeamLoading] = useState(false);
+  const [teamError, setTeamError] = useState('');
+
+  useEffect(() => {
+    if (currentTab !== 'activity') return;
+    (async () => {
+      setAuditLoading(true); setAuditError('');
+      try {
+        const res: any = await apiClient.get('/api/v1/audit-logs?page=1&pageSize=100');
+        const list = (res as any)?.data?.data || (res as any)?.data || [];
+        setAuditLogs(Array.isArray(list) ? list : []);
+      } catch (e: any) { setAuditError(e?.response?.data?.message || e?.message || 'Could not load activity log.'); }
+      finally { setAuditLoading(false); }
+    })();
+  }, [currentTab]);
+  useEffect(() => {
+    if (currentTab !== 'settings' || teamMembers.length > 0) return;
+    (async () => {
+      setTeamLoading(true); setTeamError('');
+      try {
+        const res: any = await directoryApi.users();
+        const list = (res as any)?.data?.data || (res as any)?.data || [];
+        setTeamMembers(Array.isArray(list) ? list : []);
+      } catch (e: any) { setTeamError(e?.response?.data?.message || e?.message || 'Could not load team.'); }
+      finally { setTeamLoading(false); }
+    })();
+  }, [currentTab, teamMembers.length]);
 
   // Requisition Modal
   const [showJobModal, setShowJobModal] = useState(false);
@@ -445,6 +482,64 @@ export function EmployerPortal() {
         {currentTab === 'messages' && <ChatPanel />}
         {currentTab === 'security' && <MfaPanel />}
         {currentTab === 'notifications' && <NotificationsPanel />}
+        {currentTab === 'activity' && (
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-extrabold text-slate-900">Activity Log</h3>
+                <p className="text-xs text-slate-500">Audited stage moves, interviews, offers and billing events for your organization.</p>
+              </div>
+              <input value={auditQuery} onChange={(e) => setAuditQuery(e.target.value)} placeholder="Filter by actor / action…" aria-label="Filter activity" className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none w-64" />
+            </div>
+            {auditError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold">{auditError}</div>}
+            {auditLoading ? <InlineLoading message="Loading activity…" /> : (() => {
+              const q = auditQuery.trim().toLowerCase();
+              const rows = q ? auditLogs.filter((l) => `${l.actor || ''} ${l.action || ''} ${l.resource || ''} ${l.recordId || ''}`.toLowerCase().includes(q)) : auditLogs;
+              return rows.length === 0 ? <EmptyState title="No activity yet" message="Stage moves, interviews, offers and invoices will appear here." /> : (
+                <div className="overflow-x-auto rounded-2xl border border-slate-100">
+                  <table className="w-full text-left text-xs min-w-[640px]">
+                    <thead className="bg-slate-50"><tr className="text-slate-500 font-extrabold uppercase tracking-wider text-[10px]">
+                      <th className="px-4 py-2.5">Time</th><th className="px-4 py-2.5">Actor</th><th className="px-4 py-2.5">Action</th><th className="px-4 py-2.5">Record</th>
+                    </tr></thead>
+                    <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
+                      {rows.slice(0, 100).map((l, i) => (
+                        <tr key={l.id || i} className="hover:bg-slate-50">
+                          <td className="px-4 py-2.5 text-slate-500 whitespace-nowrap">{String(l.timestamp || l.createdAt || '').slice(0, 16).replace('T', ' ')}</td>
+                          <td className="px-4 py-2.5 font-bold text-slate-900 truncate max-w-[220px]">{l.actor}</td>
+                          <td className="px-4 py-2.5 font-bold text-blue-700">{l.action}</td>
+                          <td className="px-4 py-2.5 font-mono text-slate-600">{l.resource}/{l.recordId}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+        {currentTab === 'settings' && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-sm space-y-3">
+              <h3 className="text-lg font-extrabold text-slate-900">Team Members</h3>
+              <p className="text-xs text-slate-500">Everyone with access to your organization. Invite and role changes are managed by your Company Admin.</p>
+              {teamError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold">{teamError}</div>}
+              {teamLoading ? <InlineLoading message="Loading team…" /> : teamMembers.length === 0 ? (
+                <EmptyState title="No team members" message="Your organization members will appear here." />
+              ) : (
+                <div className="space-y-2">
+                  {teamMembers.slice(0, 50).map((m: any) => (
+                    <div key={m.id || m.email} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2 flex-wrap text-xs">
+                      <div className="min-w-0"><div className="font-extrabold text-slate-900 truncate">{m.name || m.email}</div><div className="text-slate-500 font-medium truncate">{m.email}</div></div>
+                      <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-[#087BFF] border border-blue-200 font-bold text-[11px]">{m.role} • {m.status || 'Active'}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <BranchesPanel />
+            <NotificationsPanel />
+          </div>
+        )}
 
         {/* TAB 1: OVERVIEW (§8.2 — 14 widgets, each linked) */}
         {currentTab === 'overview' && (
@@ -1051,6 +1146,7 @@ export function EmployerPortal() {
             {isLoading ? (
               <InlineLoading message="Loading reports…" />
             ) : (
+            <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
                 <div className="text-xs font-bold text-slate-500 uppercase">Open Requirements</div>
@@ -1069,6 +1165,38 @@ export function EmployerPortal() {
                 <div className="text-3xl font-extrabold text-slate-900">{vettedCount}</div>
                 <div className="text-xs font-bold text-emerald-600">Candidates past screening</div>
               </div>
+            </div>
+            {(() => {
+              const stages: Record<string, number> = {};
+              for (const a of allApplications) stages[String(a.stage || 'Unknown')] = (stages[String(a.stage || 'Unknown')] || 0) + 1;
+              const entries = Object.entries(stages).sort((a, b) => b[1] - a[1]).slice(0, 8);
+              const max = Math.max(1, ...entries.map(([, n]) => n));
+              const interviewed = allApplications.filter((a) => ['Interview Scheduled', 'Interview Completed', 'Selected', 'Offer', 'Hired'].includes(String(a.stage))).length;
+              const offered = allApplications.filter((a) => ['Offer', 'Selected', 'Hired'].includes(String(a.stage))).length;
+              const hired = allApplications.filter((a) => String(a.stage) === 'Hired').length;
+              const ivToOffer = interviewed ? Math.round((offered / interviewed) * 100) : null;
+              const offToHire = offered ? Math.round((hired / offered) * 100) : null;
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                    <div className="text-xs font-bold text-slate-500 uppercase">Pipeline by stage ({allApplications.length} applications)</div>
+                    {entries.length === 0 ? <div className="text-xs text-slate-500 font-medium">No applications yet.</div> : entries.map(([s, n]) => (
+                      <div key={s} className="flex items-center gap-2">
+                        <span className="w-32 text-[11px] font-bold text-slate-600 truncate">{s}</span>
+                        <div className="flex-1 h-2 rounded-full bg-slate-200/70 overflow-hidden"><div className="h-full rounded-full bg-[#087BFF]" style={{ width: `${Math.round((n / max) * 100)}%` }} /></div>
+                        <span className="w-8 text-right text-xs font-extrabold text-slate-900">{n}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                    <div className="text-xs font-bold text-slate-500 uppercase">Conversion</div>
+                    <div className="text-sm font-extrabold text-slate-900">Interview → Offer: {ivToOffer === null ? '—' : `${ivToOffer}%`} <span className="font-medium text-slate-500">({offered}/{interviewed})</span></div>
+                    <div className="text-sm font-extrabold text-slate-900">Offer → Hired: {offToHire === null ? '—' : `${offToHire}%`} <span className="font-medium text-slate-500">({hired}/{offered})</span></div>
+                    <div className="text-[11px] text-slate-500 font-medium">{interviews.length} interviews scheduled · computed live from your pipeline, no sampling.</div>
+                  </div>
+                </div>
+              );
+            })()}
             </div>
             )}
           </div>

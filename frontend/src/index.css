@@ -368,7 +368,14 @@ div:has(> table) {
   border-radius: 999px;
 }
 .sidebar-scroll::-webkit-scrollbar-thumb:hover {
-  background: #087BFF;
+  background: #000000;
+}
+/* Nested native scrollers (job lists, sticky form cards, dropdown menus,
+   modals) opt out of Lenis smooth-wheel hijack so internal scrolling works.
+   Lenis natively respects [data-lenis-prevent]; overscroll containment stops
+   scroll-chaining into the page. */
+[data-lenis-prevent] {
+  overscroll-behavior: contain;
 }
 /* Visible keyboard focus everywhere */
 :focus-visible {

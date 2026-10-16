@@ -2128,6 +2128,7 @@ export function InterviewsPanel() {
     <RowMenu label={`Interview ${i.id}`} items={[
       { label: 'View details', onSelect: () => openDetail(i) },
       ...((i.meetingLink || i.meetLink) ? [{ label: 'Join meeting', onSelect: () => window.open(i.meetingLink || i.meetLink, '_blank', 'noopener') }] : []),
+      { label: 'Add to calendar (.ics)', onSelect: () => interviewsApi.downloadIcs(i.id).catch((e) => setError(errMsg(e))) },
       { label: 'Edit details…', onSelect: () => {
         setEditIv(i);
         setEditForm({ round: i.round || '', mode: i.mode || 'video', interviewer: i.interviewer || '', panel: i.panel || '', meetingLink: i.meetingLink || i.meetLink || '', venue: i.venue || '', instructions: i.instructions || '', timezone: i.timezone || 'Asia/Kolkata', confirmationStatus: i.confirmationStatus || 'Pending' });
@@ -2879,7 +2880,27 @@ export function TalentPoolsPanel() {
     { label: 'Add member', onSelect: () => { setAddPoolId(p.id); setShowAdd(true); } },
     { label: 'Rename', onSelect: () => { setRenameFor(p); setRenameName(p.name || ''); } },
     ...(p.status !== 'Archived' ? [{ label: 'Archive pool', danger: true as const, onSelect: () => doArchive(p) }] : []),
+    { label: 'Delete pool…', danger: true as const, onSelect: () => doDeletePool(p) },
   ];
+  const doDeletePool = async (p: any) => {
+    if (!window.confirm(`Delete pool "${p.name || p.id}"? Pools with members archive instead of deleting.`)) return;
+    setBusy(true); setError(''); setOk('');
+    try {
+      const res: any = await talentApi.deletePool(p.id);
+      const updated = (res as any)?.data || p;
+      if (updated?.status === 'Archived') {
+        setPools((x) => x.map((y) => (y.id === p.id ? { ...y, status: 'Archived' } : y)));
+        setOk(`Pool has members — archived instead of deleted.`);
+      } else {
+        setPools((x) => x.filter((y) => y.id !== p.id));
+        setOk(`Pool ${p.id} deleted.`);
+      }
+      if (drawerPool?.id === p.id) setDrawerPool(null);
+      syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
+  const [bulkJob, setBulkJob] = useState('');
+  const [bulkBusy, setBulkBusy] = useState(false);
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -3017,6 +3038,23 @@ export function TalentPoolsPanel() {
                     className="ml-auto px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-[11px] font-semibold outline-none focus:border-blue-500 w-40" />
                 )}
               </div>
+              {drawerPool?.status !== 'Archived' && members.length > 0 && (
+                <div className="flex gap-2 flex-wrap items-center p-3 rounded-xl bg-blue-50/60 border border-blue-200">
+                  <span className="text-[11px] font-extrabold text-slate-700">Bulk shortlist visible ({membersVisible.filter((m) => !staleOf(m) && !m.applicationId).length}) →</span>
+                  <input value={bulkJob} onChange={(e) => setBulkJob(e.target.value)} placeholder="Job ID (Published)" aria-label="Bulk shortlist job" className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-[11px] font-semibold outline-none w-44" />
+                  <button type="button" disabled={bulkBusy || !bulkJob.trim()} onClick={async () => {
+                    const ids = membersVisible.filter((m) => !staleOf(m) && !m.applicationId).map((m) => m.id);
+                    if (ids.length === 0) { setError('No eligible visible members (stale or already in pipeline).'); return; }
+                    setBulkBusy(true); setError(''); setOk('');
+                    try {
+                      const out: any = await talentApi.shortlistBulk(drawerPool.id, ids.slice(0, 50), bulkJob.trim());
+                      const s = out?.data?.summary || out?.summary;
+                      setOk(`Bulk shortlist: ${s?.created ?? '?'} created, ${s?.duplicates ?? '?'} duplicates, ${s?.errors ?? '?'} errors.`);
+                      setBulkJob(''); refreshMembers(drawerPool.id); syncAll();
+                    } catch (e) { setError(errMsg(e)); } finally { setBulkBusy(false); }
+                  }} className="px-3 py-1.5 rounded-lg bg-slate-900 text-white font-bold text-[11px] disabled:opacity-40 cursor-pointer">{bulkBusy ? 'Shortlisting…' : 'Shortlist visible'}</button>
+                </div>
+              )}
               {membersLoading ? <InlineLoading message="Loading members…" /> : members.length === 0 ? (
                 <div className="text-[11px] text-slate-500 font-medium p-3 rounded-xl bg-slate-50 border border-dashed border-slate-200">No members yet — add from Talent Search.</div>
               ) : membersVisible.length === 0 ? (
@@ -3686,6 +3724,10 @@ export function CandidateSearchPanel() {
 /* ---------------- Phase 2/3: Offers & placements ---------------- */
 export function OffersPlacementsPanel() {
   const [placements, setPlacements] = useState<any[]>([]);
+  const [openOffers, setOpenOffers] = useState<any[]>([]);
+  const [withdrawFor, setWithdrawFor] = useState<any>(null);
+  const [withdrawReason, setWithdrawReason] = useState('');
+  const [withdrawBusy, setWithdrawBusy] = useState(false);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
   const [offer, setOffer] = useState({ applicationId: '', ctc: '', payPeriod: 'annual', joinDate: '', letterMode: 'generate' as 'generate' | 'upload', letterRef: '' });
@@ -3770,10 +3812,23 @@ export function OffersPlacementsPanel() {
   };
   const load = async () => {
     try { setPlacements(unwrapList(await offersPlacementsApi.placements())); }
-    catch (e) { setError(errMsg(e)); }  };
+    catch (e) { setError(errMsg(e)); }
+    try { setOpenOffers(unwrapList(await offersPlacementsApi.offers())); }
+    catch { /* candidates/agencies have no employer inbox — placements still render */ }  };
   useEffect(() => { load(); }, []);
   const offerLetterRef = () => (offer.letterRef.trim() || offerFile).trim();
   const offerValid = offer.applicationId.trim() !== '' && Number(offer.ctc) > 0 && (offer.letterMode === 'generate' || offerLetterRef() !== '');
+  const doWithdraw = async () => {
+    if (!withdrawFor || !withdrawReason.trim()) { setError('Withdraw reason required (audit).'); return; }
+    setWithdrawBusy(true); setError('');
+    try {
+      await offersPlacementsApi.withdrawOffer(withdrawFor.id, withdrawReason.trim());
+      setOpenOffers((x) => x.map((o) => (o.id === withdrawFor.id ? { ...o, status: 'Withdrawn' } : o)));
+      setOk(`Offer ${withdrawFor.id} withdrawn — you can now issue a corrected offer.`);
+      setWithdrawFor(null); setWithdrawReason('');
+      syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setWithdrawBusy(false); }
+  };
   const issue = async (e?: React.FormEvent) => {
     e?.preventDefault(); setError(''); setOk('');
     if (!offerValid) { setError(offer.applicationId.trim() === '' ? 'Pick a candidate application first.' : Number(offer.ctc) <= 0 ? 'Enter the offered CTC.' : 'Upload the company letter or switch to Generate.'); return; }
@@ -3812,6 +3867,31 @@ export function OffersPlacementsPanel() {
       </div>
       {error && <PanelError message={error} onRetry={load} />}
       {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
+      {openOffers.filter((o) => o.status === 'Issued').length > 0 && (
+        <div className="space-y-2">
+          <div className="text-xs font-extrabold text-slate-700">Open offers ({openOffers.filter((o) => o.status === 'Issued').length}) — withdraw to re-issue</div>
+          {openOffers.filter((o) => o.status === 'Issued').slice(0, 20).map((o) => (
+            <div key={o.id} className="p-3 rounded-2xl bg-amber-50/60 border border-amber-200 flex items-center justify-between gap-2 flex-wrap text-xs">
+              <div className="min-w-0">
+                <span className="font-mono font-bold">{o.id}</span>
+                <span className="text-slate-600 font-medium"> • {o.candidateEmail} • {o.jobId} • ₹{Number(o.ctc || 0).toLocaleString('en-IN')}</span>
+              </div>
+              <button type="button" onClick={() => { setWithdrawFor(o); setWithdrawReason(''); }} className="px-3 py-1.5 rounded-lg bg-white border border-amber-300 text-amber-800 font-bold text-[11px]">Withdraw…</button>
+            </div>
+          ))}
+        </div>
+      )}
+      {withdrawFor && (
+        <Modal open={!!withdrawFor} onClose={() => { setWithdrawFor(null); setWithdrawReason(''); }} title={`Withdraw offer ${withdrawFor.id}`} subtitle="Frees the application for a corrected re-issue. Audited.">
+          <div className="space-y-3">
+            <Field label="Reason *"><input className={kitInput} value={withdrawReason} onChange={(e) => setWithdrawReason(e.target.value)} placeholder="e.g. CTC typo — re-issuing corrected letter" /></Field>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => { setWithdrawFor(null); setWithdrawReason(''); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
+              <button type="button" disabled={withdrawBusy || !withdrawReason.trim()} onClick={doWithdraw} className={btnDark}>{withdrawBusy ? 'Withdrawing…' : 'Withdraw offer'}</button>
+            </div>
+          </div>
+        </Modal>
+      )}
       <Modal open={showOffer} onClose={() => { setShowOffer(false); resetOffer(); }} title="Issue offer" subtitle="3 steps — candidate, compensation, then the offer letter" wide>
         <div className="space-y-4">
           <ol className="flex items-center gap-1 text-[11px] font-extrabold" aria-label="Offer progress">
@@ -6022,6 +6102,30 @@ export function CommissionsPanel() {
     : `₹${Number(c.feeBasis || 0).toLocaleString('en-IN')} annual`;
   const [approveFor, setApproveFor] = useState<any>(null);
   const [payoutFor, setPayoutFor] = useState<any>(null);
+  // Phase 6.2: clawback + payout statement
+  const [clawFor, setClawFor] = useState<any>(null);
+  const [clawForm, setClawForm] = useState({ amount: '', reason: '', override: false });
+  const [clawBusy, setClawBusy] = useState(false);
+  const [stmtFor, setStmtFor] = useState<any>(null);
+  const [stmtData, setStmtData] = useState<any>(null);
+  const doClawback = async () => {
+    if (!clawFor || !(Number(clawForm.amount) > 0) || !clawForm.reason.trim()) { setError('Amount + reason required (audit).'); return; }
+    setClawBusy(true); setError('');
+    try {
+      const out = unwrapObj(await billingApi.clawback(clawFor.id, Number(clawForm.amount), clawForm.reason.trim(), clawForm.override)) as any;
+      const updated = out?.commission || clawFor;
+      setCommissions((x) => x.map((y) => (y.id === clawFor.id ? { ...y, ...updated } : y)));
+      if (commDetail?.id === clawFor.id) setCommDetail((d: any) => ({ ...d, ...updated }));
+      setClawFor(null); setClawForm({ amount: '', reason: '', override: false });
+      setOk(`Clawback recorded on ${clawFor.id} — ledgers recomputed.`);
+      load(page, ps, dqCq, leg, approvalF, agrPage, payPage); syncAll();
+    } catch (e) { setError(errMsg(e)); } finally { setClawBusy(false); }
+  };
+  const openStatement = async (p: any) => {
+    setStmtFor(p); setStmtData(null); setError('');
+    try { setStmtData(unwrapObj(await billingApi.payoutStatement(p.id))); }
+    catch (e) { setError(errMsg(e)); }
+  };
   const approve = async (c: any) => {
     const u = unwrapObj(await billingApi.approveCommission(c.id));
     setCommissions((x) => x.map((y) => (y.id === c.id ? { ...y, ...(u?.id ? u : { approvalStatus: 'Approved' }) } : y)));
@@ -6065,6 +6169,7 @@ export function CommissionsPanel() {
       ...(!agencyFinanceView && c.approvalStatus !== 'Approved' ? [{ label: 'Approve commission…', onSelect: () => setApproveFor(c) }] : []),
       ...(!agencyFinanceView && c.approvalStatus === 'Approved' && monthsLeft(c) > 0 ? [{ label: c.basisType === 'monthly_ctc' ? `Generate month invoice (${Number(c.billedMonths || 0) + 1}/${c.contractMonths || 12})…` : 'Generate invoice…', onSelect: () => setInvoiceFor(c) }] : []),
       ...(!agencyFinanceView && c.approvalStatus === 'Approved' && c.paymentStatus !== 'Paid' ? [{ label: 'Process payout…', onSelect: () => setPayoutFor(c) }] : []),
+      ...(!agencyFinanceView ? [{ label: 'Clawback…', onSelect: () => { setClawFor(c); setClawForm({ amount: '', reason: '', override: false }); } }] : []),
       { label: 'Verify uniqueness…', onSelect: () => checkDup(c) },
       { label: 'Adjustments…', onSelect: async () => {
         setAdjustFor(c); setAdjustForm({ amount: '', reason: '' });
@@ -6300,7 +6405,10 @@ export function CommissionsPanel() {
       </div>
       <div className="text-xs font-extrabold text-slate-700">Payouts ({payPgTotal})</div>
       {payouts.map((p) => (
-        <div key={p.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold">{p.id} • ₹{p.amount} • {p.status}</div>
+        <div key={p.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2 flex-wrap">
+          <span>{p.id} • ₹{p.amount} • {p.status}</span>
+          <button type="button" onClick={() => openStatement(p)} className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold text-[11px]">Statement…</button>
+        </div>
       ))}
       <Pager page={payPage} total={payPgTotal} pageSize={20} onPage={setPayPage} />
       </>)}
@@ -6328,6 +6436,33 @@ export function CommissionsPanel() {
         tone="dark"
         onConfirm={async () => { if (payoutFor) await payout(payoutFor); }}
       />
+      <Modal open={clawFor !== null} onClose={() => setClawFor(null)} title={`Clawback — ${clawFor?.id || ''}`} subtitle="Replacement-window recovery as a negative adjustment. Receivables and payables stay separate.">
+        <div className="space-y-3">
+          <Field label="Clawback amount (₹) *"><input className={kitInput} type="number" min={1} value={clawForm.amount} onChange={(e) => setClawForm({ ...clawForm, amount: e.target.value })} placeholder="e.g. 50000" /></Field>
+          <Field label="Reason *"><input className={kitInput} value={clawForm.reason} onChange={(e) => setClawForm({ ...clawForm, reason: e.target.value })} placeholder="e.g. Candidate exited in week 3 — 50% recovery per terms" /></Field>
+          <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+            <input type="checkbox" checked={clawForm.override} onChange={(e) => setClawForm({ ...clawForm, override: e.target.checked })} /> Outside replacement window — finance override
+          </label>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setClawFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
+            <button type="button" disabled={clawBusy || !(Number(clawForm.amount) > 0) || !clawForm.reason.trim()} onClick={doClawback} className={btnDark}>{clawBusy ? 'Recording…' : 'Record clawback'}</button>
+          </div>
+        </div>
+      </Modal>
+      <Modal open={stmtFor !== null} onClose={() => { setStmtFor(null); setStmtData(null); }} title={`Payout statement — ${stmtFor?.id || ''}`} subtitle="Printable: payout + commission + agreement + invoices">
+        <div className="space-y-3">
+          {!stmtData ? <InlineLoading message="Loading statement…" /> : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              {[['Payout', stmtData.payout?.id], ['Amount', `₹${Number(stmtData.payout?.amount || 0).toLocaleString('en-IN')}`], ['Status', stmtData.payout?.status], ['Settlement', String(stmtData.payout?.settlementDate || '').slice(0, 10)], ['Commission', stmtData.commission?.id || '—'], ['Candidate', stmtData.commission?.candidateEmail || '—'], ['Agreement', stmtData.agreement ? `${stmtData.agreement.hiringType} @ ${stmtData.agreement.rate}%` : '—'], ['Replacement', stmtData.agreement ? `${stmtData.agreement.replacementDays}d` : '—'], ['Invoices', (stmtData.invoices || []).map((i: any) => `${i.number || i.id} (${i.status})`).join(', ') || 'none yet']].map(([k, v]) => (
+                <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—')}</div></div>
+              ))}
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => stmtData && printHtmlDocument(`Payout statement ${stmtFor?.id || ''}`, `<h2>Payout ${stmtFor?.id || ''}</h2><pre>${escHtml(JSON.stringify(stmtData, null, 2))}</pre>`)} className="px-4 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs">Print / Save PDF</button>
+          </div>
+        </div>
+      </Modal>
       <Modal open={dupInfo !== null} onClose={() => setDupInfo(null)} title={`Uniqueness check — ${dupInfo?.c?.id || ''}`}
         subtitle={`${dupInfo?.c?.trigger || ''} • ${dupInfo?.c?.placementId || dupInfo?.c?.applicationId || ''}`}>
         <div className="text-xs text-slate-700 space-y-2 leading-relaxed">
@@ -6360,6 +6495,7 @@ export function CommissionsPanel() {
             {commDetail.approvalStatus !== 'Approved' ? <button type="button" onClick={() => setApproveFor(commDetail)} className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-xs">Approve commission…</button> : null}
             {commDetail.approvalStatus === 'Approved' && monthsLeft(commDetail) > 0 ? <button type="button" onClick={() => { setInvoiceFor(commDetail); }} className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs">{commDetail.basisType === 'monthly_ctc' ? `Generate month invoice (${Number(commDetail.billedMonths || 0) + 1}/${commDetail.contractMonths || 12})…` : 'Generate invoice…'}</button> : null}
             {commDetail.approvalStatus === 'Approved' && commDetail.paymentStatus !== 'Paid' ? <button type="button" onClick={() => { setPayoutFor(commDetail); }} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">Process payout…</button> : null}
+            {!agencyFinanceView ? <button type="button" onClick={() => { setClawFor(commDetail); setClawForm({ amount: '', reason: '', override: false }); }} className="px-4 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700 font-bold text-xs">Clawback…</button> : null}
           </div>
         </DetailDrawer>
       )}
@@ -8216,7 +8352,14 @@ export function DocumentsPanel() {
           {rows.map((d) => (
             <div key={d.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold flex items-center justify-between gap-2">
               <span className="truncate">{d.name} • v{d.version} • {(Number(d.size || 0) / 1024).toFixed(0)} KB • {String(d.uploadedAt).slice(0, 10)}</span>
-              <RowMenu label="Document actions" items={[{ label: 'Download', onSelect: () => downloadDocumentFile(d.id, d.name).catch((e) => setError(errMsg(e))) }]} />
+              <RowMenu label="Document actions" items={[
+                { label: 'Download', onSelect: () => downloadDocumentFile(d.id, d.name).catch((e) => setError(errMsg(e))) },
+                { label: 'Delete…', onSelect: async () => {
+                  if (!window.confirm(`Delete ${d.name}? Upload a replacement afterwards if this was your active resume.`)) return;
+                  try { await documentsApi.remove(d.id); setRows((r) => r.filter((x) => x.id !== d.id)); syncAll(); }
+                  catch (e) { setError(errMsg(e)); }
+                } },
+              ]} />
             </div>
           ))}
         </div>
@@ -8233,6 +8376,23 @@ export function ConsentPanel() {
   const [marketing, setMarketing] = useState(false);
   const [visibility, setVisibility] = useState('standard');
   const [showWithdraw, setShowWithdraw] = useState(false);
+  // Phase 5.2: self-service deletion request (approve anonymizes PII, preserves records)
+  const [delReason, setDelReason] = useState('');
+  const [delBusy, setDelBusy] = useState(false);
+  const [delMsg, setDelMsg] = useState('');
+  const requestDeletion = async () => {
+    if (!delReason.trim()) { setError('Tell us why (one line) — it goes to the reviewer.'); return; }
+    setDelBusy(true); setError(''); setDelMsg('');
+    try {
+      const email = (() => { try { return localStorage.getItem('user_email') || ''; } catch { return ''; } })();
+      const prof: any = await apiClient.get(`/api/v1/candidate/profile?email=${encodeURIComponent(email)}`).catch(() => null);
+      const id = (prof as any)?.data?.id || (prof as any)?.data?.data?.id;
+      if (!id) throw new Error('Could not resolve your profile. Ask support.');
+      await directoryApi.requestDeletion(id, delReason.trim());
+      setDelMsg('Deletion request sent (Pending). A platform admin reviews it; financial and audit records are preserved.');
+      setDelReason('');
+    } catch (e) { setError(errMsg(e)); } finally { setDelBusy(false); }
+  };
   const load = async () => {
     setError('');
     try {
@@ -8287,6 +8447,15 @@ export function ConsentPanel() {
           Export my data (JSON)
         </button>
         <button type="button" onClick={() => setShowWithdraw(true)} className="px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 font-bold text-xs">Withdraw consent</button>
+      </div>
+      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+        <div className="text-xs font-extrabold text-slate-900">Delete my data</div>
+        <p className="text-[11px] text-slate-500 font-medium">Requests full anonymization of your profile. Applications, interviews, placements and billing history stay linked as required. A request can only be filed once while pending.</p>
+        {delMsg && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{delMsg}</div>}
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input value={delReason} onChange={(e) => setDelReason(e.target.value)} placeholder="Reason for deletion *" aria-label="Deletion reason" className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none" />
+          <button type="button" onClick={requestDeletion} disabled={delBusy || !delReason.trim()} className="px-4 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs disabled:opacity-50">{delBusy ? 'Sending…' : 'Request deletion'}</button>
+        </div>
       </div>
       <ConfirmDialog
         open={showWithdraw}
@@ -8412,7 +8581,7 @@ export function AgencyPanel() {
   };
   const doInvite = async (e: React.FormEvent) => {
     e.preventDefault(); if (!inviteFor) return;
-    if (!inviteForm.email.trim() || inviteForm.password.length < 8) { setError('Valid email + 8-char temporary password required.'); return; }
+    if (!inviteForm.email.trim() || inviteForm.password.length < 10) { setError('Valid email + 10-char temporary password required.'); return; }
     setBusy(true); setError('');
     try {
       await workforceApi.inviteAgencyUser(inviteFor.id, { name: inviteForm.name.trim(), email: inviteForm.email.trim(), role: inviteForm.role, password: inviteForm.password });
@@ -8600,7 +8769,7 @@ export function AgencyPanel() {
           <Field label="Full name"><input className={kitInput} value={inviteForm.name} onChange={(e) => setInviteForm({ ...inviteForm, name: e.target.value })} /></Field>
           <Field label="Work email *"><input type="email" required className={kitInput} value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} /></Field>
           <Field label="Role"><Select value={inviteForm.role} onChange={(v) => setInviteForm({ ...inviteForm, role: v })} options={[{ value: 'agency_admin', label: 'Agency Admin' }, { value: 'agency_recruiter', label: 'Agency Recruiter' }]} /></Field>
-          <Field label="Temporary password (8+ chars) *"><input type="password" required minLength={8} autoComplete="new-password" className={kitInput} value={inviteForm.password} onChange={(e) => setInviteForm({ ...inviteForm, password: e.target.value })} /></Field>
+          <Field label="Temporary password (10+ chars) *"><input type="password" required minLength={10} autoComplete="new-password" className={kitInput} value={inviteForm.password} onChange={(e) => setInviteForm({ ...inviteForm, password: e.target.value })} /></Field>
           <div className="sm:col-span-2 flex justify-end gap-2">
             <button type="button" onClick={() => setInviteFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
             <button disabled={busy} className={btnPrimary}>{busy ? 'Inviting…' : 'Invite recruiter'}</button>

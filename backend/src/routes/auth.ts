@@ -157,8 +157,7 @@ authRouter.post('/logout', (req: Request, res: Response) => {
 });
 
 // GET /auth/me
-authRouter.get('/me', async (req: Request, res: Response) => {
-  const header = String(req.headers.authorization || '');
+authRouter.get('/me', async (req: Request, res: Response) => {  const header = String(req.headers.authorization || '');
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
   if (!token) return res.status(401).json({ success: false, message: 'Missing token.' });
   if (token.startsWith('NEXA-')) {
@@ -171,6 +170,26 @@ authRouter.get('/me', async (req: Request, res: Response) => {
     const c = verifyAccess(token);
     res.json({ success: true, data: { email: c.email, role: c.role, tenantId: c.tenantId } });
   } catch { res.status(401).json({ success: false, message: 'Invalid token.' }); }
+});
+
+// Phase 6.3: own session visibility + revoke-all (refresh markers revoked immediately;
+// stateless access tokens expire within 15 minutes of revocation).
+authRouter.get('/sessions', requireAuth(), (req: Request, res: Response) => {
+  const ctx = ctxOf(req);
+  const rows = loadDb().sessions.filter((s: any) => String(s.email || '').toLowerCase() === String(ctx.email).toLowerCase() && (s.jti || s.accessToken));
+  res.json({ success: true, data: rows.slice(0, 50).map((s: any) => ({ id: s.jti || s.accessToken, role: s.role, tenantId: s.tenantId, createdAt: s.createdAt, revoked: !!s.revokedJti })), note: 'Access tokens expire 15 minutes after revoke-all.' });
+});
+authRouter.post('/sessions/revoke-all', requireAuth(), (req: Request, res: Response) => {
+  const ctx = ctxOf(req);
+  const db = loadDb();
+  let revoked = 0;
+  for (const s of db.sessions.filter((s: any) => String(s.email || '').toLowerCase() === String(ctx.email).toLowerCase() && s.jti && !s.revokedJti)) {
+    db.sessions.unshift({ revokedJti: s.jti, email: s.email, userId: s.userId, role: '', tenantId: '', createdAt: nowIso() });
+    revoked += 1;
+  }
+  if (db.sessions.length > 2000) db.sessions.length = 2000;
+  audit(ctx.email, `AUTH_SESSIONS_REVOKED:${revoked}`, ctx.tenantId, 'auth', ctx.id, req.ip); persist();
+  res.json({ success: true, data: { revoked }, message: `Revoked ${revoked} session(s). Access tokens expire within 15 minutes.` });
 });
 
 authRouter.post('/forgot-password', forgotLimiter, (req: Request, res: Response) => {
@@ -204,7 +223,7 @@ authRouter.post('/forgot-password', forgotLimiter, (req: Request, res: Response)
 
 authRouter.post('/reset-confirm', forgotLimiter, async (req: Request, res: Response) => {
   const { email, newPassword, resetToken } = req.body || {};
-  if (!email || !newPassword || String(newPassword).length < 8) return res.status(400).json({ success: false, message: 'Email + 8-char password required.' });
+  if (!email || !newPassword || String(newPassword).length < 10) return res.status(400).json({ success: false, message: 'Email + 10-char password required.' });
   // Phase A: no token, no reset — the pre-existing bypass is closed.
   if (!resetToken || typeof resetToken !== 'string') return res.status(403).json({ success: false, code: 'RESET_TOKEN_REQUIRED', message: 'A valid reset token is required.' });
   const db = loadDb();

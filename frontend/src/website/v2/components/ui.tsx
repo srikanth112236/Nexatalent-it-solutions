@@ -33,7 +33,7 @@ export function SectionHead({ eyebrow, title, sub, dark = false }: { eyebrow?: s
         </span>
       ) : null}
       <h2 className={`text-2xl font-extrabold tracking-tight sm:text-4xl ${dark ? 'text-white' : 'text-black'}`}>{title}</h2>
-      {sub ? <p className={`mt-3 text-sm leading-relaxed ${dark ? 'text-slate-300' : 'text-black'}`}>{sub}</p> : null}
+      {sub ? <p className={`mt-3 text-sm leading-relaxed ${dark ? 'text-neutral-300' : 'text-black'}`}>{sub}</p> : null}
     </div>
   );
 }
@@ -44,7 +44,7 @@ export function PillButton({ to, label, variant = 'dark' }: { to: string; label:
       ? 'bg-black text-white hover:bg-neutral-800'
       : variant === 'light'
         ? 'bg-white text-black hover:bg-neutral-100'
-        : 'border border-slate-300 bg-white text-black hover:bg-neutral-100';
+        : 'border border-neutral-300 bg-white text-black hover:bg-neutral-100';
   return (
     <Link
       to={to}
@@ -55,13 +55,12 @@ export function PillButton({ to, label, variant = 'dark' }: { to: string; label:
   );
 }
 
-export function CreamSection({ id, children, dark = false, label }: { id?: string; children: React.ReactNode; dark?: boolean; label?: string }) {
+export function CreamSection({ id, children, label }: { id?: string; children: React.ReactNode; dark?: boolean; label?: string }) {
   return (
     <section
       id={id}
       aria-label={label}
-      className={`px-4 py-12 sm:px-6 sm:py-16 lg:py-20 ${dark ? '' : 'border-t border-slate-100'}`}
-      style={{ backgroundColor: dark ? '#0B0F19' : V2_CREAM }}
+      className="border-t border-neutral-100 bg-white px-4 py-12 sm:px-6 sm:py-16 lg:py-20"
     >
       <div className="mx-auto w-full max-w-6xl">{children}</div>
     </section>

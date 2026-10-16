@@ -69,7 +69,7 @@ export function NewInsightsPage() {
                 <time>{FEATURED_POST.date}</time>
               </div>
             </div>
-            <span className="absolute right-6 top-1/2 hidden -translate-y-1/2 text-white/90 transition-transform duration-300 group-hover:translate-x-1.5 lg:block" aria-hidden>
+            <span className="absolute right-6 top-1/2 hidden -tranneutral-y-1/2 text-white/90 transition-transform duration-300 group-hover:tranneutral-x-1.5 lg:block" aria-hidden>
               <ArrowRight size={36} strokeWidth={1.5} />
             </span>
           </Link>

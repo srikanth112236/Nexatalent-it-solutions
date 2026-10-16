@@ -3,8 +3,8 @@ import { Mail, PhoneCall, MapPin } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 
 /**
- * Pure-white footer for the v2 homepage — replaces the shared beige
- * MinimalOutlineFooter (bg-[#FAF8F5]) so the page reads 100% white.
+ * Pure-white footer shared by every public page — 100% white background,
+ * black text only.
  * Copy follows the NexaTalent vision: Your Talent | Our Technology | A Better Tomorrow.
  */
 const COLS: Array<{ title: string; links: Array<{ label: string; to: string }> }> = [
@@ -40,10 +40,10 @@ const COLS: Array<{ title: string; links: Array<{ label: string; to: string }> }
 
 export function V2Footer() {
   return (
-    <footer className="border-t border-slate-200 bg-white text-black" aria-label="Footer">
+    <footer className="border-t border-neutral-200 bg-white text-black" aria-label="Footer">
       {/* CTA band — white, vision-led */}
       <div className="mx-auto max-w-6xl px-4 pt-12 sm:px-6">
-        <div className="flex flex-col items-start justify-between gap-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 md:flex-row md:items-center">
+        <div className="flex flex-col items-start justify-between gap-5 rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm sm:p-8 md:flex-row md:items-center">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-black">Your Trusted Technology & Talent Partner</p>
             <h2 className="mt-2 text-xl font-extrabold tracking-tight sm:text-2xl">Connect the right talent with the right organization.</h2>
@@ -52,7 +52,7 @@ export function V2Footer() {
             <Link to="/employers" className="inline-flex min-h-[44px] items-center rounded-full bg-black px-6 py-2.5 text-xs font-bold text-white hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-black">
               Hire Talent
             </Link>
-            <Link to="/jobs" className="inline-flex min-h-[44px] items-center rounded-full border border-slate-300 px-6 py-2.5 text-xs font-bold text-black hover:border-black focus-visible:outline-2 focus-visible:outline-black">
+            <Link to="/jobs" className="inline-flex min-h-[44px] items-center rounded-full border border-neutral-300 px-6 py-2.5 text-xs font-bold text-black hover:border-black focus-visible:outline-2 focus-visible:outline-black">
               Join Talent Network
             </Link>
           </div>
@@ -89,12 +89,16 @@ export function V2Footer() {
         ))}
       </div>
 
-      <div className="border-t border-slate-100">
+      <div className="border-t border-neutral-100">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 py-5 text-xs text-black sm:flex-row sm:px-6">
           <span>© 2026 Nexa Talent IT Solutions Pvt. Ltd.</span>
-          <span className="flex gap-4">
+          <span className="flex flex-wrap justify-center gap-x-4 gap-y-1">
             <Link to="/privacy-policy" className="hover:text-black">Privacy</Link>
             <Link to="/terms" className="hover:text-black">Terms</Link>
+            <Link to="/cookie-policy" className="hover:text-black">Cookies</Link>
+            <Link to="/accessibility" className="hover:text-black">Accessibility</Link>
+            <Link to="/data-protection" className="hover:text-black">Data Protection</Link>
+            <Link to="/disclaimer" className="hover:text-black">Disclaimer</Link>
             <Link to="/contact" className="hover:text-black">Contact</Link>
           </span>
         </div>

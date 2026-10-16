@@ -226,7 +226,7 @@ export function NewJobDetailPage() {
                     className="group inline-flex min-h-[44px] items-center gap-2.5 rounded-xl bg-black py-1.5 pl-5 pr-1.5 text-[13px] font-bold text-white shadow-md shadow-black/10 transition-all hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
                   >
                     Apply Now
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-black transition-transform group-hover:translate-x-0.5">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-black transition-transform group-hover:tranneutral-x-0.5">
                       <ArrowRight size={14} aria-hidden />
                     </span>
                   </button>

@@ -32,7 +32,7 @@ export function V2Hero() {
       </div>
       <div className="mx-auto mt-10 grid max-w-6xl grid-cols-1 gap-4 sm:grid-cols-3">
         {V2_HERO.images.map((src, i) => (
-          <div key={src} className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
+          <div key={src} className="overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-100 shadow-sm">
             <SafeImage
               src={src}
               alt={['NexaTalent recruiters collaborating with a client team', 'Modern client office supported by NexaTalent staffing', 'Technology engineers placed by NexaTalent at work'][i] ?? 'NexaTalent client and talent teams'}

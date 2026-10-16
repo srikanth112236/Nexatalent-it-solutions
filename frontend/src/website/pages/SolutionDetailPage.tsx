@@ -14,13 +14,14 @@ import {
 } from 'lucide-react';
 import { SiteNavbar, SiteFooter } from '../components/SiteChrome';
 import { SeoHead } from '../components/SeoHead';
-import { 
-  LightServiceTierComparison, 
-  LightTwoColumnPinnedStory, 
-  OneSideStickyFeatureStack, 
-  LightFAQAccordion, 
+import {
+  LightServiceTierComparison,
+  LightTwoColumnPinnedStory,
+  OneSideStickyFeatureStack,
+  LightFAQAccordion,
   LightFinalCTAExpansion
 } from '../components/light-motion';
+import { solutionStages, solutionRubrics, solutionFaqs } from '../v2/data/detailSections';
 
 export interface RoleItem {
   title: string;
@@ -424,21 +425,15 @@ export function SolutionDetailPage() {
       {/* ============================================================================
        * HERO / BANNER — premium gradient, breadcrumb, badge, trust row + clear CTAs
        * ============================================================================ */}
-      <section className="relative overflow-hidden border-b border-slate-200/80 bg-gradient-to-b from-slate-50 via-white to-white pt-28 pb-14 px-6 lg:px-16">
-        {/* decorative washes */}
-        <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-slate-100 blur-3xl opacity-80" />
-          <div className="absolute -top-16 right-[-80px] h-80 w-80 rounded-full bg-slate-100 blur-3xl opacity-70" />
-          <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-        </div>
+      <section className="relative overflow-hidden border-b border-neutral-200 bg-white pt-28 pb-14 px-6 lg:px-16">
         <div className="relative max-w-6xl mx-auto space-y-6">
           
           {/* Breadcrumb Navigation */}
-          <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
+          <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-xs font-semibold text-black">
             <Link to="/" className="hover:text-black transition-colors">Home</Link>
-            <ChevronRight size={14} className="text-slate-400" aria-hidden />
+            <ChevronRight size={14} className="text-black" aria-hidden />
             <Link to="/solutions" className="hover:text-black transition-colors">Solutions</Link>
-            <ChevronRight size={14} className="text-slate-400" aria-hidden />
+            <ChevronRight size={14} className="text-black" aria-hidden />
             <span className="text-black font-bold">{displayTitle}</span>
           </nav>
 
@@ -464,13 +459,13 @@ export function SolutionDetailPage() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.16 }}
-            className="text-base sm:text-xl text-slate-600 max-w-3xl font-normal leading-relaxed"
+            className="text-base sm:text-xl text-black max-w-3xl font-normal leading-relaxed"
           >
             {data.tagline}
           </motion.p>
 
           {/* trust row */}
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-semibold text-slate-600">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-semibold text-black">
             <span className="inline-flex items-center gap-1.5"><ShieldCheck size={14} className="text-black" aria-hidden /> NDA-protected delivery</span>
             <span className="inline-flex items-center gap-1.5"><Clock size={14} className="text-black" aria-hidden /> {data.sla.split(';')[0]}</span>
             <span className="inline-flex items-center gap-1.5"><CheckCircle2 size={14} className="text-black" aria-hidden /> 90-day replacement cover</span>
@@ -492,7 +487,7 @@ export function SolutionDetailPage() {
             </Link>
             <Link
               to="/contact"
-              className="inline-flex min-h-[52px] items-center rounded-full bg-white hover:bg-neutral-100 text-black font-bold text-sm px-8 border border-slate-300 shadow-sm transition-all focus-visible:outline-2 focus-visible:outline-black"
+              className="inline-flex min-h-[52px] items-center rounded-full bg-white hover:bg-neutral-100 text-black font-bold text-sm px-8 border border-neutral-300 shadow-sm transition-all focus-visible:outline-2 focus-visible:outline-black"
             >
               Talk to a Hiring Expert
             </Link>
@@ -504,10 +499,10 @@ export function SolutionDetailPage() {
       {/* ============================================================================
        * SLA METRICS TELEMETRY STRIP (CLEAN WHITE BG)
        * ============================================================================ */}
-      <section className="py-8 px-6 lg:px-16 bg-white border-b border-slate-200/80">
+      <section className="py-8 px-6 lg:px-16 bg-white border-b border-neutral-200/80">
         <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
           {data.metrics.map((m, idx) => (
-            <div key={idx} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
+            <div key={idx} className="p-4 rounded-2xl bg-white border border-neutral-200 shadow-xs">
               <div className="text-2xl sm:text-3xl font-extrabold text-black">{m.value}</div>
               <div className="text-xs font-semibold text-black mt-1">{m.label}</div>
             </div>
@@ -518,11 +513,11 @@ export function SolutionDetailPage() {
       {/* ============================================================================
        * SECTION 2: PROBLEM vs APPROACH vs TARGET AUDIENCE CARDS
        * ============================================================================ */}
-      <section className="py-16 px-6 lg:px-16 bg-white border-b border-slate-200/80">
+      <section className="py-16 px-6 lg:px-16 bg-white border-b border-neutral-200/80">
         <div className="max-w-6xl mx-auto space-y-12">
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-3 shadow-xs">
+            <div className="p-6 rounded-3xl bg-white border border-neutral-200 space-y-3 shadow-xs">
               <span className="text-xs font-bold text-black uppercase tracking-wider bg-white px-3 py-1 rounded-full border border-black inline-block">
                 THE CHALLENGE
               </span>
@@ -542,8 +537,8 @@ export function SolutionDetailPage() {
               </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-3 shadow-xs">
-              <span className="text-xs font-bold text-black uppercase tracking-wider bg-white px-3 py-1 rounded-full border border-slate-300 inline-block">
+            <div className="p-6 rounded-3xl bg-white border border-neutral-200 space-y-3 shadow-xs">
+              <span className="text-xs font-bold text-black uppercase tracking-wider bg-white px-3 py-1 rounded-full border border-neutral-300 inline-block">
                 TARGET PROFILE
               </span>
               <h3 className="text-lg font-extrabold text-black">Ideal Client Profile</h3>
@@ -554,7 +549,7 @@ export function SolutionDetailPage() {
           </div>
 
           {/* Solution Capabilities Checklist */}
-          <div className="p-8 sm:p-12 rounded-3xl bg-white border border-slate-200 space-y-6 shadow-xs">
+          <div className="p-8 sm:p-12 rounded-3xl bg-white border border-neutral-200 space-y-6 shadow-xs">
             <div className="space-y-2">
               <span className="text-xs font-bold text-black uppercase tracking-wider bg-white px-3.5 py-1 rounded-full border border-black">
                 DELIVERABLE SPECIFICATIONS
@@ -566,7 +561,7 @@ export function SolutionDetailPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {data.capabilities.map((cap, i) => (
-                <div key={i} className="flex items-start gap-3 p-4 bg-white rounded-2xl border border-slate-200 shadow-xs">
+                <div key={i} className="flex items-start gap-3 p-4 bg-white rounded-2xl border border-neutral-200 shadow-xs">
                   <CheckCircle2 size={18} className="text-black shrink-0 mt-0.5" />
                   <span className="text-xs sm:text-sm font-semibold text-black leading-relaxed">
                     {cap}
@@ -592,7 +587,7 @@ export function SolutionDetailPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {data.roles.map((r, i) => (
-                <div key={i} className="p-5 rounded-2xl bg-white border border-slate-200 space-y-3 flex flex-col justify-between shadow-xs">
+                <div key={i} className="p-5 rounded-2xl bg-white border border-neutral-200 space-y-3 flex flex-col justify-between shadow-xs">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold text-black bg-white px-2.5 py-0.5 rounded-full border border-black">
@@ -606,11 +601,11 @@ export function SolutionDetailPage() {
                     <h4 className="font-extrabold text-sm text-black">{r.title}</h4>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-200 space-y-1">
+                  <div className="pt-2 border-t border-neutral-200 space-y-1">
                     <span className="text-[10px] font-bold uppercase text-black block">Key Skill Tags:</span>
                     <div className="flex flex-wrap gap-1">
                       {r.skills.map((s, idx) => (
-                        <span key={idx} className="text-[10px] font-semibold px-2 py-0.5 rounded bg-white border border-slate-200 text-black">
+                        <span key={idx} className="text-[10px] font-semibold px-2 py-0.5 rounded bg-white border border-neutral-200 text-black">
                           {s}
                         </span>
                       ))}
@@ -634,7 +629,7 @@ export function SolutionDetailPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
               {data.process.map((p) => (
-                <div key={p.step} className="p-5 bg-white rounded-2xl border border-slate-200 space-y-2 relative shadow-xs">
+                <div key={p.step} className="p-5 bg-white rounded-2xl border border-neutral-200 space-y-2 relative shadow-xs">
                   <span className="text-2xl font-extrabold text-black block">{p.step}</span>
                   <h4 className="font-extrabold text-sm text-black">{p.title}</h4>
                   <p className="text-xs text-black leading-relaxed font-normal">{p.desc}</p>
@@ -644,7 +639,7 @@ export function SolutionDetailPage() {
           </div>
 
           {/* NEW SECTION 2: COMPARATIVE ADVANTAGE MATRIX */}
-          <div className="p-8 sm:p-10 rounded-3xl bg-white border border-slate-200 space-y-6 shadow-xs">
+          <div className="p-8 sm:p-10 rounded-3xl bg-white border border-neutral-200 space-y-6 shadow-xs">
             <div className="space-y-2">
               <span className="text-xs font-bold text-black uppercase tracking-wider bg-white px-3.5 py-1 rounded-full border border-black">
                 WHY NEXA TALENT IT SOLUTIONS
@@ -657,14 +652,14 @@ export function SolutionDetailPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-slate-300 text-black font-extrabold">
+                  <tr className="border-b border-neutral-300 text-black font-extrabold">
                     <th className="py-3 px-4">Evaluation Metric</th>
                     <th className="py-3 px-4 text-black">Nexa Talent IT Solutions</th>
                     <th className="py-3 px-4 text-black">Traditional Agencies</th>
                     <th className="py-3 px-4 text-black">In-House TA Only</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 text-black">
+                <tbody className="divide-y divide-neutral-200 text-black">
                   <tr>
                     <td className="py-3.5 px-4 font-bold text-black">Average Time-to-Fill</td>
                     <td className="py-3.5 px-4 font-extrabold text-black">5 - 18 Days</td>
@@ -702,7 +697,7 @@ export function SolutionDetailPage() {
 
           {/* NEW SECTION 3: ENTERPRISE RISK GOVERNANCE & COMPLIANCE */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-3 shadow-xs">
+            <div className="p-6 rounded-3xl bg-white border border-neutral-200 space-y-3 shadow-xs">
               <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-bold">
                 <ShieldCheck size={20} />
               </div>
@@ -712,7 +707,7 @@ export function SolutionDetailPage() {
               </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-3 shadow-xs">
+            <div className="p-6 rounded-3xl bg-white border border-neutral-200 space-y-3 shadow-xs">
               <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-bold">
                 <Lock size={20} />
               </div>
@@ -722,7 +717,7 @@ export function SolutionDetailPage() {
               </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-3 shadow-xs">
+            <div className="p-6 rounded-3xl bg-white border border-neutral-200 space-y-3 shadow-xs">
               <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-bold">
                 <FileText size={20} />
               </div>
@@ -773,10 +768,30 @@ export function SolutionDetailPage() {
        * LIGHT MOTION ANIMATED SECTIONS (CLEAN LIGHT THEME)
        * ============================================================================ */}
       <LightServiceTierComparison />
-      <LightTwoColumnPinnedStory />
-      <OneSideStickyFeatureStack />
-      <LightFAQAccordion />
-      <LightFinalCTAExpansion />
+      <LightTwoColumnPinnedStory
+        eyebrow={`${displayTitle} — Vetting Methodology`}
+        title={`How we vet ${displayTitle} talent`}
+        sub={`Our ${data.process.length}-phase delivery workflow for ${displayTitle.toLowerCase()} — every stage measured against ${data.metrics[0].label.toLowerCase()}.`}
+        stages={solutionStages(data)}
+      />
+      <OneSideStickyFeatureStack
+        eyebrow={`${displayTitle} — Evaluation Engine`}
+        title={`Sourcing Profiles & Evaluation Console`}
+        sub={`Live sourcing profiles actively maintained under this delivery model — ${data.roles.length} role tracks with ${data.roles[0]?.turnaround.toLowerCase() || 'rapid'} first shortlists.`}
+        cards={solutionRubrics(data)}
+      />
+      <LightFAQAccordion
+        eyebrow={`${displayTitle} — Answers`}
+        title={`FAQs on ${displayTitle}`}
+        sub={data.tagline}
+        items={solutionFaqs(data)}
+      />
+      <LightFinalCTAExpansion
+        pill={data.badge}
+        title={`Hire for ${displayTitle} — starting this week`}
+        headline={`Calibrated ${displayTitle} profiles in days, not months`}
+        sub={`${data.tagline} ${data.sla}`}
+      />
 
       {/* Site Footer */}
       <SiteFooter />

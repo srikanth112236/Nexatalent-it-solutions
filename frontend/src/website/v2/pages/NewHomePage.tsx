@@ -1,4 +1,4 @@
-import { SiteFooter } from '../../components/SiteChrome';
+import { V2Footer } from '../components/V2Footer';
 import { V2Navbar } from '../components/V2Navbar';
 import { SeoHead } from '../../components/SeoHead';
 import { V2Hero } from '../sections/Hero';
@@ -46,7 +46,7 @@ export function NewHomePage() {
         <V2WhyChoose />
         <V2InsightsSubscribe />
       </main>
-      <SiteFooter />
+      <V2Footer />
     </div>
   );
 }

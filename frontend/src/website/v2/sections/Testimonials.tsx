@@ -14,7 +14,7 @@ export function V2Testimonials() {
       <SectionHead eyebrow="Client love" title="Teams that hire with NexaTalent" sub="Real mandates, measured outcomes." />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {QUOTES.map((t) => (
-          <figure key={t.name} className="flex flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <figure key={t.name} className="flex flex-col rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
             <Quote size={22} className="text-black" aria-hidden />
             <div className="mt-2 flex gap-0.5" role="img" aria-label="Rated 5 out of 5">
               {[1, 2, 3, 4, 5].map((n) => (
@@ -22,7 +22,7 @@ export function V2Testimonials() {
               ))}
             </div>
             <blockquote className="mt-3 flex-1 text-sm leading-relaxed text-black">“{t.quote}”</blockquote>
-            <figcaption className="mt-4 border-t border-slate-100 pt-3 text-xs">
+            <figcaption className="mt-4 border-t border-neutral-100 pt-3 text-xs">
               <span className="font-extrabold text-black">{t.name}</span>
               <span className="block text-black">{t.org}</span>
             </figcaption>

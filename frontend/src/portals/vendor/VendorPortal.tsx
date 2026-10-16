@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { PortalShell } from '../common/PortalShell';
 import { Building2, Plus, CheckCircle2, X, Search, FileCheck } from 'lucide-react';
 import { apiClient } from '../../shared/api-client';
-import { SubmissionsPanel, CommissionsPanel, NotificationsPanel, TimesheetsPanel } from '../common/EnterprisePanels';
+import { SubmissionsPanel, CommissionsPanel, NotificationsPanel, TimesheetsPanel, InterviewsPanel } from '../common/EnterprisePanels';
 import { MfaPanel } from '../../auth/components/MfaPanel';
 import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
 
@@ -15,10 +15,44 @@ const navItems = [
   { label: 'Invoices & SOWs', path: '/vendor/invoices', group: 'Staffing' },
   { label: 'Compliance & NDAs', path: '/vendor/compliance', group: 'Staffing' },
   { label: 'Candidate Submissions', path: '/vendor/submissions', group: 'Business' },
+  { label: 'Interviews', path: '/vendor/interviews', group: 'Business' },
+  { label: 'Placements', path: '/vendor/placements', group: 'Business' },
   { label: 'Commissions & Payouts', path: '/vendor/commissions', group: 'Business' },
   { label: 'Security', path: '/vendor/security', group: 'Workspace' },
   { label: 'Notifications', path: '/vendor/notifications', group: 'Workspace' },
 ];
+
+function VendorPlacements() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    (async () => {
+      try {
+        const res: any = await apiClient.get('/api/v1/placements?page=1&pageSize=100');
+        const list = (res as any)?.data?.data || (res as any)?.data || [];
+        setRows(Array.isArray(list) ? list : []);
+      } catch (e: any) { setError(e?.response?.data?.message || e?.message || 'Could not load placements.'); }
+      finally { setLoading(false); }
+    })();
+  }, []);
+  if (loading) return <InlineLoading message="Loading placements…" />;
+  if (error) return <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold">{error}</div>;
+  if (rows.length === 0) return <EmptyState title="No placements yet" message="Placements attributed to your submissions will appear here with joining dates and fee basis." />;
+  return (
+    <div className="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-sm space-y-3">
+      <h3 className="text-base font-extrabold text-slate-900">Attributed Placements ({rows.length})</h3>
+      <div className="space-y-2">
+        {rows.map((p: any) => (
+          <div key={p.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between gap-2 flex-wrap">
+            <div className="min-w-0"><div className="font-extrabold text-slate-900 truncate">{p.candidateEmail}</div><div className="font-mono text-slate-500">{p.id} • {p.jobId} • joined {String(p.joinDate || '').slice(0, 10)}</div></div>
+            <div className="font-extrabold">₹{Number(p.feeBasis || 0).toLocaleString('en-IN')}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function VendorPortal() {
   const location = useLocation();
@@ -31,6 +65,8 @@ export function VendorPortal() {
     if (p.includes('/invoices')) return 'invoices';
     if (p.includes('/compliance')) return 'compliance';
     if (p.includes('/submissions')) return 'submissions';
+    if (p.includes('/interviews')) return 'interviews';
+    if (p.includes('/placements') || p.includes('/offers')) return 'placements';
     if (p.includes('/commissions') || p.includes('/payouts')) return 'commissions';
     if (p.includes('/security')) return 'security';
     if (p.includes('/notifications')) return 'notifications';
@@ -437,6 +473,8 @@ export function VendorPortal() {
 
         {/* ENTERPRISE: new phase modules */}
         {currentTab === 'submissions' && <SubmissionsPanel />}
+        {currentTab === 'interviews' && <InterviewsPanel />}
+        {currentTab === 'placements' && <VendorPlacements />}
         {currentTab === 'commissions' && <CommissionsPanel />}
         {currentTab === 'security' && <MfaPanel />}
         {currentTab === 'notifications' && <NotificationsPanel />}

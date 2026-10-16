@@ -29,7 +29,7 @@ export function RecruiterRegisterPage() {
     e.preventDefault();
     setFormError('');
     if (formData.password.length < 8) {
-      setFormError('Password must be at least 8 characters.');
+      setFormError('Password must be at least 10 characters.');
       return;
     }
     if (formData.password !== formData.confirmPassword) {
@@ -178,11 +178,11 @@ export function RecruiterRegisterPage() {
                   </div>
                 )}
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Create Password (min 8 characters) *</label>
+                  <label className="block text-slate-700 font-bold mb-1">Create Password (min 10 characters) *</label>
                   <input
                     type="password"
                     required
-                    minLength={8}
+                    minLength={10}
                     autoComplete="new-password"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -195,7 +195,7 @@ export function RecruiterRegisterPage() {
                   <input
                     type="password"
                     required
-                    minLength={8}
+                    minLength={10}
                     autoComplete="new-password"
                     value={formData.confirmPassword}
                     onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}

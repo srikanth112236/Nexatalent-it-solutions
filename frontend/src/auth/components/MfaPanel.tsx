@@ -21,6 +21,27 @@ export function MfaPanel({ admin = false }: { admin?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [copied, setCopied] = useState(false);
+  // Phase 6.3: own session visibility + revoke-all
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessNote, setSessNote] = useState('');
+  const loadSessions = async () => {
+    try {
+      const res: any = await mfaApi.sessions();
+      const list = (res as any)?.data?.data || (res as any)?.data || [];
+      setSessions(Array.isArray(list) ? list : []);
+      setSessNote(String((res as any)?.data?.note || ''));
+    } catch { setSessions([]); }
+  };
+  useEffect(() => { loadSessions(); }, []);
+  const revokeAll = async () => {
+    if (!window.confirm('Sign out all other sessions? You stay signed in here; others expire within 15 minutes.')) return;
+    setBusy(true); setError('');
+    try {
+      const res: any = await mfaApi.revokeAllSessions();
+      setOk((res as any)?.message || (res as any)?.data?.message || 'Sessions revoked.');
+      loadSessions();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  };
 
   const load = async () => {
     setLoading(true); setError('');
@@ -127,6 +148,26 @@ export function MfaPanel({ admin = false }: { admin?: boolean }) {
           </div>
         </form>
       )}
+      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="text-xs font-extrabold text-slate-900">Active sessions ({sessions.length})</div>
+          <button type="button" onClick={revokeAll} disabled={busy || sessions.length === 0} className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold text-[11px] disabled:opacity-50">Revoke all others…</button>
+        </div>
+        {sessions.length === 0 ? (
+          <div className="text-[11px] text-slate-500 font-medium">No other sessions on record.</div>
+        ) : (
+          <div className="space-y-1.5">
+            {sessions.slice(0, 8).map((s: any, i: number) => (
+              <div key={String(s.id || i)} className="flex items-center justify-between gap-2 text-[11px] font-semibold text-slate-600">
+                <span className="font-mono truncate">{String(s.id || '').slice(0, 18)}…</span>
+                <span className="truncate">{s.role || ''} • {String(s.createdAt || '').slice(0, 16).replace('T', ' ')}</span>
+                {s.revoked && <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 font-bold text-[10px]">revoked</span>}
+              </div>
+            ))}
+          </div>
+        )}
+        {sessNote && <div className="text-[11px] text-slate-500 font-medium">{sessNote}</div>}
+      </div>
       <Modal open={showDisable} onClose={() => setShowDisable(false)} title="Disable two-factor authentication" subtitle="Confirm with your password">
         <form onSubmit={doDisable} className="space-y-3">
           <Field label="Current password *"><input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" /></Field>

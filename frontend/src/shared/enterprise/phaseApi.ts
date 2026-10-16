@@ -44,6 +44,8 @@ export const mfaApi = {
   disable: (password: string) => apiClient.post('/api/v1/auth/mfa/disable', { password }),
   challenge: (ticket: string, otp?: string, backupCode?: string) => apiClient.post('/api/v1/auth/mfa/challenge', { ticket, otp, backupCode }),
   reset: (email: string) => apiClient.post('/api/v1/auth/mfa/reset', { email }),
+  sessions: () => apiClient.get('/api/v1/auth/sessions'),
+  revokeAllSessions: () => apiClient.post('/api/v1/auth/sessions/revoke-all', {}),
 };
 export const rolesApi = {
   list: () => apiClient.get('/api/v1/roles'),
@@ -52,7 +54,18 @@ export const rolesApi = {
   remove: (id: string) => apiClient.delete(`/api/v1/roles/${id}`),
 };
 export const bulkApi = {
-  import: (collection: 'skills' | 'roles', rows: unknown[], mode: 'preview' | 'commit') => apiClient.post('/api/v1/bulk-import', { collection, rows, mode }),
+  import: (collection: 'skills' | 'roles' | 'candidates' | 'leads', rows: unknown[], mode: 'preview' | 'commit') => apiClient.post('/api/v1/bulk-import', { collection, rows, mode }),
+  exportCsv: async (resource: 'candidates' | 'applications' | 'jobs' | 'leads' | 'invoices'): Promise<Blob> => {
+    const res = (await apiClient.post('/api/v1/exports/log', { resource, format: 'csv' }, { responseType: 'blob' })) as unknown as Blob;
+    return res as Blob;
+  },
+  downloadCsv: async (resource: 'candidates' | 'applications' | 'jobs' | 'leads' | 'invoices') => {
+    const blob = await bulkApi.exportCsv(resource);
+    const url = URL.createObjectURL(blob instanceof Blob ? blob : new Blob([String(blob)], { type: 'text/csv' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = `${resource}-export.csv`; a.click();
+    URL.revokeObjectURL(url);
+  },
 };
 export const permissionsApi = {
   mine: () => apiClient.get('/api/v1/permissions'),
@@ -113,6 +126,14 @@ export const interviewsApi = {
   reschedule: (id: string, body: unknown) => apiClient.patch(`/api/v1/interviews/${id}`, body),
   feedback: (id: string, body: unknown) => apiClient.post(`/api/v1/interviews/${id}/feedback`, body),
   feedbackList: (id: string) => apiClient.get(`/api/v1/interviews/${id}/feedback`),
+  ics: (id: string) => apiClient.getBlob(`/api/v1/interviews/${id}/ics`),
+  downloadIcs: async (id: string) => {
+    const blob = await interviewsApi.ics(id);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `interview-${id}.ics`; a.click();
+    URL.revokeObjectURL(url);
+  },
 };
 export const chatApi = {
   conversations: (applicationId?: string) => apiClient.get(`/api/v1/conversations${applicationId ? `?applicationId=${applicationId}` : ''}`),
@@ -127,16 +148,20 @@ export const talentApi = {
   pools: () => apiClient.get('/api/v1/talent-pools'),
   createPool: (body: unknown) => apiClient.post('/api/v1/talent-pools', body),
   editPool: (id: string, body: unknown) => apiClient.patch(`/api/v1/talent-pools/${id}`, body),
+  deletePool: (id: string) => apiClient.delete(`/api/v1/talent-pools/${id}`),
   addMember: (poolId: string, candidateId: string) => apiClient.post(`/api/v1/talent-pools/${poolId}/members`, { candidateId }),
   poolMembers: (poolId: string) => apiClient.get(`/api/v1/talent-pools/${poolId}/members`),
   removeMember: (poolId: string, memberId: string) => apiClient.delete(`/api/v1/talent-pools/${poolId}/members/${memberId}`),
   shortlistMember: (poolId: string, memberId: string, jobId: string) => apiClient.post(`/api/v1/talent-pools/${poolId}/members/${memberId}/shortlist`, { jobId }),
+  shortlistBulk: (poolId: string, memberIds: string[], jobId: string) => apiClient.post(`/api/v1/talent-pools/${poolId}/shortlist-bulk`, { memberIds, jobId }),
   saved: () => apiClient.get('/api/v1/saved-jobs'),
   save: (jobId: string) => apiClient.post('/api/v1/saved-jobs', { jobId }),
   unsave: (jobId: string) => apiClient.delete(`/api/v1/saved-jobs/${jobId}`),
 };
 export const offersPlacementsApi = {
   offer: (body: unknown) => apiClient.post('/api/v1/offers', body),
+  offers: (params = '?page=1&pageSize=100') => apiClient.get(`/api/v1/offers${params}`),
+  withdrawOffer: (id: string, reason: string) => apiClient.post(`/api/v1/offers/${id}/withdraw`, { reason }),
   mine: () => apiClient.get('/api/v1/offers/mine'),
   respond: (id: string, decision: 'accepted' | 'declined', reason?: string) => apiClient.post(`/api/v1/offers/${id}/respond`, { decision, reason }),
   place: (applicationId: string, joinDate?: string, feeBasis?: number) => apiClient.post('/api/v1/placements', { applicationId, joinDate, feeBasis }),
@@ -196,6 +221,8 @@ export const billingApi = {
   commissionInvoice: (id: string, body?: unknown) => apiClient.post(`/api/v1/commissions/${id}/invoice`, body || {}),
   payout: (commissionId: string) => apiClient.post('/api/v1/payouts', { commissionId }),
   payouts: (params = '') => apiClient.get(`/api/v1/payouts${params}`),
+  payoutStatement: (id: string) => apiClient.get(`/api/v1/payouts/${id}/statement`),
+  clawback: (commissionId: string, amount: number, reason: string, override?: boolean) => apiClient.post(`/api/v1/commissions/${commissionId}/clawback`, { amount, reason, override }),
   reconciliation: () => apiClient.get('/api/v1/reconciliation'),
 };
 
@@ -244,6 +271,7 @@ export const documentsApi = {
   createSkill: (body: unknown) => apiClient.post('/api/v1/documents', body),
   upload: (body: unknown) => apiClient.post('/api/v1/documents', body),
   list: () => apiClient.get('/api/v1/documents'),
+  remove: (id: string) => apiClient.delete(`/api/v1/documents/${id}`),
   downloadUrl: (id: string) => `/api/v1/documents/${id}/download`,
   // P5: authenticated blob download (replaces window.open direct URL with no bearer).
   downloadBlob: (id: string) => apiClient.getBlob(`/api/v1/documents/${id}/download`),

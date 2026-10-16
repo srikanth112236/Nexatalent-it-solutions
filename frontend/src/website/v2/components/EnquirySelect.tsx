@@ -88,6 +88,7 @@ export function EnquirySelect({
           <ul
             role="listbox"
             aria-label={label}
+            data-lenis-prevent
             className={`absolute z-30 max-h-60 w-full overflow-y-auto overscroll-contain rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.18)] ${
               openUp ? 'bottom-full mb-2' : 'top-full mt-2'
             }`}

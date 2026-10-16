@@ -16,11 +16,12 @@ import {
 import { SiteNavbar, SiteFooter } from '../components/SiteChrome';
 import { SeoHead } from '../components/SeoHead';
 import { INDUSTRIES_DATA } from './IndustriesPage';
-import { 
+import {
   LightTwoColumnPinnedStory,
   OneSideStickyFeatureStack,
   LightFinalCTAExpansion
 } from '../components/light-motion';
+import { industryStages, industryRubrics } from '../v2/data/detailSections';
 
 // Mapping for URL slug aliases across navigation & footer
 const SLUG_ALIASES: Record<string, string> = {
@@ -104,7 +105,7 @@ export function IndustryDetailPage() {
       {/* ============================================================================
        * HERO SECTION (CLEAN LIGHT THEME WITH BRAND BLUE ACCENTS)
        * ============================================================================ */}
-      <section className="relative pt-32 pb-16 px-6 lg:px-16 bg-white border-b border-slate-200/80">
+      <section className="relative pt-32 pb-16 px-6 lg:px-16 bg-white border-b border-neutral-200/80">
         <div className="max-w-6xl mx-auto space-y-6">
           
           {/* Breadcrumb Navigation */}
@@ -162,7 +163,7 @@ export function IndustryDetailPage() {
             </Link>
             <Link
               to="/contact"
-              className="px-8 py-4 rounded-full bg-white hover:bg-neutral-100 text-black font-bold text-sm border border-slate-300 shadow-xs transition-all"
+              className="px-8 py-4 rounded-full bg-white hover:bg-neutral-100 text-black font-bold text-sm border border-neutral-300 shadow-xs transition-all"
             >
               Talk to a Hiring Expert
             </Link>
@@ -174,21 +175,21 @@ export function IndustryDetailPage() {
       {/* ============================================================================
        * SLA & DOMAIN TELEMETRY STRIP (CLEAN WHITE BG)
        * ============================================================================ */}
-      <section className="py-8 px-6 lg:px-16 bg-white border-b border-slate-200/80">
+      <section className="py-8 px-6 lg:px-16 bg-white border-b border-neutral-200/80">
         <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
+          <div className="p-4 rounded-2xl bg-white border border-neutral-200 shadow-xs">
             <div className="text-2xl sm:text-3xl font-extrabold text-black">{industry.metrics.placed}</div>
             <div className="text-xs font-semibold text-black mt-1">Domain Placements</div>
           </div>
-          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
+          <div className="p-4 rounded-2xl bg-white border border-neutral-200 shadow-xs">
             <div className="text-2xl sm:text-3xl font-extrabold text-black">{industry.metrics.avgSla}</div>
             <div className="text-xs font-semibold text-black mt-1">Average Shortlist SLA</div>
           </div>
-          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
+          <div className="p-4 rounded-2xl bg-white border border-neutral-200 shadow-xs">
             <div className="text-2xl sm:text-3xl font-extrabold text-black">{industry.metrics.retention}</div>
             <div className="text-xs font-semibold text-black mt-1">1-Year Retention Rate</div>
           </div>
-          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
+          <div className="p-4 rounded-2xl bg-white border border-neutral-200 shadow-xs">
             <div className="text-2xl sm:text-3xl font-extrabold text-black">90 Days</div>
             <div className="text-xs font-semibold text-black mt-1">Replacement Guarantee</div>
           </div>
@@ -198,7 +199,7 @@ export function IndustryDetailPage() {
       {/* ============================================================================
        * SECTION 2: INDUSTRY BOTTLENECK vs NEXA TALENT ARCHITECTURE
        * ============================================================================ */}
-      <section className="py-16 px-6 lg:px-16 bg-white border-b border-slate-200/80">
+      <section className="py-16 px-6 lg:px-16 bg-white border-b border-neutral-200/80">
         <div className="max-w-6xl mx-auto space-y-12">
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -245,7 +246,7 @@ export function IndustryDetailPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {industry.roles.map((r, i) => (
-                <div key={i} className="p-6 rounded-3xl bg-white border border-slate-200 space-y-4 flex flex-col justify-between shadow-xs hover:border-black transition-all">
+                <div key={i} className="p-6 rounded-3xl bg-white border border-neutral-200 space-y-4 flex flex-col justify-between shadow-xs hover:border-black transition-all">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-extrabold text-black bg-white px-2.5 py-0.5 rounded-full border border-black uppercase">
@@ -259,7 +260,7 @@ export function IndustryDetailPage() {
                     <h4 className="font-extrabold text-base text-black">{r}</h4>
                   </div>
 
-                  <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-xs text-black font-semibold">
+                  <div className="pt-3 border-t border-neutral-200 flex items-center justify-between text-xs text-black font-semibold">
                     <span className="flex items-center gap-1 text-black">
                       <CheckCircle2 size={14} />
                       Practitioner Assessed
@@ -272,7 +273,7 @@ export function IndustryDetailPage() {
           </div>
 
           {/* Institutional Advantage Table */}
-          <div className="p-8 sm:p-10 rounded-3xl bg-white border border-slate-200 space-y-6 shadow-xs">
+          <div className="p-8 sm:p-10 rounded-3xl bg-white border border-neutral-200 space-y-6 shadow-xs">
             <div className="space-y-2">
               <span className="text-xs font-bold text-black uppercase tracking-wider bg-white px-3.5 py-1 rounded-full border border-black">
                 SERVICE BENCHMARK
@@ -285,14 +286,14 @@ export function IndustryDetailPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-slate-300 text-black font-extrabold">
+                  <tr className="border-b border-neutral-300 text-black font-extrabold">
                     <th className="py-3 px-4">Evaluation Criteria</th>
                     <th className="py-3 px-4 text-black">Nexa Talent Practice Pod</th>
                     <th className="py-3 px-4 text-black">General Recruitment Agencies</th>
                     <th className="py-3 px-4 text-black">In-House TA Only</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 text-black">
+                <tbody className="divide-y divide-neutral-200 text-black">
                   <tr>
                     <td className="py-3.5 px-4 font-bold text-black">Domain Vetting Depth</td>
                     <td className="py-3.5 px-4 font-extrabold text-black">Practitioner Architectural Screen</td>
@@ -324,7 +325,7 @@ export function IndustryDetailPage() {
 
           {/* Risk Governance Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-3 shadow-xs">
+            <div className="p-6 rounded-3xl bg-white border border-neutral-200 space-y-3 shadow-xs">
               <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-bold">
                 <ShieldCheck size={20} />
               </div>
@@ -334,7 +335,7 @@ export function IndustryDetailPage() {
               </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-3 shadow-xs">
+            <div className="p-6 rounded-3xl bg-white border border-neutral-200 space-y-3 shadow-xs">
               <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-bold">
                 <Lock size={20} />
               </div>
@@ -344,7 +345,7 @@ export function IndustryDetailPage() {
               </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-3 shadow-xs">
+            <div className="p-6 rounded-3xl bg-white border border-neutral-200 space-y-3 shadow-xs">
               <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-bold">
                 <FileText size={20} />
               </div>
@@ -361,13 +362,23 @@ export function IndustryDetailPage() {
       {/* ============================================================================
        * LIGHT MOTION ANIMATED SECTIONS (CLEAN LIGHT THEME WITH STICKY SCROLL PINNING)
        * ============================================================================ */}
-      <LightTwoColumnPinnedStory />
-      <OneSideStickyFeatureStack />
+      <LightTwoColumnPinnedStory
+        eyebrow={`${industry.title} — Vetting Methodology`}
+        title={`How we vet ${industry.title} talent`}
+        sub={`${industry.tagline}. A 4-phase evaluation framework tuned for ${industry.title.toLowerCase()} mandates.`}
+        stages={industryStages(industry)}
+      />
+      <OneSideStickyFeatureStack
+        eyebrow={`${industry.title} — Evaluation Engine`}
+        title={`High-Demand Roles & Evaluation Console`}
+        sub={`Live role pipelines for ${industry.title} — ${industry.roles.length} tracks, ${industry.metrics.avgSla} average shortlist SLA.`}
+        cards={industryRubrics(industry)}
+      />
 
       {/* ============================================================================
        * DOMAIN FAQ ACCORDION SECTION
        * ============================================================================ */}
-      <section className="py-20 px-6 lg:px-16 bg-white border-b border-slate-200/80">
+      <section className="py-20 px-6 lg:px-16 bg-white border-b border-neutral-200/80">
         <div className="max-w-4xl mx-auto space-y-8">
           <div className="text-center space-y-3">
             <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white border border-black text-black text-xs font-extrabold uppercase tracking-wider">
@@ -381,7 +392,7 @@ export function IndustryDetailPage() {
 
           <div className="space-y-4">
             {industryFaqs.map((faq, idx) => (
-              <div key={idx} className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
+              <div key={idx} className="p-6 rounded-2xl bg-white border border-neutral-200 shadow-xs space-y-2">
                 <h4 className="text-base font-extrabold text-black flex items-center gap-2">
                   <span className="text-black">Q:</span> {faq.q}
                 </h4>
@@ -395,7 +406,12 @@ export function IndustryDetailPage() {
       </section>
 
       {/* Final CTA Expansion Surface */}
-      <LightFinalCTAExpansion />
+      <LightFinalCTAExpansion
+        pill={`${industry.title} — Hiring Desk`}
+        title={`Hire for ${industry.title} — starting this week`}
+        headline={`Calibrated ${industry.title} profiles in ${industry.metrics.avgSla}`}
+        sub={`${industry.tagline}. ${industry.metrics.placed} delivered with a 90-day replacement warranty.`}
+      />
 
       {/* Global Footer */}
       <SiteFooter />

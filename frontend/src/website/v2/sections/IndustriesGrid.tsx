@@ -14,9 +14,9 @@ export function V2IndustriesGrid() {
           <Link
             key={ind.slug}
             to={`/industries/${ind.slug}`}
-            className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(0,0,0,0.12)]"
+            className="group overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm transition-all hover:-tranneutral-y-1 hover:shadow-[0_16px_40px_rgba(0,0,0,0.12)]"
           >
-            <div className="relative overflow-hidden bg-slate-100">
+            <div className="relative overflow-hidden bg-neutral-100">
               <SafeImage src={(ind as { image?: string }).image || ''} alt={ind.label} fallbackLabel={ind.label} className="aspect-[16/10] w-full object-cover object-top motion-safe:transition-transform motion-safe:duration-500 motion-safe:group-hover:scale-105" />
               <span className="absolute bottom-3 left-3 rounded-full bg-black/85 px-2.5 py-1 text-[10px] font-black text-white backdrop-blur">
                 {ind.hires}

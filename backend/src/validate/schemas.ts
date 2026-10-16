@@ -11,7 +11,7 @@ export const optDate = dateStr.optional();
 export const registerSchema = z.object({
   name: z.string().min(1).max(120).optional(),
   email,
-  password: z.string().min(8).max(128),
+  password: z.string().min(10).max(128),
   companyName: z.string().max(160).optional(),
   phone: z.string().max(30).optional(),
   country: z.string().max(80).optional(),

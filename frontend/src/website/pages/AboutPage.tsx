@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowUpRight, Check, Star } from 'lucide-react';
-import { SiteFooter } from '../components/SiteChrome';
+import { V2Footer } from '../v2/components/V2Footer';
 import { V2Navbar } from '../v2/components/V2Navbar';
 import { SeoHead } from '../components/SeoHead';
 
@@ -26,7 +26,7 @@ const CAPABILITIES: Array<{ n: string; title: string; desc: string }> = [
   { n: '01', title: 'IT & Tech Recruitment', desc: 'Role-specific hiring across software, cloud, data, AI and cybersecurity.' },
   { n: '02', title: 'Permanent Staffing', desc: 'End-to-end full-time hiring with screening and replacement cover.' },
   { n: '03', title: 'Contract Staffing', desc: 'Flexible engineers for immediate bandwidth and project peaks.' },
-  { n: '04', title: 'Contract-to-Hire', desc: 'Evaluate fit on contract before making a permanent offer.' },
+  { n: '04', title: 'RPO & Embedded TA', desc: 'Recruiters embedded inside your team with SLA-backed delivery and transparent reporting.' },
   { n: '05', title: 'Executive Search', desc: 'Confidential search for CTO, VP, Director and Head roles.' },
   { n: '06', title: 'Bulk & Volume Hiring', desc: 'Batch drives and pipelines for high-volume expansion.' },
   { n: '07', title: 'GCC & Offshore Pods', desc: 'Dedicated pods for GCCs and global capability centres.' },
@@ -89,7 +89,7 @@ export function AboutPage() {
           <h1 className="mx-auto mt-4 max-w-3xl text-4xl sm:text-5xl font-extrabold leading-[1.08] tracking-tight text-black">
             We don&apos;t just fill roles.
             <br />
-            <span className="text-black">We engineer possibilities.</span>
+            <span className="text-black">We build engineer possibilities.</span>
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-[15px] sm:text-base leading-relaxed text-black">
             NexaTalent IT Solutions is an AI-assisted talent company helping
@@ -394,7 +394,7 @@ export function AboutPage() {
         </div>
       </section>
 
-      <SiteFooter />
+      <V2Footer />
     </div>
   );
 }

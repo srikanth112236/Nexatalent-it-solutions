@@ -35,7 +35,7 @@ export function LoginModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" aria-hidden={!open}>
+    <div data-lenis-prevent className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain p-4" aria-hidden={!open}>
       {/* backdrop */}
       <button
         type="button"
@@ -51,13 +51,13 @@ export function LoginModal({
         aria-modal="true"
         aria-labelledby="login-modal-title"
         tabIndex={-1}
-        className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white p-7 shadow-2xl outline-none sm:p-8"
+        className="relative w-full max-w-md rounded-3xl border border-neutral-200 bg-white p-7 shadow-2xl outline-none sm:p-8"
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full text-black transition-colors hover:bg-slate-100 hover:text-black focus-visible:outline-2 focus-visible:outline-black"
+          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full text-black transition-colors hover:bg-neutral-100 hover:text-black focus-visible:outline-2 focus-visible:outline-black"
         >
           <X size={18} aria-hidden />
         </button>
@@ -85,7 +85,7 @@ export function LoginModal({
             <label htmlFor="login-email" className="mb-1.5 block text-xs font-bold text-black">
               Email or mobile
             </label>
-            <div className="flex min-h-[46px] items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 focus-within:border-black focus-within:ring-2 focus-within:ring-black/15">
+            <div className="flex min-h-[46px] items-center gap-2.5 rounded-xl border border-neutral-200 bg-white px-3.5 focus-within:border-black focus-within:ring-2 focus-within:ring-black/15">
               <Mail size={16} className="shrink-0 text-black" aria-hidden />
               <input
                 id="login-email"
@@ -106,7 +106,7 @@ export function LoginModal({
                 Forgot password?
               </Link>
             </div>
-            <div className="flex min-h-[46px] items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 focus-within:border-black focus-within:ring-2 focus-within:ring-black/15">
+            <div className="flex min-h-[46px] items-center gap-2.5 rounded-xl border border-neutral-200 bg-white px-3.5 focus-within:border-black focus-within:ring-2 focus-within:ring-black/15">
               <Lock size={16} className="shrink-0 text-black" aria-hidden />
               <input
                 id="login-password"

@@ -36,7 +36,7 @@ const TERMINAL_STAGES = ['Hired', 'Withdrawn', 'Rejected', 'Job Closed'];
 type Tab =
   | 'dashboard' | 'onboarding' | 'profile' | 'jobs' | 'jobDetail' | 'applications'
   | 'appDetail' | 'appChat' | 'interviews' | 'saved' | 'offers' | 'timesheets' | 'messages'
-  | 'docs' | 'privacy' | 'security' | 'notifications';
+  | 'docs' | 'privacy' | 'security' | 'notifications' | 'settings';
 
 function parseRoute(pathname: string): { tab: Tab; param: string } {
   const p = pathname.replace(/\/$/, '');
@@ -51,12 +51,13 @@ function parseRoute(pathname: string): { tab: Tab; param: string } {
     return { tab: 'applications', param: '' };
   }
   if (seg[0] === 'interviews') return { tab: 'interviews', param: '' };
-  if (seg[0] === 'saved' || seg[0] === 'saved-jobs' || seg[0] === 'liked-jobs') return { tab: 'saved', param: '' };
+  if (seg[0] === 'saved' || seg[0] === 'saved-jobs') return { tab: 'saved', param: '' };
   if (seg[0] === 'offers') return { tab: 'offers', param: '' };
   if (seg[0] === 'timesheets') return { tab: 'timesheets', param: '' };
   if (seg[0] === 'messages' || seg[0] === 'chat') return { tab: 'messages', param: '' };
   if (seg[0] === 'docs' || seg[0] === 'documents') return { tab: 'docs', param: '' };
-  if (seg[0] === 'privacy' || seg[0] === 'settings') return { tab: 'privacy', param: '' };
+  if (seg[0] === 'privacy') return { tab: 'privacy', param: '' };
+  if (seg[0] === 'settings') return { tab: 'settings', param: '' };
   if (seg[0] === 'security') return { tab: 'security', param: '' };
   if (seg[0] === 'notifications') return { tab: 'notifications', param: '' };
   return { tab: 'dashboard', param: '' };
@@ -67,7 +68,7 @@ const TAB_TITLES: Record<Tab, string> = {
   jobs: 'Curated Jobs', jobDetail: 'Job Detail', applications: 'Active Applications',
   appDetail: 'Application Detail', appChat: 'Application Chat', interviews: 'Upcoming Interviews',
   saved: 'Saved Jobs', offers: 'Offers & Joining', timesheets: 'My Timesheets', messages: 'Messages', docs: 'Documents',
-  privacy: 'Privacy', security: 'Security', notifications: 'Notifications',
+  privacy: 'Privacy', security: 'Security', notifications: 'Notifications', settings: 'Settings',
 };
 
 /* ---------- helpers ---------- */
@@ -1204,6 +1205,20 @@ export function CandidatePortal() {
         {currentTab === 'privacy' && <ConsentPanel />}
         {currentTab === 'security' && <MfaPanel />}
         {currentTab === 'notifications' && <NotificationsPanel />}
+        {currentTab === 'settings' && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-sm space-y-3">
+              <h3 className="text-base font-extrabold text-slate-900">Settings</h3>
+              <p className="text-xs text-slate-500 font-medium">Notification preferences live below. Profile visibility and data controls stay under Privacy; sign-in security under Security.</p>
+              <div className="flex flex-wrap gap-2 text-xs font-bold">
+                <Link to="/candidate/privacy" className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700">Privacy →</Link>
+                <Link to="/candidate/security" className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700">Security →</Link>
+                <Link to="/candidate/notifications" className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700">Notifications →</Link>
+              </div>
+            </div>
+            <NotificationsPanel />
+          </div>
+        )}
 
         {/* Reschedule modal */}
         {currentTab === 'interviews' && reschedInterview !== '' && (

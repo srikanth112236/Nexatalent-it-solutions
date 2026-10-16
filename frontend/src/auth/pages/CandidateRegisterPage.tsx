@@ -90,7 +90,7 @@ export function CandidateRegisterPage() {
       return;
     }
     if (formData.password.length < 8) {
-      setFormError('Password must be at least 8 characters.');
+      setFormError('Password must be at least 10 characters.');
       return;
     }
     if (formData.password !== formData.confirmPassword) {
@@ -583,7 +583,7 @@ export function CandidateRegisterPage() {
                           <input
                             type="password"
                             required
-                            minLength={8}
+                            minLength={10}
                             autoComplete="new-password"
                             value={formData.password}
                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -597,7 +597,7 @@ export function CandidateRegisterPage() {
                           <input
                             type="password"
                             required
-                            minLength={8}
+                            minLength={10}
                             autoComplete="new-password"
                             value={formData.confirmPassword}
                             onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}

@@ -8,7 +8,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --pool=forks --maxWorkers=1 --testTimeout=30000"
+    "test": "vitest run --pool=forks --maxWorkers=1 --testTimeout=30000",
+    "seed:v3": "node scripts/seed-enterprise-v3.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

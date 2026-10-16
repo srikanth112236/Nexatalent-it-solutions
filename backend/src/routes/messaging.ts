@@ -11,11 +11,35 @@ function plainText(s: string, max = 4000): string {
   return String(s || '').replace(/<[^>]*>/g, '').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '').slice(0, max).trim();
 }
 
+/** Phase 1.2: agency participant = linked submission (jobId + candidateEmail) for same agency tenant or submitter. */
+function agencyLinkedToApp(db: any, ctx: { email: string; tenantId: string }, app: any): boolean {
+  if (!app) return false;
+  const subs = ((db as any).submissions as any[]) || [];
+  const jobId = String(app.jobId || '');
+  const cand = String(app.candidateEmail || '').toLowerCase();
+  return subs.some((s: any) => {
+    const samePair = String(s.jobId || '') === jobId && String(s.candidateEmail || '').toLowerCase() === cand;
+    if (!samePair) return false;
+    if (s.agencyId && (String(s.agencyId) === String((ctx as any).tenantId))) return true;
+    if (String(s.submittedBy || '').toLowerCase() === String(ctx.email).toLowerCase()) return true;
+    return false;
+  });
+}
+
+const AGENCY_ROLES = ['agency_admin', 'agency_recruiter', 'recruiter', 'vendor'];
+
 messagingRouter.get('/conversations', requireAuth(), (req, res) => {
   const ctx = ctxOf(req); const appId = String(req.query.applicationId || '');
-  let rows = loadDb().conversations as any[];
+  const db = loadDb();
+  let rows = db.conversations as any[];
   if (appId) rows = rows.filter((c) => c.applicationId === appId);
   if (ctx.role === 'candidate') rows = rows.filter((c) => String(c.candidateId).toLowerCase() === ctx.email.toLowerCase() || String(c.candidateEmail || '').toLowerCase() === ctx.email.toLowerCase());
+  else if (AGENCY_ROLES.includes(ctx.role)) {
+    rows = rows.filter((c) => {
+      const app: any = db.applications.find((a: any) => a.id === c.applicationId);
+      return agencyLinkedToApp(db, ctx, app);
+    });
+  }
   else if (!['superadmin','platform_owner','employee','operations_admin'].includes(ctx.role)) rows = rows.filter((c) => c.companyId === ctx.tenantId);
   res.json({ success: true, data: rows });
 });
@@ -28,6 +52,7 @@ messagingRouter.get('/conversations/:id/messages', requireAuth(), (req, res) => 
   const app: any = db.applications.find((a: any) => a.id === conv.applicationId);
   if (ctx.role === 'candidate' && String(conv.candidateId).toLowerCase() !== ctx.email.toLowerCase() && (!app || String(app.candidateEmail).toLowerCase() !== ctx.email.toLowerCase())) return res.status(404).json({ success: false, message: 'Conversation not found.' });
   if (['employer','company_admin','hiring_manager','company_recruiter'].includes(ctx.role) && conv.companyId !== ctx.tenantId && (!app || app.orgId !== ctx.tenantId)) return res.status(404).json({ success: false, message: 'Conversation not found.' });
+  if (AGENCY_ROLES.includes(ctx.role) && !agencyLinkedToApp(db, ctx, app)) return res.status(404).json({ success: false, message: 'Conversation not found.' });
   // Must have a Scheduled (or later) interview — otherwise chat stays locked
   const iv = db.interviews.find((i: any) => i.applicationId === conv.applicationId && ['Scheduled','Rescheduled','Completed'].includes(i.status));
   if (!iv && !['superadmin','platform_owner'].includes(ctx.role)) return res.status(403).json({ success: false, message: 'Chat unlocks after an interview is scheduled for this application.', code: 'CHAT_LOCKED' });
@@ -43,7 +68,7 @@ messagingRouter.get('/conversations/:id/messages', requireAuth(), (req, res) => 
   res.json({ success: true, data: { conversation: conv, messages: msgs } });
 });
 
-messagingRouter.post('/messages', requireAuth(['candidate','employer','superadmin','company_admin','hiring_manager','company_recruiter']), (req: Request, res: Response) => {
+messagingRouter.post('/messages', requireAuth(['candidate','employer','superadmin','company_admin','hiring_manager','company_recruiter','agency_admin','agency_recruiter','recruiter','vendor','internal_recruiter','operations_admin','employee']), (req: Request, res: Response) => {
   const parsed = messageSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'Validation failed.' });
   const db = loadDb(); const ctx = ctxOf(req);
@@ -53,6 +78,12 @@ messagingRouter.post('/messages', requireAuth(['candidate','employer','superadmi
   const app2: any = db.applications.find((a: any) => a.id === conv.applicationId);
   if (ctx.role === 'candidate' && String(conv.candidateId).toLowerCase() !== ctx.email.toLowerCase() && (!app2 || String(app2.candidateEmail).toLowerCase() !== ctx.email.toLowerCase())) return res.status(404).json({ success: false, message: 'Conversation not found.' });
   if (['employer','company_admin','hiring_manager','company_recruiter'].includes(ctx.role) && conv.companyId !== ctx.tenantId && (!app2 || app2.orgId !== ctx.tenantId)) return res.status(404).json({ success: false, message: 'Conversation not found.' });
+  if (AGENCY_ROLES.includes(ctx.role) && !agencyLinkedToApp(db, ctx, app2)) return res.status(404).json({ success: false, message: 'Conversation not found.' });
+  if (['internal_recruiter','operations_admin','employee'].includes(ctx.role) && !['superadmin','platform_owner'].includes(ctx.role)) {
+    // Internal staff participate only on assigned mandates — enforced via requisition/job assignment presence.
+    const assigned = (db.requisitions as any[]).some((r: any) => r.assignee === ctx.email || (r.supporting || []).includes(ctx.email));
+    if (!assigned) return res.status(404).json({ success: false, message: 'Conversation not found.' });
+  }
   const iv = db.interviews.find((i: any) => i.applicationId === conv.applicationId && ['Scheduled','Rescheduled','Completed'].includes(i.status));
   if (!iv && !['superadmin'].includes(ctx.role)) return res.status(403).json({ success: false, message: 'Chat locked until interview scheduled.', code: 'CHAT_LOCKED' });
   // rate-limit: max 30 msgs / 5 min per conversation per sender
@@ -79,7 +110,7 @@ messagingRouter.post('/messages', requireAuth(['candidate','employer','superadmi
 });
 
 // Edit own message (history preserved — editedAt stamped, no deletes per §13)
-messagingRouter.patch('/messages/:id', requireAuth(['candidate','employer','superadmin','company_admin','hiring_manager','company_recruiter']), (req: Request, res: Response) => {
+messagingRouter.patch('/messages/:id', requireAuth(['candidate','employer','superadmin','company_admin','hiring_manager','company_recruiter','agency_admin','agency_recruiter','recruiter','vendor']), (req: Request, res: Response) => {
   const db = loadDb(); const ctx = ctxOf(req);
   const m: any = db.messages.find((x: any) => x.id === req.params.id);
   if (!m) return res.status(404).json({ success: false, message: 'Message not found.' });
@@ -100,6 +131,10 @@ messagingRouter.patch('/conversations/:id/close', requireAuth(), (req: Request, 
   if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found.' });
   if (ctx.role === 'candidate' && String(conv.candidateId).toLowerCase() !== ctx.email.toLowerCase()) return res.status(404).json({ success: false, message: 'Conversation not found.' });
   if (['employer','company_admin','hiring_manager','company_recruiter'].includes(ctx.role) && conv.companyId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Conversation not found.' });
+  if (AGENCY_ROLES.includes(ctx.role)) {
+    const appC: any = db.applications.find((a: any) => a.id === conv.applicationId);
+    if (!agencyLinkedToApp(db, ctx, appC)) return res.status(404).json({ success: false, message: 'Conversation not found.' });
+  }
   conv.status = 'closed'; conv.closedReason = String(req.body?.reason || 'closed'); conv.lastMessageAt = nowIso();
   audit(ctx.email, `CHAT_CLOSED:${conv.id}`, conv.companyId, 'conversation', conv.id, req.ip); persist();
   res.json({ success: true, data: conv });

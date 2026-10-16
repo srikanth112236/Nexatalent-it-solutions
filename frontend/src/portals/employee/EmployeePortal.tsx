@@ -5,7 +5,7 @@ import { ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { apiClient } from '../../shared/api-client';
 import { platformApi, salesApi } from '../../shared/enterprise/phaseApi';
 import { syncAll } from '../common/EnterprisePanels';
-import { LeadsPanel, PerformancePanel, NotificationsPanel, PayrollPanel } from '../common/EnterprisePanels';
+import { LeadsPanel, PerformancePanel, NotificationsPanel, PayrollPanel, RequisitionsPanel, JobsPanel, ApplicationsPanel, InterviewsPanel, CandidatesPanel } from '../common/EnterprisePanels';
 import { WebsiteLeadsPanel } from '../common/WebsiteLeadsPanel';
 import { MfaPanel } from '../../auth/components/MfaPanel';
 import { Select } from '../../shared/ui/EnterpriseKit';
@@ -14,6 +14,11 @@ import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
 const navItems = [
   { label: 'Overview', path: '/employee' },
   { label: 'CRM & Accounts', path: '/employee/crm', group: 'Delivery' },
+  { label: 'My Requirements', path: '/employee/requisitions', group: 'Delivery' },
+  { label: 'Mandate Jobs', path: '/employee/jobs', group: 'Delivery' },
+  { label: 'Candidate Pipeline', path: '/employee/applications', group: 'Delivery' },
+  { label: 'Candidate Search', path: '/employee/candidates', group: 'Delivery' },
+  { label: 'Interviews', path: '/employee/interviews', group: 'Delivery' },
   { label: 'Recruitment Tasks', path: '/employee/tasks', group: 'Delivery' },
   { label: 'Quarterly Targets', path: '/employee/targets', group: 'Delivery' },
   { label: 'Payroll', path: '/employee/payroll', group: 'Delivery' },
@@ -33,6 +38,11 @@ export function EmployeePortal() {
   const currentTab = (() => {
     const p = location.pathname;
     if (p.includes('/crm')) return 'crm';
+    if (p.includes('/requisitions')) return 'requisitions';
+    if (p.includes('/applications') || p.includes('/pipeline')) return 'applications';
+    if (p.includes('/candidates')) return 'candidates';
+    if (p.includes('/interviews')) return 'interviews';
+    if (p.includes('/jobs')) return 'jobs';
     if (p.includes('/tasks')) return 'tasks';
     if (p.includes('/targets')) return 'targets';
     if (p.includes('/payroll')) return 'payroll';
@@ -439,6 +449,11 @@ export function EmployeePortal() {
         )}
 
         {/* ENTERPRISE: new phase modules */}
+        {currentTab === 'requisitions' && <RequisitionsPanel />}
+        {currentTab === 'jobs' && <JobsPanel />}
+        {currentTab === 'applications' && <ApplicationsPanel />}
+        {currentTab === 'candidates' && <CandidatesPanel />}
+        {currentTab === 'interviews' && <InterviewsPanel />}
         {currentTab === 'payroll' && <PayrollPanel />}
         {currentTab === 'leads' && <LeadsPanel />}
         {currentTab === 'website-leads' && <WebsiteLeadsPanel />}

@@ -25,7 +25,7 @@ export function V2JobsFaq() {
       <SectionHead eyebrow="Live demand" title="Open roles this week" sub="A snapshot — explore the full board or submit your mandate." />
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {ROLES.map((r) => (
-          <li key={r.title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+          <li key={r.title} className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-black px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white">
               <Briefcase size={11} aria-hidden /> {r.type}
             </span>
@@ -48,11 +48,11 @@ export function V2JobsFaq() {
         <h3 className="text-center text-lg font-extrabold text-black">Questions, answered</h3>
         <div className="mt-4 space-y-2.5">
           {FAQS.map((f) => (
-            <details key={f.q} className="group rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+            <details key={f.q} className="group rounded-2xl border border-neutral-200 bg-white px-5 py-4 shadow-sm">
               <summary className="cursor-pointer list-none text-sm font-bold text-black focus-visible:outline-2 focus-visible:outline-black [&::-webkit-details-marker]:hidden">
                 <span className="flex items-center justify-between gap-3">
                   {f.q}
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 text-black transition-transform group-open:rotate-45" aria-hidden>+</span>
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-neutral-200 text-black transition-transform group-open:rotate-45" aria-hidden>+</span>
                 </span>
               </summary>
               <p className="mt-2 text-sm leading-relaxed text-black">{f.a}</p>

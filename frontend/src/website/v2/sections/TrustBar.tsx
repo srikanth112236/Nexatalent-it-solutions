@@ -13,7 +13,7 @@ export function V2TrustBar() {
         {CLIENTS.map((c) => (
           <li
             key={c}
-            className="flex min-h-[48px] items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-xs font-extrabold text-black"
+            className="flex min-h-[48px] items-center justify-center rounded-xl border border-neutral-200 bg-white px-3 py-2 text-center text-xs font-extrabold text-black"
           >
             {c}
           </li>

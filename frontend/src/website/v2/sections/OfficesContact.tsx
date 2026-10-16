@@ -7,7 +7,7 @@ import { EnquirySelect } from '../components/EnquirySelect';
 import { submitLead } from '../lib/leadCapture';
 
 const inputCls =
-  'min-h-[52px] w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-[15px] text-black outline-none placeholder:text-black focus:border-black focus:ring-2 focus:ring-black/15';
+  'min-h-[52px] w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-[15px] text-black outline-none placeholder:text-black focus:border-black focus:ring-2 focus:ring-black/15';
 
 function FieldLabel({ children, optional = false }: { children: React.ReactNode; optional?: boolean }) {
   return (
@@ -103,7 +103,7 @@ export function V2OfficesContact() {
         {/* Left: contact cards */}
         <div className="space-y-4">
           {V2_CONTACT.cards.map((c) => (
-            <div key={c.title} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div key={c.title} className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
               <h3 className="text-lg font-extrabold text-black">{c.title}</h3>
               {c.href.startsWith('/') ? (
                 <Link to={c.href} className="mt-1 inline-block text-[15px] font-semibold text-black hover:underline">
@@ -121,7 +121,7 @@ export function V2OfficesContact() {
 
         {/* Right: form */}
         {/* Right column: sticky + form-only internal scroll on desktop */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 lg:sticky lg:top-[92px] lg:max-h-[calc(100vh-110px)] lg:self-start lg:overflow-y-auto lg:overscroll-contain sidebar-scroll">           
+        <div data-lenis-prevent className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm sm:p-8 lg:sticky lg:top-[92px] lg:max-h-[calc(100vh-110px)] lg:self-start lg:overflow-y-auto lg:overscroll-contain sidebar-scroll">
           {sent ? (
             <div className="flex min-h-[420px] flex-col items-center justify-center text-center">
               <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black text-white">
@@ -160,7 +160,7 @@ export function V2OfficesContact() {
                 </div>
               </div>
 
-              <hr className="my-6 border-slate-200" />
+              <hr className="my-6 border-neutral-200" />
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-black">About your enquiry</p>
 
               <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -182,7 +182,7 @@ export function V2OfficesContact() {
                 />
               </div>
 
-              <hr className="my-6 border-slate-200" />
+              <hr className="my-6 border-neutral-200" />
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-black">Verify & send</p>
 
               <div className="mt-4">
@@ -204,7 +204,7 @@ export function V2OfficesContact() {
                       setMath(newMath());
                       setAnswer('');
                     }}
-                    className="flex w-[52px] shrink-0 items-center justify-center rounded-xl border border-slate-300 text-black hover:border-black"
+                    className="flex w-[52px] shrink-0 items-center justify-center rounded-xl border border-neutral-300 text-black hover:border-black"
                   >
                     <RefreshCw size={16} aria-hidden />
                   </button>
@@ -229,7 +229,7 @@ export function V2OfficesContact() {
                   type="checkbox"
                   checked={terms}
                   onChange={(e) => setTerms(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300 accent-black"
+                  className="h-4 w-4 rounded border-neutral-300 accent-black"
                 />
                 <span>
                   I have read and agree to the <Link to="/terms" className="font-bold underline">Terms</Link>.

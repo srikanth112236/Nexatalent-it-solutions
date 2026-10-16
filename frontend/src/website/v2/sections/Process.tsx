@@ -15,7 +15,7 @@ export function V2Process() {
       <SectionHead eyebrow="How it works" title="From mandate to joining in 4 steps" sub="A transparent workflow — you always know what happens next." />
       <ol className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {STEPS.map((s, i) => (
-          <li key={s.title} className="relative rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <li key={s.title} className="relative rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
             <span className="absolute right-5 top-5 text-4xl font-black text-black/10" aria-hidden>
               {i + 1}
             </span>

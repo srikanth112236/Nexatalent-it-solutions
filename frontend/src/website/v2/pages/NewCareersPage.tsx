@@ -39,15 +39,19 @@ function useAllJobs(): V2Job[] {
  * Careers — same board as Jobs, but every application is no-login:
  * details + resume collected in-modal and sent to Superadmin Website Leads.
  */
+const CAREERS_PAGE_SIZE = 6;
+
 export function NewCareersPage() {
   const navigate = useNavigate();
   const [q, setQ] = useState('');
   const [loc, setLoc] = useState('Anywhere');
   const [category, setCategory] = useState('All Roles');
   const [tab, setTab] = useState<'latest' | 'premium'>('latest');
+  const [page, setPage] = useState(1);
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [applyJob, setApplyJob] = useState<V2Job | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const allJobs = useAllJobs();
 
   useEffect(() => {
@@ -94,6 +98,22 @@ export function NewCareersPage() {
     });
   }, [allJobs, q, loc, category, tab]);
 
+  // Reset to first page whenever filters change
+  useEffect(() => {
+    setPage(1);
+  }, [q, loc, category, tab]);
+
+  const totalPages = Math.max(1, Math.ceil(list.length / CAREERS_PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const visibleJobs = list.slice((currentPage - 1) * CAREERS_PAGE_SIZE, currentPage * CAREERS_PAGE_SIZE);
+
+  const changePage = (p: number) => {
+    const next = Math.min(Math.max(1, p), totalPages);
+    setPage(next);
+    // Scroll the independent roles feed back to its top (native container scroll)
+    listRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="min-h-screen bg-white font-sans text-black antialiased">
       <SeoHead
@@ -105,11 +125,7 @@ export function NewCareersPage() {
       <main id="main-content">
         {/* ============ HERO + SEARCH ============ */}
         {/* overflow-x-clip (not hidden) so the suggestion dropdown can float over the next section */}
-        <section className="relative overflow-x-clip border-b border-neutral-200 bg-gradient-to-b from-slate-50 via-white to-white px-4 pb-14 pt-12 sm:px-6 sm:pt-16" aria-label="Careers search">
-          <div aria-hidden className="pointer-events-none absolute inset-0">
-            <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-slate-100 blur-3xl opacity-80" />
-            <div className="absolute -top-16 right-[-80px] h-80 w-80 rounded-full bg-slate-100 blur-3xl opacity-70" />
-          </div>
+        <section className="relative overflow-x-clip border-b border-neutral-200 bg-white px-4 pb-14 pt-12 sm:px-6 sm:pt-16" aria-label="Careers search">
           <div className="relative mx-auto max-w-3xl text-center">
             <nav aria-label="Breadcrumb" className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-black/60">
               <Link to="/" className="hover:text-black">Home</Link>
@@ -170,7 +186,7 @@ export function NewCareersPage() {
               </button>
             </form>
             {suggestOpen && q.trim().length >= 2 && (
-              <div className="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xl shadow-black/10">
+              <div data-lenis-prevent className="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xl shadow-black/10">
                 {suggestions.length > 0 ? (
                   <ul id="career-suggestions" role="listbox" aria-label="Matching roles" className="max-h-72 overflow-y-auto py-1.5">
                     {suggestions.map((s) => (
@@ -206,12 +222,12 @@ export function NewCareersPage() {
         </section>
 
         {/* ============ ROLES ============ */}
-        <section aria-label="Open roles" className="bg-white px-4 py-14 sm:px-6 sm:py-16">
+        <section aria-label="Open roles" className="bg-white px-4 py-10 sm:px-6 sm:py-12">
           <div className="mx-auto max-w-6xl">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-2xl font-extrabold tracking-tight text-black sm:text-3xl">Open Roles</h2>
-                <p className="mt-1 text-sm text-black/60">Every application goes straight to our recruitment desk</p>
+                <h2 className="text-xl font-extrabold tracking-tight text-black sm:text-2xl">Open Roles</h2>
+                <p className="mt-0.5 text-[13px] text-black/60">Every application goes straight to our recruitment desk</p>
               </div>
               <div className="flex gap-2" role="group" aria-label="Role feed filter">
                 <button
@@ -235,11 +251,11 @@ export function NewCareersPage() {
               </div>
             </div>
 
-            <div className="mt-8 grid grid-cols-1 items-start gap-6 lg:grid-cols-[300px_1fr]">
+            <div className="mt-6 grid grid-cols-1 items-start gap-5 lg:grid-cols-[280px_1fr]">
               {/* categories sidebar — sticky, filters stay put */}
-              <aside className="h-fit rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto" aria-label="Role categories">
-                <h3 className="text-base font-extrabold tracking-tight text-black">Categories</h3>
-                <ul className="mt-4 divide-y divide-neutral-200">
+              <aside data-lenis-prevent className="sidebar-scroll h-fit rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto" aria-label="Role categories">
+                <h3 className="text-[15px] font-extrabold tracking-tight text-black">Categories</h3>
+                <ul className="mt-3 divide-y divide-neutral-200">
                   {CATEGORIES.map((c) => {
                     const active = category === c;
                     return (
@@ -247,7 +263,7 @@ export function NewCareersPage() {
                         <button
                           onClick={() => setCategory(c)}
                           aria-pressed={active}
-                          className={`flex min-h-[48px] w-full items-center justify-between gap-3 text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-black ${
+                          className={`flex min-h-[44px] w-full items-center justify-between gap-3 text-left text-[13px] transition-colors focus-visible:outline-2 focus-visible:outline-black ${
                             active ? 'font-extrabold text-black' : 'font-semibold text-black/70 hover:text-black'
                           }`}
                         >
@@ -273,22 +289,22 @@ export function NewCareersPage() {
                 </div>
               </aside>
 
-              {/* role cards — independently scrollable on desktop */}
-              <div className="min-w-0 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pr-1 lg:pb-2">
+              {/* role cards — sticky + independently scrollable feed on desktop (native scroll, Lenis-exempt) */}
+              <div ref={listRef} data-lenis-prevent className="sidebar-scroll min-w-0 lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pr-1 lg:pb-2">
                 <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-black/50" aria-live="polite">
-                  {list.length} opening{list.length === 1 ? '' : 's'}
+                  {list.length} opening{list.length === 1 ? '' : 's'} · Page {currentPage} of {totalPages}
                 </p>
-                <ul className="space-y-4">
-                  {list.map((r) => (
+                <ul className="space-y-3">
+                  {visibleJobs.map((r) => (
                     <li
                       key={r.slug}
-                      className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md ${
+                      className={`overflow-hidden rounded-xl border bg-white shadow-sm transition-shadow hover:shadow-md ${
                         r.premium ? 'border-black' : 'border-neutral-200'
                       }`}
                     >
-                      <div className="h-1 w-full bg-black" aria-hidden />
-                      <div className="p-5">
-                        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[11px] font-semibold text-black/60">
+                      <div className="h-0.5 w-full bg-black" aria-hidden />
+                      <div className="p-4">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-semibold text-black/60">
                           <span>
                             Type: <strong className="text-black">{r.type}</strong>
                           </span>
@@ -306,9 +322,9 @@ export function NewCareersPage() {
                             </span>
                           ) : null}
                         </div>
-                        <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <h3 className="text-lg font-extrabold tracking-tight text-black">
+                        <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <h3 className="text-[15px] font-extrabold tracking-tight text-black">
                               <Link
                                 to={`/careers/${r.slug}`}
                                 className="hover:underline focus-visible:outline-2 focus-visible:outline-black"
@@ -316,19 +332,19 @@ export function NewCareersPage() {
                                 {r.title}
                               </Link>
                             </h3>
-                            <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-black">
-                              <Wallet size={14} className="text-black" aria-hidden /> {r.salary}
+                            <p className="mt-0.5 flex items-center gap-1.5 text-[13px] font-semibold text-black">
+                              <Wallet size={13} className="text-black" aria-hidden /> {r.salary}
                             </p>
                           </div>
                           <button
                             onClick={() => setApplyJob(r)}
-                            className="inline-flex min-h-[42px] items-center gap-1.5 rounded-full bg-black px-5 text-xs font-bold text-white transition-colors hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+                            className="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full bg-black px-4 text-xs font-bold text-white transition-colors hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
                           >
                             Apply — No Login <ArrowRight size={13} aria-hidden />
                           </button>
                         </div>
                       </div>
-                      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-neutral-200 bg-neutral-50/60 px-5 py-3 text-xs font-semibold text-black/70">
+                      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-neutral-200 bg-neutral-50/60 px-4 py-2.5 text-xs font-semibold text-black/70">
                         <span className="flex items-center gap-1.5">
                           <MapPin size={13} className="text-black" aria-hidden /> {r.location}
                         </span>
@@ -356,6 +372,39 @@ export function NewCareersPage() {
                     </p>
                   </div>
                 ) : null}
+
+                {totalPages > 1 ? (
+                  <nav aria-label="Roles pagination" className="mt-6 flex flex-wrap items-center justify-center gap-2 pb-1">
+                    <button
+                      onClick={() => changePage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="inline-flex min-h-[40px] items-center gap-1 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-semibold text-black transition-colors hover:border-neutral-300 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+                    >
+                      Prev
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => changePage(p)}
+                        aria-current={p === currentPage ? 'page' : undefined}
+                        className={`inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-lg px-3 text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${
+                          p === currentPage
+                            ? 'bg-black text-white'
+                            : 'border border-neutral-200 bg-white text-black hover:border-neutral-300'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => changePage(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="inline-flex min-h-[40px] items-center gap-1 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-semibold text-black transition-colors hover:border-neutral-300 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+                    >
+                      Next
+                    </button>
+                  </nav>
+                ) : null}
               </div>
             </div>
           </div>
@@ -371,7 +420,7 @@ export function NewCareersPage() {
                 <button
                   key={l.city}
                   onClick={() => { setLoc(l.city); setTab('latest'); document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth' }); }}
-                  className="group rounded-2xl border border-neutral-200 bg-white p-6 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-black hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+                  className="group rounded-2xl border border-neutral-200 bg-white p-6 text-left shadow-sm transition-all hover:-tranneutral-y-0.5 hover:border-black hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
                 >
                   <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-black text-white">
                     <MapPin size={18} aria-hidden />

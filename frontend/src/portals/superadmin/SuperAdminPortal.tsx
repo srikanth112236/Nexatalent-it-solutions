@@ -14,6 +14,7 @@ import {
   ReportsPanel, NotificationsPanel, AdminControlsPanel, LoginLockoutsPanel, RequisitionsPanel, ApplicationsPanel,
   CandidatesPanel, AgencyPanel, BranchesPanel, JobsPanel, SupportPanel,
   InterviewsPanel, OffersPlacementsPanel, RequirementCreatePage, JobCreatePage, RolesPanel, SkillsPanel, PaymentsRemindersPanel, TimesheetsPanel,
+  TalentPoolsPanel, CandidateSearchPanel, OutreachPanel, ChatPanel,
 } from '../common/EnterprisePanels';
 import { Modal, Select, Field } from '../../shared/ui/EnterpriseKit';
 import { MfaPanel } from '../../auth/components/MfaPanel';
@@ -34,6 +35,10 @@ const navItems = [
   { label: 'Applications', path: '/superadmin/applications', group: 'Recruitment' },
   { label: 'Interviews', path: '/superadmin/interviews', group: 'Recruitment' },
   { label: 'Placements', path: '/superadmin/placements', group: 'Recruitment' },
+  { label: 'Talent Pools', path: '/superadmin/talent', group: 'Recruitment' },
+  { label: 'Candidate Search', path: '/superadmin/search', group: 'Recruitment' },
+  { label: 'Outreach', path: '/superadmin/outreach', group: 'Recruitment' },
+  { label: 'Messages', path: '/superadmin/messages', group: 'Recruitment' },
   { label: 'Timesheets', path: '/superadmin/timesheets', group: 'Recruitment' },
   { label: 'Subscriptions & Plans', path: '/superadmin/subscriptions', group: 'Commercial' },
   { label: 'Invoices', path: '/superadmin/invoices', group: 'Commercial' },
@@ -49,6 +54,7 @@ const navItems = [
   { label: 'Notifications', path: '/superadmin/notifications', group: 'Platform' },
   { label: 'Security Audit Logs', path: '/superadmin/audit-logs', group: 'Platform' },
   { label: 'System Settings', path: '/superadmin/settings', group: 'Platform' },
+  { label: 'My Profile', path: '/superadmin/profile', group: 'Platform' },
 ];
 
 export function SuperAdminPortal() {
@@ -71,6 +77,10 @@ export function SuperAdminPortal() {
     if (p.includes('/applications')) return 'applications';
     if (p.includes('/interviews')) return 'interviews';
     if (p.includes('/placements') || p.includes('/offers')) return 'placements';
+    if (p.includes('/talent')) return 'talent';
+    if (p.includes('/search')) return 'search';
+    if (p.includes('/outreach')) return 'outreach';
+    if (p.includes('/messages') || p.includes('/chat')) return 'messages';
     if (p.includes('/timesheets')) return 'timesheets';
     if (p.includes('/subscriptions')) return 'subscriptions';
     if (p.includes('/invoices')) return 'invoices';
@@ -85,6 +95,7 @@ export function SuperAdminPortal() {
     if (p.includes('/controls')) return 'controls';
     if (p.includes('/notifications')) return 'notifications';
     if (p.includes('/audit')) return 'audit';
+    if (p.includes('/profile')) return 'profile';
     if (p.includes('/settings')) return 'settings';
     return 'overview';
   })();
@@ -130,6 +141,13 @@ export function SuperAdminPortal() {
   const [showUserModal, setShowUserModal] = useState(false);
   const [tenantForm, setTenantForm] = useState({ name: '', plan: 'Enterprise Custom', seats: '50' });
   const [userForm, setUserForm] = useState({ name: '', email: '', role: 'employer', tenantId: 'TNT-9011', password: '' });
+  // Phase 2.4: own admin profile (name edit + MFA, verification read-only)
+  const [profileName, setProfileName] = useState('');
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileMsg, setProfileMsg] = useState('');
+  const ownEmail = (() => { try { return (localStorage.getItem('user_email') || '').toLowerCase(); } catch { return ''; } })();
+  const ownUser = users.find((u: any) => String(u.email || '').toLowerCase() === ownEmail) || null;
+  useEffect(() => { if (ownUser && !profileName) setProfileName(ownUser.name || ''); }, [ownUser]);
 
   useEffect(() => {
     async function fetchData() {
@@ -848,8 +866,8 @@ export function SuperAdminPortal() {
                   ]}
                 />
               </Field>
-              <Field label="Temporary Password (min 8 characters) *">
-                <input type="password" required minLength={8} autoComplete="new-password" value={userForm.password || ''} onChange={(e) => setUserForm({ ...userForm, password: e.target.value })} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-900 outline-none" placeholder="Set an initial password" />
+              <Field label="Temporary Password (min 10 characters) *">
+                <input type="password" required minLength={10} autoComplete="new-password" value={userForm.password || ''} onChange={(e) => setUserForm({ ...userForm, password: e.target.value })} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-900 outline-none" placeholder="Set an initial password" />
               </Field>
               <button type="submit" className="w-full py-3 rounded-xl bg-spec-navy hover:bg-spec-midnight text-white font-bold cursor-pointer mt-2">
                 Create Global Account
@@ -869,6 +887,44 @@ export function SuperAdminPortal() {
         {currentTab === 'applications' && <ApplicationsPanel />}
         {currentTab === 'interviews' && <InterviewsPanel />}
         {currentTab === 'placements' && <OffersPlacementsPanel />}
+        {currentTab === 'talent' && <TalentPoolsPanel />}
+        {currentTab === 'search' && <CandidateSearchPanel />}
+        {currentTab === 'outreach' && <OutreachPanel />}
+        {currentTab === 'messages' && <ChatPanel />}
+        {currentTab === 'profile' && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-sm space-y-3">
+              <h3 className="text-base font-extrabold text-slate-900">My Admin Profile</h3>
+              {profileMsg && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{profileMsg}</div>}
+              {!ownUser ? (
+                <div className="text-xs text-slate-500 font-medium">Signed in as {ownEmail || '—'}. Directory row loads with the user list.</div>
+              ) : (
+                <form onSubmit={async (e) => {
+                  e.preventDefault(); if (!ownUser) return;
+                  setProfileSaving(true); setProfileMsg('');
+                  try {
+                    const res = await apiClient.put<any>(`/api/v1/users/${ownUser.id}`, { name: profileName.trim() });
+                    if (res.data) setUsers(users.map((u: any) => (u.id === ownUser.id ? res.data : u)));
+                    setProfileMsg('Display name updated.');
+                  } catch (err: any) { setProfileMsg(err?.response?.data?.message || 'Save failed.'); }
+                  finally { setProfileSaving(false); }
+                }} className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <label className="block font-bold text-slate-700">Email (read-only)
+                    <input readOnly value={ownUser.email || ''} className="mt-1 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-500 outline-none" />
+                  </label>
+                  <label className="block font-bold text-slate-700">Role (read-only)
+                    <input readOnly value={ownUser.role || ''} className="mt-1 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-500 outline-none" />
+                  </label>
+                  <label className="block font-bold text-slate-700 sm:col-span-2">Display name
+                    <input value={profileName} onChange={(e) => setProfileName(e.target.value)} className="mt-1 w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-900 outline-none" />
+                  </label>
+                  <div className="sm:col-span-2"><button type="submit" disabled={profileSaving} className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold disabled:opacity-50">{profileSaving ? 'Saving…' : 'Save profile'}</button></div>
+                </form>
+              )}
+            </div>
+            <MfaPanel />
+          </div>
+        )}
         {currentTab === 'timesheets' && <TimesheetsPanel canApprove />}
         {currentTab === 'subscriptions' && <SubscriptionsPanel />}
         {currentTab === 'invoices' && <InvoicesPanel />}

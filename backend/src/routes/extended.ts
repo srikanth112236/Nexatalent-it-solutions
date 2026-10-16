@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync, readFileSync, unlinkSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { loadDb, persist, uid, nowIso, audit } from '../db/store.js';
@@ -92,6 +92,30 @@ extendedRouter.get('/documents/:id/download', requireAuth(), (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.send(buf);
   } catch { res.status(410).json({ success: false, message: 'File no longer available.' }); }
+});
+/* Phase 5.2: owner-controlled document delete (latest resume link repoints, file removed). */
+extendedRouter.delete('/documents/:id', requireAuth(), (req, res) => {
+  const db = loadDb(); const ctx = ctxOf(req);
+  const ix = db.documents.findIndex((x: any) => x.id === req.params.id);
+  if (ix < 0) return res.status(404).json({ success: false, message: 'Not found.' });
+  const d: any = db.documents[ix];
+  const isOwner = String(d.ownerEmail || '').toLowerCase() === String(ctx.email).toLowerCase();
+  const isPlatform = [...PLATFORM, 'operations_admin', 'employee'].includes(ctx.role);
+  const isOrgAdmin = ['employer', 'company_admin'].includes(ctx.role) && d.orgId === ctx.tenantId;
+  if (!isOwner && !isPlatform && !isOrgAdmin) return res.status(404).json({ success: false, message: 'Not found.' });
+  const [removed] = db.documents.splice(ix, 1);
+  try { const p = join(UPLOAD_DIR, `${removed.id}.bin`); if (existsSync(p)) unlinkSync(p); } catch { /* file best-effort */ }
+  if (removed.kind === 'resume') {
+    const remaining = db.documents.filter((x: any) => x.ownerEmail === removed.ownerEmail && x.kind === 'resume').sort((a: any, b: any) => Number(b.version || 0) - Number(a.version || 0))[0];
+    const p: any = db.candidateProfiles.find((x: any) => String(x.email).toLowerCase() === String(removed.ownerEmail).toLowerCase());
+    if (p) {
+      if (remaining) { p.resumeRef = remaining.id; p.resumeVersion = remaining.version; }
+      else { p.resumeRef = ''; p.resumeVersion = 0; }
+      p.updatedAt = nowIso();
+    }
+  }
+  audit(ctx.email, `DOCUMENT_DELETED:${removed.id}`, ctx.tenantId, 'document', removed.id, req.ip); persist();
+  res.json({ success: true, data: removed });
 });
 
 /* ---------------- Consent center (§15.2) ---------------- */
@@ -438,12 +462,23 @@ extendedRouter.post('/agency-profiles', requireAuth(['superadmin', 'platform_own
   audit(ctxOf(req).email, `AGENCY_ONBOARDED:${row.id}`, 'TNT-GLOBAL', 'agency', row.id, req.ip); persist();
   res.status(201).json({ success: true, data: row });
 });
-extendedRouter.patch('/agency-profiles/:id', requireAuth(['superadmin', 'platform_owner', 'operations_admin']), (req, res) => {
+extendedRouter.patch('/agency-profiles/:id', requireAuth(), (req, res) => {
   const db = loadDb(); const a: any = db.agencyProfiles.find((x: any) => x.id === req.params.id);
   if (!a) return res.status(404).json({ success: false, message: 'Not found.' });
+  const ctx = ctxOf(req);
+  const isPlatform = ['superadmin', 'platform_owner', 'operations_admin'].includes(ctx.role);
+  // Phase 1.1: agency_admin may self-edit own profile (limited fields, no verification/account changes).
+  const isOwnAgencyAdmin = ctx.role === 'agency_admin' && a.tenantId && a.tenantId === ctx.tenantId;
+  if (!isPlatform && !isOwnAgencyAdmin) return res.status(403).json({ success: false, message: `Access denied for role '${ctx.role}'.` });
   const b: any = req.body || {};
-  for (const k of ['displayName', 'entityType', 'country', 'registrationNumber', 'taxIds', 'website', 'address', 'contactName', 'contactEmail', 'contactPhone', 'specialties', 'locations', 'recruiterCount', 'commercialModel', 'agreementStatus', 'tenantId', 'accountManager']) {
-    if (b[k] !== undefined) a[k] = b[k];
+  const SELF_FIELDS = ['displayName', 'entityType', 'country', 'registrationNumber', 'taxIds', 'website', 'address', 'contactName', 'contactEmail', 'contactPhone', 'specialties', 'locations', 'recruiterCount', 'commercialModel'];
+  const PLATFORM_FIELDS = [...SELF_FIELDS, 'agreementStatus', 'tenantId', 'accountManager'];
+  const allowed = isPlatform ? PLATFORM_FIELDS : SELF_FIELDS;
+  for (const k of allowed) {
+    if (b[k] !== undefined) a[k] = k === 'recruiterCount' ? Number(b[k]) || 0 : b[k];
+  }
+  if (!isPlatform && (b.verificationStatus !== undefined || b.accountStatus !== undefined)) {
+    return res.status(403).json({ success: false, message: 'Verification and account status are managed by the platform.' });
   }
   if (b.verificationStatus && ['Pending', 'Approved', 'Rejected'].includes(b.verificationStatus)) {
     if (!b.reason && b.verificationStatus !== 'Pending') return res.status(400).json({ success: false, message: 'Verification decision needs a reason.' });
@@ -489,7 +524,7 @@ extendedRouter.post('/agency-profiles/:id/invite', requireAuth(['superadmin', 'p
   const { name, email, role, password } = req.body || {};
   if (!email || !String(email).includes('@')) return res.status(400).json({ success: false, message: 'Valid email required.' });
   if (!['agency_admin', 'agency_recruiter'].includes(role)) return res.status(400).json({ success: false, message: 'role must be agency_admin|agency_recruiter.' });
-  if (!password || String(password).length < 8) return res.status(400).json({ success: false, message: '8-char temporary password required.' });
+  if (!password || String(password).length < 10) return res.status(400).json({ success: false, message: '10-char temporary password required.' });
   if (db.users.some((u: any) => String(u.email).toLowerCase() === String(email).toLowerCase())) return res.status(409).json({ success: false, message: 'Account exists. Use the user directory.' });
   const { hashPassword } = await import('../auth/password.js');
   const user = { id: uid('USR'), name: name || String(email).split('@')[0], email, role, tenantId: a.tenantId, status: 'Active', invitationStatus: 'Pending', invitedAt: nowIso(), lastLogin: 'Never' };

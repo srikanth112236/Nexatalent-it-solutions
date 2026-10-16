@@ -320,7 +320,7 @@ export function NewContactPage() {
                     className="group flex min-h-[48px] w-full items-center justify-center gap-2.5 rounded-xl bg-black text-[13px] font-bold text-white shadow-md shadow-black/10 transition-colors hover:bg-neutral-800 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black sm:w-auto sm:px-8"
                   >
                     {sending ? 'Sending…' : 'Send Message — Get a Callback'}
-                    <span className="transition-transform group-hover:translate-x-0.5">
+                    <span className="transition-transform group-hover:tranneutral-x-0.5">
                       <ArrowRight size={15} aria-hidden />
                     </span>
                   </button>

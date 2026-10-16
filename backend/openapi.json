@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "NexaTalent Enterprise Recruitment API",
-    "version": "2.0.0",
-    "description": "All 5 spec phases. Real JWT (15m access / 7d refresh rotation), bcrypt, 20 roles, 17 permissions, file-persisted DB, zod validation, idempotent finance, interview-gated chat. Legacy paths kept for old frontend builds."
+    "version": "2.1.0",
+    "description": "All 5 spec phases plus Phase 1-6 gap closures. Real JWT (15m access / 7d refresh rotation), bcrypt, 20 roles, 17 permissions, file-persisted DB, zod validation, idempotent finance, interview-gated chat. Legacy paths kept for old frontend builds."
   },
   "servers": [{ "url": "http://localhost:5000" }],
   "security": [{ "bearerAuth": [] }],
@@ -29,7 +29,9 @@
     "/api/v1/auth/logout": { "post": { "summary": "Revoke + audit", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/auth/me": { "get": { "summary": "Resolve session", "responses": { "200": { "description": "session" } } } },
     "/api/v1/auth/forgot-password": { "post": { "summary": "Anti-enumeration request", "responses": { "200": { "description": "ok" } } } },
-    "/api/v1/auth/reset-confirm": { "post": { "summary": "Set new 8-char password", "responses": { "200": { "description": "ok" } } } },
+    "/api/v1/auth/reset-confirm": { "post": { "summary": "Set new 10-char password", "responses": { "200": { "description": "ok" } } } },
+    "/api/v1/auth/sessions": { "get": { "summary": "List own login sessions (Phase 6.3)", "responses": { "200": { "description": "ok" } } } },
+    "/api/v1/auth/sessions/revoke-all": { "post": { "summary": "Revoke own refresh sessions (access tokens expire in 15m, Phase 6.3)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/auth/bootstrap": { "post": { "summary": "One-time platform-owner bootstrap (empty directory + BOOTSTRAP_KEY)", "responses": { "201": { "description": "created" } } } },
     "/api/v1/auth/register/{type}": { "post": { "summary": "Register candidate|employer|recruiter|vendor", "responses": { "201": { "description": "created" } } } },
     "/api/v1/tenants": { "get": { "summary": "List orgs", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Provision org", "responses": { "201": { "description": "created" } } } },
@@ -58,7 +60,7 @@
 
     "/api/v1/directory/candidates/{id}/info-requests/{reqId}": { "patch": { "summary": "Mark info request Open|Responded|Closed", "responses": { "200": { "description": "ok" } } } },
 
-    "/api/v1/directory/candidates/{id}/deletion-request": { "post": { "summary": "Open privacy deletion request", "responses": { "201": { "description": "created" }, "409": { "description": "already pending" } } } },
+    "/api/v1/directory/candidates/{id}/deletion-request": { "post": { "summary": "Open privacy deletion request (admins any profile, candidates own profile only, Phase 5.2)", "responses": { "201": { "description": "created" }, "409": { "description": "already pending" } } } },
 
     "/api/v1/directory/candidates/{id}/deletion-requests": { "get": { "summary": "List deletion requests", "responses": { "200": { "description": "ok" } } } },
 
@@ -86,10 +88,11 @@
     "/api/v1/applications/{id}/stage": { "patch": { "summary": "Move ATS stage + history + event + frozen-pipeline guard (422 unless Withdrawn)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/interviews": { "get": { "summary": "List (role-scoped), jobId + requisitionId filters", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Schedule (auto-enables chat)", "responses": { "201": { "description": "created" } } } },
     "/api/v1/interviews/{id}/feedback": { "post": { "summary": "Panel feedback (rating 1-5, never mutates status)", "responses": { "201": { "description": "created" } } }, "get": { "summary": "List feedback for interview", "responses": { "200": { "description": "ok" } } } },
+    "/api/v1/interviews/{id}/ics": { "get": { "summary": "Calendar download for interview (same visibility, Phase 6.3)", "responses": { "200": { "description": "text/calendar" }, "404": { "description": "not found" } } } },
     "/api/v1/credit-notes": { "get": { "summary": "List credit notes", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/roles": { "get": { "summary": "Role directory (scope + purpose; pickers source)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Create custom role", "responses": { "201": { "description": "created" }, "409": { "description": "exists" } } } },
     "/api/v1/roles/{id}": { "put": { "summary": "Edit role (permissions rewire authZ, audited)", "responses": { "200": { "description": "ok" } } }, "delete": { "summary": "Delete custom role (blocked if assigned/system)", "responses": { "200": { "description": "ok" }, "422": { "description": "blocked" } } } },
-    "/api/v1/bulk-import": { "post": { "summary": "Preview/commit CSV import with duplicate report (skills|roles)", "responses": { "200": { "description": "ok" } } } },
+    "/api/v1/bulk-import": { "post": { "summary": "Preview/commit import with duplicate report (skills|roles|candidates|leads, Phase 6.1)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/billing/schedule/run": { "post": { "summary": "Auto-bill started months + issue due series drafts (idempotent)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/mail-outbox": { "get": { "summary": "Email log (queued/sent/failed + SMTP flag)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/invoices/{id}/pdf": { "get": { "summary": "Server-generated invoice PDF", "responses": { "200": { "description": "PDF bytes" } } } },
@@ -97,14 +100,15 @@
     "/api/v1/allocations": { "get": { "summary": "Payment allocations ledger", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/subscription-changes": { "get": { "summary": "Subscription history", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/usage-ledger": { "get": { "summary": "Raw quota ledger (finance)", "responses": { "200": { "description": "ok" } } } },
-    "/api/v1/conversations": { "get": { "summary": "List chats (app-scoped)", "responses": { "200": { "description": "ok" } } } },
+    "/api/v1/conversations": { "get": { "summary": "List chats (app-scoped; agencies see linked submissions, Phase 1.2)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/conversations/{id}/messages": { "get": { "summary": "Thread (locked until interview scheduled)", "responses": { "200": { "description": "ok" }, "403": { "description": "CHAT_LOCKED" } } } },
     "/api/v1/jobs/{id}": { "get": { "summary": "Job detail + acceptingApplications flag", "responses": { "200": { "description": "ok" }, "404": { "description": "not found" } } }, "put": { "summary": "Edit job incl. agency/vendor assignment", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/applications/{id}/withdraw": { "post": { "summary": "Candidate withdraws (closes chat, history kept)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/applications/{id}/reopen": { "post": { "summary": "Reopen terminal application (Withdrawn/Rejected -> Applied/Shortlisted, reason required, reopens closed chat)", "responses": { "200": { "description": "ok" }, "400": { "description": "reason/target required" }, "422": { "description": "not terminal" } } } },
     "/api/v1/interviews/{id}": { "patch": { "summary": "Reschedule/cancel with reason (history preserved)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/conversations/{id}/close": { "patch": { "summary": "Close chat, history preserved", "responses": { "200": { "description": "ok" } } } },
-    "/api/v1/talent-pools/{id}": { "patch": { "summary": "Edit/archive pool", "responses": { "200": { "description": "ok" } } } },
+    "/api/v1/talent-pools/{id}": { "patch": { "summary": "Edit/archive pool", "responses": { "200": { "description": "ok" } } }, "delete": { "summary": "Delete empty pool, archive pool with members (Phase 6.2)", "responses": { "200": { "description": "ok" } } } },
+    "/api/v1/talent-pools/{id}/shortlist-bulk": { "post": { "summary": "Bulk shortlist members to a live job, per-member results (Phase 6.2)", "responses": { "201": { "description": "ok" } } } },
     "/api/v1/talent-pools/{id}/members": { "get": { "summary": "List pool members", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/talent-pools/{id}/members/{memberId}": { "delete": { "summary": "Remove member", "responses": { "200": { "description": "ok" } } } }, "/api/v1/talent-pools/{id}/members/{memberId}/shortlist": { "post": { "summary": "Shortlist member into ATS (creates application, frozen jobs refuse)", "responses": { "201": { "description": "created" } } } },
     "/api/v1/refunds": { "get": { "summary": "List refunds", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Process refund (idempotent, perm: refund)", "responses": { "201": { "description": "created" } } } },
@@ -112,6 +116,7 @@
     "/api/v1/skills": { "get": { "summary": "Industry-wide skill taxonomy (?q=, ?category=, paged + categories)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Add skill (ops)", "responses": { "201": { "description": "created" } } } },
     "/api/v1/documents": { "get": { "summary": "List documents (scoped)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Upload base64 doc (5MB, allow-listed types, versioned)", "responses": { "201": { "description": "created" } } } },
     "/api/v1/documents/{id}/download": { "get": { "summary": "Download with ownership check", "responses": { "200": { "description": "file" } } } },
+    "/api/v1/documents/{id}": { "delete": { "summary": "Owner-controlled delete, resume link repoints (Phase 5.2)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/consents": { "get": { "summary": "My consent record", "responses": { "200": { "description": "ok" } } }, "put": { "summary": "Update marketing/visibility consent", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/consents/withdraw": { "post": { "summary": "Withdraw consent (privates profile)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/consents/export": { "get": { "summary": "Export my data (JSON)", "responses": { "200": { "description": "ok" } } } },
@@ -126,18 +131,19 @@
     "/api/v1/commissions/{id}/adjustments": { "get": { "summary": "List adjustments", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Add adjustment (perm, idempotent, recomputes totals)", "responses": { "201": { "description": "created" } } } },
     "/api/v1/agency-profiles": { "get": { "summary": "Agency directory (real records)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Onboard agency", "responses": { "201": { "description": "created" } } } },
 
-    "/api/v1/agency-profiles/{id}": { "patch": { "summary": "Edit + verify + suspend with reason (revokes member sessions)", "responses": { "200": { "description": "ok" } } }, "delete": { "summary": "Close (live work) or delete agency", "responses": { "200": { "description": "ok" } } } },
+    "/api/v1/agency-profiles/{id}": { "patch": { "summary": "Edit + verify + suspend with reason (revokes member sessions); agency_admin may self-edit own limited fields (Phase 1.1)", "responses": { "200": { "description": "ok" } } }, "delete": { "summary": "Close (live work) or delete agency", "responses": { "200": { "description": "ok" } } } },
 
     "/api/v1/agency-profiles/{id}/invite": { "post": { "summary": "Invite tenant-scoped agency admin|recruiter", "responses": { "201": { "description": "created" }, "422": { "description": "no tenant link" } } } },
 
     "/api/v1/agency-profiles/{id}/360": { "get": { "summary": "Agency 360: users, jobs, submissions, placements, agreements, payouts, audit", "responses": { "200": { "description": "ok" } } } },    "/api/v1/agency-profiles/{id}": { "patch": { "summary": "Verify/suspend/edit agency", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/notifications/{id}/read": { "patch": { "summary": "Mark notification read", "responses": { "200": { "description": "ok" } } } },
-    "/api/v1/messages": { "post": { "summary": "Send (rate-limited 30/5min)", "responses": { "201": { "description": "sent" } } } },
+    "/api/v1/messages": { "post": { "summary": "Send (rate-limited 30/5min; agency + internal roles included, Phase 1.2)", "responses": { "201": { "description": "sent" } } } },
     "/api/v1/talent-pools": { "get": { "summary": "List pools", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Create pool (entitlement)", "responses": { "201": { "description": "created" } } } },
     "/api/v1/talent-pools/{id}/members": { "post": { "summary": "Add candidate", "responses": { "201": { "description": "created" } } } },
     "/api/v1/saved-jobs": { "get": { "summary": "My saved jobs", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Save (unique)", "responses": { "201": { "description": "created" } } } },
     "/api/v1/saved-jobs/{jobId}": { "delete": { "summary": "Unsave", "responses": { "200": { "description": "ok" } } } },
-    "/api/v1/offers": { "post": { "summary": "Issue offer", "responses": { "201": { "description": "created" } } } },
+    "/api/v1/offers": { "get": { "summary": "Employer-scoped offer inbox (Phase 1.5)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Issue offer", "responses": { "201": { "description": "created" } } } },
+    "/api/v1/offers/{id}/withdraw": { "post": { "summary": "Withdraw Issued offer with reason, frees re-issue (Phase 1.5)", "responses": { "200": { "description": "ok" }, "409": { "description": "not issued" } } } },
     "/api/v1/placements": { "get": { "summary": "List placements", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Mark joined (triggers commission eval)", "responses": { "201": { "description": "created" } } } },
     "/api/v1/plans": { "get": { "summary": "Plans", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Create plan version", "responses": { "201": { "description": "created" } } } },
 
@@ -179,7 +185,9 @@
     "/api/v1/commissions/check": { "get": { "summary": "Duplicate placement+trigger diagnostic", "responses": { "200": { "description": "ok" }, "400": { "description": "bad query" } } } },    "/api/v1/commissions": { "get": { "summary": "Commission ledger (paged, q/leg/approval filters + receivable/payable summary)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/commissions/{id}/invoice": { "post": { "summary": "Generate invoice from approved commission (once, 409-guarded)", "responses": { "201": { "description": "created" }, "409": { "description": "already invoiced" }, "422": { "description": "not approved" } } } },
     "/api/v1/commissions/{id}/approve": { "patch": { "summary": "Approve (perm: approve)", "responses": { "200": { "description": "ok" } } } },
+    "/api/v1/commissions/{id}/clawback": { "post": { "summary": "Replacement-window clawback as negative adjustment (Phase 6.2)", "responses": { "201": { "description": "created" }, "422": { "description": "window expired" } } } },
     "/api/v1/payouts": { "get": { "summary": "Payouts (separate ledger)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Process payout", "responses": { "201": { "description": "created" } } } },
+    "/api/v1/payouts/{id}/statement": { "get": { "summary": "Printable payout statement (Phase 6.2)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/reconciliation": { "get": { "summary": "Invoiced vs paid", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/leads": { "get": { "summary": "Leads (paged)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Create lead", "responses": { "201": { "description": "created" } } } },
 
@@ -187,7 +195,7 @@
 
     "/api/v1/permissions": { "get": { "summary": "Own effective set (admins: all overrides)", "responses": { "200": { "description": "ok" } } }, "post": { "summary": "Grant/revoke exception (perm: manage_permissions)", "responses": { "201": { "description": "created" } } }, "delete": { "summary": "Clear exception", "responses": { "200": { "description": "ok" } } } },
 
-    "/api/v1/exports/log": { "post": { "summary": "Audit-log a CSV export", "responses": { "201": { "description": "logged" } } } },    "/api/v1/leads/{id}": { "put": { "summary": "Edit lead (audited)", "responses": { "200": { "description": "ok" } } }, "delete": { "summary": "Delete lead (Won blocked)", "responses": { "200": { "description": "ok" }, "422": { "description": "audit-protected" } } } },
+    "/api/v1/exports/log": { "post": { "summary": "Audit-log an export; format:csv returns scoped CSV download (Phase 6.1)", "responses": { "201": { "description": "logged" }, "200": { "description": "CSV bytes" } } } },    "/api/v1/leads/{id}": { "put": { "summary": "Edit lead (audited)", "responses": { "200": { "description": "ok" } } }, "delete": { "summary": "Delete lead (Won blocked)", "responses": { "200": { "description": "ok" }, "422": { "description": "audit-protected" } } } },
 
     "/api/v1/leads/{id}/stage": { "patch": { "summary": "Pipeline transition (lost needs reason)", "responses": { "200": { "description": "ok" } } } },
     "/api/v1/leads/{id}/activities": { "post": { "summary": "Log activity", "responses": { "201": { "description": "created" } } } },

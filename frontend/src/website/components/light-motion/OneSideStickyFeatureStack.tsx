@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CheckCircle2, ShieldCheck, Code2 } from 'lucide-react';
 
-interface RubricCard {
+export interface RubricCard {
   id: string;
   tag: string;
   title: string;
@@ -11,7 +11,14 @@ interface RubricCard {
   metrics: string[];
 }
 
-const RUBRIC_CARDS: RubricCard[] = [
+export interface FeatureStackProps {
+  eyebrow?: string;
+  title?: string;
+  sub?: string;
+  cards?: RubricCard[];
+}
+
+const DEFAULT_RUBRIC_CARDS: RubricCard[] = [
   {
     id: 'rubric-1',
     tag: 'RUBRIC 01 • CONCURRENCY',
@@ -41,10 +48,17 @@ const RUBRIC_CARDS: RubricCard[] = [
   }
 ];
 
-export const OneSideStickyFeatureStack: React.FC = () => {
+export const OneSideStickyFeatureStack: React.FC<FeatureStackProps> = ({
+  eyebrow = 'PRACTITIONER EVALUATION ENGINE',
+  title = 'Technical Vetting Rubric & Evaluation Console',
+  sub = 'Scroll through evaluation criteria on the left while our verified candidate assessment console stays pinned on the right.',
+  cards,
+}) => {
+  const items = cards && cards.length > 0 ? cards : DEFAULT_RUBRIC_CARDS;
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeIdx, setActiveIdx] = useState(0);
-  const activeRubric = RUBRIC_CARDS[activeIdx];
+  const safeIdx = Math.min(activeIdx, items.length - 1);
+  const activeRubric = items[safeIdx];
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -82,20 +96,20 @@ export const OneSideStickyFeatureStack: React.FC = () => {
   };
 
   return (
-    <section ref={containerRef} className="py-20 bg-white border-b border-slate-200 relative">
+    <section ref={containerRef} className="py-20 bg-white border-b border-neutral-200 relative">
       <div className="max-w-7xl mx-auto px-6">
         
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-[#0265FF] text-xs font-extrabold uppercase tracking-wider mb-3 shadow-xs">
-            <Code2 className="w-4 h-4 text-[#0265FF]" />
-            <span>PRACTITIONER EVALUATION ENGINE</span>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-neutral-200 text-[#000000] text-xs font-extrabold uppercase tracking-wider mb-3 shadow-xs">
+            <Code2 className="w-4 h-4 text-[#000000]" />
+            <span>{eyebrow}</span>
           </div>
-          <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-3">
-            Technical Vetting Rubric & Evaluation Console
+          <h2 className="text-3xl md:text-5xl font-extrabold text-black tracking-tight mb-3">
+            {title}
           </h2>
-          <p className="text-base text-slate-600">
-            Scroll through evaluation criteria on the left while our verified candidate assessment console stays pinned on the right.
+          <p className="text-base text-black">
+            {sub}
           </p>
         </div>
 
@@ -104,8 +118,8 @@ export const OneSideStickyFeatureStack: React.FC = () => {
           
           {/* Left Column: Scrolling Rubric Cards */}
           <div className="lg:col-span-6 space-y-6">
-            {RUBRIC_CARDS.map((item, idx) => {
-              const isActive = activeIdx === idx;
+            {items.map((item, idx) => {
+              const isActive = safeIdx === idx;
               return (
                 <div
                   key={item.id}
@@ -113,31 +127,31 @@ export const OneSideStickyFeatureStack: React.FC = () => {
                   onClick={() => scrollToRubric(idx)}
                   className={`rubric-scroll-trigger p-6 sm:p-8 rounded-3xl border transition-all duration-300 cursor-pointer ${
                     isActive
-                      ? 'bg-white border-2 border-[#0265FF] shadow-xl shadow-blue-500/10'
-                      : 'bg-[#FAF8F5] border-slate-200 hover:border-slate-300'
+                      ? 'bg-white border-2 border-[#000000] shadow-xl shadow-black/10'
+                      : 'bg-white border-neutral-200 hover:border-neutral-300'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-extrabold text-[#0265FF]">
+                    <span className="text-xs font-extrabold text-[#000000]">
                       {item.tag}
                     </span>
-                    <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    <span className="text-xs font-bold text-black bg-neutral-50 px-2.5 py-0.5 rounded-full border border-neutral-200">
                       {item.score}
                     </span>
                   </div>
 
-                  <h3 className="text-lg md:text-xl font-extrabold text-slate-900 mb-2">
+                  <h3 className="text-lg md:text-xl font-extrabold text-black mb-2">
                     {item.title}
                   </h3>
 
-                  <p className="text-xs text-slate-600 leading-relaxed mb-4 font-normal">
+                  <p className="text-xs text-black leading-relaxed mb-4 font-normal">
                     {item.detail}
                   </p>
 
-                  <div className="space-y-2 pt-4 border-t border-slate-200">
+                  <div className="space-y-2 pt-4 border-t border-neutral-200">
                     {item.metrics.map((m, mIdx) => (
-                      <div key={mIdx} className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-[#0265FF] shrink-0" />
+                      <div key={mIdx} className="flex items-center gap-2 text-xs font-semibold text-black">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#000000] shrink-0" />
                         <span>{m}</span>
                       </div>
                     ))}
@@ -156,43 +170,43 @@ export const OneSideStickyFeatureStack: React.FC = () => {
               alignSelf: 'start',
             }}
           >
-            <div className="rounded-3xl bg-[#FAF8F5] border border-slate-200 text-slate-900 shadow-xl p-6 sm:p-8 space-y-4">
-              <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+            <div className="rounded-3xl bg-white border border-neutral-200 text-black shadow-xl p-6 sm:p-8 space-y-4">
+              <div className="flex items-center justify-between pb-4 border-b border-neutral-200">
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-slate-300 inline-block" />
                   <span className="w-3 h-3 rounded-full bg-slate-300 inline-block" />
                   <span className="w-3 h-3 rounded-full bg-slate-300 inline-block" />
-                  <span className="text-xs font-bold text-slate-500 ml-2">technical_evaluation_console.ts</span>
+                  <span className="text-xs font-bold text-black ml-2">technical_evaluation_console.ts</span>
                 </div>
-                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">● VERIFIED CONSOLE</span>
+                <span className="text-xs font-bold text-black bg-neutral-50 px-2.5 py-1 rounded-full border border-neutral-200">● VERIFIED CONSOLE</span>
               </div>
 
               <div>
-                <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-1">
+                <span className="text-[10px] font-extrabold uppercase text-black block mb-1">
                   Active Evaluation Context
                 </span>
-                <h4 className="text-base font-extrabold text-slate-900">{activeRubric.title}</h4>
+                <h4 className="text-base font-extrabold text-black">{activeRubric.title}</h4>
               </div>
 
               {/* Code / Evaluation Box */}
-              <div className="p-4 rounded-2xl bg-white border border-slate-200 font-mono text-xs text-[#0265FF] overflow-x-auto shadow-xs">
+              <div className="p-4 rounded-2xl bg-white border border-neutral-200 font-mono text-xs text-[#000000] overflow-x-auto shadow-xs">
                 <pre>{activeRubric.codeSnippet}</pre>
               </div>
 
               {/* Output Strip */}
-              <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200 text-slate-800 text-xs space-y-1">
-                <div className="flex items-center gap-2 font-bold text-[#0265FF]">
+              <div className="p-4 rounded-2xl bg-white/60 border border-neutral-200 text-black text-xs space-y-1">
+                <div className="flex items-center gap-2 font-bold text-[#000000]">
                   <ShieldCheck className="w-4 h-4" />
                   <span>Benchmark Result: {activeRubric.score}</span>
                 </div>
-                <p className="text-xs text-slate-600">
+                <p className="text-xs text-black">
                   Candidate meets strict Nexa Talent IT Solutions practitioner benchmarks.
                 </p>
               </div>
 
-              <div className="pt-2 flex items-center justify-between text-xs text-slate-500 font-semibold">
+              <div className="pt-2 flex items-center justify-between text-xs text-black font-semibold">
                 <span>Vetted by Senior Engineering Review Board</span>
-                <span className="text-[#0265FF] font-bold">100% Quality Safeguard</span>
+                <span className="text-[#000000] font-bold">100% Quality Safeguard</span>
               </div>
             </div>
           </div>

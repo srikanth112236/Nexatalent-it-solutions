@@ -3,17 +3,20 @@ import { useLocation } from 'react-router-dom';
 import { PortalShell } from '../common/PortalShell';
 import { Briefcase, Plus, CheckCircle2, X, Search, Clock } from 'lucide-react';
 import { apiClient } from '../../shared/api-client';
-import { applicationsApi, platformApi, talentApi } from '../../shared/enterprise/phaseApi';
+import { applicationsApi, platformApi, talentApi, workforceApi } from '../../shared/enterprise/phaseApi';
 import { syncAll } from '../common/EnterprisePanels';
 import { Select, ActionConfirm } from '../../shared/ui/EnterpriseKit';
 import { SearchSuggest, SkillsMultiSelect, FilterPanel, DataTable } from '../../shared/ui/SearchKit';
-import { SubmissionsPanel, TalentPoolsPanel, InterviewsPanel, NotificationsPanel, OffersPlacementsPanel, CommissionsPanel } from '../common/EnterprisePanels';
+import { SubmissionsPanel, TalentPoolsPanel, InterviewsPanel, NotificationsPanel, OffersPlacementsPanel, CommissionsPanel, ChatPanel, RequisitionsPanel } from '../common/EnterprisePanels';
 import { useCan } from '../../shared/auth/AuthContext';
 import { MfaPanel } from '../../auth/components/MfaPanel';
 import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
 
 const navItems = [
   { label: 'Pipeline Overview', path: '/recruiter' },
+  { label: 'Agency Profile', path: '/recruiter/profile', group: 'Workspace' },
+  { label: 'Clients', path: '/recruiter/clients', group: 'Delivery' },
+  { label: 'Requisitions', path: '/recruiter/requisitions', group: 'Delivery' },
   { label: 'Jobs & Mandates', path: '/recruiter/jobs', group: 'Delivery' },
   { label: 'Talent Pool Search', path: '/recruiter/talent-pool', group: 'Delivery' },
   { label: 'ATS Stages', path: '/recruiter/ats', group: 'Delivery' },
@@ -22,14 +25,36 @@ const navItems = [
   { label: 'Schedule Interview', path: '/recruiter/schedule', group: 'Delivery' },
   { label: 'My Tasks', path: '/recruiter/tasks', group: 'Delivery' },
   { label: 'Interviews', path: '/recruiter/interviews', group: 'Delivery' },
+  { label: 'Reports', path: '/recruiter/reports', group: 'Delivery' },
+  { label: 'Messages', path: '/recruiter/messages', group: 'Delivery' },
   { label: 'Offers & Placements', path: '/recruiter/offers', group: 'Commercial' },
   { label: 'Commissions', path: '/recruiter/commissions', group: 'Commercial' },
+  { label: 'Settings', path: '/recruiter/settings', group: 'Workspace' },
   { label: 'Security', path: '/recruiter/security', group: 'Workspace' },
   { label: 'Notifications', path: '/recruiter/notifications', group: 'Workspace' },
 ];
 
-export function RecruiterPortal() {
-  const location = useLocation();
+function CommissionLocked() {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const request = async () => {
+    setBusy(true); setMsg('');
+    try {
+      await apiClient.post('/api/v1/support-tickets', { subject: 'Finance grant request: commissions read', body: 'Agency recruiter requests a finance read grant for commission and payout ledgers.', category: 'Account', priority: 'Medium' });
+      setMsg('Request sent — your admin will review it under Support & Issues.');
+    } catch (e: any) { setMsg(e?.response?.data?.message || e?.message || 'Request failed.'); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div className="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-sm space-y-3 text-center">
+      <EmptyState title="Finance grant required" message="Commission and payout ledgers need an explicit finance grant (manage_billing). Your pipeline, interviews and placements above are unaffected." />
+      {msg && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{msg}</div>}
+      <button type="button" onClick={request} disabled={busy} className="px-4 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs disabled:opacity-50">{busy ? 'Sending…' : 'Request finance access'}</button>
+    </div>
+  );
+}
+
+export function RecruiterPortal() {  const location = useLocation();
   // Phase 1 — finance nav denied by default (§3.3). Server denies API;
   // UI hides as secondary measure. Explicit `manage_billing` grant restores it.
   const canFinance = useCan('manage_billing');
@@ -38,6 +63,12 @@ export function RecruiterPortal() {
   const currentTab = (() => {
     const p = location.pathname;
     if (p.includes('/jobs')) return 'jobs';
+    if (p.includes('/profile')) return 'profile';
+    if (p.includes('/clients')) return 'clients';
+    if (p.includes('/requisitions')) return 'requisitions';
+    if (p.includes('/reports')) return 'reports';
+    if (p.includes('/settings')) return 'settings';
+    if (p.includes('/messages') || p.includes('/chat')) return 'messages';
     if (p.includes('/talent-pool') || p.includes('/talent')) return 'talent';
     if (p.includes('/ats')) return 'ats';
     if (p.includes('/interviews')) return 'interviews';
@@ -85,6 +116,14 @@ export function RecruiterPortal() {
   const [tUpgrade, setTUpgrade] = useState('');
   const [tSearched, setTSearched] = useState(false);
   const [fbPending, setFbPending] = useState(0);
+  // Phase 1.1: own agency profile (self-edit limited fields, verification read-only)
+  const [agency, setAgency] = useState<any>(null);
+  const [agencyLoading, setAgencyLoading] = useState(false);
+  const [agencyError, setAgencyError] = useState('');
+  const [agencyOk, setAgencyOk] = useState('');
+  const [agencyEditing, setAgencyEditing] = useState(false);
+  const [agencyForm, setAgencyForm] = useState({ displayName: '', website: '', address: '', contactName: '', contactPhone: '', specialties: '', locations: '', commercialModel: '' });
+  const [agencyBusy, setAgencyBusy] = useState(false);
 
   const STAGES = ['New', 'Applied', 'Under Review', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interview Completed', 'Selected', 'Offer', 'Hired', 'Rejected', 'Withdrawn', 'On Hold', 'Job Closed'];
 
@@ -274,6 +313,38 @@ export function RecruiterPortal() {
       } catch { setFbPending(0); }
     })();
   }, [currentTab]);
+  // Phase 1.1: load own agency once the profile tab opens
+  useEffect(() => {
+    if (currentTab !== 'profile' || agency) return;
+    (async () => {
+      setAgencyLoading(true); setAgencyError('');
+      try {
+        const res: any = await workforceApi.agencies();
+        const list = (res as any)?.data?.data || (res as any)?.data || [];
+        const own = Array.isArray(list) ? list[0] : null;
+        if (own) {
+          setAgency(own);
+          setAgencyForm({
+            displayName: own.displayName || '', website: own.website || '', address: own.address || '',
+            contactName: own.contactName || '', contactPhone: own.contactPhone || '',
+            specialties: own.specialties || '', locations: own.locations || '', commercialModel: own.commercialModel || '',
+          });
+        } else setAgencyError('No agency profile linked to this login yet — ask Super Admin to link a tenant.');
+      } catch (e: any) { setAgencyError(e?.response?.data?.message || e?.message || 'Could not load agency profile.'); }
+      finally { setAgencyLoading(false); }
+    })();
+  }, [currentTab, agency]);
+  const saveAgency = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!agency) return;
+    setAgencyBusy(true); setAgencyError(''); setAgencyOk('');
+    try {
+      const res: any = await workforceApi.updateAgency(agency.id, agencyForm);
+      const updated = (res as any)?.data || agencyForm;
+      setAgency((a: any) => ({ ...a, ...updated }));
+      setAgencyEditing(false); setAgencyOk('Profile updated.');
+    } catch (e: any) { setAgencyError(e?.response?.data?.message || e?.message || 'Save failed.'); }
+    finally { setAgencyBusy(false); }
+  };
   // Phase 2: no UI fee math — slabs are server-enforced (8.33–15%). Show operational counts only.
 
   return (
@@ -309,11 +380,102 @@ export function RecruiterPortal() {
         </div>
 
         {/* ENTERPRISE: new phase modules */}
+        {currentTab === 'profile' && (
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 shadow-sm space-y-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <h3 className="text-base font-extrabold text-slate-900">Agency Profile</h3>
+              {agency && !agencyEditing && <button type="button" onClick={() => setAgencyEditing(true)} className="px-3 py-1.5 rounded-lg bg-slate-900 text-white font-bold text-[11px]">Edit…</button>}
+            </div>
+            {agencyError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold">{agencyError}</div>}
+            {agencyOk && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{agencyOk}</div>}
+            {agencyLoading ? <InlineLoading message="Loading agency profile…" /> : agency ? agencyEditing ? (
+              <form onSubmit={saveAgency} className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                {[['displayName','Display name'],['website','Website'],['contactName','Contact name'],['contactPhone','Contact phone'],['specialties','Specialties'],['locations','Locations served'],['commercialModel','Commercial model']].map(([k, label]) => (
+                  <label key={k} className="block font-bold text-slate-700">{label}
+                    <input value={(agencyForm as any)[k] || ''} onChange={(e) => setAgencyForm({ ...agencyForm, [k]: e.target.value })} className="mt-1 w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-900 outline-none" />
+                  </label>
+                ))}
+                <label className="block font-bold text-slate-700 sm:col-span-2">Address
+                  <input value={agencyForm.address} onChange={(e) => setAgencyForm({ ...agencyForm, address: e.target.value })} className="mt-1 w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-900 outline-none" />
+                </label>
+                <div className="sm:col-span-2 flex gap-2">
+                  <button type="submit" disabled={agencyBusy} className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold disabled:opacity-50">{agencyBusy ? 'Saving…' : 'Save profile'}</button>
+                  <button type="button" onClick={() => setAgencyEditing(false)} className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold">Cancel</button>
+                </div>
+                <p className="sm:col-span-2 text-[11px] text-slate-500 font-medium">Verification + account status are managed by the platform and are read-only here.</p>
+              </form>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                {[['Agency ID', agency.id], ['Legal name', agency.legalName], ['Display name', agency.displayName], ['Contact', `${agency.contactName || ''} ${agency.contactEmail || ''} ${agency.contactPhone || ''}`.trim()], ['Website', agency.website], ['Specialties', agency.specialties], ['Locations', agency.locations], ['Verification', agency.verificationStatus], ['Account', agency.accountStatus], ['Submissions', agency.submissions], ['Placements', agency.placements], ['Payout balance', agency.payoutBalance]].map(([k, v]) => (
+                  <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—')}</div></div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        )}
+        {currentTab === 'messages' && <ChatPanel />}
+        {currentTab === 'clients' && (
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 shadow-sm space-y-3">
+            <h3 className="text-base font-extrabold text-slate-900">Client Organizations</h3>
+            <p className="text-xs text-slate-500 font-medium">Derived from your assigned mandates — names and mandate counts only, no contact or billing data.</p>
+            {(() => {
+              const m = new Map<string, { mandates: number; locations: Set<string> }>();
+              for (const j of jobs) {
+                const name = String((j as any).companyName || 'Unnamed client');
+                const e = m.get(name) || { mandates: 0, locations: new Set<string>() };
+                e.mandates += 1;
+                if ((j as any).location) e.locations.add(String((j as any).location));
+                m.set(name, e);
+              }
+              const rows = [...m.entries()].sort((a, b) => b[1].mandates - a[1].mandates);
+              return rows.length === 0 ? <EmptyState title="No clients yet" message="Clients appear here once mandates are assigned to your agency." /> : (
+                <div className="space-y-2">
+                  {rows.map(([name, v]) => (
+                    <div key={name} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2 flex-wrap text-xs">
+                      <div className="min-w-0"><div className="font-extrabold text-slate-900 text-sm truncate">{name}</div><div className="text-slate-500 font-medium">{[...v.locations].slice(0, 3).join(' • ') || 'Location —'}</div></div>
+                      <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-[#087BFF] border border-blue-200 font-bold text-[11px]">{v.mandates} mandate{v.mandates === 1 ? '' : 's'}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+        {currentTab === 'requisitions' && <RequisitionsPanel />}
+        {currentTab === 'reports' && (
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 shadow-sm space-y-3">
+            <h3 className="text-base font-extrabold text-slate-900">Delivery Reports</h3>
+            <p className="text-xs text-slate-500 font-medium">Computed live from your mandates and submissions — agency scope only.</p>
+            {(() => {
+              const byStage: Record<string, number> = {};
+              for (const a of liveApps) byStage[String((a as any).stage || 'Unknown')] = (byStage[String((a as any).stage || 'Unknown')] || 0) + 1;
+              const entries = Object.entries(byStage).sort((a, b) => b[1] - a[1]);
+              const max = Math.max(1, ...entries.map(([, n]) => n));
+              const submitted = liveApps.length;
+              const interviewed = liveApps.filter((a) => ['Interview Scheduled', 'Interview Completed', 'Selected', 'Offer', 'Hired'].includes(String((a as any).stage))).length;
+              const placed = liveApps.filter((a) => ['Offer', 'Selected', 'Hired'].includes(String((a as any).stage))).length;
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200"><div className="font-bold text-slate-500 uppercase text-[10px]">Mandates</div><div className="text-2xl font-extrabold">{jobs.length}</div></div>
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200"><div className="font-bold text-slate-500 uppercase text-[10px]">Submitted → Interviewed</div><div className="text-2xl font-extrabold">{submitted ? `${Math.round((interviewed / submitted) * 100)}%` : '—'}</div><div className="font-medium text-slate-500">{interviewed}/{submitted}</div></div>
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200"><div className="font-bold text-slate-500 uppercase text-[10px]">Submitted → Offer/Placed</div><div className="text-2xl font-extrabold">{submitted ? `${Math.round((placed / submitted) * 100)}%` : '—'}</div><div className="font-medium text-slate-500">{placed}/{submitted}</div></div>
+                  <div className="sm:col-span-3 p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                    <div className="font-bold text-slate-500 uppercase text-[10px]">Pipeline by stage</div>
+                    {entries.length === 0 ? <div className="font-medium text-slate-500">No submissions yet.</div> : entries.map(([s, n]) => (
+                      <div key={s} className="flex items-center gap-2"><span className="w-36 text-[11px] font-bold text-slate-600 truncate">{s}</span><div className="flex-1 h-2 rounded-full bg-slate-200/70 overflow-hidden"><div className="h-full rounded-full bg-[#087BFF]" style={{ width: `${Math.round((n / max) * 100)}%` }} /></div><span className="w-8 text-right font-extrabold">{n}</span></div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+        {currentTab === 'settings' && <NotificationsPanel />}
         {currentTab === 'submissions' && <SubmissionsPanel />}
         {currentTab === 'pools' && <TalentPoolsPanel />}
         {currentTab === 'schedule' && <InterviewsPanel />}
         {currentTab === 'offers' && <OffersPlacementsPanel />}
-        {currentTab === 'commissions' && (canFinance ? <CommissionsPanel /> : <EmptyState title="Not authorized" message="Commission and payout ledgers require a finance grant. Ask your admin." />)}
+        {currentTab === 'commissions' && (canFinance ? <CommissionsPanel /> : <CommissionLocked />)}
         {currentTab === 'security' && <MfaPanel />}
         {currentTab === 'notifications' && <NotificationsPanel />}
 

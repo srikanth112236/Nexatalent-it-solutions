@@ -922,6 +922,51 @@ commercialRouter.get('/payouts', requireAuth(), denyFinanceUnlessGranted, (req, 
   const { page, pageSize } = paginate.parse(req.query);
   res.json({ success: true, ...paged(rows, page, pageSize) });
 });
+// Phase 6.2: payout statement — printable JSON (payout + commission + agreement + invoices).
+commercialRouter.get('/payouts/:id/statement', requireAuth(), denyFinanceUnlessGranted, (req, res) => {
+  const db = loadDb(); const ctx = ctxOf(req);
+  const p: any = db.payouts.find((x: any) => x.id === req.params.id);
+  if (!p) return res.status(404).json({ success: false, message: 'Payout not found.' });
+  const com: any = p.commissionId ? db.commissions.find((c: any) => c.id === p.commissionId) : null;
+  if (!(FINANCE_VIEWERS as readonly string[]).includes(ctx.role)) {
+    const mine = (com && (com.orgId === ctx.tenantId || com.agencyId === ctx.tenantId)) || p.orgId === ctx.tenantId || p.vendorTenant === ctx.tenantId || String(p.candidateEmail || '').toLowerCase() === String(ctx.email).toLowerCase();
+    if (!mine) return res.status(404).json({ success: false, message: 'Payout not found.' });
+  }
+  const ag: any = com?.agreementId ? db.commissionAgreements.find((a: any) => a.id === com.agreementId) : null;
+  const invoices = com ? db.invoices.filter((i: any) => (com.invoiceIds || []).includes(i.id) || i.id === com.invoiceId) : [];
+  res.json({ success: true, data: { payout: p, commission: com, agreement: ag ? { id: ag.id, hiringType: ag.hiringType, rate: ag.rate, paymentTermsDays: ag.paymentTermsDays, replacementDays: ag.replacementDays } : null, invoices: invoices.map((i: any) => ({ id: i.id, number: i.number, status: i.status, total: i.total, balance: i.balance })), generatedAt: nowIso() } });
+});
+// Phase 6.2: commission clawback — replacement-window recovery as a negative adjustment.
+// Receivables (company) and payables (agency) stay separate legs; the adjustment recomputes both.
+commercialRouter.post('/commissions/:id/clawback', requireAuth(['superadmin','platform_owner','finance_admin']), requirePermission('adjust_commission'), (req: Request, res: Response) => {
+  const db = loadDb(); const c: any = db.commissions.find((x: any) => x.id === req.params.id);
+  if (!c) return res.status(404).json({ success: false, message: 'Commission not found.' });
+  const amount = Number(req.body?.amount);
+  const reason = String(req.body?.reason || '').slice(0, 1000);
+  if (!reason.trim()) return res.status(400).json({ success: false, message: 'Clawback reason required (audit).' });
+  if (!(amount > 0)) return res.status(400).json({ success: false, message: 'Positive clawback amount required.' });
+  if (amount > Number(c.net ?? c.total ?? 0)) return res.status(422).json({ success: false, message: 'Clawback exceeds commission net.' });
+  // Replacement-window guard: placement joinDate + agreement replacementDays.
+  const pl: any = c.placementId ? db.placements.find((x: any) => x.id === c.placementId) : db.placements.find((x: any) => x.applicationId === c.applicationId);
+  const ag: any = c.agreementId ? db.commissionAgreements.find((x: any) => x.id === c.agreementId) : null;
+  const windowDays = Number(ag?.replacementDays ?? 90);
+  if (pl?.joinDate && !req.body?.override) {
+    const elapsed = (Date.now() - new Date(pl.joinDate).getTime()) / 864e5;
+    if (elapsed > windowDays) return res.status(422).json({ success: false, code: 'WINDOW_EXPIRED', message: `Replacement window expired (${Math.floor(elapsed)}d > ${windowDays}d). Pass override:true with finance approval to proceed.` });
+  }
+  if (!claimIdempotency(`clawback:${c.id}:${amount}:${reason}`)) return res.status(200).json({ success: true, message: 'Duplicate ignored (idempotent).' });
+  const row = { id: uid('ADJ'), commissionId: c.id, amount: -Math.round(amount * 100) / 100, reason: `CLAWBACK: ${reason.trim()}`, type: 'clawback', by: ctxOf(req).email, createdAt: nowIso() };
+  db.commissionAdjustments.unshift(row);
+  c.adjustments = +(Number(c.adjustments || 0) + row.amount).toFixed(2);
+  const gross = +(Number(c.gross || 0) + row.amount).toFixed(2);
+  c.tax = +(gross * 0.18).toFixed(2);
+  c.total = +(gross * 1.18).toFixed(2);
+  c.net = c.total;
+  c.clawback = true;
+  audit(ctxOf(req).email, `COMMISSION_CLAWBACK:${c.id}:${row.amount}`, c.orgId, 'commission', c.id, req.ip); persist();
+  emit('commission.clawback', { commissionId: c.id, amount: row.amount, reason }, c.orgId, ctxOf(req).email);
+  res.status(201).json({ success: true, data: { adjustment: row, commission: c } });
+});
 /* ---------------- Contract payroll: approved timesheets → staffing invoice + contractor payouts ----------------
    Sync chain: vendor submits → company approves → finance runs payroll (ONE run per org+period, idempotent)
    → staffing invoice (Company→NexaTalent, +18% GST) + contractor payouts @82% (NexaTalent→candidate, Payable)

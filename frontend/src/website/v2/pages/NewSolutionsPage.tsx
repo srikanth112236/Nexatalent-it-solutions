@@ -20,7 +20,7 @@ import { SeoHead } from '../../components/SeoHead';
 import { ServiceDetailModal } from '../components/ServiceDetailModal';
 import { getServiceDetail } from '../data/serviceDetails';
 
-/** Nine NexaTalent delivery services — reference-style light SaaS layout, blue palette. */
+/** Nine NexaTalent delivery services — white background, black text only. */
 const NINE_SERVICES = [
   { slug: 'permanent-recruitment', icon: Users, title: 'Permanent Recruitment', desc: 'Direct full-time hiring for technology, engineering, corporate and leadership roles with replacement guarantees.' },
   { slug: 'contract-staffing', icon: Timer, title: 'Contract Staffing', desc: 'Time-bound, project-based workforce with payroll, statutory compliance and single-window invoicing.' },
@@ -51,7 +51,7 @@ function ArrowButton({ to, label }: { to: string; label: string }) {
       className="group inline-flex min-h-[48px] items-center gap-3 rounded-full bg-black py-1.5 pl-6 pr-1.5 text-sm font-bold text-white shadow-lg shadow-black/10 transition-all hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
     >
       {label}
-      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-black transition-transform group-hover:translate-x-0.5">
+      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-black transition-transform group-hover:tranneutral-x-0.5">
         <ArrowRight size={15} aria-hidden />
       </span>
     </Link>

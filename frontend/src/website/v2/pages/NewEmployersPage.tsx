@@ -63,11 +63,7 @@ export function NewEmployersPage() {
       <V2Navbar />
       <main id="main-content">
         {/* ===== PREMIUM BANNER — compact, everything visible in one view ===== */}
-        <section className="relative overflow-hidden border-b border-neutral-200 bg-gradient-to-b from-slate-50 via-white to-white px-4 pb-10 pt-6 sm:px-6 sm:pt-8" aria-label="Employers banner">
-          <div aria-hidden className="pointer-events-none absolute inset-0">
-            <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-slate-100 blur-3xl opacity-80" />
-            <div className="absolute -top-16 right-[-80px] h-80 w-80 rounded-full bg-slate-100 blur-3xl opacity-70" />
-          </div>
+        <section className="relative overflow-hidden border-b border-neutral-200 bg-white px-4 pb-10 pt-6 sm:px-6 sm:pt-8" aria-label="Employers banner">
           <div className="relative mx-auto grid max-w-6xl items-start gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
             <div className="pt-1">
               <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-black/60">

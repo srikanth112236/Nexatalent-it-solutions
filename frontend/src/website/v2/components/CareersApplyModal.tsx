@@ -11,7 +11,7 @@ interface Props {
 }
 
 const field =
-  'min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3.5 text-[13px] outline-none placeholder:text-black/50 focus:border-black focus:ring-2 focus:ring-black/15';
+  'min-h-[44px] w-full rounded-xl border border-neutral-200 bg-white px-3.5 text-[13px] outline-none placeholder:text-black/50 focus:border-black focus:ring-2 focus:ring-black/15';
 
 const EXPERIENCE = ['0–1 yrs', '1–3 yrs', '3–5 yrs', '5–8 yrs', '8–12 yrs', '12+ yrs'];
 const NOTICE = ['Immediate joiner', '15 days', '30 days', '60 days', '90 days'];
@@ -154,7 +154,7 @@ export function CareersApplyModal({ jobTitle, jobSlug, sourcePage, onClose }: Pr
         tabIndex={-1}
         className="relative max-h-[92vh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-3xl bg-white shadow-2xl outline-none sm:rounded-3xl"
       >
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white/95 px-5 py-3.5 backdrop-blur sm:px-7">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-100 bg-white/95 px-5 py-3.5 backdrop-blur sm:px-7">
           <div className="flex items-center gap-3">
             <span className="rounded-full bg-black px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white">
               Careers
@@ -165,14 +165,14 @@ export function CareersApplyModal({ jobTitle, jobSlug, sourcePage, onClose }: Pr
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="flex h-9 w-9 items-center justify-center rounded-full text-black transition-colors hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-black"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-black transition-colors hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-black"
           >
             <X size={18} aria-hidden />
           </button>
         </div>
 
         {!doneId && (
-          <div className="h-1.5 w-full bg-slate-100" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label="Form progress">
+          <div className="h-1.5 w-full bg-neutral-100" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label="Form progress">
             <div className="h-full rounded-full bg-black transition-all duration-500" style={{ width: `${progress}%` }} />
           </div>
         )}
@@ -252,7 +252,7 @@ export function CareersApplyModal({ jobTitle, jobSlug, sourcePage, onClose }: Pr
               <span id="ca-resume-label" className="mb-1.5 block text-[11px] font-bold text-black">Resume (PDF, DOC, DOCX · max 5 MB) *</span>
               <label
                 htmlFor="ca-resume"
-                className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50/60 p-4 transition-colors hover:border-black focus-within:border-black"
+                className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-neutral-300 bg-neutral-50/60 p-4 transition-colors hover:border-black focus-within:border-black"
               >
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black text-white">
                   {resumeFile ? <FileText size={16} aria-hidden /> : <Upload size={16} aria-hidden />}
@@ -287,7 +287,7 @@ export function CareersApplyModal({ jobTitle, jobSlug, sourcePage, onClose }: Pr
                 placeholder="2–3 lines on your stack, domain and why this role…"
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
-                className="w-full rounded-xl border border-slate-200 bg-white p-3.5 text-[13px] leading-relaxed outline-none placeholder:text-black/50 focus:border-black focus:ring-2 focus:ring-black/15"
+                className="w-full rounded-xl border border-neutral-200 bg-white p-3.5 text-[13px] leading-relaxed outline-none placeholder:text-black/50 focus:border-black focus:ring-2 focus:ring-black/15"
               />
             </div>
 

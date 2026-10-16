@@ -19,12 +19,12 @@ export function SafeImage({ src, alt, fallbackLabel, className = '', ...rest }: 
       <div
         role="img"
         aria-label={alt}
-        className={`flex w-full items-center justify-center bg-gradient-to-br from-slate-100 via-white to-slate-200 text-center ${className}`}
+        className={`flex w-full items-center justify-center bg-white text-center ${className}`}
         style={{ aspectRatio: '16 / 10' }}
       >
         <div className="px-6">
-          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">NexaTalent</p>
-          <p className="mt-1 text-sm font-extrabold text-slate-700">{fallbackLabel || alt || 'NexaTalent delivery team'}</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-black">NexaTalent</p>
+          <p className="mt-1 text-sm font-extrabold text-black">{fallbackLabel || alt || 'NexaTalent delivery team'}</p>
         </div>
       </div>
     );

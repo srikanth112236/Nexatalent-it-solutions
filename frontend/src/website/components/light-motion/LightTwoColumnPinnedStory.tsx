@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CheckCircle2, Cpu, Sparkles, Terminal, FileCode2, ShieldCheck, ChevronRight } from 'lucide-react';
 
-interface StageInfo {
+export interface StageInfo {
   id: string;
   step: string;
   title: string;
@@ -13,7 +13,14 @@ interface StageInfo {
   rubricItems: string[];
 }
 
-const stages: StageInfo[] = [
+export interface PinnedStoryProps {
+  eyebrow?: string;
+  title?: string;
+  sub?: string;
+  stages?: StageInfo[];
+}
+
+const DEFAULT_STAGES: StageInfo[] = [
   {
     id: 'stage-1',
     step: 'PHASE 01',
@@ -76,7 +83,13 @@ const stages: StageInfo[] = [
   },
 ];
 
-export const LightTwoColumnPinnedStory: React.FC = () => {
+export const LightTwoColumnPinnedStory: React.FC<PinnedStoryProps> = ({
+  eyebrow = 'RIGOROUS TALENT VETTING METHODOLOGY',
+  title = 'Deterministic Talent Verification In Action',
+  sub = 'Scroll through our 4-phase evaluation framework while the interactive assessment console stays pinned on the left.',
+  stages,
+}) => {
+  const items = stages && stages.length > 0 ? stages : DEFAULT_STAGES;
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeStage, setActiveStage] = useState(0);
 
@@ -115,7 +128,8 @@ export const LightTwoColumnPinnedStory: React.FC = () => {
     }
   };
 
-  const current = stages[activeStage] || stages[0];
+  const safeIdx = Math.min(activeStage, items.length - 1);
+  const current = items[safeIdx] || items[0];
 
   return (
     <section
@@ -139,24 +153,24 @@ export const LightTwoColumnPinnedStory: React.FC = () => {
               gap: '0.4rem',
               padding: '0.4rem 0.9rem',
               borderRadius: '9999px',
-              backgroundColor: '#EFF6FF',
-              border: '1px solid #BFDBFE',
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #E5E5E5',
               fontSize: '0.8125rem',
               fontWeight: 800,
-              color: '#0265FF',
+              color: '#000000',
               marginBottom: '1rem',
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
             }}
           >
             <Sparkles size={14} />
-            <span>RIGOROUS TALENT VETTING METHODOLOGY</span>
+            <span>{eyebrow}</span>
           </div>
           <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0F172A' }}>
-            Deterministic Talent Verification In Action
+            {title}
           </h2>
           <p style={{ color: '#475569', fontSize: '1.0625rem', maxWidth: '660px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
-            Scroll through our 4-phase evaluation framework while the interactive assessment console stays pinned on the left.
+            {sub}
           </p>
         </div>
 
@@ -178,7 +192,7 @@ export const LightTwoColumnPinnedStory: React.FC = () => {
               top: '100px',
               alignSelf: 'start',
               borderRadius: '24px',
-              backgroundColor: '#FAF8F5',
+              backgroundColor: '#FFFFFF',
               border: '1px solid #e2e8f0',
               padding: '2rem',
               boxShadow: '0 20px 40px -15px rgba(2, 101, 255, 0.08)',
@@ -191,7 +205,7 @@ export const LightTwoColumnPinnedStory: React.FC = () => {
                 style={{
                   fontSize: '0.75rem',
                   fontWeight: 800,
-                  backgroundColor: '#0265FF',
+                  backgroundColor: '#000000',
                   color: '#ffffff',
                   padding: '0.25rem 0.65rem',
                   borderRadius: '6px',
@@ -200,14 +214,14 @@ export const LightTwoColumnPinnedStory: React.FC = () => {
               >
                 {current.step}
               </span>
-              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#059669', backgroundColor: '#ecfdf5', padding: '0.2rem 0.6rem', borderRadius: '9999px', border: '1px solid #a7f3d0' }}>
-                ● IN FOCUS ({activeStage + 1}/4)
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#000000', backgroundColor: '#FFFFFF', padding: '0.2rem 0.6rem', borderRadius: '9999px', border: '1px solid #E5E5E5' }}>
+                ● IN FOCUS ({safeIdx + 1}/{items.length})
               </span>
             </div>
 
             {/* Interactive Phase Selector Pills */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1.25rem' }}>
-              {stages.map((stg, i) => {
+              {items.map((stg, i) => {
                 const isSelected = activeStage === i;
                 return (
                   <button
@@ -221,9 +235,9 @@ export const LightTwoColumnPinnedStory: React.FC = () => {
                       textAlign: 'left',
                       padding: '0.6rem 0.85rem',
                       borderRadius: '12px',
-                      border: isSelected ? '1px solid #0265FF' : '1px solid transparent',
+                      border: isSelected ? '1px solid #000000' : '1px solid transparent',
                       backgroundColor: isSelected ? '#ffffff' : 'transparent',
-                      color: isSelected ? '#0265FF' : '#64748b',
+                      color: isSelected ? '#000000' : '#64748b',
                       fontWeight: isSelected ? 800 : 600,
                       fontSize: '0.8125rem',
                       cursor: 'pointer',
@@ -234,7 +248,7 @@ export const LightTwoColumnPinnedStory: React.FC = () => {
                       <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>0{i + 1}.</span>
                       <span>{stg.shortLabel}</span>
                     </span>
-                    {isSelected && <ChevronRight size={14} color="#0265FF" />}
+                    {isSelected && <ChevronRight size={14} color="#000000" />}
                   </button>
                 );
               })}
@@ -253,10 +267,10 @@ export const LightTwoColumnPinnedStory: React.FC = () => {
               <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>
                 Phase Performance SLA Metric
               </div>
-              <div style={{ fontSize: '2.25rem', fontWeight: 900, color: '#0265FF', lineHeight: 1 }}>
+              <div style={{ fontSize: '2.25rem', fontWeight: 900, color: '#000000', lineHeight: 1 }}>
                 {current.metric}
               </div>
-              <div style={{ fontSize: '0.8125rem', color: '#059669', fontWeight: 700, marginTop: '0.4rem' }}>
+              <div style={{ fontSize: '0.8125rem', color: '#000000', fontWeight: 700, marginTop: '0.4rem' }}>
                 ✓ {current.metricLabel}
               </div>
             </div>
@@ -268,7 +282,7 @@ export const LightTwoColumnPinnedStory: React.FC = () => {
               </div>
               {current.rubricItems.map((item, idx) => (
                 <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.8125rem', color: '#334155', lineHeight: 1.4 }}>
-                  <CheckCircle2 size={15} color="#0265FF" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <CheckCircle2 size={15} color="#000000" style={{ flexShrink: 0, marginTop: '2px' }} />
                   <span style={{ fontWeight: 600 }}>{item}</span>
                 </div>
               ))}
@@ -278,14 +292,14 @@ export const LightTwoColumnPinnedStory: React.FC = () => {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '0.35rem' }}>
                 <span>Framework Progression</span>
-                <span style={{ color: '#0265FF' }}>{current.progress}%</span>
+                <span style={{ color: '#000000' }}>{current.progress}%</span>
               </div>
               <div style={{ height: '6px', width: '100%', backgroundColor: '#e2e8f0', borderRadius: '9999px', overflow: 'hidden' }}>
                 <div
                   style={{
                     height: '100%',
                     width: `${current.progress}%`,
-                    backgroundColor: '#0265FF',
+                    backgroundColor: '#000000',
                     borderRadius: '9999px',
                     transition: 'width 0.4s ease',
                   }}
@@ -296,8 +310,8 @@ export const LightTwoColumnPinnedStory: React.FC = () => {
 
           {/* RIGHT SCROLLING CARDS (Col Span 7) */}
           <div className="lg:col-span-7 col-span-12" style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
-            {stages.map((stage, idx) => {
-              const isActive = activeStage === idx;
+            {items.map((stage, idx) => {
+              const isActive = safeIdx === idx;
               return (
                 <div
                   key={stage.id}
@@ -305,8 +319,8 @@ export const LightTwoColumnPinnedStory: React.FC = () => {
                   className="story-scroll-trigger"
                   style={{
                     borderRadius: '24px',
-                    backgroundColor: isActive ? '#ffffff' : '#FAF8F5',
-                    border: isActive ? '2px solid #0265FF' : '1px solid #e2e8f0',
+                    backgroundColor: isActive ? '#ffffff' : '#FFFFFF',
+                    border: isActive ? '2px solid #000000' : '1px solid #e2e8f0',
                     padding: '2.5rem',
                     boxShadow: isActive ? '0 20px 40px -10px rgba(2, 101, 255, 0.14)' : 'none',
                     transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -321,8 +335,8 @@ export const LightTwoColumnPinnedStory: React.FC = () => {
                           width: '40px',
                           height: '40px',
                           borderRadius: '12px',
-                          backgroundColor: isActive ? '#EFF6FF' : '#f1f5f9',
-                          color: isActive ? '#0265FF' : '#64748b',
+                          backgroundColor: isActive ? '#FFFFFF' : '#f1f5f9',
+                          color: isActive ? '#000000' : '#64748b',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -334,7 +348,7 @@ export const LightTwoColumnPinnedStory: React.FC = () => {
                         {idx === 3 && <ShieldCheck size={20} />}
                       </div>
                       <div>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: isActive ? '#0265FF' : '#64748b', textTransform: 'uppercase' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: isActive ? '#000000' : '#64748b', textTransform: 'uppercase' }}>
                           {stage.step} Execution Node
                         </span>
                         <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
@@ -347,11 +361,11 @@ export const LightTwoColumnPinnedStory: React.FC = () => {
                       style={{
                         fontSize: '0.75rem',
                         fontWeight: 700,
-                        color: isActive ? '#059669' : '#94a3b8',
-                        backgroundColor: isActive ? '#ecfdf5' : '#f1f5f9',
+                        color: isActive ? '#000000' : '#94a3b8',
+                        backgroundColor: isActive ? '#FFFFFF' : '#f1f5f9',
                         padding: '0.25rem 0.65rem',
                         borderRadius: '9999px',
-                        border: isActive ? '1px solid #a7f3d0' : '1px solid #e2e8f0',
+                        border: isActive ? '1px solid #E5E5E5' : '1px solid #e2e8f0',
                       }}
                     >
                       {isActive ? '● Active Step' : 'Stage Ready'}
@@ -363,7 +377,7 @@ export const LightTwoColumnPinnedStory: React.FC = () => {
                   </p>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1.25rem', backgroundColor: isActive ? '#f8fafc' : '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0265FF', textTransform: 'uppercase' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#000000', textTransform: 'uppercase' }}>
                       Calibrated Output & Audit Standard:
                     </div>
                     <div style={{ fontSize: '0.8125rem', color: '#1e293b', fontWeight: 600 }}>
