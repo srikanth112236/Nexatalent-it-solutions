@@ -105,8 +105,10 @@ export function NewJobsPage() {
   const changePage = (p: number) => {
     const next = Math.min(Math.max(1, p), totalPages);
     setPage(next);
-    // Scroll the independent jobs feed back to its top (native container scroll)
-    listRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    // Feed moves with the page — bring its top back into view on page change
+    requestAnimationFrame(() => {
+      document.getElementById('jobs-feed')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   };
 
   return (
@@ -246,9 +248,9 @@ export function NewJobsPage() {
               </div>
             </div>
 
-            <div className="mt-6 grid grid-cols-1 items-start gap-5 lg:grid-cols-[280px_1fr]">
-              {/* categories sidebar — sticky, filters stay put */}
-              <aside data-lenis-prevent className="sidebar-scroll h-fit rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto" aria-label="Job categories">
+            <div className="mt-6 grid grid-cols-1 items-start gap-5 lg:grid-cols-[1fr_280px]">
+              {/* categories sidebar — right side, sticky; no internal overflow scroll */}
+              <aside className="order-1 h-fit rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm lg:order-2 lg:sticky lg:top-24 lg:self-start" aria-label="Job categories">
                 <h3 className="text-[15px] font-extrabold tracking-tight text-black">Job Categories</h3>
                 <ul className="mt-3 divide-y divide-neutral-200">
                   {CATEGORIES.map((c) => {
@@ -290,8 +292,8 @@ export function NewJobsPage() {
                 </div>
               </aside>
 
-              {/* job cards — sticky + independently scrollable feed on desktop (native scroll, Lenis-exempt) */}
-              <div ref={listRef} data-lenis-prevent className="sidebar-scroll min-w-0 lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pr-1 lg:pb-2">
+              {/* job cards — left side, moves naturally with page scroll (no overflow) */}
+              <div ref={listRef} id="jobs-feed" className="order-2 min-w-0 scroll-mt-28 lg:order-1">
                 <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-black/50" aria-live="polite">
                   {list.length} opening{list.length === 1 ? '' : 's'} · Page {currentPage} of {totalPages}
                 </p>
