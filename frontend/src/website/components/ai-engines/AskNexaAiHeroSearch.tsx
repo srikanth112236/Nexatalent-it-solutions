@@ -161,9 +161,9 @@ export function AskNexaAiHeroSearch({
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-blue-50 text-[#0265FF] border border-blue-200 shadow-xs uppercase tracking-wider"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-neutral-100 text-black border border-neutral-300 shadow-xs uppercase tracking-wider"
           >
-            <Sparkles className="w-3.5 h-3.5 text-[#0265FF]" />
+            <Sparkles className="w-3.5 h-3.5 text-black" />
             <span>NEXA AI HIRING ENGINE • VERIFIED TALENT MANDATES</span>
           </motion.div>
 
@@ -200,20 +200,20 @@ export function AskNexaAiHeroSearch({
                 }}
                 className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
                   isSelected
-                    ? 'bg-white border-2 border-[#0265FF] shadow-lg shadow-blue-500/10'
+                    ? 'bg-white border-2 border-black shadow-lg shadow-black/10'
                     : 'bg-white border-slate-200 hover:border-slate-300'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-extrabold text-slate-900 flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-[#0265FF]" />
+                    <MapPin className="w-3.5 h-3.5 text-black" />
                     <span>{hub.city}</span>
                   </span>
-                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  <span className="text-[10px] font-bold text-black bg-neutral-100 px-2 py-0.5 rounded-full border border-neutral-300">
                     {hub.sla}
                   </span>
                 </div>
-                <div className="text-[11px] font-bold text-[#0265FF] truncate">{hub.role}</div>
+                <div className="text-[11px] font-bold text-black truncate">{hub.role}</div>
                 <div className="text-[10px] text-slate-500 mt-0.5">{hub.pool}</div>
               </button>
             );
@@ -225,19 +225,19 @@ export function AskNexaAiHeroSearch({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
-          className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-7 shadow-xl shadow-blue-900/5 space-y-4"
+          className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-7 shadow-xl shadow-black/5 space-y-4"
         >
           <div className="flex flex-col md:flex-row gap-3 items-stretch">
             <div className="relative flex-1">
               <div className="absolute top-4 left-4 pointer-events-none text-slate-400">
-                <Search className="w-5 h-5 text-[#0265FF]" />
+                <Search className="w-5 h-5 text-black" />
               </div>
               <textarea
                 rows={2}
                 value={query}
                 onChange={(e) => handleQueryChange(e.target.value)}
                 placeholder="e.g. I need 5 Java developers in Bangalore with 5+ years experience, Spring Boot, Microservices, immediate joiners..."
-                className="w-full pl-12 pr-4 py-3.5 bg-[#FAF8F5] border border-slate-200 rounded-2xl text-slate-900 text-sm sm:text-base placeholder-slate-400 focus:outline-none focus:border-[#0265FF] focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all resize-none font-medium"
+                className="w-full pl-12 pr-4 py-3.5 bg-[#FAF8F5] border border-slate-200 rounded-2xl text-slate-900 text-sm sm:text-base placeholder-slate-400 focus:outline-none focus:border-black focus:bg-white focus:ring-2 focus:ring-black/10 transition-all resize-none font-medium"
               />
             </div>
             <div className="flex md:flex-col justify-end gap-2">
@@ -245,7 +245,7 @@ export function AskNexaAiHeroSearch({
                 type="button"
                 onClick={() => handleAnalyze()}
                 disabled={isAnalyzing}
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-[#0265FF] hover:bg-[#004FBF] text-white font-bold text-sm transition-all shadow-lg shadow-blue-600/20 active:scale-95 disabled:opacity-50 cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-black hover:bg-neutral-800 text-white font-bold text-sm transition-all shadow-lg shadow-black/10 active:scale-95 disabled:opacity-50 cursor-pointer"
               >
                 {isAnalyzing ? (
                   <>
@@ -273,7 +273,7 @@ export function AskNexaAiHeroSearch({
                   handleQueryChange(preset);
                   handleAnalyze(preset);
                 }}
-                className="text-xs px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-[#0265FF] text-slate-700 border border-slate-200 transition-all text-left truncate max-w-[280px] sm:max-w-xs font-semibold cursor-pointer"
+                className="text-xs px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-neutral-200 hover:text-black text-slate-700 border border-slate-200 transition-all text-left truncate max-w-[280px] sm:max-w-xs font-semibold cursor-pointer"
               >
                 {preset.slice(0, 44)}...
               </button>
@@ -287,22 +287,22 @@ export function AskNexaAiHeroSearch({
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.35 }}
-            className="bg-white border border-blue-200 rounded-3xl p-6 sm:p-8 shadow-xl shadow-blue-900/5 relative overflow-hidden space-y-6"
+            className="bg-white border border-neutral-300 rounded-3xl p-6 sm:p-8 shadow-xl shadow-black/5 relative overflow-hidden space-y-6"
           >
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div>
-                <span className="text-[10px] font-extrabold uppercase text-[#0265FF] tracking-wider block mb-1">
+                <span className="text-[10px] font-extrabold uppercase text-black tracking-wider block mb-1">
                   TARGET ROLE SPECIFICATION IDENTIFIED
                 </span>
                 <h3 className="text-xl sm:text-2xl font-black text-slate-900 flex items-center gap-3">
                   {parsedResult.jobTitle}
-                  <span className="text-xs px-3 py-1 rounded-full bg-blue-50 text-[#0265FF] border border-blue-200 font-bold">
+                  <span className="text-xs px-3 py-1 rounded-full bg-neutral-100 text-black border border-neutral-300 font-bold">
                     {parsedResult.openings} Openings
                   </span>
                 </h3>
               </div>
-              <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-black bg-neutral-100 px-3 py-1 rounded-full border border-neutral-300">
+                <CheckCircle2 className="w-4 h-4 text-black" />
                 <span>Specs Extracted</span>
               </span>
             </div>
@@ -313,7 +313,7 @@ export function AskNexaAiHeroSearch({
                 <span className="text-slate-500 font-semibold block">1. Mandatory Skills</span>
                 <div className="flex flex-wrap gap-1 pt-1">
                   {parsedResult.mandatorySkills.map((sk, i) => (
-                    <span key={i} className="px-2 py-0.5 rounded bg-blue-100 text-[#0265FF] font-extrabold">
+                    <span key={i} className="px-2 py-0.5 rounded bg-neutral-200 text-black font-extrabold">
                       {sk}
                     </span>
                   ))}
@@ -332,17 +332,17 @@ export function AskNexaAiHeroSearch({
 
               <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-slate-200 space-y-1">
                 <span className="text-slate-500 font-semibold block">4. Work Mode</span>
-                <span className="font-extrabold text-emerald-700 text-sm">{parsedResult.workMode}</span>
+                <span className="font-extrabold text-black text-sm">{parsedResult.workMode}</span>
               </div>
 
               <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-slate-200 space-y-1">
                 <span className="text-slate-500 font-semibold block">5. Target CTC Band</span>
-                <span className="font-extrabold text-[#0265FF] text-sm">{parsedResult.salaryCTC}</span>
+                <span className="font-extrabold text-black text-sm">{parsedResult.salaryCTC}</span>
               </div>
 
               <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-slate-200 space-y-1">
                 <span className="text-slate-500 font-semibold block">6. Notice Period</span>
-                <span className="font-extrabold text-amber-700 text-sm">{parsedResult.noticePeriod}</span>
+                <span className="font-extrabold text-black text-sm">{parsedResult.noticePeriod}</span>
               </div>
 
               <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-slate-200 space-y-1">
@@ -359,7 +359,7 @@ export function AskNexaAiHeroSearch({
             {/* Action Strip */}
             <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
-                <SlidersHorizontal className="w-4 h-4 text-[#0265FF]" />
+                <SlidersHorizontal className="w-4 h-4 text-black" />
                 <span>Nexa Talent Database: <strong className="text-slate-900 font-bold">42 Matching Candidate Dossiers Ready</strong></span>
               </div>
               <button
@@ -369,7 +369,7 @@ export function AskNexaAiHeroSearch({
                   const el = document.getElementById('jobs-interactive-filter-deck');
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 rounded-2xl bg-[#0265FF] hover:bg-[#004FBF] text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-blue-600/20 active:scale-95 cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 rounded-2xl bg-black hover:bg-neutral-800 text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-black/10 active:scale-95 cursor-pointer"
               >
                 <span>View Filtered Mandates Below</span>
                 <ArrowRight className="w-4 h-4" />

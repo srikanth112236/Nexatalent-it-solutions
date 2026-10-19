@@ -48,22 +48,22 @@ export const LightBeforeAfterMatrix: React.FC = () => {
             gap: '0.4rem',
             padding: '0.35rem 0.85rem',
             borderRadius: '9999px',
-            backgroundColor: 'rgba(37, 99, 235, 0.08)',
-            border: '1px solid rgba(37, 99, 235, 0.25)',
+            backgroundColor: '#ffffff',
+            border: '1px solid #000000',
             fontSize: '0.8125rem',
             fontWeight: 800,
-            color: '#2563eb',
+            color: '#000000',
             marginBottom: '1rem',
           }}
         >
-          <Sparkles size={14} />
+          <Sparkles size={14} color="#000000" />
           <span>NEXATALENT OPERATING SYSTEM ADVANTAGE</span>
         </div>
 
-        <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--nt-ink, #0f172a)', marginBottom: '0.75rem' }}>
+        <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#000000', marginBottom: '0.75rem' }}>
           Conventional Agency vs. NexaTalent IT Solutions Platform
         </h2>
-        <p style={{ color: 'var(--nt-muted, #64748b)', fontSize: '1.0625rem', maxWidth: '640px', margin: '0 auto 4rem auto', lineHeight: 1.6 }}>
+        <p style={{ color: '#000000', fontSize: '1.0625rem', maxWidth: '640px', margin: '0 auto 4rem auto', lineHeight: 1.6 }}>
           See how our deterministic engineering infrastructure eliminates traditional recruiter failure modes.
         </p>
 
@@ -71,7 +71,7 @@ export const LightBeforeAfterMatrix: React.FC = () => {
         <div
           style={{
             borderRadius: '24px',
-            border: '1px solid var(--nt-border, #e2e8f0)',
+            border: '1px solid #e2e8f0',
             overflow: 'hidden',
             boxShadow: '0 20px 45px -15px rgba(0,0,0,0.06)',
             textAlign: 'left',
@@ -82,17 +82,17 @@ export const LightBeforeAfterMatrix: React.FC = () => {
             style={{
               display: 'grid',
               gridTemplateColumns: '1.2fr 2fr 2fr',
-              backgroundColor: 'var(--nt-surface-2, #f8fafc)',
-              borderBottom: '2px solid var(--nt-border, #e2e8f0)',
+              backgroundColor: '#f8fafc',
+              borderBottom: '2px solid #000000',
               padding: '1.25rem 2rem',
               fontWeight: 800,
               fontSize: '0.875rem',
-              color: 'var(--nt-ink-2, #334155)',
+              color: '#000000',
             }}
           >
             <div>OPERATIONAL DIMENSION</div>
-            <div style={{ color: '#ef4444' }}>CONVENTIONAL RECRUITER</div>
-            <div style={{ color: '#2563eb' }}>NEXATALENT IT SOLUTIONS OPERATING SYSTEM</div>
+            <div style={{ color: '#525252' }}>CONVENTIONAL RECRUITER</div>
+            <div style={{ color: '#000000', fontWeight: 900 }}>NEXATALENT IT SOLUTIONS OPERATING SYSTEM</div>
           </div>
 
           {/* Rows */}
@@ -107,31 +107,31 @@ export const LightBeforeAfterMatrix: React.FC = () => {
                 display: 'grid',
                 gridTemplateColumns: '1.2fr 2fr 2fr',
                 padding: '1.5rem 2rem',
-                borderBottom: idx < comparisons.length - 1 ? '1px solid var(--nt-border, #e2e8f0)' : 'none',
-                backgroundColor: idx % 2 === 0 ? 'var(--nt-surface, #ffffff)' : '#fcfdfd',
+                borderBottom: idx < comparisons.length - 1 ? '1px solid #e2e8f0' : 'none',
+                backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fafafa',
                 alignItems: 'center',
                 gap: '1.5rem',
               }}
             >
-              <div style={{ fontWeight: 800, fontSize: '0.9375rem', color: 'var(--nt-ink, #0f172a)' }}>
+              <div style={{ fontWeight: 800, fontSize: '0.9375rem', color: '#000000' }}>
                 {item.feature}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', color: 'var(--nt-muted, #64748b)', fontSize: '0.875rem', lineHeight: 1.5 }}>
-                <XCircle size={16} color="#ef4444" style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', color: '#525252', fontSize: '0.875rem', lineHeight: 1.5 }}>
+                <XCircle size={16} color="#737373" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <span>{item.traditional}</span>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', color: 'var(--nt-ink, #0f172a)', fontWeight: 600, fontSize: '0.875rem', lineHeight: 1.5, backgroundColor: '#eff6ff', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #bfdbfe' }}>
-                <CheckCircle2 size={16} color="#2563eb" style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', color: '#000000', fontWeight: 700, fontSize: '0.875rem', lineHeight: 1.5, backgroundColor: '#f5f5f5', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #d4d4d4' }}>
+                <CheckCircle2 size={16} color="#000000" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <span>{item.nexatalent}</span>
               </div>
             </motion.div>
           ))}
         </div>
 
-        <div style={{ marginTop: '2.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: '#059669', fontWeight: 700, fontSize: '0.875rem' }}>
-          <ShieldCheck size={18} />
+        <div style={{ marginTop: '2.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: '#000000', fontWeight: 700, fontSize: '0.875rem' }}>
+          <ShieldCheck size={18} color="#000000" />
           <span>Every mandate run on structured screening with defined terms</span>
         </div>
       </div>

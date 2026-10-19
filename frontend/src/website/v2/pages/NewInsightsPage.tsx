@@ -118,7 +118,7 @@ export function NewInsightsPage() {
                       alt=""
                       loading="lazy"
                       decoding="async"
-                      className="aspect-[4/3] w-full object-cover object-center transition-transform duration-500 hover:scale-[1.03]"
+                      className="aspect-[16/10] w-full object-cover object-center transition-transform duration-500 hover:scale-[1.03]"
                     />
                   </Link>
                   <span className="mt-4 w-fit rounded-full bg-black px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">

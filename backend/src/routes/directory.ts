@@ -22,7 +22,11 @@ directoryRouter.get('/tenants', requireAuth([...TENANTS_PLATFORM_ROLES, 'employe
 });
 directoryRouter.post('/tenants', requireAuth(['superadmin','platform_owner']), (req: Request, res: Response) => {
   const b: any = req.body || {};
-  if (!b.legalName && !b.displayName && !b.name) return res.status(400).json({ success: false, message: 'legalName required.' });
+  if (b.gstin !== undefined && b.gstin !== '') {
+    if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/i.test(String(b.gstin).trim())) {
+      return res.status(400).json({ success: false, message: 'Invalid GSTIN format (e.g. 29AABCT1011A1Z5).' });
+    }
+  }
   // P6: allowlist — was ...req.body (caller could set id/status/verification).
   const org = {
     id: uid('TNT'), status: 'Invited', verificationStatus: 'Pending', accountStatus: 'Invited', createdDate: nowIso().slice(0, 10),
@@ -47,7 +51,9 @@ directoryRouter.patch('/tenants/:id', requireAuth(['superadmin','platform_owner'
   const db = loadDb(); const o: any = db.organizations.find((x: any) => x.id === req.params.id);
   if (!o) return res.status(404).json({ success: false, message: 'Not found.' });
   const b: any = req.body || {};
-  // Phase B: plan/seats are subscription-owned — direct org edits must not bypass entitlements.
+  if (b.gstin !== undefined && b.gstin !== '' && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/i.test(String(b.gstin).trim())) {
+    return res.status(400).json({ success: false, message: 'Invalid GSTIN format (e.g. 29AABCT1011A1Z5).' });
+  }
   for (const k of ['legalName','displayName','entityType','industry','subIndustry','companySize','website','description','countryOfIncorporation','registrationNumber','gstin','taxIds','registeredAddress','headquarters','operatingLocations','logoUrl','primaryContact','primaryContactDesignation','businessEmail','businessPhone','billingContact','financeEmail','accountManager','salesOwner','payrollRules']) {
     if (b[k] !== undefined) o[k] = b[k];
   }

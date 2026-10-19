@@ -85,7 +85,7 @@ export const companyProfileSchema = z.object({
   description: z.string().max(5000).optional(),
   countryOfIncorporation: z.string().max(80).optional(),
   registrationNumber: z.string().max(80).optional(),
-  gstin: z.string().max(30).optional(),
+  gstin: z.string().max(30).optional().refine((v) => !v || /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(v.toUpperCase()), { message: 'Invalid GSTIN format (e.g. 29AABCT1011A1Z5).' }),
   taxIds: z.string().max(200).optional(),
   registeredAddress: z.string().max(500).optional(),
   headquarters: z.string().max(200).optional(),
@@ -105,6 +105,7 @@ export const companyProfileSchema = z.object({
 
 /* ---------- §8.3 Requisition (basic/role/location/comp/plan/assignment) ---------- */
 export const requisitionSchema = z.object({
+  orgId: z.string().max(80).optional(),
   title: z.string().min(3).max(160),
   department: z.string().max(120).optional(),
   category: z.string().max(120).optional(),

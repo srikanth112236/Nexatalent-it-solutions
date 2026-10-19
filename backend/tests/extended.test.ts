@@ -80,7 +80,7 @@ describe('opportunities + proposals + meetings', () => {
 
 describe('timesheets', () => {
   it('vendor submits, employer approves once', async () => {
-    const sub = await request(app).post('/api/v1/timesheets').set(auth(vendorToken)).send({ contractorId: 'CTR-801', period: '2026-10-W2', hours: 40 });
+    const sub = await request(app).post('/api/v1/timesheets').set(auth(vendorToken)).send({ contractorId: 'CTR-801', period: '2026-10', hours: 40 });
     expect(sub.status).toBe(201);
     const ap = await request(app).patch(`/api/v1/timesheets/${sub.body.data.id}/approve`).set(auth(superToken)).send({ decision: 'approve' });
     expect(ap.body.data.status).toBe('Approved');

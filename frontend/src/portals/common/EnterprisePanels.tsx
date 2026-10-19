@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, Fragment } from 'react';
 import { FileText, Download, ExternalLink, X } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { apiClient } from '../../shared/api-client';
 import { Candidate360Drawer, AgencyDrawer } from '../superadmin/SuperAdmin360';
 import { ExportButton, useQueryState, useDebounced, checkRecordAction, useActionGuard, DetailDrawer, SearchSuggest, DrawerCard, DrawerList, StatusPill, KeyValues, drawerTone, CrudToolbar } from './CrudKit';
@@ -11,6 +11,7 @@ import {
   offersPlacementsApi, billingApi, salesApi, platformApi, documentsApi, workforceApi, directoryApi,
 } from '../../shared/enterprise/phaseApi';
 import { invalidateCollections } from '../../shared/data/store';
+import { getActiveRole } from '../../shared/auth/session';
 import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
 import { Modal, ConfirmDialog, RowMenu, Select, DatePicker, Field, ActionConfirm, RichText, inputCls as kitInput } from '../../shared/ui/EnterpriseKit';
 import { sanitizeHtml, escHtml } from '../../shared/utils';
@@ -1134,19 +1135,27 @@ export function RequisitionsPanel() {
 }
 
 /* ---------------- Full-page creators (portal layout: sidebar + header come from PortalShell) ---------------- */
-const REQ_EMPTY = { title: '', department: '', category: '', location: '', branch: '', openings: 1, employmentType: 'Full-time', priority: 'Medium', description: '', responsibilities: '', requiredSkills: '', preferredSkills: '', qualifications: '', budgetMin: '', budgetMax: '', currency: 'INR', payPeriod: 'annual', benefits: '', recruiter: '', experienceMin: '', experienceMax: '', deadline: '' };
+const REQ_EMPTY = { orgId: '', title: '', department: '', category: '', location: '', branch: '', openings: 1, employmentType: 'Full-time', priority: 'Medium', description: '', responsibilities: '', requiredSkills: '', preferredSkills: '', qualifications: '', budgetMin: '', budgetMax: '', currency: 'INR', payPeriod: 'annual', benefits: '', recruiter: '', experienceMin: '', experienceMax: '', deadline: '' };
 
 export function RequirementCreatePage({ base }: { base: string }) {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ ...REQ_EMPTY });
+  const location = useLocation();
+  const initialOrgId = new URLSearchParams(location.search).get('orgId') || '';
+  const [form, setForm] = useState({ ...REQ_EMPTY, orgId: initialOrgId });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [orgs, setOrgs] = useState<any[]>([]);
+  const isPlatform = ['superadmin', 'platform_owner', 'operations_admin', 'employee'].includes(getActiveRole() || '');
+  useEffect(() => {
+    if (!isPlatform) return;
+    (async () => { try { setOrgs(unwrapList(await directoryApi.tenants())); } catch { setOrgs([]); } })();
+  }, [isPlatform]);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!form.title.trim()) { setError('Title is required.'); return; }
     setBusy(true); setError('');
     try {
       await requisitionsApi.create({
-        ...form, openings: Number(form.openings) || 1,
+        ...form, orgId: form.orgId || undefined, openings: Number(form.openings) || 1,
         experienceMin: form.experienceMin === '' ? undefined : Number(form.experienceMin),
         experienceMax: form.experienceMax === '' ? undefined : Number(form.experienceMax),
         budgetMin: form.budgetMin === '' ? undefined : Number(form.budgetMin),
@@ -1169,6 +1178,12 @@ export function RequirementCreatePage({ base }: { base: string }) {
       {error && <PanelError message={error} onRetry={() => setError('')} />}
       <form onSubmit={submit} className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {isPlatform && orgs.length > 0 && (
+            <div className="sm:col-span-2">
+              <Field label="Company (target tenant) *"><Select value={form.orgId || ''} onChange={(v) => setForm({ ...form, orgId: v })} placeholder="Choose company"
+                options={orgs.map((o: any) => ({ value: o.id, label: `${o.displayName || o.legalName || o.id} (${o.id})` }))} /></Field>
+            </div>
+          )}
           <div className="sm:col-span-2"><Field label="Title *"><input className={kitInput} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Senior React Engineer" /></Field></div>
           <Field label="Department"><input className={kitInput} value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} /></Field>
           <Field label="Category"><input className={kitInput} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></Field>
@@ -1203,13 +1218,18 @@ export function RequirementCreatePage({ base }: { base: string }) {
 
 export function JobCreatePage({ base }: { base: string }) {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ orgId: '', title: '', requisitionId: '', location: '', employmentType: 'Full-time', salaryMin: '', salaryMax: '', expiryDate: '', visibility: 'public', description: '' });
+  const location = useLocation();
+  const initialOrgId = new URLSearchParams(location.search).get('orgId') || '';
+  const [form, setForm] = useState({ orgId: initialOrgId, title: '', requisitionId: '', location: '', employmentType: 'Full-time', salaryMin: '', salaryMax: '', expiryDate: '', visibility: 'public', description: '' });
   const [reqs, setReqs] = useState<any[]>([]);
+  const [orgs, setOrgs] = useState<any[]>([]);
+  const isPlatform = ['superadmin', 'platform_owner', 'operations_admin', 'employee'].includes(getActiveRole() || '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   useEffect(() => {
     (async () => {
       try { setReqs(unwrapList(await requisitionsApi.list('?page=1&pageSize=100'))); } catch { setReqs([]); }
+      if (isPlatform) { try { setOrgs(unwrapList(await directoryApi.tenants())); } catch { setOrgs([]); } }
     })();
   }, []);
   const submit = async (e: React.FormEvent) => {
@@ -1239,7 +1259,12 @@ export function JobCreatePage({ base }: { base: string }) {
       <form onSubmit={submit} className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="sm:col-span-2"><Field label="Title *"><input className={kitInput} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Senior React Engineer" /></Field></div>
-          <Field label="Organization ID"><input className={kitInput} value={form.orgId} onChange={(e) => setForm({ ...form, orgId: e.target.value })} placeholder="Blank = own org" /></Field>
+          {isPlatform && orgs.length > 0 ? (
+            <Field label="Company (target tenant)"><Select value={form.orgId} onChange={(v) => setForm({ ...form, orgId: v })} placeholder="Choose company (blank = own org)"
+              options={[{ value: '', label: 'Own organization' }, ...orgs.map((o: any) => ({ value: o.id, label: `${o.displayName || o.legalName || o.id} (${o.id})` }))]} /></Field>
+          ) : (
+            <Field label="Organization ID"><input className={kitInput} value={form.orgId} onChange={(e) => setForm({ ...form, orgId: e.target.value })} placeholder="Blank = own org" /></Field>
+          )}
           <Field label="Requirement"><Select value={form.requisitionId} onChange={(v) => setForm({ ...form, requisitionId: v })} placeholder="Link a requirement (optional)" options={[{ value: '', label: 'No link' }, ...reqs.map((r: any) => ({ value: r.id, label: `${r.id} — ${r.title}` }))]} /></Field>
           <Field label="Location"><input className={kitInput} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></Field>
           <Field label="Employment type"><Select value={form.employmentType} onChange={(v) => setForm({ ...form, employmentType: v })} options={['Full-time', 'Part-time', 'Contract', 'Internship'].map((v) => ({ value: v, label: v }))} /></Field>
@@ -5447,122 +5472,10 @@ export function BillingPanel() {
   );
 }
 
-/* ---------------- Phase 3: Plan & usage (billing sub-menu) ---------------- */
-export function PlanUsagePanel() {
-  const [usage, setUsage] = useState<any>(null);
-  const [subs, setSubs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [loadError, setLoadError] = useState(0);
-  const load = async () => {
-    setLoading(true); setError('');
-    try {
-      const [u, s] = await Promise.all([
-        billingApi.usage().catch(() => null),
-        billingApi.subscriptions().catch(() => null),
-      ]);
-      setUsage(u ? unwrapObj(u) : null);
-      setSubs(s ? unwrapList(s) : []);
-    } catch (e) { setError(errMsg(e)); setLoadError(errStatus(e)); }
-    finally { setLoading(false); }
-  };
-  useEffect(() => { load(); }, []);
-  const ents = Object.entries(usage?.usage || {}) as [string, any][];
-  const pct = (v: any) => {
-    if (!v || v.limit === undefined || !Number(v.limit)) return null;
-    return Math.min(100, Math.round((Number(v.used || 0) / Number(v.limit)) * 100));
-  };
-  return (
-    <div className={cardCls}>
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex flex-col gap-0.5">
-            <h3 className="text-base font-extrabold text-slate-900">Plan & usage — subscription, entitlements, quota</h3>
-            <p className="text-xs text-slate-500 font-medium">Entitlements are enforced live on every write. Ask superadmin to change the plan.</p>
-          </div>
-          <button type="button" onClick={load} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Refresh</button>
-        </div>
-      </div>
-      {error && <PanelError message={error} status={loadError} onRetry={load} />}
-      {loading ? <InlineLoading message="Loading plan…" /> : (<>
-        {!usage ? (
-          <EmptyState title="No usage record" message="No subscription is active on this account yet." />
-        ) : (<>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-            <div className="p-3.5 rounded-2xl bg-slate-900 text-white">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Plan</div>
-              <div className="text-base font-extrabold mt-0.5">{usage.plan || '—'}</div>
-            </div>
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Subscription</div>
-              <div className="text-base font-extrabold mt-0.5">{usage.subscription || '—'}</div>
-            </div>
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Period</div>
-              <div className="text-base font-extrabold mt-0.5">{usage.period || '—'}</div>
-            </div>
-          </div>
-          {ents.length > 0 && (
-            <div className="space-y-1.5">
-              <div className="text-xs font-extrabold text-slate-700">Entitlements ({ents.length})</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {ents.map(([k, v]) => {
-                  const p = pct(v);
-                  return (
-                    <div key={k} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="font-bold text-slate-900 break-all">{k}</span>
-                        {v?.limit === undefined
-                          ? <span className="px-2 py-0.5 rounded-full border font-bold text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200 shrink-0">enabled</span>
-                          : <span className="shrink-0 font-mono font-extrabold">{Number(v.used || 0).toLocaleString('en-IN')}/{Number(v.limit || 0).toLocaleString('en-IN')}</span>}
-                      </div>
-                      {p !== null && (
-                        <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden" role="progressbar" aria-valuenow={p} aria-valuemin={0} aria-valuemax={100} aria-label={`${k} usage`}>
-                          <div className={`h-full rounded-full ${p >= 90 ? 'bg-red-500' : p >= 70 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${p}%` }} />
-                        </div>
-                      )}
-                      {v?.limit !== undefined && (
-                        <div className="text-slate-500 font-medium">left <strong className={Number(v.remaining || 0) <= 0 ? 'text-red-600' : 'text-slate-700'}>{Number(v.remaining || 0).toLocaleString('en-IN')}</strong>{p !== null ? ` • ${p}% used` : ''}</div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </>)}
-        <div className="text-xs font-extrabold text-slate-700">Subscriptions ({subs.length})</div>
-        {subs.length === 0 ? <div className="text-xs text-slate-500 font-medium p-3 rounded-xl bg-slate-50 border border-dashed border-slate-200">No subscription records.</div> : (
-          <div className="overflow-x-auto rounded-2xl border border-slate-200 hidden md:block">
-            <table className="w-full text-left text-xs min-w-[720px]">
-              <thead className="bg-slate-50 sticky top-0 z-10"><tr className="text-slate-500 font-extrabold uppercase tracking-wider text-[10px]">
-                <th className="px-3 py-2.5">Subscription</th><th className="px-3 py-2.5">Company</th><th className="px-3 py-2.5">Plan</th><th className="px-3 py-2.5">Status</th><th className="px-3 py-2.5">Started</th><th className="px-3 py-2.5">Renews</th>
-              </tr></thead>
-              <tbody className="divide-y divide-slate-100">
-                {subs.map((s: any) => (
-                  <tr key={s.id} className="hover:bg-slate-50/70">
-                    <td className="px-3 py-2.5 font-mono font-bold">{s.id}</td>
-                    <td className="px-3 py-2.5 font-mono font-bold text-amber-700">{s.orgId}</td>
-                    <td className="px-3 py-2.5 font-bold">{s.planId || s.plan || '—'}</td>
-                    <td className="px-3 py-2.5"><span className={invPill(s.status === 'active' ? 'Paid' : s.status === 'canceled' || s.status === 'cancelled' ? 'Void' : 'Issued')}>{s.status || '—'}</span></td>
-                    <td className="px-3 py-2.5 whitespace-nowrap">{String(s.startDate || s.start || s.createdAt || '').slice(0, 10) || '—'}</td>
-                    <td className="px-3 py-2.5 whitespace-nowrap">{String(s.currentPeriodEnd || s.renewalDate || s.endDate || '').slice(0, 10) || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </>)}
-    </div>
-  );
-}
-
-/** Billing sub-menu workspace — Invoices / Payments & refunds / Plan & usage. */
+/** Billing sub-menu workspace — Invoices / Payments & refunds. */
 const BILL_VIEWS = [
   { key: 'invoices', label: 'Invoices' },
   { key: 'payments', label: 'Payments & refunds' },
-  { key: 'plan', label: 'Plan & usage' },
 ] as const;
 export function EmployerBillingWorkspace() {
   const [tab, setTab] = useQueryState('bill_tab');
@@ -5581,227 +5494,11 @@ export function EmployerBillingWorkspace() {
           ))}
         </div>
       </div>
-      {active === 'invoices' ? <InvoicesPanel /> : active === 'payments' ? <BillingPanel /> : <PlanUsagePanel />}
+      {active === 'invoices' ? <InvoicesPanel /> : <BillingPanel />}
     </div>
   );
 }
 
-/* ---------------- Phase 3: Subscriptions (admin) — full CRUD ---------------- */
-export function SubscriptionsPanel() {
-  const [plans, setPlans] = useState<any[]>([]);
-  const [subs, setSubs] = useState<any[]>([]);
-  const [error, setError] = useState('');
-  const [ok, setOk] = useState('');
-  const [sub, setSub] = useState({ orgId: '', planId: '' });
-  const [showSubscribe, setShowSubscribe] = useState(false);
-  const [showPlan, setShowPlan] = useState(false);
-  const [planForm, setPlanForm] = useState({ name: '', price: '', interval: 'monthly', target: 'company' });
-  const [detail, setDetail] = useState<any>(null);
-  const [detailHistory, setDetailHistory] = useState<any[]>([]);
-  const [q, setQ] = useQueryState('sub_q');
-  const [versionsFor, setVersionsFor] = useState<any>(null);
-  const [versions, setVersions] = useState<any[]>([]);
-  const [versionForm, setVersionForm] = useState({ price: '', interval: 'monthly', entitlements: '' });
-  const [changeFor, setChangeFor] = useState<any>(null);
-  const [changePlanId, setChangePlanId] = useState('');
-  const [changeReason, setChangeReason] = useState('');
-  const [renewalFor, setRenewalFor] = useState<any>(null);
-  const [renewalForm, setRenewalForm] = useState({ autoRenew: 'true', discount: '' });
-  const load = async () => {
-    setError('');
-    try { setPlans(unwrapList(await billingApi.plans())); setSubs(unwrapList(await billingApi.subscriptions())); }
-    catch (e) { setError(errMsg(e)); }
-  };
-  useEffect(() => { load(); }, []);
-  const subscribe = async (e: React.FormEvent) => {
-    e.preventDefault(); if (!sub.orgId || !sub.planId) return;
-    try {       const s = unwrapObj(await billingApi.subscribe(sub.orgId, sub.planId)); if (s?.id) setSubs((x) => [s, ...x]); setSub({ orgId: '', planId: '' }); setShowSubscribe(false); setOk('Subscription created (Trial). Terms snapshotted.'); syncAll(); }
-    catch (e) { setError(errMsg(e)); }
-  };
-  const createPlan = async (e: React.FormEvent) => {
-    e.preventDefault(); if (!planForm.name.trim() || !planForm.price) return;
-    try {
-      const p = unwrapObj(await billingApi.createPlan({ name: planForm.name.trim(), price: Number(planForm.price), interval: planForm.interval, target: planForm.target }));
-      if (p?.id) setPlans((x) => [p, ...x]);
-      setPlanForm({ name: '', price: '', interval: 'monthly', target: 'company' }); setShowPlan(false); setOk('Plan created (v1).'); syncAll();
-    } catch (e) { setError(errMsg(e)); }
-  };
-  const setStatus = async (id: string, status: string) => {
-    try { const u = unwrapObj(await billingApi.setSubscription(id, status, status === 'Cancelled' ? 'admin-console' : undefined)); setSubs((x) => x.map((s) => (s.id === id ? u : s))); setOk(`${id} → ${status}.`); syncAll(); }
-    catch (e) { setError(errMsg(e)); }
-  };
-  const openVersions = async (p: any) => {
-    setVersionsFor(p); setVersions([]); setVersionForm({ price: String(p.price ?? ''), interval: p.interval || 'monthly', entitlements: JSON.stringify(p.entitlements || {}, null, 2) });
-    try { setVersions(unwrapList(await billingApi.planVersions(p.id))); }
-    catch (e) { setError(errMsg(e)); }
-  };
-  const saveVersion = async (e: React.FormEvent) => {
-    e.preventDefault(); if (!versionsFor) return;
-    let ent: Record<string, unknown> | undefined;
-    if (versionForm.entitlements.trim()) {
-      try { ent = JSON.parse(versionForm.entitlements); }
-      catch { setError('Entitlements must be valid JSON (object).'); return; }
-    }
-    try {
-      const u = unwrapObj(await billingApi.newPlanVersion(versionsFor.id, { price: Number(versionForm.price), interval: versionForm.interval, entitlements: ent }));
-      setPlans((x) => x.map((pl) => (pl.id === versionsFor.id ? { ...pl, ...(u?.id ? u : {}) } : x)));
-      setVersionsFor(null); load(); setOk(`Plan ${versionsFor.id} → v${(u as any)?.version || 'next'} (old terms snapshotted).`); syncAll();
-    } catch (e) { setError(errMsg(e)); }
-  };
-  const archivePlan = async (p: any) => {
-    try {
-      await billingApi.archivePlan(p.id);
-      setPlans((x) => x.map((pl) => (pl.id === p.id ? { ...pl, status: 'Archived' } : pl))); setOk(`Plan ${p.id} archived.`); syncAll();
-    } catch (e) { setError(errMsg(e)); }
-  };
-  const doChangePlan = async () => {
-    if (!changeFor || !changePlanId) return;
-    try {
-      const u = unwrapObj(await billingApi.changePlan(changeFor.id, changePlanId, changeReason || undefined));
-      setSubs((x) => x.map((s) => (s.id === changeFor.id ? { ...s, ...(u?.id ? u : {}) } : x)));
-      setChangeFor(null); setChangePlanId(''); setChangeReason(''); setOk('Plan changed — history recorded.'); syncAll();
-    } catch (e) { setError(errMsg(e)); }
-  };
-  const saveRenewal = async () => {
-    if (!renewalFor) return;
-    try {
-      const u = unwrapObj(await billingApi.renewalSettings(renewalFor.id, { autoRenew: renewalForm.autoRenew === 'true', discount: Number(renewalForm.discount) || 0 }));
-      setSubs((x) => x.map((s) => (s.id === renewalFor.id ? { ...s, ...(u?.id ? u : {}) } : x)));
-      setRenewalFor(null); setOk('Renewal settings saved.'); syncAll();
-    } catch (e) { setError(errMsg(e)); }
-  };
-  const openDetail = async (s: any) => {
-    setDetail(s); setDetailHistory([]);
-    try {
-      const res: any = await apiClient.get('/api/v1/subscription-changes');
-      const all = unwrapList(res).filter((c: any) => c.subscriptionId === s.id);
-      setDetailHistory(all);
-    } catch { /* history best-effort */ }
-  };
-  const filteredSubs = subs.filter((s) => !q.trim() || `${s.id} ${s.orgId} ${s.planId} ${s.status}`.toLowerCase().includes(q.toLowerCase()));
-  return (
-    <div className={cardCls}>
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-base font-extrabold text-slate-900">Plans & Subscriptions — Create / View / Suspend / Cancel / Export</h3>
-          <div className="flex gap-2">
-            <ExportButton filename="subscriptions.csv" rows={filteredSubs} columns={['id', 'orgId', 'planId', 'status', 'renewalDate']} />
-            <button type="button" onClick={() => setShowPlan(true)} className={btnDark}>+ New plan</button>
-            <button type="button" onClick={() => setShowSubscribe(true)} className={btnPrimary}>+ Subscribe org</button>
-          </div>
-        </div>
-        <SearchSuggest value={q} onChange={setQ} placeholder="Search subscription ID, org, plan, status…"
-          items={subs.map((s: any) => ({ key: String(s.id), query: String(s.id), title: String(s.id), meta: [s.orgId, s.planId].filter(Boolean).join(' • '), status: s.status }))}
-          onPick={(it) => setQ(it.query ?? it.key)} />
-      </div>
-      {error && <PanelError message={error} onRetry={load} />}
-      {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
-      <div className="text-xs font-extrabold text-slate-700">Plans ({plans.length}) — versions are immutable snapshots</div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        {plans.map((p) => (
-          <div key={p.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
-            <div className="font-bold flex items-center justify-between gap-2">
-              <span className="truncate">{p.name} • ₹{p.price}/{p.interval} • v{p.version} • {p.status}</span>
-              <RowMenu items={[
-                { label: 'Versions + new version…', onSelect: () => openVersions(p) },
-                ...(p.status !== 'Archived' ? [{ label: 'Archive plan…', danger: true, onSelect: () => archivePlan(p) }] : []),
-              ]} />
-            </div>
-            <div className="text-slate-500 font-medium">{p.id} • target: {p.target || 'company'}</div>
-            {p.entitlements && (
-              <div className="flex flex-wrap gap-1 pt-1">
-                {Object.entries(p.entitlements as Record<string, unknown>).map(([k, v]) => (
-                  <span key={k} className="px-2 py-0.5 rounded-full bg-white border border-slate-200 font-bold text-[11px]">{k}: {String(v)}</span>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-      <Modal open={showSubscribe} onClose={() => setShowSubscribe(false)} title="Subscribe organization" subtitle="Plan terms are snapshotted at subscribe time">
-        <form onSubmit={subscribe} className="space-y-3">
-          <Field label="Organization ID *"><input className={kitInput} value={sub.orgId} onChange={(e) => setSub({ ...sub, orgId: e.target.value })} placeholder="e.g. TNT-9011" /></Field>
-          <Field label="Plan ID *">
-            <Select value={sub.planId} onChange={(v) => setSub({ ...sub, planId: v })} placeholder="Choose plan" options={plans.map((p) => ({ value: p.id, label: `${p.name} — ₹${p.price}/${p.interval}` }))} />
-          </Field>
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setShowSubscribe(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
-            <button className={btnPrimary}>Subscribe</button>
-          </div>
-        </form>
-      </Modal>
-      <Modal open={showPlan} onClose={() => setShowPlan(false)} title="New subscription plan" subtitle="Versioned v1 — edits never rewrite active subscriptions">
-        <form onSubmit={createPlan} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="sm:col-span-2"><Field label="Plan name *"><input className={kitInput} value={planForm.name} onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })} placeholder="e.g. Growth Annual" /></Field></div>
-          <Field label="Price (₹) *"><input className={kitInput} type="number" value={planForm.price} onChange={(e) => setPlanForm({ ...planForm, price: e.target.value })} /></Field>
-          <Field label="Interval"><Select value={planForm.interval} onChange={(v) => setPlanForm({ ...planForm, interval: v })} options={[{ value: 'monthly', label: 'Monthly' }, { value: 'quarterly', label: 'Quarterly' }, { value: 'annual', label: 'Annual' }]} /></Field>
-          <div className="sm:col-span-2 flex justify-end gap-2">
-            <button type="button" onClick={() => setShowPlan(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
-            <button className={btnDark}>Create plan</button>
-          </div>
-        </form>
-      </Modal>
-      <div className="space-y-2">{filteredSubs.map((s) => (
-        <div key={s.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
-          <div className="text-xs font-bold min-w-0 truncate">{s.id} • {s.orgId} • {s.planId} v{s.planVersion} • <strong className="text-blue-600">{s.status}</strong> • ₹{s.price}{s.discount ? ` − ₹${s.discount}` : ''} • {s.autoRenew ? 'auto' : 'manual'} • renews {String(s.renewalDate || '').slice(0, 10)}</div>
-          <RowMenu items={[
-            { label: 'View terms + history', onSelect: () => openDetail(s) },
-            { label: 'Change plan…', onSelect: () => { setChangeFor(s); setChangePlanId(''); setChangeReason(''); } },
-            { label: 'Renewal settings…', onSelect: () => { setRenewalFor(s); setRenewalForm({ autoRenew: s.autoRenew === false ? 'false' : 'true', discount: String(s.discount || '') }); } },
-            ...['Trial', 'Active', 'Renewal Due', 'Past Due', 'Grace Period', 'Suspended', 'Cancelled', 'Expired'].filter((x) => x !== s.status).slice(0, 6).map((x) => ({ label: `Set ${x}`, danger: x === 'Cancelled', onSelect: () => setStatus(s.id, x) })),
-          ]} />
-        </div>
-      ))}</div>
-      <Modal open={versionsFor !== null} onClose={() => setVersionsFor(null)} title={`Plan versions — ${versionsFor?.name || ''}`} subtitle="Edits mint a new version; active subscriptions keep their snapshot">
-        <div className="space-y-3">
-          {versions.length === 0 ? <div className="text-[11px] text-slate-500 font-medium">No prior versions — this is v{versionsFor?.version || 1}.</div> : versions.map((v: any) => (
-            <div key={v.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold">v{v.version} • ₹{v.snapshot?.price} • by {v.by} • {String(v.createdAt || '').slice(0, 10)}</div>
-          ))}
-          <form onSubmit={saveVersion} className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-blue-50/50 border border-blue-200">
-            <Field label="New price (₹)"><input className={kitInput} type="number" value={versionForm.price} onChange={(e) => setVersionForm({ ...versionForm, price: e.target.value })} /></Field>
-            <Field label="Interval"><Select value={versionForm.interval} onChange={(v) => setVersionForm({ ...versionForm, interval: v })} options={[{ value: 'monthly', label: 'Monthly' }, { value: 'quarterly', label: 'Quarterly' }, { value: 'annual', label: 'Annual' }]} /></Field>
-            <div className="sm:col-span-2"><Field label="Entitlements JSON (object)"><textarea rows={4} className={`${kitInput} font-mono`} value={versionForm.entitlements} onChange={(e) => setVersionForm({ ...versionForm, entitlements: e.target.value })} /></Field></div>
-            <div className="sm:col-span-2 flex justify-end gap-2">
-              <button type="button" onClick={() => setVersionsFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Close</button>
-              <button className={btnDark}>Mint new version</button>
-            </div>
-          </form>
-        </div>
-      </Modal>
-      <Modal open={changeFor !== null} onClose={() => setChangeFor(null)} title={`Change plan — ${changeFor?.id || ''}`} subtitle="Old terms stay snapshotted in history">
-        <div className="space-y-3">
-          <Field label="New plan"><Select value={changePlanId} onChange={setChangePlanId} placeholder="Choose plan" options={plans.filter((p) => p.status !== 'Archived').map((p) => ({ value: p.id, label: `${p.name} v${p.version} — ₹${p.price}/${p.interval}` }))} /></Field>
-          <Field label="Reason"><input className={kitInput} value={changeReason} onChange={(e) => setChangeReason(e.target.value)} placeholder="e.g. Upgrade at renewal" /></Field>
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setChangeFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
-            <button type="button" disabled={!changePlanId} onClick={doChangePlan} className={btnPrimary}>Change plan</button>
-          </div>
-        </div>
-      </Modal>
-      <Modal open={renewalFor !== null} onClose={() => setRenewalFor(null)} title={`Renewal settings — ${renewalFor?.id || ''}`}>
-        <div className="space-y-3">
-          <Field label="Auto-renew"><Select value={renewalForm.autoRenew} onChange={(v) => setRenewalForm({ ...renewalForm, autoRenew: v })} options={[{ value: 'true', label: 'On' }, { value: 'false', label: 'Off' }]} /></Field>
-          <Field label="Discount (₹)"><input className={kitInput} type="number" min={0} value={renewalForm.discount} onChange={(e) => setRenewalForm({ ...renewalForm, discount: e.target.value })} /></Field>
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setRenewalFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
-            <button type="button" onClick={saveRenewal} className={btnDark}>Save</button>
-          </div>
-        </div>
-      </Modal>
-      <Modal open={detail !== null} onClose={() => setDetail(null)} title={`${detail?.id || ''}`} subtitle={`${detail?.orgId || ''} • ${detail?.planId || ''}`}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-          {[['Status', detail?.status], ['Plan version', detail?.planVersion], ['Price', detail?.price], ['Discount', detail?.discount || 0], ['Currency', detail?.currency], ['Start', String(detail?.startDate || '').slice(0, 10)], ['Renewal', String(detail?.renewalDate || '').slice(0, 10)], ['Auto-renew', String(detail?.autoRenew)], ['Trial end', String(detail?.trialEnd || '').slice(0, 10)]].map(([k, v]) => (
-            <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1">{String(v ?? '—')}</div></div>
-          ))}
-        </div>
-        <div className="text-xs font-extrabold pt-2">Upgrade / downgrade history ({detailHistory.length})</div>
-        {detailHistory.length === 0 ? <div className="text-[11px] text-slate-500">No changes recorded.</div> : detailHistory.map((h: any) => (
-          <div key={h.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs"><strong>{h.change}</strong> • {h.by || ''} • <span className="text-slate-500">{String(h.createdAt || '').slice(0, 16).replace('T', ' ')}</span>{h.reason ? <div>{h.reason}</div> : null}</div>
-        ))}
-      </Modal>
-    </div>
-  );
-}
 
 /* ---------------- Agreement templates: advanced HTML document editor ----------------
    Own component: template CRUD + Word-style editing + filled preview + .doc/print.
@@ -9319,6 +9016,9 @@ export function BranchesPanel() {
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
   const [q, setQ] = useQueryState('br_q');
+  const [orgF, setOrgF] = useQueryState('br_org');
+  const [orgs, setOrgs] = useState<any[]>([]);
+  const isPlatform = ['superadmin', 'platform_owner', 'operations_admin', 'employee'].includes(getActiveRole() || '');
   const [form, setForm] = useState({ name: '', city: '', orgId: '' });
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<any>(null);
@@ -9329,6 +9029,7 @@ export function BranchesPanel() {
     try {
       const { directoryApi } = await import('../../shared/enterprise/phaseApi');
       setRows(unwrapList(await directoryApi.branches()));
+      if (isPlatform) { try { setOrgs(unwrapList(await directoryApi.tenants())); } catch { setOrgs([]); } }
     } catch (e) { setError(errMsg(e)); } finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
@@ -9361,13 +9062,23 @@ export function BranchesPanel() {
       setRows((r) => r.filter((x) => x.id !== deleteFor.id)); setDeleteFor(null); setOk('Branch deleted.'); syncAll();
     } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
   };
-  const filtered = rows.filter((b) => !q.trim() || `${b.id} ${b.name} ${b.city} ${b.orgId}`.toLowerCase().includes(q.toLowerCase()));
+  const filtered = rows.filter((b) => {
+    if (orgF && String(b.orgId) !== orgF) return false;
+    if (!q.trim()) return true;
+    return `${b.id} ${b.name} ${b.city} ${b.orgId}`.toLowerCase().includes(q.toLowerCase());
+  });
   return (
     <div className={cardCls}>
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-base font-extrabold text-slate-900">Branches — Create / Edit / Delete / Export</h3>
           <div className="flex gap-2">
+            {orgs.length > 0 && (
+              <div className="w-44 shrink-0">
+                <Select value={orgF} onChange={setOrgF} ariaLabel="Company filter" placeholder="All companies"
+                  options={[{ value: '', label: 'All companies' }, ...orgs.map((o: any) => ({ value: o.id, label: `${o.displayName || o.legalName || o.id}` }))]} />
+              </div>
+            )}
             <ExportButton filename="branches.csv" rows={filtered} columns={['id', 'orgId', 'name', 'city', 'status']} />
             <button type="button" onClick={() => setShowCreate(true)} className={btnPrimary}>+ New branch</button>
           </div>

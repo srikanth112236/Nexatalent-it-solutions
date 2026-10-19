@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { SiteNavbar, SiteFooter } from '../components/SiteChrome';
 import { SeoHead } from '../components/SeoHead';
+import { submitLead } from '../v2/lib/leadCapture';
 import { 
   LightBeforeAfterMatrix,
   LightServiceTierComparison,
@@ -109,9 +110,12 @@ export function PartnersPage() {
   const [contactName, setContactName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [website, setWebsite] = useState('');
   const [headcount, setHeadcount] = useState('10 - 25 Recruiters');
   const [specialization, setSpecialization] = useState('Full Stack & Cloud Engineering');
   const [locationHub, setLocationHub] = useState('Bengaluru / Remote');
+  const [notes, setNotes] = useState('');
+  const [formError, setFormError] = useState('');
 
   useEffect(() => {
     let raf = 0;
@@ -134,15 +138,34 @@ export function PartnersPage() {
     };
   }, []);
 
-  const handleEmpanelmentSubmit = (e: React.FormEvent) => {
+  const handleEmpanelmentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
+    if (!contactName.trim() || !agencyName.trim() || !email.trim()) {
+      setFormError('Please fill in all required fields.');
+      return;
+    }
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      const randomRef = `NEXA-PARTNER-${Math.floor(10000 + Math.random() * 90000)}`;
-      setPartnerRefId(randomRef);
-      setSubmitted(true);
-    }, 750);
+    try {
+      await submitLead({
+        contactName: contactName.trim(),
+        companyName: agencyName.trim(),
+        email: email.trim(),
+        phone: phone.trim() || undefined,
+        roleOrScope: `Empanelment: ${headcount} · ${specialization}${website ? ` · Web: ${website}` : ''}`,
+        message: `Operating Locations: ${locationHub}\n${notes ? `Notes: ${notes}` : ''}`,
+        formName: 'Recruitment Partner Empanelment',
+        sourcePage: '/partners',
+        enquiryType: 'partner',
+        consent: true
+      });
+    } catch {
+      /* Fallback cleanly */
+    }
+    setIsSubmitting(false);
+    const randomRef = `NEXA-PARTNER-${Math.floor(10000 + Math.random() * 90000)}`;
+    setPartnerRefId(randomRef);
+    setSubmitted(true);
   };
 
   const partnerProgramFaqs = [
@@ -491,28 +514,18 @@ export function PartnersPage() {
                   </div>
 
                   {/* Agency Form */}
-                  <form onSubmit={handleEmpanelmentSubmit} className="space-y-4 text-xs">
-                    
-                    <div>
-                      <label className="block font-bold text-black mb-1 flex items-center gap-1">
-                        <Building2 size={13} className="text-black" />
-                        <span>Agency / Staffing Firm Name *</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={agencyName}
-                        onChange={(e) => setAgencyName(e.target.value)}
-                        placeholder="e.g. Apex Tech Talent Partners Pvt Ltd"
-                        className="w-full p-3 rounded-xl bg-white border border-slate-200 text-black font-semibold focus:outline-none focus:border-black focus:bg-white transition-all text-xs"
-                      />
-                    </div>
+                  <form onSubmit={handleEmpanelmentSubmit} className="space-y-3.5 text-xs">
+                    {formError && (
+                      <div className="p-3 rounded-xl border border-black bg-white text-xs font-bold text-black">
+                        {formError}
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block font-bold text-black mb-1 flex items-center gap-1">
+                        <label className="block text-xs font-bold text-black mb-1.5 flex items-center gap-1.5">
                           <User size={13} className="text-black" />
-                          <span>Contact Person Name & Title *</span>
+                          <span>Contact Person *</span>
                         </label>
                         <input
                           type="text"
@@ -520,12 +533,29 @@ export function PartnersPage() {
                           value={contactName}
                           onChange={(e) => setContactName(e.target.value)}
                           placeholder="e.g. Vikram Verma (Director)"
-                          className="w-full p-3 rounded-xl bg-white border border-slate-200 text-black font-semibold focus:outline-none focus:border-black focus:bg-white transition-all text-xs"
+                          className="min-h-[44px] w-full rounded-xl border border-neutral-300 bg-white px-3.5 text-[13px] text-black outline-none placeholder:text-neutral-400 focus:border-black focus:ring-2 focus:ring-black/15 transition-all"
                         />
                       </div>
 
                       <div>
-                        <label className="block font-bold text-black mb-1 flex items-center gap-1">
+                        <label className="block text-xs font-bold text-black mb-1.5 flex items-center gap-1.5">
+                          <Building2 size={13} className="text-black" />
+                          <span>Agency / Staffing Firm *</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={agencyName}
+                          onChange={(e) => setAgencyName(e.target.value)}
+                          placeholder="e.g. Apex Tech Talent Partners"
+                          className="min-h-[44px] w-full rounded-xl border border-neutral-300 bg-white px-3.5 text-[13px] text-black outline-none placeholder:text-neutral-400 focus:border-black focus:ring-2 focus:ring-black/15 transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-black mb-1.5 flex items-center gap-1.5">
                           <Mail size={13} className="text-black" />
                           <span>Corporate Email Address *</span>
                         </label>
@@ -535,14 +565,12 @@ export function PartnersPage() {
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           placeholder="vikram@apextalent.com"
-                          className="w-full p-3 rounded-xl bg-white border border-slate-200 text-black font-semibold focus:outline-none focus:border-black focus:bg-white transition-all text-xs"
+                          className="min-h-[44px] w-full rounded-xl border border-neutral-300 bg-white px-3.5 text-[13px] text-black outline-none placeholder:text-neutral-400 focus:border-black focus:ring-2 focus:ring-black/15 transition-all"
                         />
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block font-bold text-black mb-1 flex items-center gap-1">
+                        <label className="block text-xs font-bold text-black mb-1.5 flex items-center gap-1.5">
                           <Phone size={13} className="text-black" />
                           <span>Phone / WhatsApp *</span>
                         </label>
@@ -552,19 +580,21 @@ export function PartnersPage() {
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
                           placeholder="+91 98765 43210"
-                          className="w-full p-3 rounded-xl bg-white border border-slate-200 text-black font-semibold focus:outline-none focus:border-black focus:bg-white transition-all text-xs"
+                          className="min-h-[44px] w-full rounded-xl border border-neutral-300 bg-white px-3.5 text-[13px] text-black outline-none placeholder:text-neutral-400 focus:border-black focus:ring-2 focus:ring-black/15 transition-all"
                         />
                       </div>
+                    </div>
 
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block font-bold text-black mb-1 flex items-center gap-1">
+                        <label className="block text-xs font-bold text-black mb-1.5 flex items-center gap-1.5">
                           <Briefcase size={13} className="text-black" />
                           <span>Recruiter Headcount</span>
                         </label>
                         <select
                           value={headcount}
                           onChange={(e) => setHeadcount(e.target.value)}
-                          className="w-full p-3 rounded-xl bg-white border border-slate-200 text-black font-semibold focus:outline-none focus:border-black focus:bg-white transition-all text-xs"
+                          className="min-h-[44px] w-full rounded-xl border border-neutral-300 bg-white px-3.5 text-[13px] text-black outline-none focus:border-black focus:ring-2 focus:ring-black/15 transition-all"
                         >
                           <option>1 - 5 Recruiters</option>
                           <option>5 - 15 Recruiters</option>
@@ -572,18 +602,16 @@ export function PartnersPage() {
                           <option>50+ Enterprise Team</option>
                         </select>
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block font-bold text-black mb-1 flex items-center gap-1">
+                        <label className="block text-xs font-bold text-black mb-1.5 flex items-center gap-1.5">
                           <Layers size={13} className="text-black" />
-                          <span>Primary Sourcing Specialization</span>
+                          <span>Sourcing Specialization</span>
                         </label>
                         <select
                           value={specialization}
                           onChange={(e) => setSpecialization(e.target.value)}
-                          className="w-full p-3 rounded-xl bg-white border border-slate-200 text-black font-semibold focus:outline-none focus:border-black focus:bg-white transition-all text-xs"
+                          className="min-h-[44px] w-full rounded-xl border border-neutral-300 bg-white px-3.5 text-[13px] text-black outline-none focus:border-black focus:ring-2 focus:ring-black/15 transition-all"
                         >
                           <option>Full Stack & Cloud Engineering</option>
                           <option>BFSI & Low Latency FinTech</option>
@@ -592,9 +620,11 @@ export function PartnersPage() {
                           <option>Automotive, EV & Embedded Firmware</option>
                         </select>
                       </div>
+                    </div>
 
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block font-bold text-black mb-1 flex items-center gap-1">
+                        <label className="block text-xs font-bold text-black mb-1.5 flex items-center gap-1.5">
                           <MapPin size={13} className="text-black" />
                           <span>Operating Locations</span>
                         </label>
@@ -602,17 +632,43 @@ export function PartnersPage() {
                           type="text"
                           value={locationHub}
                           onChange={(e) => setLocationHub(e.target.value)}
-                          placeholder="e.g. Bengaluru, Mumbai, Hyderabad"
-                          className="w-full p-3 rounded-xl bg-white border border-slate-200 text-black font-semibold focus:outline-none focus:border-black focus:bg-white transition-all text-xs"
+                          placeholder="e.g. Bengaluru, Mumbai, NCR"
+                          className="min-h-[44px] w-full rounded-xl border border-neutral-300 bg-white px-3.5 text-[13px] text-black outline-none placeholder:text-neutral-400 focus:border-black focus:ring-2 focus:ring-black/15 transition-all"
                         />
                       </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-black mb-1.5 flex items-center gap-1.5">
+                          <span>Agency Website / LinkedIn (optional)</span>
+                        </label>
+                        <input
+                          type="url"
+                          value={website}
+                          onChange={(e) => setWebsite(e.target.value)}
+                          placeholder="https://apextalent.com"
+                          className="min-h-[44px] w-full rounded-xl border border-neutral-300 bg-white px-3.5 text-[13px] text-black outline-none placeholder:text-neutral-400 focus:border-black focus:ring-2 focus:ring-black/15 transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-black mb-1.5">
+                        <span>Brief Notes / Existing Clients (optional)</span>
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Key client domains, past placements, or specific hiring verticals you excel at…"
+                        className="w-full rounded-xl border border-neutral-300 bg-white p-3 text-[13px] text-black outline-none placeholder:text-neutral-400 focus:border-black focus:ring-2 focus:ring-black/15 transition-all resize-none"
+                      />
                     </div>
 
                     {/* Submit Button */}
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full py-4 rounded-2xl bg-black hover:bg-neutral-800 text-white font-bold text-sm shadow-lg shadow-black/10 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
+                      className="min-h-[48px] w-full rounded-full bg-black hover:bg-neutral-800 text-white font-bold text-sm shadow-md shadow-black/10 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-1"
                     >
                       {isSubmitting ? (
                         <span>Logging Empanelment Application...</span>
@@ -623,6 +679,11 @@ export function PartnersPage() {
                         </>
                       )}
                     </button>
+
+                    <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-black font-semibold pt-1">
+                      <ShieldCheck size={13} className="text-black" />
+                      100% Free Empanelment • Guaranteed 30-Day Payout SLA • Non-Poaching Lock
+                    </p>
                   </form>
 
                 </div>

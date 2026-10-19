@@ -40,14 +40,14 @@ export function VendorEmpanelmentForm() {
           viewport={{ once: true }}
           className="text-center mb-10"
         >
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 mb-3 shadow-sm">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-black border border-black mb-3 shadow-xs">
+            <ShieldCheck className="w-3.5 h-3.5 text-black" />
             <span>OFFICIAL SUPPLIER EMPANELMENT GATEWAY</span>
           </div>
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-slate-950 mb-3">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-black mb-3">
             🤝 Apply for Recruitment Partner Empanelment
           </h2>
-          <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-sm sm:text-base text-neutral-600 max-w-2xl mx-auto leading-relaxed">
             Join NexaTalent IT Solutions’s authorized vendor network. Supply verified technology talent to Fortune 500 GCCs and high-growth tech enterprises with guaranteed 30-day payout cycles.
           </p>
         </motion.div>
@@ -57,27 +57,27 @@ export function VendorEmpanelmentForm() {
           initial={{ opacity: 0, scale: 0.98 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
-          className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-10 shadow-xl shadow-slate-200/50 relative"
+          className="bg-white border border-neutral-200 rounded-2xl p-6 sm:p-10 shadow-xl shadow-black/5 relative"
         >
           {submitted ? (
             <div className="p-8 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-100 border border-emerald-300 text-emerald-700 flex items-center justify-center mx-auto mb-4 shadow-sm">
+              <div className="w-16 h-16 rounded-2xl bg-neutral-100 border border-black text-black flex items-center justify-center mx-auto mb-4 shadow-xs">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">Empanelment Application Received!</h3>
-              <p className="text-sm text-slate-600 max-w-md mx-auto mb-6">
+              <h3 className="text-2xl font-bold text-black mb-2">Empanelment Application Received!</h3>
+              <p className="text-sm text-neutral-600 max-w-md mx-auto mb-6">
                 Your partnership dossier has entered Stage 2 (Document Verification) in the Nexa Alliance Portal. An Alliance Director will contact you within 24 hours.
               </p>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-700 font-semibold">
-                Application Tracking ID: <strong className="text-emerald-700 font-mono">NEXA-VND-2026-8842</strong>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-neutral-100 border border-neutral-300 text-xs text-black font-semibold">
+                Application Tracking ID: <strong className="text-black font-mono">NEXA-VND-2026-8842</strong>
               </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Group 1: Corporate & Legal Entities */}
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-4 flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-emerald-600" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-black mb-4 flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-black" />
                   <span>1. Company Legal & Corporate Credentials</span>
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
@@ -175,127 +175,127 @@ export function VendorEmpanelmentForm() {
               </div>
 
               {/* Group 2: Recruitment Expertise & Coverage */}
-              <div className="pt-4 border-t border-slate-200">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-4 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <div className="pt-4 border-t border-neutral-200">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-black mb-4 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-black" />
                   <span>2. Recruitment Domain & Operational Footprint</span>
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
                   <div>
-                    <label className="block text-slate-600 mb-1 font-semibold">IT Recruitment Experience (%)</label>
+                    <label className="block text-black mb-1 font-semibold">IT Recruitment Experience (%)</label>
                     <input
                       type="text"
                       value={formData.itRecruitmentPercent}
                       onChange={(e) => setFormData({ ...formData, itRecruitmentPercent: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-900"
+                      className="w-full bg-white border border-neutral-300 rounded-lg p-2.5 text-black"
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-600 mb-1 font-semibold">Non-IT Recruitment Experience (%)</label>
+                    <label className="block text-black mb-1 font-semibold">Non-IT Recruitment Experience (%)</label>
                     <input
                       type="text"
                       value={formData.nonItRecruitmentPercent}
                       onChange={(e) => setFormData({ ...formData, nonItRecruitmentPercent: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-900"
+                      className="w-full bg-white border border-neutral-300 rounded-lg p-2.5 text-black"
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-600 mb-1 font-semibold">Geographic Coverage</label>
+                    <label className="block text-black mb-1 font-semibold">Geographic Coverage</label>
                     <input
                       type="text"
                       value={formData.geographicCoverage}
                       onChange={(e) => setFormData({ ...formData, geographicCoverage: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-900"
+                      className="w-full bg-white border border-neutral-300 rounded-lg p-2.5 text-black"
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-slate-600 mb-1 font-semibold">Technologies Covered</label>
+                    <label className="block text-black mb-1 font-semibold">Technologies Covered</label>
                     <input
                       type="text"
                       value={formData.technologiesCovered}
                       onChange={(e) => setFormData({ ...formData, technologiesCovered: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-900"
+                      className="w-full bg-white border border-neutral-300 rounded-lg p-2.5 text-black"
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-600 mb-1 font-semibold">Client Industries Supported</label>
+                    <label className="block text-black mb-1 font-semibold">Client Industries Supported</label>
                     <input
                       type="text"
                       value={formData.clientIndustries}
                       onChange={(e) => setFormData({ ...formData, clientIndustries: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-900"
+                      className="w-full bg-white border border-neutral-300 rounded-lg p-2.5 text-black"
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-600 mb-1 font-semibold">Dedicated Recruiter Headcount</label>
+                    <label className="block text-black mb-1 font-semibold">Dedicated Recruiter Headcount</label>
                     <input
                       type="text"
                       value={formData.numberOfRecruiters}
                       onChange={(e) => setFormData({ ...formData, numberOfRecruiters: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-900"
+                      className="w-full bg-white border border-neutral-300 rounded-lg p-2.5 text-black"
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-600 mb-1 font-semibold">Notable Existing Clients</label>
+                    <label className="block text-black mb-1 font-semibold">Notable Existing Clients</label>
                     <input
                       type="text"
                       value={formData.existingClients}
                       onChange={(e) => setFormData({ ...formData, existingClients: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-900"
+                      className="w-full bg-white border border-neutral-300 rounded-lg p-2.5 text-black"
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-600 mb-1 font-semibold">Annual Tech Placement Volume</label>
+                    <label className="block text-black mb-1 font-semibold">Annual Tech Placement Volume</label>
                     <input
                       type="text"
                       value={formData.placementVolume}
                       onChange={(e) => setFormData({ ...formData, placementVolume: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-900"
+                      className="w-full bg-white border border-neutral-300 rounded-lg p-2.5 text-black"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Group 3: Document Uploads & Terms */}
-              <div className="pt-4 border-t border-slate-200">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-4 flex items-center gap-2">
-                  <UploadCloud className="w-4 h-4 text-emerald-600" />
+              <div className="pt-4 border-t border-neutral-200">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-black mb-4 flex items-center gap-2">
+                  <UploadCloud className="w-4 h-4 text-black" />
                   <span>3. Document Dossier & Legal Acceptance</span>
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 text-xs">
-                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-3">
-                    <FileText className="w-5 h-5 text-emerald-600" />
+                  <div className="p-3.5 rounded-xl bg-neutral-50 border border-neutral-200 flex items-center gap-3">
+                    <FileText className="w-5 h-5 text-black" />
                     <div>
-                      <span className="font-bold text-slate-900 block">GST Certificate</span>
-                      <span className="text-emerald-700 text-[11px] font-semibold">gst_cert_apex.pdf (Uploaded)</span>
+                      <span className="font-bold text-black block">GST Certificate</span>
+                      <span className="text-neutral-600 text-[11px] font-semibold">gst_cert_apex.pdf (Uploaded)</span>
                     </div>
                   </div>
-                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-3">
-                    <FileText className="w-5 h-5 text-emerald-600" />
+                  <div className="p-3.5 rounded-xl bg-neutral-50 border border-neutral-200 flex items-center gap-3">
+                    <FileText className="w-5 h-5 text-black" />
                     <div>
-                      <span className="font-bold text-slate-900 block">Incorporation Certificate</span>
-                      <span className="text-emerald-700 text-[11px] font-semibold">coi_llp_2019.pdf (Uploaded)</span>
+                      <span className="font-bold text-black block">Incorporation Certificate</span>
+                      <span className="text-neutral-600 text-[11px] font-semibold">coi_llp_2019.pdf (Uploaded)</span>
                     </div>
                   </div>
-                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-3">
-                    <FileText className="w-5 h-5 text-emerald-600" />
+                  <div className="p-3.5 rounded-xl bg-neutral-50 border border-neutral-200 flex items-center gap-3">
+                    <FileText className="w-5 h-5 text-black" />
                     <div>
-                      <span className="font-bold text-slate-900 block">Company PAN Card</span>
-                      <span className="text-emerald-700 text-[11px] font-semibold">company_pan.pdf (Uploaded)</span>
+                      <span className="font-bold text-black block">Company PAN Card</span>
+                      <span className="text-neutral-600 text-[11px] font-semibold">company_pan.pdf (Uploaded)</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                <div className="flex items-start gap-3 p-3.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs">
                   <input
                     type="checkbox"
                     id="terms"
                     required
                     checked={formData.agreedToTerms}
                     onChange={(e) => setFormData({ ...formData, agreedToTerms: e.target.checked })}
-                    className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500"
+                    className="mt-0.5 rounded text-black focus:ring-black accent-black"
                   />
-                  <label htmlFor="terms" className="text-slate-600 leading-relaxed font-medium">
+                  <label htmlFor="terms" className="text-black leading-relaxed font-medium">
                     We accept NexaTalent IT Solutions’s Partner Master Supplier Agreement (MSA), candidate non-solicitation guidelines, anti-duplicate submission policies, and agree to undergo compliance background verification.
                   </label>
                 </div>
@@ -305,7 +305,7 @@ export function VendorEmpanelmentForm() {
               <div className="pt-4">
                 <button
                   type="submit"
-                  className="w-full inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-xl shadow-emerald-600/25 active:scale-95 transition-all"
+                  className="w-full inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-black hover:bg-neutral-800 text-white font-bold text-sm shadow-xl shadow-black/10 active:scale-95 transition-all cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
                   <span>Submit Partner Empanelment Application</span>

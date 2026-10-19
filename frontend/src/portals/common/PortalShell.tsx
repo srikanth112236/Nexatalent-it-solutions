@@ -3,7 +3,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Logo } from '../../website/components/Logo';
 import { User, LogOut, ShieldCheck, Building2, Menu, X, ChevronsLeft, ChevronsRight, ChevronDown } from 'lucide-react';
 import { apiClient } from '../../shared/api-client';
-import { clearSession, getTenantId, getUserEmail } from '../../shared/auth/session';
+import { clearSession, getTenantId, getUserEmail, getActiveRole } from '../../shared/auth/session';
+import { directoryApi } from '../../shared/enterprise/phaseApi';
+import { Select } from '../../shared/ui/EnterpriseKit';
 
 export interface PortalNavItem {
   label: string;
@@ -64,6 +66,26 @@ export function PortalShell({ portalTitle, portalRole, navItems, children }: Por
   const safeNavItems = Array.isArray(navItems) ? navItems : [];
   const fallbackPath = safeNavItems[0]?.path || '/login';
   const roleInitial = (portalRole || 'U').charAt(0).toUpperCase();
+
+  const isPlatformRole = ['superadmin', 'platform_owner', 'operations_admin', 'employee'].includes(getActiveRole() || '');
+  const [tenantOptions, setTenantOptions] = useState<{ id: string; label: string }[]>([]);
+  useEffect(() => {
+    if (!isPlatformRole) return;
+    (async () => {
+      try {
+        const res: any = await directoryApi.tenants();
+        const list = Array.isArray(res?.data) ? res.data : res?.data?.data || [];
+        setTenantOptions(list.map((t: any) => ({ id: t.id, label: `${t.displayName || t.legalName || t.id}` })));
+      } catch { setTenantOptions([]); }
+    })();
+  }, [isPlatformRole]);
+
+  const switchTenant = (tid: string) => {
+    if (!tid || tid === activeTenantId) return;
+    try { localStorage.setItem('nexatalent_tenant_id', tid); } catch { /* noop */ }
+    // Reload so every panel re-reads the active tenant from localStorage.
+    window.location.reload();
+  };
 
   const isActiveItem = (item: PortalNavItem) =>
     location.pathname === item.path || (item.path !== fallbackPath && location.pathname.startsWith(item.path));
@@ -308,6 +330,18 @@ export function PortalShell({ portalTitle, portalRole, navItems, children }: Por
               <span role="status" className="ml-2 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 border border-emerald-200 text-emerald-700 hidden md:inline-flex items-center gap-1">
                 <ShieldCheck size={12} /> {activeTenantId} Authenticated
               </span>
+              {isPlatformRole && tenantOptions.length > 0 && (
+                <div className="hidden md:flex items-center gap-1.5 ml-2">
+                  <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Act as</label>
+                  <Select
+                    value={activeTenantId}
+                    onChange={switchTenant}
+                    ariaLabel="Switch active company tenant"
+                    options={tenantOptions.map((t) => ({ value: t.id, label: `${t.label} (${t.id})` }))}
+                    searchable
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-4 text-xs">

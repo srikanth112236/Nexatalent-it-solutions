@@ -262,27 +262,28 @@ export function LegalPage() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                padding: '0.3rem 0.8rem',
+                padding: '0.25rem 0.65rem',
                 borderRadius: '6px',
                 backgroundColor: '#000000',
                 color: '#ffffff',
-                fontSize: '0.8rem',
+                fontSize: '0.75rem',
                 fontWeight: 700,
-                marginBottom: '0.75rem'
+                marginBottom: '0.65rem'
               }}>
-                <ShieldCheck size={14} />
+                <ShieldCheck size={13} />
                 <span>Statutory Governance Documentation • Enterprise Compliance & DPDP 2023</span>
               </div>
               <h1 style={{
-                fontSize: 'clamp(2rem, 4vw, 3rem)',
+                fontSize: '1.5rem',
                 fontWeight: 800,
                 color: '#000000',
-                lineHeight: 1.2,
-                marginBottom: '0.5rem'
+                lineHeight: 1.25,
+                letterSpacing: '-0.02em',
+                marginBottom: '0.35rem'
               }}>
                 {activeDoc.title}
               </h1>
-              <p style={{ color: '#000000', fontSize: '0.95rem' }}>
+              <p style={{ color: '#000000', fontSize: '0.85rem' }}>
                 Governing Entity: NexaTalent IT Solutions Pvt. Ltd. (CIN: U72200MH2021PTC145678) • Last Revised: October 2026
               </p>
             </div>
@@ -400,26 +401,26 @@ export function LegalPage() {
             boxShadow: '0 4px 25px rgba(0,0,0,0.03)'
           }}>
             <div style={{
-              padding: '1rem 1.25rem',
-              borderRadius: '14px',
-              backgroundColor: '#ffffff',
+              padding: '0.85rem 1.1rem',
+              borderRadius: '12px',
+              backgroundColor: '#fafafa',
               border: '1px solid #000000',
-              marginBottom: '1.75rem',
+              marginBottom: '1.5rem',
               color: '#000000',
-              fontSize: '0.95rem',
+              fontSize: '0.85rem',
               fontWeight: 500,
-              lineHeight: 1.6
+              lineHeight: 1.55
             }}>
               {activeDoc.summary}
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               {activeDoc.content.map((sec, idx) => (
                 <div key={sec.heading} id={`clause-${idx}`} style={{ scrollMarginTop: '6rem' }}>
-                  <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#000000', marginBottom: '0.5rem' }}>
+                  <h2 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#000000', marginBottom: '0.35rem' }}>
                     {sec.heading}
                   </h2>
-                  <p style={{ fontSize: '0.95rem', color: '#000000', lineHeight: 1.75 }}>
+                  <p style={{ fontSize: '0.85rem', color: '#1a1a1a', lineHeight: 1.65 }}>
                     {sec.text}
                   </p>
                 </div>

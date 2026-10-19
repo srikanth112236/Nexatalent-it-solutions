@@ -12,7 +12,7 @@ export function WebsiteFooter() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '3rem', marginBottom: '3rem' }}>
           <div>
             <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', marginBottom: '1rem' }}>
-              Nexa<span style={{ color: 'var(--color-primary, #3b82f6)' }}>Talent</span>
+              NexaTalent
             </div>
             <p style={{ color: 'var(--color-text-muted, #94a3b8)', fontSize: '0.875rem', lineHeight: 1.6 }}>
               Enterprise recruitment technology platform delivering verified specialist talent across global engineering and leadership hubs.

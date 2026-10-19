@@ -9,8 +9,10 @@ import { MfaPanel } from '../../auth/components/MfaPanel';
 import { Select, Field } from '../../shared/ui/EnterpriseKit';
 import { SearchSuggest, SkillsMultiSelect, FilterPanel, DataTable } from '../../shared/ui/SearchKit';
 import { getUserEmail } from '../../shared/auth/session';
+import { onboardingCompleted } from '../../shared/onboarding';
 import { EmptyState, ErrorState, InlineLoading } from '../../shared/ui/DataState';
 import { safeMeetLink } from '../../shared/utils';
+import { useFormValidation, required, email, phone } from '../../shared/validation';
 
 const navItems = [
   { label: 'Career Dashboard', path: '/candidate' },
@@ -159,6 +161,26 @@ export function CandidatePortal() {
     visibility: 'standard', preferences: null, jobPreferences: { roles: '', locations: '', employmentTypes: '', workArrangement: '', availability: '' },
     onboarding: null,
   });
+
+  /* ---------- real-time field validation for profile inputs ---------- */
+  const profileForm = useFormValidation(
+    { name: '', email: '', phone: '', expectedCtc: '' },
+    {
+      name: [required('Full name')],
+      email: [required('Email address'), email()],
+      phone: [phone()],
+      expectedCtc: [required('Expected compensation')],
+    },
+    { validateOnChange: true, validateOnBlur: true }
+  );
+
+  /* Onboarding is a FIRST-TIME flow. Once completed, the details live in the
+     Profile tab and can be edited there forever — the prompt/nav must not reappear. */
+  const onboardingDone = onboardingCompleted(profile);
+  const visibleNavItems = useMemo(
+    () => (onboardingDone ? navItems.filter((n) => n.path !== '/candidate/onboarding') : navItems),
+    [onboardingDone],
+  );
 
   useEffect(() => {
     async function fetchData() {
@@ -345,27 +367,28 @@ export function CandidatePortal() {
     })();
   }, [currentTab, routeParam]);
 
-  const handleSaveProfile = async (e?: React.FormEvent, silent = false) => {
+  const handleSaveProfile = async (e?: React.FormEvent, silent = false, override?: any) => {
     if (e) e.preventDefault();
     setSaveError('');
+    const src: any = override || profile;
     try {
       // Keep legacy string columns in sync with structured arrays for admin/directory views.
       const body = {
-        ...profile,
-        email: profile.email || userEmail,
-        education: asArray(profile.educations).length > 0
-          ? asArray(profile.educations).map((r: any) => `${r.institution} — ${r.qualification}${r.endDate ? `, ${r.endDate}` : ''}`).join('; ')
-          : profile.education,
-        certifications: asArray(profile.certList).length > 0
-          ? asArray(profile.certList).map((r: any) => `${r.name} — ${r.issuer}${r.expiryDate ? ` (exp ${r.expiryDate})` : ''}`).join('; ')
-          : profile.certifications,
-        projects: asArray(profile.projectList).length > 0
-          ? asArray(profile.projectList).map((r: any) => r.name).join(', ')
-          : profile.projects,
-        skills: asArray(profile.skillLevels).length > 0
-          ? asArray(profile.skillLevels).map((r: any) => r.skill).join(', ')
-          : profile.skills,
-        experience: profile.experiences,
+        ...src,
+        email: src.email || userEmail,
+        education: asArray(src.educations).length > 0
+          ? asArray(src.educations).map((r: any) => `${r.institution} — ${r.qualification}${r.endDate ? `, ${r.endDate}` : ''}`).join('; ')
+          : src.education,
+        certifications: asArray(src.certList).length > 0
+          ? asArray(src.certList).map((r: any) => `${r.name} — ${r.issuer}${r.expiryDate ? ` (exp ${r.expiryDate})` : ''}`).join('; ')
+          : src.certifications,
+        projects: asArray(src.projectList).length > 0
+          ? asArray(src.projectList).map((r: any) => r.name).join(', ')
+          : src.projects,
+        skills: asArray(src.skillLevels).length > 0
+          ? asArray(src.skillLevels).map((r: any) => r.skill).join(', ')
+          : src.skills,
+        experience: src.experiences,
       };
       const res = await apiClient.put<any>('/api/v1/candidate/profile', body);
       if ((res as { data?: any })?.data) {
@@ -530,7 +553,7 @@ export function CandidatePortal() {
   const skillList = useMemo(() => filters.skills.split(',').map((s) => s.trim()).filter(Boolean), [filters.skills]);
 
   return (
-    <PortalShell portalTitle="Candidate Career Hub" portalRole="candidate" navItems={navItems}>
+    <PortalShell portalTitle="Candidate Career Hub" portalRole="candidate" navItems={visibleNavItems}>
       <div className="max-w-6xl mx-auto space-y-4">
 
         <div className="px-1">
@@ -540,9 +563,9 @@ export function CandidatePortal() {
         {/* ============ DASHBOARD (§7.2 — 9 widgets, each linked) ============ */}
         {currentTab === 'dashboard' && (
           <div className="space-y-4">
-            {!hasProfile && !isLoading && (
+            {!onboardingDone && !isLoading && (
               <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold flex items-center justify-between gap-3">
-                <span>Your profile is empty. Complete onboarding to get matched to jobs.</span>
+                <span>Your profile is not complete yet. Finish onboarding to get matched to jobs.</span>
                 <button type="button" onClick={() => navigate('/candidate/onboarding')} className="px-4 py-2 rounded-xl bg-amber-600 text-white font-bold shrink-0">Start Onboarding</button>
               </div>
             )}
@@ -643,12 +666,37 @@ export function CandidatePortal() {
 
         {/* ============ ONBOARDING (§7.1 — 9 sections, save progress) ============ */}
         {currentTab === 'onboarding' && (
-          <OnboardingWizard profile={profile} setProfile={setProfile} hasProfile={hasProfile} onSaveSection={async (step: number) => {
-            setSaveError('');
-            try {
-              await apiClient.put<any>('/api/v1/candidate/profile', { email: profile.email || userEmail, onboarding: { step, updatedAt: new Date().toISOString() } });
-            } catch { /* progress save best-effort */ }
-          }} onFinish={async () => { await handleSaveProfile(); navigate('/candidate/profile'); }} saveError={saveError} />
+          onboardingDone ? (
+            <div className={cardCls + ' sm:p-8 text-center space-y-3'}>
+              <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto"><CheckCircle2 size={30} /></div>
+              <h3 className="text-lg font-extrabold text-slate-900">Onboarding complete</h3>
+              <p className="text-xs text-slate-500">Your details are saved in your profile and can be edited any time from “My Profile &amp; CV”.</p>
+              <button type="button" onClick={() => navigate('/candidate/profile')} className="px-5 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs">Open profile</button>
+            </div>
+          ) : (
+            <OnboardingWizard profile={profile} setProfile={setProfile} hasProfile={hasProfile} onSaveSection={async (step: number) => {
+              setSaveError('');
+              try {
+                const completing = step >= 9;
+                const res = await apiClient.put<any>('/api/v1/candidate/profile', {
+                  email: profile.email || userEmail,
+                  onboarding: { step, completed: completing, ...(completing ? { completedAt: new Date().toISOString() } : {}), updatedAt: new Date().toISOString() },
+                });
+                const saved = (res as { data?: any })?.data;
+                if (saved?.onboarding) setProfile((prev: any) => ({ ...prev, onboarding: saved.onboarding }));
+              } catch { /* progress save best-effort */ }
+            }} onFinish={async () => {
+              const now = new Date().toISOString();
+              // Persist every wizard field AND the completed flag in one save —
+              // the wizard only saves the `onboarding` object per step.
+              const completing = {
+                ...profile,
+                onboarding: { step: 9, completed: true, completedAt: now, updatedAt: now },
+              };
+              await handleSaveProfile(undefined, false, completing);
+              navigate('/candidate/profile');
+            }} saveError={saveError} />
+          )
         )}
 
         {/* ============ PROFILE (§7.3 — structured) ============ */}
@@ -669,9 +717,12 @@ export function CandidatePortal() {
               {/* Personal */}
               <Section title="Personal">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Field2 label="Full Name *"><input required value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} className={inputCls} /></Field2>
-                  <Field2 label="Primary Email *"><input required type="email" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} className={inputCls} /></Field2>
-                  <Field2 label="Phone"><input value={profile.phone} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} className={inputCls} placeholder="+91 ..." /></Field2>
+                  <Field2 label="Full Name *"><input required value={profile.name} onChange={(e) => { setProfile({ ...profile, name: e.target.value }); profileForm.setField('name', e.target.value); }} onBlur={() => profileForm.setTouchedField('name')} className={inputCls} /></Field2>
+                  {profileForm.errorFor('name') && <p className="text-xs text-red-600 font-bold mt-1 ml-2">{profileForm.errorFor('name')}</p>}
+                  <Field2 label="Primary Email *"><input required type="email" value={profile.email} onChange={(e) => { setProfile({ ...profile, email: e.target.value }); profileForm.setField('email', e.target.value); }} onBlur={() => profileForm.setTouchedField('email')} className={inputCls} /></Field2>
+                  {profileForm.errorFor('email') && <p className="text-xs text-red-600 font-bold mt-1 ml-2">{profileForm.errorFor('email')}</p>}
+                  <Field2 label="Phone"><input value={profile.phone} onChange={(e) => { setProfile({ ...profile, phone: e.target.value }); profileForm.setField('phone', e.target.value); }} onBlur={() => profileForm.setTouchedField('phone')} className={inputCls} placeholder="+91 ..." /></Field2>
+                  {profileForm.errorFor('phone') && <p className="text-xs text-red-600 font-bold mt-1 ml-2">{profileForm.errorFor('phone')}</p>}
                   <Field2 label="Professional Headline"><input value={profile.headline} onChange={(e) => setProfile({ ...profile, headline: e.target.value })} className={inputCls} placeholder="e.g. Senior Fullstack Engineer" /></Field2>
                   <Field2 label="Location"><input value={profile.location} onChange={(e) => setProfile({ ...profile, location: e.target.value })} className={inputCls} placeholder="City, State" /></Field2>
                   <Field2 label="Country"><input value={profile.country} onChange={(e) => setProfile({ ...profile, country: e.target.value })} className={inputCls} /></Field2>
@@ -792,7 +843,8 @@ export function CandidatePortal() {
               {/* Compensation */}
               <Section title="Compensation">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <Field2 label="Expected compensation *"><input required value={profile.expectedCtc} onChange={(e) => setProfile({ ...profile, expectedCtc: e.target.value })} className={inputCls} placeholder="e.g. 3600000" /></Field2>
+                  <Field2 label="Expected compensation *"><input required value={profile.expectedCtc} onChange={(e) => { setProfile({ ...profile, expectedCtc: e.target.value }); profileForm.setField('expectedCtc', e.target.value); }} onBlur={() => profileForm.setTouchedField('expectedCtc')} className={inputCls} placeholder="e.g. 3600000" /></Field2>
+                  {profileForm.errorFor('expectedCtc') && <p className="text-xs text-red-600 font-bold mt-1 ml-2">{profileForm.errorFor('expectedCtc')}</p>}
                   <Field2 label="Currency"><Select value={profile.currency || 'INR'} onChange={(v) => setProfile({ ...profile, currency: v })} options={['INR', 'USD', 'AED', 'EUR', 'GBP', 'SGD'].map((v) => ({ value: v, label: v }))} /></Field2>
                   <Field2 label="Pay period"><Select value={profile.payPeriod || 'annual'} onChange={(v) => setProfile({ ...profile, payPeriod: v })} options={[{ value: 'annual', label: 'Annual' }, { value: 'monthly', label: 'Monthly' }]} /></Field2>
                 </div>

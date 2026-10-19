@@ -9,6 +9,7 @@ import { Select, ActionConfirm } from '../../shared/ui/EnterpriseKit';
 import { SearchSuggest, SkillsMultiSelect, FilterPanel, DataTable } from '../../shared/ui/SearchKit';
 import { SubmissionsPanel, TalentPoolsPanel, InterviewsPanel, NotificationsPanel, OffersPlacementsPanel, CommissionsPanel, ChatPanel, RequisitionsPanel } from '../common/EnterprisePanels';
 import { useCan } from '../../shared/auth/AuthContext';
+import { onboardingCompleted } from '../../shared/onboarding';
 import { MfaPanel } from '../../auth/components/MfaPanel';
 import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
 
@@ -124,6 +125,9 @@ export function RecruiterPortal() {  const location = useLocation();
   const [agencyEditing, setAgencyEditing] = useState(false);
   const [agencyForm, setAgencyForm] = useState({ displayName: '', website: '', address: '', contactName: '', contactPhone: '', specialties: '', locations: '', commercialModel: '' });
   const [agencyBusy, setAgencyBusy] = useState(false);
+  /* Onboarding is first-time only: once the agency profile is saved we mark it
+     complete and stop prompting. The profile stays editable forever after. */
+  const agencyOnboarded = onboardingCompleted(agency);
 
   const STAGES = ['New', 'Applied', 'Under Review', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interview Completed', 'Selected', 'Offer', 'Hired', 'Rejected', 'Withdrawn', 'On Hold', 'Job Closed'];
 
@@ -338,8 +342,18 @@ export function RecruiterPortal() {  const location = useLocation();
     e.preventDefault(); if (!agency) return;
     setAgencyBusy(true); setAgencyError(''); setAgencyOk('');
     try {
-      const res: any = await workforceApi.updateAgency(agency.id, agencyForm);
-      const updated = (res as any)?.data || agencyForm;
+      const now = new Date().toISOString();
+      const body = {
+        ...agencyForm,
+        onboarding: {
+          ...(agency.onboarding || {}),
+          completed: true,
+          completedAt: agency.onboarding?.completedAt || now,
+          updatedAt: now,
+        },
+      };
+      const res: any = await workforceApi.updateAgency(agency.id, body);
+      const updated = (res as any)?.data || body;
       setAgency((a: any) => ({ ...a, ...updated }));
       setAgencyEditing(false); setAgencyOk('Profile updated.');
     } catch (e: any) { setAgencyError(e?.response?.data?.message || e?.message || 'Save failed.'); }
@@ -388,6 +402,12 @@ export function RecruiterPortal() {  const location = useLocation();
             </div>
             {agencyError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold">{agencyError}</div>}
             {agencyOk && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{agencyOk}</div>}
+            {agency && !agencyOnboarded && (
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold flex items-center justify-between gap-3">
+                <span>Complete your agency setup once to receive mandates and submit candidates. Your details are saved here and editable later.</span>
+                <button type="button" onClick={() => setAgencyEditing(true)} className="px-4 py-2 rounded-xl bg-amber-600 text-white font-bold shrink-0">Complete setup</button>
+              </div>
+            )}
             {agencyLoading ? <InlineLoading message="Loading agency profile…" /> : agency ? agencyEditing ? (
               <form onSubmit={saveAgency} className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 {[['displayName','Display name'],['website','Website'],['contactName','Contact name'],['contactPhone','Contact phone'],['specialties','Specialties'],['locations','Locations served'],['commercialModel','Commercial model']].map(([k, label]) => (

@@ -4,22 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { apiClient } from '../../shared/api-client';
 import { Select } from '../../shared/ui/EnterpriseKit';
 import { Logo } from '../../website/components/Logo';
-import { 
-  Building2, 
-  CheckCircle2, 
-  ArrowRight, 
-  ArrowLeft, 
-  ShieldCheck, 
-  UploadCloud, 
-  Briefcase, 
-  Check, 
-  UserCheck, 
-  Globe, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  DollarSign
+import {
+  Building2, CheckCircle2, ArrowRight, ArrowLeft, ShieldCheck,
+  Briefcase, Check, UserCheck, Globe, Mail, Phone
 } from 'lucide-react';
+import {
+  useFormValidation, required, email, phone, minLength, match, url,
+} from '../../shared/validation';
 
 export function EmployerRegisterPage() {
   const [step, setStep] = useState(1);
@@ -27,600 +18,277 @@ export function EmployerRegisterPage() {
   const [refId, setRefId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
-  const [docFile, setDocFile] = useState<File | null>(null);
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    // Step 1: Legal Entity & Corporate Info
-    companyName: '',
-    website: '',
-    industry: '',
-    gstCin: '',
-    hqAddress: '',
+  /* ---------- step validation ---------- */
+  const step1Form = useFormValidation(
+    { companyName: '', website: '', industry: '', gstCin: '', hqAddress: '' },
+    {
+      companyName: [required('Company legal name'), minLength(2, 'Company legal name')],
+      website: [required('Company website'), url('Website address')],
+      industry: [required('Industry sector')],
+      gstCin: [required('GSTIN / CIN number')],
+      hqAddress: [required('Headquarters address')],
+    },
+    { validateOnChange: true, validateOnBlur: true }
+  );
+  const step2Form = useFormValidation(
+    { contactPerson: '', designation: '', email: '', phone: '', officePhone: '' },
+    {
+      contactPerson: [required('Executive name'), minLength(2, 'Executive name')],
+      designation: [required('Designation')],
+      email: [required('Corporate email'), email()],
+      phone: [required('Phone number'), phone()],
+    },
+    { validateOnChange: true, validateOnBlur: true }
+  );
+  const step3Form = useFormValidation(
+    { companySize: '', targetLocations: '', monthlyHiringVolume: '', preferredModel: '', estimatedBudget: '' },
+    {
+      companySize: [required('Company size')],
+      targetLocations: [required('Target hiring locations')],
+      monthlyHiringVolume: [required('Monthly hiring volume')],
+      preferredModel: [required('Preferred hiring model')],
+    },
+    { validateOnChange: true, validateOnBlur: true }
+  );
+  const step4Form = useFormValidation(
+    { password: '', confirmPassword: '', agreeTerms: false },
+    {
+      password: [required('Create password'), minLength(10, 'Password')],
+      confirmPassword: [required('Confirm password'), match('password', 'Confirm password', 'Password')],
+      agreeTerms: [(v) => (v === true || v === 'true') ? undefined : 'You must accept the terms to continue.'],
+    },
+    { validateOnChange: true, validateOnBlur: true }
+  );
 
-    // Step 2: Executive Leadership & Primary Contact
-    contactPerson: '',
-    designation: '',
-    email: '',
-    phone: '',
-    officePhone: '',
+  const handleBack = () => { if (step > 1) setStep(step - 1); };
 
-    // Step 3: Hiring Scale & Target Locations
-    companySize: '',
-    targetLocations: '',
-    monthlyHiringVolume: '',
-    preferredModel: '',
-    estimatedBudget: '',
-
-    // Step 4: Password & Security
-    password: '',
-    confirmPassword: '',
-    ndaRequired: false,
-    agreeTerms: false
-  });
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setDocFile(e.target.files[0]);
-    }
-  };
-
-  const handleNext = () => {
-    if (step < 4) {
-      setStep(step + 1);
-    }
-  };
-
-  const handleBack = () => {
-    if (step > 1) {
-      setStep(step - 1);
-    }
+  const handleNext = (next: number) => {
+    if (step === 1) { const { isValid, validationMessages } = step1Form.validateForm(); if (!isValid) { setFormError((validationMessages && validationMessages.length ? validationMessages[0] : 'Please fill in the fields above.')); return; } }
+    if (step === 2) { const { isValid, validationMessages } = step2Form.validateForm(); if (!isValid) { setFormError((validationMessages && validationMessages.length ? validationMessages[0] : 'Please fill in the fields above.')); return; } }
+    if (step === 3) { const { isValid, validationMessages } = step3Form.validateForm(); if (!isValid) { setFormError((validationMessages && validationMessages.length ? validationMessages[0] : 'Please fill in the fields above.')); return; } }
+    setStep(next);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
-    if (!formData.companyName.trim() || !formData.email.trim()) {
-      setFormError('Company name and corporate email are required.');
-      return;
-    }
-    if (!formData.agreeTerms) {
-      setFormError('You must accept the terms to continue.');
-      return;
-    }
-    if (formData.password.length < 8) {
-      setFormError('Password must be at least 10 characters.');
-      return;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      setFormError('Passwords do not match.');
-      return;
-    }
+    const { isValid, validationMessages } = step4Form.validateForm();
+    if (!isValid) { setFormError((validationMessages && validationMessages.length ? validationMessages[0] : 'Please fill in the fields above.')); return; }
     setIsSubmitting(true);
     try {
       const res = await apiClient.post<any>('/api/v1/auth/register/employer', {
-        name: formData.contactPerson.trim(),
-        email: formData.email.trim(),
-        password: formData.password,
-        companyName: formData.companyName.trim(),
-        phone: formData.phone.trim(),
+        name: step2Form.values.contactPerson.trim(),
+        email: step2Form.values.email.trim(),
+        password: step4Form.values.password,
+        companyName: step1Form.values.companyName.trim(),
+        phone: step2Form.values.phone.trim(),
       });
       const created = (res as { data?: { id?: string } })?.data;
       setRefId(created?.id || 'RECEIVED');
       setSubmitted(true);
-      setTimeout(() => {
-        navigate('/login', { replace: true });
-      }, 2800);
+      setTimeout(() => { navigate('/login', { replace: true }); }, 2800);
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        (err as Error)?.message ||
-        'Registration failed. Please try again.';
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || (err as Error)?.message || 'Registration failed. Please try again.';
       setFormError(msg);
-    } finally {
-      setIsSubmitting(false);
-    }
+    } finally { setIsSubmitting(false); }
   };
+
+  const [formData, setFormData] = useState({
+    companyName: '', website: '', industry: '', gstCin: '', hqAddress: '',
+    contactPerson: '', designation: '', email: '', phone: '', officePhone: '',
+    companySize: '', targetLocations: '', monthlyHiringVolume: '', preferredModel: '', estimatedBudget: '',
+    password: '', confirmPassword: '', ndaRequired: false, agreeTerms: false
+  });
 
   return (
     <div className="min-h-screen w-full bg-[#FAF8F5] flex items-center justify-center p-4 sm:p-6 lg:p-10 font-sans">
-      {/* Container */}
-      <div className="w-full max-w-5xl bg-white border border-slate-200/90 rounded-3xl shadow-2xl shadow-slate-200/60 overflow-hidden grid grid-cols-1 lg:grid-cols-12">
-        
-        {/* Left Brand Column */}
+      <div className="w-full max-w-5xl bg-white border border-slate-200/90 rounded-3xl shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12">
         <div className="lg:col-span-4 bg-slate-900 text-white p-8 sm:p-10 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-800">
           <div>
-            <div className="mb-8">
-              <Link to="/" className="inline-block bg-white p-2.5 rounded-xl shadow-sm">
-                <Logo height={34} />
-              </Link>
+            <div className="mb-8"><Link to="/" className="inline-block bg-white p-2.5 rounded-xl shadow-sm"><Logo height={34} /></Link></div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-bold bg-white/10 text-white border border-white/20 mb-4">
+              <Building2 className="w-3.5 h-3.5" /><span>Employer KYC & Hiring Portal</span>
             </div>
-
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-bold tracking-wide bg-blue-500/10 text-blue-400 border border-blue-500/20 mb-4">
-              <Building2 className="w-3.5 h-3.5" />
-              <span>Enterprise Client KYC Protocol</span>
-            </div>
-
-            <h2 className="text-2xl font-extrabold text-white tracking-tight leading-snug mb-3">
-              Deploy Engineering Pods & GCC Squads
-            </h2>
-
+            <h2 className="text-2xl font-extrabold text-white tracking-tight leading-snug mb-3">Enterprise Hiring Partner Registration</h2>
             <p className="text-xs text-slate-300 leading-relaxed mb-6 font-normal">
-              Pre-evaluated technical talent graph, 3-stage code vetting, open-book Cost-Plus pricing, and 72-hour shortlist SLAs.
+              Register your company to post jobs, invite agencies, and hire verified tech talent with transparent fee payouts.
             </p>
-
-            {/* Stepper Progress Indicator */}
             <div className="space-y-3 pt-4 border-t border-slate-800/80 text-xs">
-              <div className={`flex items-center gap-3 p-2 rounded-xl border transition-colors ${step === 1 ? 'bg-blue-600/20 border-blue-500/40 text-white font-bold' : 'border-transparent text-slate-400'}`}>
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${step > 1 ? 'bg-emerald-500 text-white' : step === 1 ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
-                  {step > 1 ? <Check size={13} /> : '1'}
-                </span>
-                <span>1. Corporate Legal Verification</span>
+              <div className={`flex items-center gap-3 p-2 rounded-xl border transition-colors ${step === 1 ? 'bg-white/15 border-white/30 text-white font-bold' : 'border-transparent text-slate-400'}`}>
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${step > 1 ? 'bg-white text-black' : step === 1 ? 'bg-white text-black' : 'bg-slate-800 text-slate-400'}`}>{step > 1 ? <Check size={13} /> : '1'}</span><span>1. Corporate Legal Details</span>
               </div>
-
-              <div className={`flex items-center gap-3 p-2 rounded-xl border transition-colors ${step === 2 ? 'bg-blue-600/20 border-blue-500/40 text-white font-bold' : 'border-transparent text-slate-400'}`}>
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${step > 2 ? 'bg-emerald-500 text-white' : step === 2 ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
-                  {step > 2 ? <Check size={13} /> : '2'}
-                </span>
-                <span>2. Executive Contact Details</span>
+              <div className={`flex items-center gap-3 p-2 rounded-xl border transition-colors ${step === 2 ? 'bg-white/15 border-white/30 text-white font-bold' : 'border-transparent text-slate-400'}`}>
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${step > 2 ? 'bg-white text-black' : step === 2 ? 'bg-white text-black' : 'bg-slate-800 text-slate-400'}`}>{step > 2 ? <Check size={13} /> : '2'}</span><span>2. Executive Contact</span>
               </div>
-
-              <div className={`flex items-center gap-3 p-2 rounded-xl border transition-colors ${step === 3 ? 'bg-blue-600/20 border-blue-500/40 text-white font-bold' : 'border-transparent text-slate-400'}`}>
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${step > 3 ? 'bg-emerald-500 text-white' : step === 3 ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
-                  {step > 3 ? <Check size={13} /> : '3'}
-                </span>
-                <span>3. Hiring Scale & Scope</span>
+              <div className={`flex items-center gap-3 p-2 rounded-xl border transition-colors ${step === 3 ? 'bg-white/15 border-white/30 text-white font-bold' : 'border-transparent text-slate-400'}`}>
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${step > 3 ? 'bg-white text-black' : step === 3 ? 'bg-white text-black' : 'bg-slate-800 text-slate-400'}`}>{step > 3 ? <Check size={13} /> : '3'}</span><span>3. Hiring Scale & Locations</span>
               </div>
-
-              <div className={`flex items-center gap-3 p-2 rounded-xl border transition-colors ${step === 4 ? 'bg-blue-600/20 border-blue-500/40 text-white font-bold' : 'border-transparent text-slate-400'}`}>
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${step === 4 ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
-                  4
-                </span>
-                <span>4. Documents & Security</span>
+              <div className={`flex items-center gap-3 p-2 rounded-xl border transition-colors ${step === 4 ? 'bg-white/15 border-white/30 text-white font-bold' : 'border-transparent text-slate-400'}`}>
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${step === 4 ? 'bg-white text-black' : 'bg-slate-800 text-slate-400'}`}>4</span><span>4. Account Security</span>
               </div>
             </div>
           </div>
-
           <div className="pt-6 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between font-medium">
-            <span className="flex items-center gap-1.5 text-emerald-400">
-              <ShieldCheck size={14} /> MCA Admin Audit SLA: 2 Hours
-            </span>
+            <span className="flex items-center gap-1.5 text-white font-bold"><ShieldCheck size={14} /> Corporate KYC Verified</span>
           </div>
         </div>
 
-        {/* Right Form Panel */}
         <div className="lg:col-span-8 p-8 sm:p-10 bg-white flex flex-col justify-between">
           <div>
-            {/* Header */}
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
               <div>
-                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                  Enterprise Client Registration
-                </h1>
-                <p className="text-xs text-slate-600 font-medium mt-0.5">
-                  Complete corporate KYC verification to unlock the Nexa Requisition Console.
-                </p>
+                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Employer KYC Registration</h1>
+                <p className="text-xs text-slate-600 font-medium mt-0.5">Register your organization to post jobs and hire talent.</p>
               </div>
-              <span className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full">
-                Step {step} of 4
-              </span>
+              <span className="text-xs font-bold text-black bg-neutral-100 border border-neutral-300 px-3 py-1 rounded-full">Step {step} of 4</span>
             </div>
-
+            {formError && <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-bold">{formError}</div>}
             <AnimatePresence mode="wait">
               {submitted ? (
-                <motion.div
-                  key="submitted"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="text-center py-10 space-y-4"
-                >
-                  <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-md">
-                    <CheckCircle2 size={36} />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-extrabold text-slate-900">Organization Verified & Logged</h3>
-                    <p className="text-sm text-slate-600 mt-1">
-                      Reference ID: <strong className="text-blue-600 font-mono">{refId}</strong>
-                    </p>
-                  </div>
-                  <div className="max-w-md mx-auto p-4 rounded-2xl bg-blue-50 border border-blue-200 text-xs text-slate-700 text-left space-y-2">
-                    <div className="flex items-center gap-2 font-bold text-blue-900">
-                      <UserCheck size={15} /> Express Admin Audit Activated
-                    </div>
-                    <p className="text-slate-600 leading-relaxed">
-                      Your GST registration ({formData.gstCin.split('/')[0]}) and corporate domain have been matched against ministry records. An executive account partner has been assigned.
-                    </p>
-                  </div>
-                    <div className="text-xs font-bold text-slate-500 animate-pulse">
-                      Redirecting to Sign In...
-                    </div>
+                <motion.div key="submitted" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-10 space-y-4">
+                  <div className="w-16 h-16 rounded-full bg-neutral-100 text-black border border-neutral-300 flex items-center justify-center mx-auto shadow-md"><CheckCircle2 size={36} /></div>
+                  <div><h3 className="text-2xl font-extrabold text-slate-900">Employer Account Calibrated</h3><p className="text-sm text-slate-600 mt-1">Registration Reference: <strong className="text-black font-mono">{refId}</strong></p></div>
+                  <div className="text-xs font-bold text-slate-500 animate-pulse">Redirecting to Sign In...</div>
                 </motion.div>
               ) : (
-                <form onSubmit={handleSubmit}>
-                  
-                  {/* STEP 1: Corporate Legal Information */}
+                <form noValidate>
                   {step === 1 && (
-                    <motion.div
-                      key="step1"
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -10 }}
-                      className="space-y-4 text-xs"
-                    >
-                      <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 text-blue-600">
-                        <Building2 size={16} /> Step 1: Corporate Legal & Incorporation Details
-                      </h3>
-
+                    <motion.div key="step1" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-4 text-xs">
+                      <h3 className="text-sm font-bold text-black uppercase tracking-wider flex items-center gap-2"><Building2 size={16} /> Step 1: Corporate Legal & Incorporation Details</h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-slate-700 font-bold mb-1">Company Legal Registered Name *</label>
-                          <input
-                            type="text"
-                            required
-                            value={formData.companyName}
-                            onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                            placeholder="e.g. Fintech ScaleOps Technologies Ltd"
-                            className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold focus:bg-white focus:border-blue-600 outline-none"
-                          />
+                          <input type="text" value={formData.companyName} onChange={(e) => { setFormData({...formData, companyName: e.target.value}); step1Form.setField('companyName', e.target.value); }} onBlur={() => step1Form.setTouchedField('companyName')} placeholder="e.g. Fintech ScaleOps Technologies Ltd" className={`w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold focus:bg-white focus:border-black outline-none ${step1Form.errorFor('companyName') ? 'border-red-400 focus:border-red-400' : ''}`} />
+                          {step1Form.errorFor('companyName') && <p className="text-xs text-red-600 font-bold mt-1">{step1Form.errorFor('companyName')}</p>}
                         </div>
-
                         <div>
                           <label className="block text-slate-700 font-bold mb-1">Official Corporate Website *</label>
-                          <div className="relative">
-                            <Globe size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <input
-                              type="url"
-                              required
-                              value={formData.website}
-                              onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                              placeholder="https://company.io"
-                              className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-3 py-3 text-slate-900 font-semibold focus:bg-white focus:border-blue-600 outline-none"
-                            />
-                          </div>
+                          <div className="relative"><Globe size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" /><input type="url" value={formData.website} onChange={(e) => { setFormData({...formData, website: e.target.value}); step1Form.setField('website', e.target.value); }} onBlur={() => step1Form.setTouchedField('website')} placeholder="https://company.io" className={`w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-3 py-3 text-slate-900 font-semibold focus:bg-white focus:border-black outline-none ${step1Form.errorFor('website') ? 'border-red-400 focus:border-red-400' : ''}`} /></div>
+                          {step1Form.errorFor('website') && <p className="text-xs text-red-600 font-bold mt-1">{step1Form.errorFor('website')}</p>}
                         </div>
                       </div>
-
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-slate-700 font-bold mb-1">Industry Sector & Domain *</label>
-                          <input
-                            type="text"
-                            required
-                            value={formData.industry}
-                            onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                            placeholder="e.g. BFSI / FinTech / Healthcare AI"
-                            className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold focus:bg-white focus:border-blue-600 outline-none"
-                          />
+                          <input type="text" value={formData.industry} onChange={(e) => { setFormData({...formData, industry: e.target.value}); step1Form.setField('industry', e.target.value); }} onBlur={() => step1Form.setTouchedField('industry')} placeholder="e.g. BFSI / FinTech / Healthcare AI" className={`w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold focus:bg-white focus:border-black outline-none ${step1Form.errorFor('industry') ? 'border-red-400 focus:border-red-400' : ''}`} />
+                          {step1Form.errorFor('industry') && <p className="text-xs text-red-600 font-bold mt-1">{step1Form.errorFor('industry')}</p>}
                         </div>
-
                         <div>
                           <label className="block text-slate-700 font-bold mb-1">GSTIN / CIN Certificate Number *</label>
-                          <input
-                            type="text"
-                            required
-                            value={formData.gstCin}
-                            onChange={(e) => setFormData({ ...formData, gstCin: e.target.value })}
-                            placeholder="e.g. 29AAACF1234H1Z1"
-                            className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold font-mono focus:bg-white focus:border-blue-600 outline-none"
-                          />
+                          <input type="text" value={formData.gstCin} onChange={(e) => { setFormData({...formData, gstCin: e.target.value}); step1Form.setField('gstCin', e.target.value); }} onBlur={() => step1Form.setTouchedField('gstCin')} placeholder="e.g. 29AAACF1234H1Z1" className={`w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold font-mono focus:bg-white focus:border-black outline-none ${step1Form.errorFor('gstCin') ? 'border-red-400 focus:border-red-400' : ''}`} />
+                          {step1Form.errorFor('gstCin') && <p className="text-xs text-red-600 font-bold mt-1">{step1Form.errorFor('gstCin')}</p>}
                         </div>
                       </div>
-
                       <div>
                         <label className="block text-slate-700 font-bold mb-1">Corporate Headquarters Address *</label>
-                        <textarea
-                          rows={2}
-                          required
-                          value={formData.hqAddress}
-                          onChange={(e) => setFormData({ ...formData, hqAddress: e.target.value })}
-                          placeholder="Full registered office address..."
-                          className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-medium focus:bg-white focus:border-blue-600 outline-none"
-                        />
+                        <textarea rows={2} value={formData.hqAddress} onChange={(e) => { setFormData({...formData, hqAddress: e.target.value}); step1Form.setField('hqAddress', e.target.value); }} onBlur={() => step1Form.setTouchedField('hqAddress')} placeholder="Full registered office address..." className={`w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-medium focus:bg-white focus:border-black outline-none ${step1Form.errorFor('hqAddress') ? 'border-red-400 focus:border-red-400' : ''}`} />
+                        {step1Form.errorFor('hqAddress') && <p className="text-xs text-red-600 font-bold mt-1">{step1Form.errorFor('hqAddress')}</p>}
                       </div>
                     </motion.div>
                   )}
-
-                  {/* STEP 2: Executive Contact Details */}
                   {step === 2 && (
-                    <motion.div
-                      key="step2"
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -10 }}
-                      className="space-y-4 text-xs"
-                    >
-                      <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 text-blue-600">
-                        <UserCheck size={16} /> Step 2: Primary Authorized Contact & Executive Lead
-                      </h3>
-
+                    <motion.div key="step2" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-4 text-xs">
+                      <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 text-black"><UserCheck size={16} /> Step 2: Primary Authorized Contact & Executive Lead</h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-slate-700 font-bold mb-1">Executive Full Name *</label>
-                          <input
-                            type="text"
-                            required
-                            value={formData.contactPerson}
-                            onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
-                            placeholder="e.g. Aditi Deshmukh"
-                            className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold focus:bg-white focus:border-blue-600 outline-none"
-                          />
+                          <input type="text" value={formData.contactPerson} onChange={(e) => { setFormData({...formData, contactPerson: e.target.value}); step2Form.setField('contactPerson', e.target.value); }} onBlur={() => step2Form.setTouchedField('contactPerson')} placeholder="e.g. Aditi Deshmukh" className={`w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold focus:bg-white focus:border-black outline-none ${step2Form.errorFor('contactPerson') ? 'border-red-400 focus:border-red-400' : ''}`} />
+                          {step2Form.errorFor('contactPerson') && <p className="text-xs text-red-600 font-bold mt-1">{step2Form.errorFor('contactPerson')}</p>}
                         </div>
-
                         <div>
-                          <label className="block text-slate-700 font-bold mb-1">Corporate Designation / Title *</label>
-                          <input
-                            type="text"
-                            required
-                            value={formData.designation}
-                            onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
-                            placeholder="e.g. VP of Engineering / Talent Lead"
-                            className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold focus:bg-white focus:border-blue-600 outline-none"
-                          />
+                          <label className="block text-slate-700 font-bold mb-1">Designation *</label>
+                          <input type="text" value={formData.designation} onChange={(e) => { setFormData({...formData, designation: e.target.value}); step2Form.setField('designation', e.target.value); }} onBlur={() => step2Form.setTouchedField('designation')} placeholder="e.g. VP Talent Acquisition" className={`w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold focus:bg-white focus:border-black outline-none ${step2Form.errorFor('designation') ? 'border-red-400 focus:border-red-400' : ''}`} />
+                          {step2Form.errorFor('designation') && <p className="text-xs text-red-600 font-bold mt-1">{step2Form.errorFor('designation')}</p>}
                         </div>
                       </div>
-
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-slate-700 font-bold mb-1">Official Work Email *</label>
-                          <div className="relative">
-                            <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <input
-                              type="email"
-                              required
-                              value={formData.email}
-                              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                              placeholder="aditi@company.io"
-                              className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-3 py-3 text-slate-900 font-semibold focus:bg-white focus:border-blue-600 outline-none"
-                            />
-                          </div>
+                          <label className="block text-slate-700 font-bold mb-1">Corporate Email *</label>
+                          <div className="relative"><Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" /><input type="email" value={formData.email} onChange={(e) => { setFormData({...formData, email: e.target.value}); step2Form.setField('email', e.target.value); }} onBlur={() => step2Form.setTouchedField('email')} placeholder="hr@company.io" className={`w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-3 py-3 text-slate-900 font-semibold focus:bg-white focus:border-black outline-none ${step2Form.errorFor('email') ? 'border-red-400 focus:border-red-400' : ''}`} /></div>
+                          {step2Form.errorFor('email') && <p className="text-xs text-red-600 font-bold mt-1">{step2Form.errorFor('email')}</p>}
                         </div>
-
                         <div>
-                          <label className="block text-slate-700 font-bold mb-1">Direct Mobile Number *</label>
-                          <div className="relative">
-                            <Phone size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <input
-                              type="tel"
-                              required
-                              value={formData.phone}
-                              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                              placeholder="+91 99800 11223"
-                              className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-3 py-3 text-slate-900 font-semibold focus:bg-white focus:border-blue-600 outline-none"
-                            />
-                          </div>
+                          <label className="block text-slate-700 font-bold mb-1">Phone Number *</label>
+                          <div className="relative"><Phone size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" /><input type="tel" value={formData.phone} onChange={(e) => { setFormData({...formData, phone: e.target.value}); step2Form.setField('phone', e.target.value); }} onBlur={() => step2Form.setTouchedField('phone')} placeholder="+91 98450 12890" className={`w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-3 py-3 text-slate-900 font-semibold focus:bg-white focus:border-black outline-none ${step2Form.errorFor('phone') ? 'border-red-400 focus:border-red-400' : ''}`} /></div>
+                          {step2Form.errorFor('phone') && <p className="text-xs text-red-600 font-bold mt-1">{step2Form.errorFor('phone')}</p>}
                         </div>
+                      </div>
+                      <div>
+                        <label className="block text-slate-700 font-bold mb-1">Office Phone</label>
+                        <input type="tel" value={formData.officePhone} onChange={(e) => setFormData({...formData, officePhone: e.target.value})} placeholder="+91 22 1234 5678" className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold focus:bg-white focus:border-black outline-none" />
                       </div>
                     </motion.div>
                   )}
-
-                  {/* STEP 3: Hiring Scale & Scope */}
                   {step === 3 && (
-                    <motion.div
-                      key="step3"
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -10 }}
-                      className="space-y-4 text-xs"
-                    >
-                      <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 text-blue-600">
-                        <Briefcase size={16} /> Step 3: Hiring Scale, Target Hubs & Model
-                      </h3>
-
+                    <motion.div key="step3" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-4 text-xs">
+                      <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 text-black"><Briefcase size={16} /> Step 3: Hiring Scale & Target Locations</h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-slate-700 font-bold mb-1">Company Headcount Scale *</label>
-                          <Select
-                            value={formData.companySize}
-                            onChange={(v) => setFormData({ ...formData, companySize: v })}
-                            ariaLabel="Company headcount scale"
-                            options={[
-                              '10–50 Employees (Early Stage / Seed)',
-                              '50–250 Employees (Growth / Series A-B)',
-                              '250–500 Employees (Series C Funded)',
-                              '500–2500 Employees (Mid-Enterprise / Unicorn)',
-                              '2500+ Employees (Global Enterprise / Fortune 500)',
-                            ].map((o) => ({ value: o, label: o }))}
-                          />
+                          <label className="block text-slate-700 font-bold mb-1">Company Size *</label>
+                          <Select value={formData.companySize} onChange={(v) => { setFormData({...formData, companySize: v}); step3Form.setField('companySize', v); }} ariaLabel="Company size" options={['1-10','11-50','51-200','201-500','501-1000','1000+'].map(o => ({value: o, label: o}))} />
+                          {step3Form.errorFor('companySize') && <p className="text-xs text-red-600 font-bold mt-1">{step3Form.errorFor('companySize')}</p>}
                         </div>
-
                         <div>
                           <label className="block text-slate-700 font-bold mb-1">Target Hiring Locations *</label>
-                          <div className="relative">
-                            <MapPin size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <input
-                              type="text"
-                              required
-                              value={formData.targetLocations}
-                              onChange={(e) => setFormData({ ...formData, targetLocations: e.target.value })}
-                              placeholder="e.g. Bengaluru, Hyderabad, Remote"
-                              className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-3 py-3 text-slate-900 font-semibold focus:bg-white focus:border-blue-600 outline-none"
-                            />
-                          </div>
+                          <input type="text" value={formData.targetLocations} onChange={(e) => { setFormData({...formData, targetLocations: e.target.value}); step3Form.setField('targetLocations', e.target.value); }} onBlur={() => step3Form.setTouchedField('targetLocations')} placeholder="e.g. Bengaluru, Mumbai, Remote" className={`w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold focus:bg-white focus:border-black outline-none ${step3Form.errorFor('targetLocations') ? 'border-red-400 focus:border-red-400' : ''}`} />
+                          {step3Form.errorFor('targetLocations') && <p className="text-xs text-red-600 font-bold mt-1">{step3Form.errorFor('targetLocations')}</p>}
                         </div>
                       </div>
-
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-slate-700 font-bold mb-1">Expected Monthly Hiring Volume *</label>
-                          <Select
-                            value={formData.monthlyHiringVolume}
-                            onChange={(v) => setFormData({ ...formData, monthlyHiringVolume: v })}
-                            ariaLabel="Expected monthly hiring volume"
-                            options={[
-                              '1–5 Engineers / Month',
-                              '5–10 Engineers / Month',
-                              '10–25 Engineers / Month',
-                              '25+ Engineers / Month (Turnkey GCC Setup)',
-                            ].map((o) => ({ value: o, label: o }))}
-                          />
+                          <label className="block text-slate-700 font-bold mb-1">Monthly Hiring Volume *</label>
+                          <input type="text" value={formData.monthlyHiringVolume} onChange={(e) => { setFormData({...formData, monthlyHiringVolume: e.target.value}); step3Form.setField('monthlyHiringVolume', e.target.value); }} onBlur={() => step3Form.setTouchedField('monthlyHiringVolume')} placeholder="e.g. 5-10 roles" className={`w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold focus:bg-white focus:border-black outline-none ${step3Form.errorFor('monthlyHiringVolume') ? 'border-red-400 focus:border-red-400' : ''}`} />
+                          {step3Form.errorFor('monthlyHiringVolume') && <p className="text-xs text-red-600 font-bold mt-1">{step3Form.errorFor('monthlyHiringVolume')}</p>}
                         </div>
-
                         <div>
-                          <label className="block text-slate-700 font-bold mb-1">Estimated Annual Hiring Spend Budget *</label>
-                          <div className="relative">
-                            <DollarSign size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <input
-                              type="text"
-                              required
-                              value={formData.estimatedBudget}
-                              onChange={(e) => setFormData({ ...formData, estimatedBudget: e.target.value })}
-                              placeholder="e.g. ₹1.5 Cr – ₹4.0 Cr"
-                              className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-3 py-3 text-slate-900 font-semibold focus:bg-white focus:border-blue-600 outline-none"
-                            />
-                          </div>
+                          <label className="block text-slate-700 font-bold mb-1">Preferred Hiring Model *</label>
+                          <Select value={formData.preferredModel} onChange={(v) => { setFormData({...formData, preferredModel: v}); step3Form.setField('preferredModel', v); }} ariaLabel="Hiring model" options={['Contingent','Retained','Executive Search','Bulk Hiring','Contract Staffing'].map(o => ({value: o, label: o}))} />
+                          {step3Form.errorFor('preferredModel') && <p className="text-xs text-red-600 font-bold mt-1">{step3Form.errorFor('preferredModel')}</p>}
                         </div>
+                      </div>
+                      <div>
+                        <label className="block text-slate-700 font-bold mb-1">Estimated Annual Hiring Budget</label>
+                        <input type="text" value={formData.estimatedBudget} onChange={(e) => setFormData({...formData, estimatedBudget: e.target.value})} placeholder="e.g. ₹50,00,000" className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold font-mono focus:bg-white focus:border-black outline-none" />
                       </div>
                     </motion.div>
                   )}
-
-                  {/* STEP 4: Documents & Security Verification */}
                   {step === 4 && (
-                    <motion.div
-                      key="step4"
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -10 }}
-                      className="space-y-4 text-xs"
-                    >
-                      <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 text-blue-600">
-                        <UploadCloud size={16} /> Step 4: Verification Documents & Security Credentials
-                      </h3>
-
-                      {/* File Upload Box */}
-                      <div className="p-5 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-300 text-center space-y-2">
-                        <UploadCloud size={28} className="text-blue-600 mx-auto" />
-                        <div className="text-xs font-bold text-slate-800">
-                          Upload Company Certificate of Incorporation / GST Certificate / Deck
-                        </div>
-                        <p className="text-[11px] text-slate-500">
-                          Supports PDF, DOCX (Max 10MB). Used exclusively for express MCA verification.
-                        </p>
-                        <input
-                          type="file"
-                          id="corporate-doc"
-                          accept=".pdf,.docx,.doc"
-                          onChange={handleFileUpload}
-                          className="hidden"
-                        />
-                        <label
-                          htmlFor="corporate-doc"
-                          className="inline-block px-4 py-2 rounded-xl bg-white border border-slate-300 text-blue-600 font-bold text-xs shadow-sm hover:bg-slate-100 cursor-pointer transition-colors"
-                        >
-                          {docFile ? `Selected: ${docFile.name}` : 'Choose File to Upload'}
-                        </label>
-                      </div>
-
-                      {/* Password Fields */}
-                      {formError && (
-                        <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-bold">
-                          {formError}
-                        </div>
-                      )}
+                    <motion.div key="step4" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-4 text-xs">
+                      <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 text-black"><ShieldCheck size={16} /> Step 4: Account Security</h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-slate-700 font-bold mb-1">Create Account Password (min 8) *</label>
-                          <input
-                            type="password"
-                            required
-                            minLength={10}
-                            autoComplete="new-password"
-                            value={formData.password}
-                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                            placeholder="••••••••••••"
-                            className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold focus:bg-white focus:border-blue-600 outline-none"
-                          />
+                          <label className="block text-slate-700 font-bold mb-1">Create Password *</label>
+                          <input type="password" value={formData.password} onChange={(e) => { setFormData({...formData, password: e.target.value}); step4Form.setField('password', e.target.value); }} onBlur={() => step4Form.setTouchedField('password')} autoComplete="new-password" placeholder="••••••••••••" className={`w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold focus:bg-white focus:border-black outline-none ${step4Form.errorFor('password') ? 'border-red-400 focus:border-red-400' : ''}`} />
+                          {step4Form.errorFor('password') && <p className="text-xs text-red-600 font-bold mt-1">{step4Form.errorFor('password')}</p>}
                         </div>
-
                         <div>
-                          <label className="block text-slate-700 font-bold mb-1">Confirm Account Password *</label>
-                          <input
-                            type="password"
-                            required
-                            minLength={10}
-                            autoComplete="new-password"
-                            value={formData.confirmPassword}
-                            onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                            placeholder="••••••••••••"
-                            className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold focus:bg-white focus:border-blue-600 outline-none"
-                          />
+                          <label className="block text-slate-700 font-bold mb-1">Confirm Password *</label>
+                          <input type="password" value={formData.confirmPassword} onChange={(e) => { setFormData({...formData, confirmPassword: e.target.value}); step4Form.setField('confirmPassword', e.target.value); }} onBlur={() => step4Form.setTouchedField('confirmPassword')} autoComplete="new-password" placeholder="••••••••••••" className={`w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 font-semibold focus:bg-white focus:border-black outline-none ${step4Form.errorFor('confirmPassword') ? 'border-red-400 focus:border-red-400' : ''}`} />
+                          {step4Form.errorFor('confirmPassword') && <p className="text-xs text-red-600 font-bold mt-1">{step4Form.errorFor('confirmPassword')}</p>}
                         </div>
                       </div>
-
-                      {/* Checkboxes */}
-                      <div className="space-y-2 pt-2">
-                        <label className="flex items-center gap-2 cursor-pointer text-slate-700 font-medium">
-                          <input
-                            type="checkbox"
-                            checked={formData.ndaRequired}
-                            onChange={(e) => setFormData({ ...formData, ndaRequired: e.target.checked })}
-                            className="w-4 h-4 text-blue-600 rounded border-slate-300"
-                          />
-                          <span>Require Mutual Non-Disclosure Agreement (MNDA) before candidate portfolio sharing</span>
-                        </label>
-
-                        <label className="flex items-center gap-2 cursor-pointer text-slate-700 font-medium">
-                          <input
-                            type="checkbox"
-                            required
-                            checked={formData.agreeTerms}
-                            onChange={(e) => setFormData({ ...formData, agreeTerms: e.target.checked })}
-                            className="w-4 h-4 text-blue-600 rounded border-slate-300"
-                          />
-                          <span>I agree to NexaTalent IT Solutions Master Services Agreement and Privacy Policy</span>
-                        </label>
+                      <label className="flex items-start gap-2 cursor-pointer p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 font-medium">
+                        <input type="checkbox" checked={formData.agreeTerms} onChange={(e) => { setFormData({...formData, agreeTerms: e.target.checked}); step4Form.setField('agreeTerms', e.target.checked); }} className="w-4 h-4 mt-0.5 text-black accent-black rounded border-slate-300" />
+                        <span>I accept the <Link to="/terms" target="_blank" className="text-black font-bold underline">Terms of Service</Link> and <Link to="/privacy" target="_blank" className="text-black font-bold underline">Privacy Policy</Link> *</span>
+                      </label>
+                      {step4Form.errorFor('agreeTerms') && <p className="text-xs text-red-600 font-bold mt-1">{step4Form.errorFor('agreeTerms')}</p>}
+                      <div className="p-3 rounded-xl bg-neutral-100 border border-neutral-300 text-xs text-black font-medium">
+                        <div className="flex items-center gap-2"><Building2 size={14} className="text-black" /><span>Your GST registration and corporate domain will be matched against ministry records.</span></div>
                       </div>
-
                     </motion.div>
                   )}
-
-                  {/* Form Navigation Buttons */}
                   <div className="mt-8 pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
-                    {step > 1 ? (
-                      <button
-                        type="button"
-                        onClick={handleBack}
-                        className="px-5 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-2 transition-colors cursor-pointer"
-                      >
-                        <ArrowLeft size={15} />
-                        <span>Previous Step</span>
-                      </button>
-                    ) : <div />}
-
-                    {step < 4 ? (
-                      <button
-                        type="button"
-                        onClick={handleNext}
-                        className="px-7 py-3.5 rounded-xl bg-[#087BFF] hover:bg-blue-600 text-white font-bold text-xs shadow-md shadow-blue-500/20 flex items-center gap-2 transition-all cursor-pointer"
-                      >
-                        <span>Proceed to Step {step + 1}</span>
-                        <ArrowRight size={15} />
-                      </button>
-                    ) : (
-                      <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="px-8 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-60"
-                      >
-                        <span>{isSubmitting ? 'Submitting…' : 'Submit Organization Registration'}</span>
-                        <CheckCircle2 size={16} />
-                      </button>
-                    )}
+                    {step > 1 ? (<button type="button" onClick={handleBack} className="px-5 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-2 transition-colors cursor-pointer"><ArrowLeft size={15} /><span>Previous Step</span></button>) : <div />}
+                    {step < 4 ? (<button type="button" onClick={() => handleNext(step + 1)} className="px-7 py-3.5 rounded-xl bg-black hover:bg-neutral-800 text-white font-bold text-xs shadow-md shadow-black/10 flex items-center gap-2 transition-all cursor-pointer"><span>Proceed to Step {step + 1}</span><ArrowRight size={15} /></button>) : (<button type="button" onClick={() => handleSubmit({ preventDefault: () => {} } as unknown as React.FormEvent)} disabled={isSubmitting} className="px-8 py-3.5 rounded-xl bg-black hover:bg-neutral-800 text-white font-bold text-xs shadow-lg shadow-black/10 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-60"><span>{isSubmitting ? 'Creating Account…' : 'Create Verified Employer Account'}</span><CheckCircle2 size={16} /></button>)}
                   </div>
-
                 </form>
               )}
             </AnimatePresence>
           </div>
-
-          {/* Bottom Footer Link */}
-          <div className="mt-6 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
-            <span>Already registered your company?</span>
-            <Link to="/login" className="text-[#087BFF] font-bold hover:underline">
-              Sign In to Employer Workspace →
-            </Link>
-          </div>
+          <div className="mt-6 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium"><span>Already registered as an employer?</span><Link to="/login" className="text-black font-bold hover:underline">Sign In to Employer Portal →</Link></div>
         </div>
-
       </div>
     </div>
   );

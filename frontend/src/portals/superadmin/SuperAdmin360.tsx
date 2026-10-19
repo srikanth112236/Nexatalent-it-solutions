@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { directoryApi, jobsApi, workforceApi } from '../../shared/enterprise/phaseApi';
 import { DetailDrawer, KeyValues, StatusPill, ExportButton, DrawerCard, DrawerList } from '../common/CrudKit';
 import { Modal, RowMenu } from '../../shared/ui/EnterpriseKit';
@@ -24,6 +25,7 @@ function TabBar({ tabs, active, onPick }: { tabs: string[]; active: string; onPi
 const COMPANY_TABS = ['Overview', 'Profile', 'Verification', 'Users', 'Branches', 'Requisitions', 'Jobs', 'Applications', 'Interviews', 'Subscription', 'Invoices', 'Payments', 'Commissions', 'Activity', 'Audit Log'];
 
 export function Company360Drawer({ tenantId, onClose, onChanged }: { tenantId: string; onClose: () => void; onChanged?: () => void }) {
+  const navigate = useNavigate();
   const [tab, setTab] = useState('Overview');
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -75,7 +77,6 @@ export function Company360Drawer({ tenantId, onClose, onChanged }: { tenantId: s
                 ['Legal name', data.organization.legalName || data.organization.name],
                 ['Brand', data.organization.displayName || '—'],
                 ['Plan / Seats', `${data.organization.plan || '—'} / ${data.organization.seats || '—'}`],
-                ['Subscription', (() => { const s = (data.subscriptions || [])[0]; return s ? `${s.planId} v${s.planVersion} — ${s.status}` : '—'; })()],
                 ['Verification', <StatusPill value={data.organization.verificationStatus || 'Pending'} />],
                 ['Account', <StatusPill value={data.organization.accountStatus || data.organization.status} />],
                 ['Active jobs', String(data.computed?.activeJobs ?? '—')],
@@ -166,18 +167,34 @@ export function Company360Drawer({ tenantId, onClose, onChanged }: { tenantId: s
                 )} />
             </div>
           )}
-          {tab === 'Requisitions' && <DrawerList items={data.requisitions || []} empty="No requisitions." label="Requisitions"
-            render={(r) => (
-              <DrawerCard key={r.id} status={r.status} title={r.title || r.id}
-                meta={<>{r.id} • {r.openings || 1} opening(s)</>}
-                right={<StatusPill value={r.status} />} />
-            )} />}
-          {tab === 'Jobs' && <DrawerList items={data.jobs || []} empty="No jobs." label="Jobs"
-            render={(j) => (
-              <DrawerCard key={j.id} status={j.status} title={j.title || j.id}
-                meta={<>{j.id} • {j.location || '—'}</>}
-                right={<StatusPill value={j.status} />} />
-            )} />}
+          {tab === 'Requisitions' && (
+            <div className="space-y-2">
+              <div className="flex justify-end">
+                <button type="button" onClick={() => { onClose(); navigate(`/superadmin/requisitions/new?orgId=${encodeURIComponent(tenantId)}`); }}
+                  className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-xs">+ Create requirement for this company</button>
+              </div>
+              <DrawerList items={data.requisitions || []} empty="No requisitions." label="Requisitions"
+                render={(r) => (
+                  <DrawerCard key={r.id} status={r.status} title={r.title || r.id}
+                    meta={<>{r.id} • {r.openings || 1} opening(s)</>}
+                    right={<StatusPill value={r.status} />} />
+                )} />
+            </div>
+          )}
+          {tab === 'Jobs' && (
+            <div className="space-y-2">
+              <div className="flex justify-end">
+                <button type="button" onClick={() => { onClose(); navigate(`/superadmin/jobs/new?orgId=${encodeURIComponent(tenantId)}`); }}
+                  className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-xs">+ Create job for this company</button>
+              </div>
+              <DrawerList items={data.jobs || []} empty="No jobs." label="Jobs"
+                render={(j) => (
+                  <DrawerCard key={j.id} status={j.status} title={j.title || j.id}
+                    meta={<>{j.id} • {j.location || '—'}</>}
+                    right={<StatusPill value={j.status} />} />
+                )} />
+            </div>
+          )}
           {tab === 'Applications' && <DrawerList items={data.applications || []} empty="No applications." label="Applications"
             render={(a) => (
               <DrawerCard key={a.id} status={a.stage} title={a.jobTitle || a.jobId}
@@ -189,12 +206,6 @@ export function Company360Drawer({ tenantId, onClose, onChanged }: { tenantId: s
               <DrawerCard key={i.id} status={i.status} title={i.candidateName || i.candidateEmail}
                 meta={<>{i.round || i.roundName || ''} • {String(i.scheduledAt || i.date || '').slice(0, 16).replace('T', ' ')}</>}
                 right={<StatusPill value={i.status} />} />
-            )} />}
-          {tab === 'Subscription' && <DrawerList items={data.subscriptions || []} empty="No subscriptions." label="Subscriptions"
-            render={(s) => (
-              <DrawerCard key={s.id} status={s.status} title={s.id}
-                meta={<>{s.planId} (v{s.planVersion}) • renews {String(s.renewalDate || '').slice(0, 10)}</>}
-                right={<StatusPill value={s.status} />} />
             )} />}
           {tab === 'Invoices' && <DrawerList items={data.invoices || []} empty="No invoices." label="Invoices"
             render={(i: any) => (

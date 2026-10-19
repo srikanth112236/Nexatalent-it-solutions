@@ -118,14 +118,14 @@ export function AboutPage() {
             <img
               src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=900&q=80"
               alt="NexaTalent office"
-              className="aspect-[4/3] w-full object-cover object-center"
+              className="aspect-[16/10] w-full object-cover object-center"
             />
           </div>
           <div className="overflow-hidden rounded-2xl border border-neutral-200 sm:col-span-4">
             <img
               src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=900&q=80"
               alt="NexaTalent professionals"
-              className="aspect-[4/3] w-full object-cover object-center"
+              className="aspect-[16/10] w-full object-cover object-center"
             />
           </div>
           <div className="flex flex-col justify-between rounded-2xl border border-neutral-200 bg-white p-6 sm:col-span-3">
@@ -151,9 +151,9 @@ export function AboutPage() {
         <div className={`${SHELL} mt-10 grid grid-cols-1 items-start gap-8 md:grid-cols-2`}>
           <div className="overflow-hidden rounded-2xl border border-neutral-200">
             <img
-              src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1000&q=80"
+              src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&crop=focalpoint&fp-y=0.25&w=1000&q=80"
               alt="Team reviewing profiles"
-              className="aspect-[4/3] w-full object-cover object-center"
+              className="aspect-[16/10] w-full object-cover object-center"
             />
           </div>
           <div className="space-y-4 text-[15px] leading-7 text-black">
@@ -256,9 +256,9 @@ export function AboutPage() {
         <div className={`${SHELL} grid grid-cols-1 items-center gap-10 md:grid-cols-2`}>
           <div className="overflow-hidden rounded-2xl border border-neutral-200">
             <img
-              src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=80"
+              src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&crop=focalpoint&fp-y=0.25&w=900&q=80"
               alt="NexaTalent team"
-              className="aspect-[4/3] w-full object-cover object-center"
+              className="aspect-[16/10] w-full object-cover object-center"
             />
           </div>
           <div>

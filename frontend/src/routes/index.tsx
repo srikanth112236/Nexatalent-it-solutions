@@ -6,6 +6,8 @@ import { CandidateRegisterPage } from '../auth/pages/CandidateRegisterPage';
 import { EmployerRegisterPage } from '../auth/pages/EmployerRegisterPage';
 import { RecruiterRegisterPage } from '../auth/pages/RecruiterRegisterPage';
 import { VendorRegisterPage } from '../auth/pages/VendorRegisterPage';
+import { OtpVerifyPage } from '../auth/pages/OtpVerifyPage';
+import { OnboardingAnimation } from '../auth/pages/OnboardingAnimation';
 import { ForgotPasswordPage } from '../auth/pages/ForgotPasswordPage';
 import { NotFoundPage } from './NotFoundPage';
 import { InlineLoading } from '../shared/ui/DataState';
@@ -85,6 +87,11 @@ export function AppRoutes() {
         <Route path="/vendor/login" element={<LoginPage />} />
         <Route path="/employee/login" element={<LoginPage />} />
         <Route path="/superadmin/login" element={<LoginPage />} />
+        
+        <Route path="/auth/otp-verify" element={<OtpVerifyPage />} />
+        <Route path="/auth/otp-verify/*" element={<OtpVerifyPage />} />
+        <Route path="/onboarding/animation" element={<OnboardingAnimation />} />
+        <Route path="/onboarding/animation/*" element={<OnboardingAnimation />} />
         
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/forgot-password/*" element={<ForgotPasswordPage />} />

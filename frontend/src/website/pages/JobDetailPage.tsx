@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useFormValidation, required, email as emailRule, phone as phoneRule } from '../../shared/validation';
 import { 
   MapPin, 
   IndianRupee, 
@@ -285,6 +286,17 @@ export function JobDetailPage() {
   const [appReferenceId, setAppReferenceId] = useState('');
   const [applyError, setApplyError] = useState('');
 
+  /* ---------- real-time validation for job application ---------- */
+  const applyForm = useFormValidation(
+    { fullName: '', email: '', phone: '' },
+    {
+      fullName: [required('Full name')],
+      email: [required('Email address'), emailRule()],
+      phone: [required('Phone number'), phoneRule()],
+    },
+    { validateOnChange: true, validateOnBlur: true }
+  );
+
   // Lookup target job mandate or fallback to j1
   const lookupKey = (jobSlug && JOBS_DATABASE[jobSlug.toLowerCase()]) ? jobSlug.toLowerCase() : 'j1';
   const job = JOBS_DATABASE[lookupKey];
@@ -319,7 +331,12 @@ export function JobDetailPage() {
   const handleApplicationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setApplyError('');
-    setIsSubmitting(true);
+
+    const { isValid, validationMessages } = applyForm.validateForm();
+    if (!isValid) {
+      setApplyError(validationMessages.length ? validationMessages[0] : 'Please fill in the fields above.');
+      return;
+    }
     try {
       const base =
         (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) ||
@@ -849,10 +866,12 @@ export function JobDetailPage() {
                         type="text"
                         required
                         value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
+                        onChange={(e) => { setFullName(e.target.value); applyForm.setField('fullName', e.target.value); }}
+                        onBlur={() => applyForm.setTouchedField('fullName')}
                         placeholder="e.g. Rahul Sharma"
-                        className="w-full p-3 rounded-xl bg-white border border-slate-200 text-black font-semibold focus:outline-none focus:border-black focus:bg-white transition-all text-xs"
+                        className={`w-full p-3 rounded-xl bg-white border border-slate-200 text-black font-semibold focus:outline-none focus:border-black focus:bg-white transition-all text-xs ${applyForm.errorFor('fullName') ? 'border-red-400 focus:border-red-400' : ''}`}
                       />
+                      {applyForm.errorFor('fullName') && <p className="text-xs text-red-600 font-bold mt-1 ml-2">{applyForm.errorFor('fullName')}</p>}
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -865,10 +884,12 @@ export function JobDetailPage() {
                           type="email"
                           required
                           value={email}
-                          onChange={(e) => setEmail(e.target.value)}
+                          onChange={(e) => { setEmail(e.target.value); applyForm.setField('email', e.target.value); }}
+                          onBlur={() => applyForm.setTouchedField('email')}
                           placeholder="rahul@domain.com"
-                          className="w-full p-3 rounded-xl bg-white border border-slate-200 text-black font-semibold focus:outline-none focus:border-black focus:bg-white transition-all text-xs"
+                          className={`w-full p-3 rounded-xl bg-white border border-slate-200 text-black font-semibold focus:outline-none focus:border-black focus:bg-white transition-all text-xs ${applyForm.errorFor('email') ? 'border-red-400 focus:border-red-400' : ''}`}
                         />
+                        {applyForm.errorFor('email') && <p className="text-xs text-red-600 font-bold mt-1 ml-2">{applyForm.errorFor('email')}</p>}
                       </div>
 
                       <div>
@@ -880,10 +901,12 @@ export function JobDetailPage() {
                           type="tel"
                           required
                           value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
+                          onChange={(e) => { setPhone(e.target.value); applyForm.setField('phone', e.target.value); }}
+                          onBlur={() => applyForm.setTouchedField('phone')}
                           placeholder="+91 98765 43210"
-                          className="w-full p-3 rounded-xl bg-white border border-slate-200 text-black font-semibold focus:outline-none focus:border-black focus:bg-white transition-all text-xs"
+                          className={`w-full p-3 rounded-xl bg-white border border-slate-200 text-black font-semibold focus:outline-none focus:border-black focus:bg-white transition-all text-xs ${applyForm.errorFor('phone') ? 'border-red-400 focus:border-red-400' : ''}`}
                         />
+                        {applyForm.errorFor('phone') && <p className="text-xs text-red-600 font-bold mt-1 ml-2">{applyForm.errorFor('phone')}</p>}
                       </div>
                     </div>
 

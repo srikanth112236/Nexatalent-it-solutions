@@ -641,7 +641,7 @@ export function SolutionDetailPage() {
           {/* NEW SECTION 2: COMPARATIVE ADVANTAGE MATRIX */}
           <div className="p-8 sm:p-10 rounded-3xl bg-white border border-neutral-200 space-y-6 shadow-xs">
             <div className="space-y-2">
-              <span className="text-xs font-bold text-black uppercase tracking-wider bg-white px-3.5 py-1 rounded-full border border-black">
+              <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-black uppercase tracking-wider bg-white px-3.5 py-1.5 rounded-full border border-black shadow-xs">
                 WHY NEXA TALENT IT SOLUTIONS
               </span>
               <h2 className="text-2xl sm:text-4xl font-extrabold text-black tracking-tight">
@@ -650,45 +650,57 @@ export function SolutionDetailPage() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full text-left text-base sm:text-[15px]">
                 <thead>
-                  <tr className="border-b border-neutral-300 text-black font-extrabold">
-                    <th className="py-3 px-4">Evaluation Metric</th>
-                    <th className="py-3 px-4 text-black">Nexa Talent IT Solutions</th>
-                    <th className="py-3 px-4 text-black">Traditional Agencies</th>
-                    <th className="py-3 px-4 text-black">In-House TA Only</th>
+                  <tr className="border-b-2 border-neutral-300 text-black font-extrabold">
+                    <th className="py-4 px-4 font-black">Evaluation Metric</th>
+                    <th className="py-4 px-4 text-black font-black bg-neutral-100 rounded-t-xl border-x border-neutral-300">
+                      Nexa Talent IT Solutions
+                    </th>
+                    <th className="py-4 px-4 text-neutral-600 font-bold">Traditional Agencies</th>
+                    <th className="py-4 px-4 text-neutral-600 font-bold">In-House TA Only</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-200 text-black">
                   <tr>
-                    <td className="py-3.5 px-4 font-bold text-black">Average Time-to-Fill</td>
-                    <td className="py-3.5 px-4 font-extrabold text-black">5 - 18 Days</td>
-                    <td className="py-3.5 px-4 text-black">45 - 90 Days</td>
-                    <td className="py-3.5 px-4 text-black">60+ Days</td>
+                    <td className="py-4 px-4 font-bold text-black">Average Time-to-Fill</td>
+                    <td className="py-4 px-4 font-black text-black bg-neutral-100/80 border-x border-neutral-300">
+                      5 - 18 Days
+                    </td>
+                    <td className="py-4 px-4 text-neutral-700">45 - 90 Days</td>
+                    <td className="py-4 px-4 text-neutral-700">60+ Days</td>
                   </tr>
                   <tr>
-                    <td className="py-3.5 px-4 font-bold text-black">Technical Pre-Screening</td>
-                    <td className="py-3.5 px-4 font-extrabold text-black">Practitioner Code Vetting</td>
-                    <td className="py-3.5 px-4 text-black">Keyword Resume Matching</td>
-                    <td className="py-3.5 px-4 text-black">General Recruiter Screen</td>
+                    <td className="py-4 px-4 font-bold text-black">Technical Pre-Screening</td>
+                    <td className="py-4 px-4 font-black text-black bg-neutral-100/80 border-x border-neutral-300">
+                      Practitioner Code Vetting
+                    </td>
+                    <td className="py-4 px-4 text-neutral-700">Keyword Resume Matching</td>
+                    <td className="py-4 px-4 text-neutral-700">General Recruiter Screen</td>
                   </tr>
                   <tr>
-                    <td className="py-3.5 px-4 font-bold text-black">Candidate Replacement Guarantee</td>
-                    <td className="py-3.5 px-4 font-extrabold text-black">90-Day Unconditional</td>
-                    <td className="py-3.5 px-4 text-black">30 Days or None</td>
-                    <td className="py-3.5 px-4 text-black">N/A (Sunk Cost)</td>
+                    <td className="py-4 px-4 font-bold text-black">Candidate Replacement Guarantee</td>
+                    <td className="py-4 px-4 font-black text-black bg-neutral-100/80 border-x border-neutral-300">
+                      90-Day Unconditional
+                    </td>
+                    <td className="py-4 px-4 text-neutral-700">30 Days or None</td>
+                    <td className="py-4 px-4 text-neutral-700">N/A (Sunk Cost)</td>
                   </tr>
                   <tr>
-                    <td className="py-3.5 px-4 font-bold text-black">Statutory & Labor Compliance</td>
-                    <td className="py-3.5 px-4 font-extrabold text-black">100% PF, ESI, GST Governed</td>
-                    <td className="py-3.5 px-4 text-black">Varies / Partial</td>
-                    <td className="py-3.5 px-4 text-black">Internal HR Overhead</td>
+                    <td className="py-4 px-4 font-bold text-black">Statutory & Labor Compliance</td>
+                    <td className="py-4 px-4 font-black text-black bg-neutral-100/80 border-x border-neutral-300">
+                      100% PF, ESI, GST Governed
+                    </td>
+                    <td className="py-4 px-4 text-neutral-700">Varies / Partial</td>
+                    <td className="py-4 px-4 text-neutral-700">Internal HR Overhead</td>
                   </tr>
                   <tr>
-                    <td className="py-3.5 px-4 font-bold text-black">Cost Transparency</td>
-                    <td className="py-3.5 px-4 font-extrabold text-black">Cost-Plus Clear Billing</td>
-                    <td className="py-3.5 px-4 text-black">Markups (30-50%)</td>
-                    <td className="py-3.5 px-4 text-black">Fixed Overhead</td>
+                    <td className="py-4 px-4 font-bold text-black">Cost Transparency</td>
+                    <td className="py-4 px-4 font-black text-black bg-neutral-100/80 border-x border-neutral-300 rounded-b-xl">
+                      Cost-Plus Clear Billing
+                    </td>
+                    <td className="py-4 px-4 text-neutral-700">Markups (30-50%)</td>
+                    <td className="py-4 px-4 text-neutral-700">Fixed Overhead</td>
                   </tr>
                 </tbody>
               </table>

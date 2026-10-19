@@ -471,7 +471,7 @@ extendedRouter.patch('/agency-profiles/:id', requireAuth(), (req, res) => {
   const isOwnAgencyAdmin = ctx.role === 'agency_admin' && a.tenantId && a.tenantId === ctx.tenantId;
   if (!isPlatform && !isOwnAgencyAdmin) return res.status(403).json({ success: false, message: `Access denied for role '${ctx.role}'.` });
   const b: any = req.body || {};
-  const SELF_FIELDS = ['displayName', 'entityType', 'country', 'registrationNumber', 'taxIds', 'website', 'address', 'contactName', 'contactEmail', 'contactPhone', 'specialties', 'locations', 'recruiterCount', 'commercialModel'];
+  const SELF_FIELDS = ['displayName', 'entityType', 'country', 'registrationNumber', 'taxIds', 'website', 'address', 'contactName', 'contactEmail', 'contactPhone', 'specialties', 'locations', 'recruiterCount', 'commercialModel', 'onboarding'];
   const PLATFORM_FIELDS = [...SELF_FIELDS, 'agreementStatus', 'tenantId', 'accountManager'];
   const allowed = isPlatform ? PLATFORM_FIELDS : SELF_FIELDS;
   for (const k of allowed) {

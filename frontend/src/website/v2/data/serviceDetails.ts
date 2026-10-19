@@ -16,7 +16,7 @@ export interface ServiceDetail {
   industry?: string;
 }
 
-const u = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=900&q=70`;
+const u = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&crop=focalpoint&fp-y=0.25&w=900&q=80`;
 
 export const SOLUTION_DETAILS: ServiceDetail[] = [
   {
@@ -86,8 +86,8 @@ export const SOLUTION_DETAILS: ServiceDetail[] = [
     tagline: 'Confidential leadership search',
     description:
       'Discreet, retained search for CXO, VP Engineering, Director and Head-level mandates. Research-led mapping of target companies, confidential outreach and psychometric-backed assessments.',
-    image: u('photo-1552664730-d307ca884978'),
-    alt: 'Leadership team in a boardroom discussion',
+    image: u('photo-1556157382-97eda2d62296'),
+    alt: 'Executive technology leader in a modern office',
     stats: [['30 days', 'avg. closure'], ['92%', 'retention at 1 yr'], ['100%', 'confidential']],
     capabilities: [
       'Target-company org mapping',

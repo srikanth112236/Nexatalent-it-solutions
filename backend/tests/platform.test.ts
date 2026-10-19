@@ -587,7 +587,7 @@ describe('requirements rollups + transitions (§6.7)', () => {
     expect((gone.body.data as any[]).some((x) => x.id === jid)).toBe(false);
     // close, then reopen requires future expiry
     await request(app).patch(`/api/v1/jobs/${jid}/status`).set(empAuth()).send({ status: 'Published', expiryDate: '2027-06-01' });
-    await request(app).patch(`/api/v1/jobs/${jid}/status`).set(empAuth()).send({ status: 'Closed' });
+    await request(app).patch(`/api/v1/jobs/${jid}/status`).set(empAuth()).send({ status: 'Closed', reason: 'closing for backfill window' });
     const reopenStale = await request(app).patch(`/api/v1/jobs/${jid}/status`).set(auth(superToken)).send({ status: 'Published', reason: 'backfill', expiryDate: '2020-01-01' });
     expect(reopenStale.status).toBe(422);
     const reopen = await request(app).patch(`/api/v1/jobs/${jid}/status`).set(auth(superToken)).send({ status: 'Published', reason: 'backfill approved', expiryDate: '2027-09-01' });

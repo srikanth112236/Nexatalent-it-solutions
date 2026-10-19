@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useFormValidation, required, email, phone } from '../../shared/validation';
 import { motion } from 'framer-motion';
 import { 
   Mail, 
@@ -136,6 +137,20 @@ export function ContactPage() {
     message: '',
   });
 
+  /* ---------- real-time validation for contact enquiry ---------- */
+  const contactForm = useFormValidation(
+    { name: '', workEmail: '', phone: '', company: '', roleOrHeadcount: '', message: '' },
+    {
+      name: [required('Full name')],
+      workEmail: [required('Email address'), email()],
+      phone: [required('Phone number'), phone()],
+      company: [required('Company / organization')],
+      roleOrHeadcount: [required('Requirement details')],
+      message: [required('Message')],
+    },
+    { validateOnChange: true, validateOnBlur: true }
+  );
+
   React.useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const inquiry = searchParams.get('inquiry');
@@ -164,8 +179,13 @@ export function ContactPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSendError('');
-    // Phase 7: real enquiry → lead. Server validates, dedupes and sets owner/status.
-    if (formData.message.trim().length < 10) {
+
+    const { isValid, validationMessages } = contactForm.validateForm();
+    if (!isValid) {
+      setSendError(validationMessages.length ? validationMessages[0] : 'Please fill in the fields above.');
+      return;
+    }
+    if (String(contactForm.values.message || '').trim().length < 10) {
       setSendError('Please add a few more details (at least 10 characters) so we can route your inquiry.');
       return;
     }
@@ -314,9 +334,11 @@ export function ContactPage() {
                       required
                       placeholder="e.g. Vikramaditya Sen"
                       value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white"
+                      onChange={(e) => { setFormData({ ...formData, name: e.target.value }); contactForm.setField('name', e.target.value); }}
+                      onBlur={() => contactForm.setTouchedField('name')}
+                      className={`w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white ${contactForm.errorFor('name') ? 'border-red-400 focus:ring-red-400' : ''}`}
                     />
+                    {contactForm.errorFor('name') && <p className="text-xs text-red-600 font-bold mt-1 ml-2">{contactForm.errorFor('name')}</p>}
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-black mb-1">Corporate Email *</label>
@@ -325,9 +347,11 @@ export function ContactPage() {
                       required
                       placeholder="vikram@company.com"
                       value={formData.workEmail}
-                      onChange={(e) => setFormData({ ...formData, workEmail: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white"
+                      onChange={(e) => { setFormData({ ...formData, workEmail: e.target.value }); contactForm.setField('workEmail', e.target.value); }}
+                      onBlur={() => contactForm.setTouchedField('workEmail')}
+                      className={`w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white ${contactForm.errorFor('workEmail') ? 'border-red-400 focus:ring-red-400' : ''}`}
                     />
+                    {contactForm.errorFor('workEmail') && <p className="text-xs text-red-600 font-bold mt-1 ml-2">{contactForm.errorFor('workEmail')}</p>}
                   </div>
                 </div>
 
@@ -339,9 +363,11 @@ export function ContactPage() {
                       required
                       placeholder="+91 98765 43210"
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white"
+                      onChange={(e) => { setFormData({ ...formData, phone: e.target.value }); contactForm.setField('phone', e.target.value); }}
+                      onBlur={() => contactForm.setTouchedField('phone')}
+                      className={`w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white ${contactForm.errorFor('phone') ? 'border-red-400 focus:ring-red-400' : ''}`}
                     />
+                    {contactForm.errorFor('phone') && <p className="text-xs text-red-600 font-bold mt-1 ml-2">{contactForm.errorFor('phone')}</p>}
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-black mb-1">Company / Organization *</label>
@@ -350,9 +376,11 @@ export function ContactPage() {
                       required
                       placeholder="e.g. Goldman Sachs GCC"
                       value={formData.company}
-                      onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white"
+                      onChange={(e) => { setFormData({ ...formData, company: e.target.value }); contactForm.setField('company', e.target.value); }}
+                      onBlur={() => contactForm.setTouchedField('company')}
+                      className={`w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white ${contactForm.errorFor('company') ? 'border-red-400 focus:ring-red-400' : ''}`}
                     />
+                    {contactForm.errorFor('company') && <p className="text-xs text-red-600 font-bold mt-1 ml-2">{contactForm.errorFor('company')}</p>}
                   </div>
                 </div>
 
@@ -364,9 +392,11 @@ export function ContactPage() {
                     type="text"
                     placeholder="e.g. 4 Senior React/Node Engineers in Bengaluru"
                     value={formData.roleOrHeadcount}
-                    onChange={(e) => setFormData({ ...formData, roleOrHeadcount: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white"
+                    onChange={(e) => { setFormData({ ...formData, roleOrHeadcount: e.target.value }); contactForm.setField('roleOrHeadcount', e.target.value); }}
+                    onBlur={() => contactForm.setTouchedField('roleOrHeadcount')}
+                    className={`w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white ${contactForm.errorFor('roleOrHeadcount') ? 'border-red-400 focus:ring-red-400' : ''}`}
                   />
+                  {contactForm.errorFor('roleOrHeadcount') && <p className="text-xs text-red-600 font-bold mt-1 ml-2">{contactForm.errorFor('roleOrHeadcount')}</p>}
                 </div>
 
                 <div>
@@ -375,9 +405,11 @@ export function ContactPage() {
                     rows={4}
                     placeholder="Provide additional details regarding tech stack, budget, or timeline..."
                     value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white resize-y"
+                    onChange={(e) => { setFormData({ ...formData, message: e.target.value }); contactForm.setField('message', e.target.value); }}
+                    onBlur={() => contactForm.setTouchedField('message')}
+                    className={`w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white resize-y ${contactForm.errorFor('message') ? 'border-red-400 focus:ring-red-400' : ''}`}
                   />
+                  {contactForm.errorFor('message') && <p className="text-xs text-red-600 font-bold mt-1 ml-2">{contactForm.errorFor('message')}</p>}
                 </div>
 
                 <button

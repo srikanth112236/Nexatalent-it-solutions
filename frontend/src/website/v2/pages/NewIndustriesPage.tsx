@@ -13,64 +13,64 @@ const EIGHT_INDUSTRIES = [
     slug: 'bfsi',
     label: 'Banking & Financial Services',
     desc: 'Streamlined operations and enhanced security to deliver personalized customer experiences.',
-    alt: 'A financial advisor reviewing documents with a client',
-    image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=800&q=70',
+    alt: 'Financial analytics and banking technology operations',
+    image: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=900&q=80',
     metric: '2,900+ Hires',
   },
   {
     slug: 'retail',
     label: 'Retail & E-commerce',
     desc: 'Empowered businesses with technology to drive customer loyalty and optimize operations.',
-    alt: 'A retail worker at the entrance of a modern lighting store',
-    image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=800&q=70',
+    alt: 'Modern commercial retail storefront and digital logistics',
+    image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=900&q=80',
     metric: '2,200+ Hires',
   },
   {
     slug: 'manufacturing',
     label: 'Manufacturing',
     desc: 'Enabled smart production and sustainable processes through innovative solutions.',
-    alt: 'Sparks flying from an automated industrial welding machine',
-    image: 'https://images.unsplash.com/photo-1565043666747-69f6646db940?auto=format&fit=crop&w=800&q=70',
+    alt: 'High-precision automated industrial manufacturing machinery',
+    image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=900&q=80',
     metric: '1,400+ Hires',
   },
   {
     slug: 'energy',
     label: 'Oil, Energy & Utilities',
     desc: 'Optimized resource management and improved efficiency with digital transformation.',
-    alt: 'An illuminated oil refinery seen from above at night',
-    image: 'https://images.unsplash.com/photo-1466611653911-95081537e5b7?auto=format&fit=crop&w=800&q=70',
+    alt: 'Renewable and industrial energy utility installation at sunrise',
+    image: 'https://images.unsplash.com/photo-1466611653911-95081537e5b7?auto=format&fit=crop&w=900&q=80',
     metric: '1,100+ Hires',
   },
   {
     slug: 'healthcare',
     label: 'Healthcare & Life Sciences',
     desc: 'Improved patient outcomes and streamlined operations with advanced technologies.',
-    alt: 'A futuristic interface visualizing health and life-sciences data',
-    image: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=800&q=70',
+    alt: 'Medical research and clinical laboratory technology',
+    image: 'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?auto=format&fit=crop&w=900&q=80',
     metric: '1,750+ Hires',
   },
   {
     slug: 'media',
     label: 'Communication & Media',
     desc: 'Digitized operations to enhance user engagement and create seamless experiences.',
-    alt: 'A presenter speaking into a microphone under studio lighting',
-    image: 'https://images.unsplash.com/photo-1495020689067-958852a7765e?auto=format&fit=crop&w=800&q=70',
+    alt: 'Media production studio and digital broadcasting technology',
+    image: 'https://images.unsplash.com/photo-1492619375914-88005aa9e8fb?auto=format&fit=crop&w=900&q=80',
     metric: '1,950+ Hires',
   },
   {
     slug: 'logistics',
     label: 'Travel, Transportation & Logistics',
     desc: 'Transformed processes to improve efficiency, safety, and customer satisfaction.',
-    alt: 'A container cargo ship at sea carrying freight across global trade routes',
-    image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=70',
+    alt: 'Global commercial supply chain logistics and fulfillment facility',
+    image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=900&q=80',
     metric: '1,800+ Hires',
   },
   {
     slug: 'gcc',
     label: 'Government & Public Sector',
     desc: 'Delivered secure, accessible digital services that meet the standards of public institutions.',
-    alt: 'A government capitol building with a classical dome',
-    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=70',
+    alt: 'Enterprise government and public institution architectural headquarters',
+    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=900&q=80',
     metric: '5,500+ Hires',
   },
 ];
@@ -116,7 +116,7 @@ export function NewIndustriesPage() {
                     alt={ind.alt}
                     loading="lazy"
                     decoding="async"
-                    className="aspect-[4/3] w-full rounded-2xl border border-neutral-200 object-cover object-center"
+                    className="aspect-[16/10] w-full rounded-2xl border border-neutral-200 object-cover object-center"
                   />
                 </div>
                 <div className="md:col-span-7">

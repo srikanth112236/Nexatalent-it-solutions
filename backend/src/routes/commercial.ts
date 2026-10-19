@@ -251,34 +251,136 @@ commercialRouter.get('/mail-outbox', requireAuth(), (req, res) => {
   const total = rows.length;
   return res.json({ success: true, data: rows.slice((page - 1) * pageSize, page * pageSize), pagination: { page, pageSize, total }, configured: mailConfigured() });
 });
-// ---- Server-generated PDFs (pdfkit, no browser needed) ----
+// ---- Server-generated PDFs (pdfkit, matches frontend HTML design) ----
+function drawInvoiceHeader(pdf: any, d: any, pageWidth: number) {
+  // Dark header band
+  pdf.fillColor('#0A192F').rect(0, 0, pageWidth, 90).fill();
+  pdf.fillColor('#FFFFFF').fontSize(20).font('Helvetica-Bold').text('NexaTalent IT Solutions', 48, 22);
+  pdf.fillColor('#94A3B8').fontSize(10).font('Helvetica').text('Talent acquisition services • GST invoicing', 48, 44);
+  pdf.fillColor('#FFFFFF').fontSize(13).font('Helvetica-Bold').text('TAX INVOICE', pageWidth - 120, 22, { align: 'right' });
+  pdf.fillColor('#94A3B8').fontSize(10).font('Helvetica').text(d.number || d.id, pageWidth - 120, 44, { align: 'right' });
+}
+
+function drawSectionLabel(pdf: any, y: number, label: string) {
+  pdf.fillColor('#475569').fontSize(9).font('Helvetica-Bold').text(label, 48, y);
+  return y + 14;
+}
+
 commercialRouter.get('/invoices/:id/pdf', requireAuth(), denyFinanceUnlessGranted, (req, res) => {
   const db = loadDb(); const inv: any = db.invoices.find((i: any) => i.id === req.params.id);
   if (!inv) return res.status(404).json({ success: false, message: 'Invoice not found.' });
   const ctx = ctxOf(req);
   if (!['superadmin','platform_owner','finance_admin','finance_staff'].includes(ctx.role) && inv.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Invoice not found.' });
   const d = buildInvoiceDocument(db, inv);
+  const pageWidth = 612; // US Letter width
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `inline; filename="${d.number || d.id}.pdf"`);
-  const pdf = new PDFDocument({ margin: 48, info: { Title: `Tax Invoice ${d.number || d.id}` } });
+  const pdf = new PDFDocument({ size: 'letter', margin: 0, info: { Title: `Tax Invoice ${d.number || d.id}` } });
   pdf.pipe(res);
-  pdf.fontSize(18).text('NexaTalent IT Solutions — TAX INVOICE');
-  pdf.moveDown(0.5).fontSize(10).text(`${d.number || d.id} • Issued ${String(d.issueDate || d.createdAt || '').slice(0, 10)} • Due ${String(d.dueDate || '').slice(0, 10)} • ${d.status}${d.overdue ? ` • ${d.daysOverdue}d OVERDUE` : ''}`);
-  pdf.moveDown().fontSize(11).text(`Billed to: ${d.billingEntity || d.organization?.legalName || d.orgId}${d.taxIds || d.organization?.gstin ? ` (GSTIN: ${d.taxIds || d.organization?.gstin})` : ''}`);
-  if (d.billingAddress) pdf.fontSize(9).text(d.billingAddress);
-  if (d.billingPeriod) pdf.fontSize(9).text(`Billing period: ${d.billingPeriod}`);
-  if (d.subscriptionId) pdf.fontSize(9).text(`Subscription/service: ${d.subscriptionId}`);
-  pdf.fontSize(9).text(`Currency: ${d.currency || 'INR'}`);
-  if (d.agreement) pdf.fontSize(10).text(`Agreement ${d.agreement.id} • ${d.agreement.hiringType} @ ${d.agreement.rate}%`);
-  pdf.moveDown();
-  for (const l of d.lines || []) pdf.fontSize(10).text(`${l.label} — qty ${l.qty} × ₹${l.unit} = ₹${(l.qty * l.unit).toLocaleString('en-IN')}`);
-  pdf.moveDown().fontSize(11)
-    .text(`Subtotal: ₹${d.subtotal}`).text(`Discount: ₹${d.discount}`)
-    .text(`Tax (GST @ ${d.taxRate ?? 18}%): ₹${d.tax}`).text(`Total: ₹${d.total}`)
-    .text(`Paid: ₹${d.amountPaid}`).text(`Balance: ₹${d.balance}`);
-  pdf.moveDown().fontSize(9).fillColor('#475569')
-    .text(d.terms.paymentNote).text(d.terms.replacementNote).text(d.terms.gstNote);
-  pdf.fillColor('#000000');
+
+  /* ============ HEADER BAND ============ */
+  drawInvoiceHeader(pdf, d, pageWidth);
+
+  let y = 118;
+
+  /* ============ BILLED TO + INVOICE DETAILS (two columns) ============ */
+  y = drawSectionLabel(pdf, y, 'Billed to');
+  pdf.fillColor('#0F172A').fontSize(11).font('Helvetica-Bold').text(d.billingEntity || d.organization?.legalName || d.orgId || 'NexaTalent Client', 48, y);
+  y += 18;
+  pdf.fillColor('#64748B').fontSize(8.5).font('Helvetica').text(`GSTIN not on file — collect before filing`, 48, y);
+  y += 16;
+
+  const detailsX = pageWidth - 48 - 220;
+  y = drawSectionLabel(pdf, y, 'Invoice');
+  const issued = String(d.issueDate || d.createdAt || '').slice(0, 10);
+  const due = String(d.dueDate || '').slice(0, 10);
+  pdf.fillColor('#0F172A').fontSize(9).font('Helvetica').text(`Issued ${issued} • Due ${due}`, detailsX, y);
+  y += 14;
+  pdf.fillColor('#0F172A').fontSize(9).font('Helvetica').text(`Status: ${d.status}${d.overdue ? ` • ${d.daysOverdue}d overdue` : ''}`, detailsX, y);
+  y += 14;
+  pdf.fillColor('#0F172A').fontSize(9).font('Helvetica').text(`Currency: ${d.currency || 'INR'}`, detailsX, y);
+  y += 16;
+
+  y = drawSectionLabel(pdf, y, 'Billing & terms');
+  if (d.billingAddress) {
+    pdf.fillColor('#0F172A').fontSize(9).font('Helvetica').text(d.billingAddress, 48, y);
+    y += 16;
+  }
+  if (d.billingPeriod) {
+    pdf.fillColor('#0F172A').fontSize(9).font('Helvetica').text(`Billing period: ${d.billingPeriod}`, 48, y);
+    y += 14;
+  }
+  if (d.subscriptionId) {
+    pdf.fillColor('#0F172A').fontSize(9).font('Helvetica').text(`Subscription/service: ${d.subscriptionId}`, 48, y);
+    y += 14;
+  }
+  if (d.agreement) {
+    pdf.fillColor('#0F172A').fontSize(9).font('Helvetica').text(`Agreement ${d.agreement.id} • ${d.agreement.hiringType} @ ${d.agreement.rate}%`, 48, y);
+    y += 16;
+  }
+
+  /* ============ ITEMIZED TABLE ============ */
+  y += 6;
+  const tableX = 48;
+  const itemColX = tableX;
+  const qtyColX = pageWidth - 130;
+  const unitColX = pageWidth - 90;
+  const amtColX = pageWidth - 48;
+
+  pdf.fillColor('#0A192F').rect(tableX, y, pageWidth - 96, 24).fill();
+  pdf.fillColor('#FFFFFF').fontSize(8.5).font('Helvetica-Bold').text('Item', itemColX, y + 7, { width: qtyColX - itemColX - 10, align: 'left' });
+  pdf.fillColor('#FFFFFF').fontSize(8.5).font('Helvetica-Bold').text('Qty', qtyColX, y + 7, { width: unitColX - qtyColX - 10, align: 'right' });
+  pdf.fillColor('#FFFFFF').fontSize(8.5).font('Helvetica-Bold').text('Unit', unitColX, y + 7, { width: amtColX - unitColX - 10, align: 'right' });
+  pdf.fillColor('#FFFFFF').fontSize(8.5).font('Helvetica-Bold').text('Amount', amtColX, y + 7, { align: 'right' });
+  y += 24;
+
+  let lineY = y;
+  for (const l of d.lines || []) {
+    pdf.fillColor('#FFFFFF').rect(tableX, lineY, pageWidth - 96, 22).fill();
+    pdf.fillColor('#0F172A').fontSize(9).font('Helvetica').text(l.label || '', itemColX, lineY + 6, { width: qtyColX - itemColX - 10, align: 'left' });
+    pdf.fillColor('#0F172A').fontSize(9).font('Helvetica').text(String(l.qty || 1), qtyColX, lineY + 6, { width: unitColX - qtyColX - 10, align: 'right' });
+    pdf.fillColor('#0F172A').fontSize(9).font('Helvetica').text(`₹${(l.unit || 0).toLocaleString('en-IN')}`, unitColX, lineY + 6, { width: amtColX - unitColX - 10, align: 'right' });
+    pdf.fillColor('#0F172A').fontSize(9).font('Helvetica-Bold').text(`₹${((l.qty || 1) * (l.unit || 0)).toLocaleString('en-IN')}`, amtColX, lineY + 6, { align: 'right' });
+    lineY += 22;
+  }
+  y = lineY + 10;
+
+  /* ============ TOTALS (right column) ============ */
+  const totalsX = pageWidth - 260;
+  pdf.fillColor('#F1F5F9').rect(totalsX, y, 212, 150).fill();
+  pdf.fillColor('#475569').fontSize(8.5).font('Helvetica-Bold').text('Amount Summary', totalsX + 14, y + 10);
+  y += 30;
+  const totalRows = [
+    ['Subtotal', d.subtotal],
+    ['Discount', -d.discount],
+    [`Tax (GST @ ${d.taxRate ?? 18}%)`, d.tax],
+    ['Total', d.total],
+    ['Paid', d.amountPaid],
+    ['Balance', d.balance],
+  ];
+  for (const [label, val] of totalRows) {
+    const isTotal = label === 'Total';
+    pdf.fillColor(isTotal ? '#0F172A' : '#64748B').fontSize(isTotal ? 10 : 8.5).font(isTotal ? 'Helvetica-Bold' : 'Helvetica').text(label, totalsX + 14, y);
+    pdf.fillColor(isTotal ? '#0F172A' : '#64748B').fontSize(isTotal ? 10 : 8.5).font(isTotal ? 'Helvetica-Bold' : 'Helvetica').text(`₹${val.toLocaleString('en-IN')}`, totalsX + 14, y, { width: 190, align: 'right' });
+    y += 18;
+  }
+  y += 10;
+
+  /* ============ COMMERCIAL TERMS ============ */
+  y = drawSectionLabel(pdf, y, 'Commercial terms');
+  const terms = [
+    d.terms?.paymentNote || `Payable within ${d.terms?.paymentTermsDays || 30} days of the candidate's joining date.`,
+    d.terms?.replacementNote || 'Free replacement within 90 days of joining under the defined conditions.',
+    d.terms?.gstNote || 'GST charged extra as applicable on the taxable value.',
+    d.terms?.ownershipNote || 'Candidate ownership rests with the introducing party for 90 days from submission.',
+    d.terms?.duplicateNote || 'Duplicate profiles are rejected; the earliest valid submission owns the candidate.',
+  ];
+  for (const t of terms) {
+    if (!t) continue;
+    pdf.fillColor('#0F172A').fontSize(8.5).font('Helvetica').text(`• ${t}`, 48, y, { width: pageWidth - 96 });
+    y += 15;
+  }
+
   pdf.end();
 });
 commercialRouter.get('/commission-agreements/:id/pdf', requireAuth(), (req, res) => {
@@ -289,15 +391,57 @@ commercialRouter.get('/commission-agreements/:id/pdf', requireAuth(), (req, res)
   const tpl: any = (db.agreementTemplates as any[]).find((t: any) => t.id === ag.templateId) || (db.agreementTemplates as any[]).find((t: any) => t.id === 'AGT-STD-001');
   const org: any = db.organizations.find((o: any) => o.id === ag.orgId);
   const filled = fillAgreementHtml(tpl, ag, org);
+  const pageWidth = 612;
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `inline; filename="Agreement-${ag.id}.pdf"`);
-  const pdf = new PDFDocument({ margin: 48, info: { Title: `Agreement ${ag.id}` } });
+  const pdf = new PDFDocument({ size: 'letter', margin: 54, info: { Title: `Agreement ${ag.id}` } });
   pdf.pipe(res);
-  for (const block of filled) {
-    if (block.h) pdf.fontSize(13).text(block.t, { underline: false });
-    else pdf.fontSize(10).text(block.t);
-    pdf.moveDown(0.4);
+
+  pdf.fillColor('#0A192F').rect(0, 0, pageWidth, 70).fill();
+  pdf.fillColor('#FFFFFF').fontSize(18).font('Helvetica-Bold').text('Commission Agreement', 54, 22);
+  pdf.fillColor('#94A3B8').fontSize(10).font('Helvetica').text(ag.orgId, 54, 44);
+  pdf.fillColor('#FFFFFF').fontSize(13).font('Helvetica-Bold').text(`AGT-${ag.id}`, pageWidth - 120, 22, { align: 'right' });
+
+  let ay = 100;
+  pdf.fillColor('#475569').fontSize(9).font('Helvetica-Bold').text('Parties', 54, ay);
+  ay += 14;
+  pdf.fillColor('#0F172A').fontSize(10).font('Helvetica-Bold').text('Introducing Party (Agency)', 54, ay);
+  pdf.fillColor('#64748B').fontSize(9).font('Helvetica').text(ag.orgId, 180, ay);
+  ay += 14;
+  pdf.fillColor('#0F172A').fontSize(10).font('Helvetica-Bold').text('Client (Organization)', 54, ay);
+  pdf.fillColor('#64748B').fontSize(9).font('Helvetica').text(org?.legalName || org?.displayName || ag.orgId, 180, ay);
+  ay += 20;
+
+  pdf.fillColor('#475569').fontSize(9).font('Helvetica-Bold').text('Commercial Terms', 54, ay);
+  ay += 14;
+  const terms = [
+    `Hiring type: ${ag.hiringType}`,
+    `Fee model: ${ag.feeModel}`,
+    `Rate: ${ag.rate}%`,
+    `Basis: ${ag.basisType || 'annual_ctc'}`,
+    `Contract months: ${ag.contractMonths || 12}`,
+    `Trigger: ${ag.trigger || 'Joined'}`,
+    `Payment terms: ${ag.paymentTermsDays || 30} days`,
+    `Replacement window: ${ag.replacementDays || 90} days`,
+  ];
+  for (const t of terms) {
+    pdf.fillColor('#0F172A').fontSize(9).font('Helvetica').text(`• ${t}`, 54, ay);
+    ay += 14;
   }
+  ay += 8;
+
+  pdf.fillColor('#475569').fontSize(9).font('Helvetica-Bold').text('Agreement Body', 54, ay);
+  ay += 14;
+  for (const block of filled) {
+    if (block.h) {
+      pdf.fillColor('#0F172A').fontSize(11).font('Helvetica-Bold').text(block.t, 54, ay);
+      ay += 18;
+    } else {
+      pdf.fillColor('#0F172A').fontSize(9.5).font('Helvetica').text(block.t, 54, ay, { width: pageWidth - 108, lineGap: 2 });
+      ay += 22;
+    }
+  }
+
   pdf.end();
 });
 function fillAgreementHtml(tpl: any, ag: any, org: any): Array<{ h?: boolean; t: string }> {

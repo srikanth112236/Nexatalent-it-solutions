@@ -102,7 +102,7 @@ export function SearchSuggest({ value, onChange, fetchSuggestions, placeholder, 
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => pick(s)}
                 onMouseEnter={() => setHi(i)}
-                className={`w-full text-left px-3 py-2 text-xs font-semibold truncate ${i === hi ? 'bg-blue-50 text-[#0B5FD9]' : 'text-slate-700'}`}
+                className={`w-full text-left px-3 py-2 text-xs font-semibold truncate ${i === hi ? 'bg-neutral-100 text-black font-bold' : 'text-slate-700'}`}
               >
                 {s}
               </button>
@@ -183,7 +183,7 @@ export function SkillsMultiSelect({ value, onChange, placeholder = 'Skills — t
       {value.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-1.5">
           {value.map((s) => (
-            <span key={s} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-[#0B5FD9] border border-blue-200 font-bold text-[11px]">
+            <span key={s} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-100 text-black border border-neutral-300 font-bold text-[11px]">
               {s}
               <button type="button" onClick={() => remove(s)} aria-label={`Remove ${s}`} className="hover:text-red-600"><X size={11} /></button>
             </span>
@@ -218,7 +218,7 @@ export function SkillsMultiSelect({ value, onChange, placeholder = 'Skills — t
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => add(s)}
                 onMouseEnter={() => setHi(i)}
-                className={`w-full text-left px-3 py-2 text-xs font-semibold font-mono truncate ${i === hi ? 'bg-blue-50 text-[#0B5FD9]' : 'text-slate-700'}`}
+                className={`w-full text-left px-3 py-2 text-xs font-semibold font-mono truncate ${i === hi ? 'bg-neutral-100 text-black font-bold' : 'text-slate-700'}`}
               >
                 + {s}
               </button>

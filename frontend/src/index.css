@@ -58,7 +58,7 @@
     max-width: 100vw;
     font-family: var(--font-sans);
     background-color: var(--nt-surface, #ffffff);
-    color: var(--nt-ink, #0A1E4E);
+    color: var(--nt-ink, #000000);
     -webkit-font-smoothing: antialiased;
   }
 
@@ -152,8 +152,8 @@ section h2.section-heading,
   --nt-surface: #ffffff;
   --nt-surface-2: #EFF5FF;
   --nt-surface-3: #D8EBFF;
-  --nt-ink: #0A1E4E;
-  --nt-ink-2: #102C6B;
+  --nt-ink: #000000;
+  --nt-ink-2: #000000;
   --nt-muted: #4A5F86;
   --nt-border: #B3D7FF;
 }
@@ -379,7 +379,7 @@ div:has(> table) {
 }
 /* Visible keyboard focus everywhere */
 :focus-visible {
-  outline: 2px solid var(--nt-brand-600, #0B63E5);
+  outline: 2px solid #000000;
   outline-offset: 2px;
 }
 /* Skip link (rendered by SiteNavbar) */

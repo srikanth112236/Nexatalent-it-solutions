@@ -163,19 +163,17 @@ export const FINANCE_BLOCKED_ROLES = [
   'sales_manager',
   'agency_recruiter',
   'support_admin',
+  'internal_recruiter',
+  'candidate',
 ] as const;
 // Platform delivery staff see finance RECORDS (read-only) so timesheets/payroll stay
 // synced across the suite. Mutations still require manage_billing (finance/superadmin).
-// NOTE: 'candidate' is intentionally NOT blocked — handler-level scoping limits
-// candidates to their own contractor payouts + payroll runs (invoices/payments
-// stay tenant-scoped, so other orgs' records remain invisible).
+// Deny-by-default (§3.3): everyone else — including internal_recruiter and candidate —
+// is refused at the gate; a finance grant is required to read these ledgers.
 export const FINANCE_VIEWERS = [
   'superadmin', 'platform_owner', 'finance_admin', 'finance_staff',
-  'operations_admin', 'employee', 'internal_recruiter',
+  'operations_admin', 'employee',
 ] as const;
-// NOTE: 'candidate' is intentionally NOT blocked — handler-level scoping limits
-// candidates to their own contractor payouts + payroll runs (invoices/payments
-// stay tenant-scoped, so other orgs' records remain invisible).
 
 const FINANCE_GRANTS = ['manage_billing', 'reconcile', 'adjust_commission', 'refund'];
 

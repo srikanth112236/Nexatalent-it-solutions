@@ -137,7 +137,7 @@ export const LightTwoColumnPinnedStory: React.FC<PinnedStoryProps> = ({
       className="theme-light"
       style={{
         backgroundColor: '#ffffff',
-        color: '#0f172a',
+        color: '#000000',
         padding: '6rem 1.5rem',
         position: 'relative',
         borderBottom: '1px solid #e2e8f0',
@@ -166,10 +166,10 @@ export const LightTwoColumnPinnedStory: React.FC<PinnedStoryProps> = ({
             <Sparkles size={14} />
             <span>{eyebrow}</span>
           </div>
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#0F172A' }}>
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, letterSpacing: '-0.03em', color: '#000000' }}>
             {title}
           </h2>
-          <p style={{ color: '#475569', fontSize: '1.0625rem', maxWidth: '660px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
+          <p style={{ color: '#000000', fontSize: '1.0625rem', maxWidth: '660px', margin: '0.75rem auto 0 auto', lineHeight: 1.6 }}>
             {sub}
           </p>
         </div>
@@ -195,7 +195,7 @@ export const LightTwoColumnPinnedStory: React.FC<PinnedStoryProps> = ({
               backgroundColor: '#FFFFFF',
               border: '1px solid #e2e8f0',
               padding: '2rem',
-              boxShadow: '0 20px 40px -15px rgba(2, 101, 255, 0.08)',
+              boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.08)',
               zIndex: 10,
             }}
           >
@@ -237,7 +237,7 @@ export const LightTwoColumnPinnedStory: React.FC<PinnedStoryProps> = ({
                       borderRadius: '12px',
                       border: isSelected ? '1px solid #000000' : '1px solid transparent',
                       backgroundColor: isSelected ? '#ffffff' : 'transparent',
-                      color: isSelected ? '#000000' : '#64748b',
+                      color: '#000000',
                       fontWeight: isSelected ? 800 : 600,
                       fontSize: '0.8125rem',
                       cursor: 'pointer',
@@ -264,7 +264,7 @@ export const LightTwoColumnPinnedStory: React.FC<PinnedStoryProps> = ({
                 marginBottom: '1.25rem',
               }}
             >
-              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>
                 Phase Performance SLA Metric
               </div>
               <div style={{ fontSize: '2.25rem', fontWeight: 900, color: '#000000', lineHeight: 1 }}>
@@ -277,11 +277,11 @@ export const LightTwoColumnPinnedStory: React.FC<PinnedStoryProps> = ({
 
             {/* Verification Checklist */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.25rem' }}>
-              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#000000', textTransform: 'uppercase' }}>
                 Active Verification Rubric:
               </div>
               {current.rubricItems.map((item, idx) => (
-                <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.8125rem', color: '#334155', lineHeight: 1.4 }}>
+                <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.8125rem', color: '#000000', lineHeight: 1.4 }}>
                   <CheckCircle2 size={15} color="#000000" style={{ flexShrink: 0, marginTop: '2px' }} />
                   <span style={{ fontWeight: 600 }}>{item}</span>
                 </div>
@@ -290,7 +290,7 @@ export const LightTwoColumnPinnedStory: React.FC<PinnedStoryProps> = ({
 
             {/* Progress Bar */}
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '0.35rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 700, color: '#000000', marginBottom: '0.35rem' }}>
                 <span>Framework Progression</span>
                 <span style={{ color: '#000000' }}>{current.progress}%</span>
               </div>
@@ -322,7 +322,7 @@ export const LightTwoColumnPinnedStory: React.FC<PinnedStoryProps> = ({
                     backgroundColor: isActive ? '#ffffff' : '#FFFFFF',
                     border: isActive ? '2px solid #000000' : '1px solid #e2e8f0',
                     padding: '2.5rem',
-                    boxShadow: isActive ? '0 20px 40px -10px rgba(2, 101, 255, 0.14)' : 'none',
+                    boxShadow: isActive ? '0 20px 40px -10px rgba(0, 0, 0, 0.1)' : 'none',
                     transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                     cursor: 'pointer',
                   }}
@@ -336,7 +336,7 @@ export const LightTwoColumnPinnedStory: React.FC<PinnedStoryProps> = ({
                           height: '40px',
                           borderRadius: '12px',
                           backgroundColor: isActive ? '#FFFFFF' : '#f1f5f9',
-                          color: isActive ? '#000000' : '#64748b',
+                          color: '#000000',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -348,10 +348,10 @@ export const LightTwoColumnPinnedStory: React.FC<PinnedStoryProps> = ({
                         {idx === 3 && <ShieldCheck size={20} />}
                       </div>
                       <div>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: isActive ? '#000000' : '#64748b', textTransform: 'uppercase' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#000000', textTransform: 'uppercase' }}>
                           {stage.step} Execution Node
                         </span>
-                        <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                        <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#000000', margin: 0 }}>
                           {stage.title}
                         </h4>
                       </div>
@@ -361,7 +361,7 @@ export const LightTwoColumnPinnedStory: React.FC<PinnedStoryProps> = ({
                       style={{
                         fontSize: '0.75rem',
                         fontWeight: 700,
-                        color: isActive ? '#000000' : '#94a3b8',
+                        color: '#000000',
                         backgroundColor: isActive ? '#FFFFFF' : '#f1f5f9',
                         padding: '0.25rem 0.65rem',
                         borderRadius: '9999px',
@@ -372,7 +372,7 @@ export const LightTwoColumnPinnedStory: React.FC<PinnedStoryProps> = ({
                     </span>
                   </div>
 
-                  <p style={{ color: '#475569', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+                  <p style={{ color: '#000000', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
                     {stage.description}
                   </p>
 
@@ -380,7 +380,7 @@ export const LightTwoColumnPinnedStory: React.FC<PinnedStoryProps> = ({
                     <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#000000', textTransform: 'uppercase' }}>
                       Calibrated Output & Audit Standard:
                     </div>
-                    <div style={{ fontSize: '0.8125rem', color: '#1e293b', fontWeight: 600 }}>
+                    <div style={{ fontSize: '0.8125rem', color: '#000000', fontWeight: 600 }}>
                       {stage.rubricItems[0]}
                     </div>
                   </div>

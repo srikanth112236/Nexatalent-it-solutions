@@ -137,7 +137,7 @@ export function ServiceDetailModal({ detail, onClose }: Props) {
         {/* ===== STEP 1: DETAIL ===== */}
         {step === 'detail' && (
           <div>
-            <SafeImage src={detail.image} alt={detail.alt} fallbackLabel={detail.label} className="aspect-[16/9] w-full object-cover object-top" />
+            <SafeImage src={detail.image} alt={detail.alt} fallbackLabel={detail.label} className="aspect-[16/9] w-full object-cover object-center" />
             <div className="px-5 py-6 sm:px-7">
               <h2 className="text-xl font-extrabold tracking-tight text-black sm:text-2xl">{detail.label}</h2>
               <p className="mt-1 text-[13px] font-bold text-black">{detail.tagline}</p>

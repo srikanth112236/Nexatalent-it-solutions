@@ -110,13 +110,29 @@ recruitmentRouter.get('/requisitions/:id', requireAuth(), (req, res) => {
   }
   res.json({ success: true, data: { ...r, rollup: requirementRollup(db, r) } });
 });
-recruitmentRouter.post('/requisitions', requireAuth(['employer','superadmin','company_admin','hiring_manager','employee','operations_admin']), (req: Request, res: Response) => {
+recruitmentRouter.post('/requisitions', requireAuth(['employer','superadmin','platform_owner','company_admin','hiring_manager','employee','operations_admin']), (req: Request, res: Response) => {
   const parsed = requisitionSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'Validation failed.', errors: parsed.error.flatten() });
-  const ctx = ctxOf(req); const t = tenantOf(req);
+  const ctx = ctxOf(req);
+  const db = loadDb();
+  // Cross-tenant creation: platform roles may target any tenant (company) by orgId/tenantId.
+  const requestedOrg = String((req.body as any)?.orgId || (req.body as any)?.tenantId || '').trim();
+  let t = tenantOf(req);
+  if (['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && requestedOrg) {
+    if (db.organizations.some((o: any) => o.id === requestedOrg) || db.agencyProfiles.some((a: any) => a.tenantId === requestedOrg)) {
+      t = requestedOrg;
+    }
+  }
   const rec = { id: uid('REQ'), orgId: t, hiringManager: ctx.email, ...parsed.data, createdAt: nowIso(), createdBy: ctx.email };
+  // Keep orgId authoritative (don't let the body override the resolved tenant).
+  rec.orgId = t;
   loadDb().requisitions.unshift(rec);
   audit(ctx.email, `REQUISITION_CREATED:${rec.id}`, t, 'requisition', rec.id, req.ip); persist();
+  // Notify the target company when a platform actor creates it on their behalf.
+  if (t !== ctx.tenantId && !['employer','company_admin','hiring_manager'].includes(ctx.role)) {
+    notify(loadDb(), `company:${t}`, 'requisition', `A new requirement "${rec.title}" was created for your company by ${ctx.email}.`, t);
+    persist();
+  }
   res.status(201).json({ success: true, data: rec });
 });
 recruitmentRouter.put('/requisitions/:id', requireAuth(['employer','superadmin','platform_owner','company_admin','hiring_manager','employee','operations_admin']), (req: Request, res: Response) => {
@@ -217,6 +233,11 @@ recruitmentRouter.get('/jobs', requireAuth(), (req, res) => {
     rows = rows
       .filter((j) => jobAssignedTo(db, j, me) || (j.status === 'Published' && j.visibility !== 'private'))
       .map((j) => ({ ...j, assignedToMe: jobAssignedTo(db, j, me) }));
+  } else if (['employer', 'company_admin', 'hiring_manager', 'company_recruiter'].includes(ctx.role)) {
+    // Company roles see their own jobs in every state (Draft … Archived) so they can
+    // manage a posting end-to-end — including ones created for them by the platform.
+    const t = tenantOf(req);
+    rows = rows.filter((j) => j.orgId === t);
   } else if (!PLATFORM_ROLES.includes(ctx.role)) {
     // Non-platform roles discover only published, non-private jobs (drafts stay hidden).
     rows = rows.filter((j) => j.status === 'Published' && j.visibility !== 'private');
@@ -275,10 +296,18 @@ recruitmentRouter.get('/jobs-public/:id', (req, res) => {
   }
   res.json({ success: true, data: { ...publicJob(j), counts: jobCounts(db, j), acceptingApplications: true } });
 });
-recruitmentRouter.post('/jobs', requireAuth(['employer','superadmin','company_admin','hiring_manager']), (req: Request, res: Response) => {
+recruitmentRouter.post('/jobs', requireAuth(['employer','superadmin','platform_owner','company_admin','hiring_manager']), (req: Request, res: Response) => {
   const parsed = jobSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'Validation failed.', errors: parsed.error.flatten() });
-  const ctx = ctxOf(req); const t = tenantOf(req);
+  const ctx = ctxOf(req);
+  const db0 = loadDb();
+  const requestedOrg = String((req.body as any)?.orgId || (req.body as any)?.tenantId || '').trim();
+  let t = tenantOf(req);
+  if (['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && requestedOrg) {
+    if (db0.organizations.some((o: any) => o.id === requestedOrg) || db0.agencyProfiles.some((a: any) => a.tenantId === requestedOrg)) {
+      t = requestedOrg;
+    }
+  }
   try { evaluate(t, 'jobs.create'); } catch (e: any) { return res.status(e.status || 403).json({ success: false, message: e.message, code: e.code }); }
   // Phase D: the active-job cap counts live postings, not ledger rows.
   const active = loadDb().jobs.filter((j: any) => j.orgId === t && ['Published','Approved'].includes(j.status)).length;
@@ -287,9 +316,14 @@ recruitmentRouter.post('/jobs', requireAuth(['employer','superadmin','company_ad
     return res.status(429).json({ success: false, code: 'QUOTA_EXHAUSTED', message: `'jobs.active_limit': ${active}/${grant} live postings used. Close or archive one first.` });
   }
   const job = { id: uid('JOB'), orgId: t, applicantsCount: 0, ...parsed.data, createdAt: nowIso(), createdBy: ctx.email };
+  job.orgId = t;
   loadDb().jobs.unshift(job);
   consumeQuota(t, ctx.email, 'jobs.create', 0, job.id, `job-create:${job.id}`);
   audit(ctx.email, `JOB_CREATED:${job.id}`, t, 'job', job.id, req.ip); persist();
+  if (t !== ctx.tenantId && !['employer','company_admin','hiring_manager'].includes(ctx.role)) {
+    notify(loadDb(), `company:${t}`, 'job', `A new job posting "${job.title}" was created for your company by ${ctx.email}.`, t);
+    persist();
+  }
   emit('job.published', job, t, ctx.email);
   res.status(201).json({ success: true, data: job });
 });
@@ -317,15 +351,8 @@ recruitmentRouter.put('/jobs/:id', requireAuth(['employer','superadmin','platfor
   const ctx = ctxOf(req);
   if (!['superadmin','platform_owner'].includes(ctx.role) && j.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Job not found.' });
   const b: any = req.body || {};
-  // Live edit lock: once Published, field edits are frozen for company roles —
-  // pause (stops pipeline) or close the posting instead. Platform may correct with audit.
-  if (j.status === 'Published' && !['superadmin','platform_owner'].includes(ctx.role)) {
-    return res.status(422).json({ success: false, code: 'EDIT_LOCKED', message: `Job is live (Published) — editing is locked. Pause it to stop the pipeline, or close it.` });
-  }
-  if (b.visibility !== undefined && b.visibility !== j.visibility && !['Draft'].includes(j.status) && !['superadmin','platform_owner'].includes(ctx.role)) {
-    return res.status(422).json({ success: false, code: 'VISIBILITY_LOCKED', message: `Visibility cannot be edited while ${j.status}. Pause or close the posting instead.` });
-  }
   // Phase B: assignments must name real agencies/vendors — typos previously orphaned mandates.
+  // Validated BEFORE the live edit lock so invalid input always fails fast (UNKNOWN_AGENCY).
   for (const k of ['assignedAgencies','assignedVendors']) {
     if (b[k] !== undefined) {
       const names = (Array.isArray(b[k]) ? b[k] : String(b[k]).split(',')).map((x: unknown) => String(x).trim()).filter(Boolean);
@@ -339,6 +366,20 @@ recruitmentRouter.put('/jobs/:id', requireAuth(['employer','superadmin','platfor
       });
       if (bad.length > 0) return res.status(422).json({ success: false, code: 'UNKNOWN_AGENCY', message: `Unknown agency/vendor: ${bad.join(', ')}. Use a verified agency name, tenant or email.` });
       b[k] = names;
+    }
+  }
+  // Live edit lock: once Published, field edits are frozen for company roles —
+  // pause (stops pipeline) or close the posting instead. Platform may correct with audit.
+  // Visibility has its own explicit error code; a pure expiryDate change is an
+  // operational edit (shorten/extend a live posting) and stays allowed.
+  if (j.status === 'Published' && !['superadmin','platform_owner'].includes(ctx.role)) {
+    if (b.visibility !== undefined && b.visibility !== j.visibility) {
+      return res.status(422).json({ success: false, code: 'VISIBILITY_LOCKED', message: `Visibility cannot be edited while ${j.status}. Pause or close the posting instead.` });
+    }
+    const keys = Object.keys(b).filter((k) => b[k] !== undefined);
+    const onlyExpiry = keys.length > 0 && keys.every((k) => k === 'expiryDate');
+    if (!onlyExpiry) {
+      return res.status(422).json({ success: false, code: 'EDIT_LOCKED', message: `Job is live (Published) — editing is locked. Pause it to stop the pipeline, or close it.` });
     }
   }
   for (const k of ['title','description','location','employmentType','workArrangement','salaryMin','salaryMax','visibility','expiryDate','requiredSkills','preferredSkills','qualifications','assignedAgencies','assignedVendors']) {
@@ -379,7 +420,9 @@ recruitmentRouter.patch('/jobs/:id/status', requireAuth(['employer','superadmin'
       if (req.body.requisitionId && !j.requisitionId) j.requisitionId = String(req.body.requisitionId);
       const r: any = db.requisitions.find((x: any) => x.id === j.requisitionId);
       if (!r) return res.status(422).json({ success: false, message: `Cannot publish: linked requirement ${j.requisitionId} was not found.`, code: 'REQUIREMENT_MISSING' });
-      if (!['Approved','Sourcing'].includes(r.status)) return res.status(422).json({ success: false, message: `Cannot publish: parent requirement ${r.id} is ${r.status}. Approve it first.`, code: 'REQUIREMENT_NOT_APPROVED' });
+      // A reopen from Closed is an authorized restore: the parent was auto-closed
+      // when the last live job closed (see sync below), so allow it and restore.
+      if (!['Approved','Sourcing'].includes(r.status) && !(reopen && r.status === 'Closed')) return res.status(422).json({ success: false, message: `Cannot publish: parent requirement ${r.id} is ${r.status}. Approve it first.`, code: 'REQUIREMENT_NOT_APPROVED' });
       if (!(Number(r.openings) > 0)) return res.status(422).json({ success: false, message: `Cannot publish: parent requirement ${r.id} has no openings.`, code: 'NO_OPENINGS' });
       const exp = req.body.expiryDate ?? j.expiryDate;
       if (exp && !(new Date(exp) > new Date())) return res.status(422).json({ success: false, message: 'Cannot publish: expiry date is in the past. Set a future date.', code: 'EXPIRY_PAST' });

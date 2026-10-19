@@ -36,7 +36,7 @@ export function V2Hero() {
             <SafeImage
               src={src}
               alt={['NexaTalent recruiters collaborating with a client team', 'Modern client office supported by NexaTalent staffing', 'Technology engineers placed by NexaTalent at work'][i] ?? 'NexaTalent client and talent teams'}
-              className="aspect-[4/3] w-full object-cover object-top"
+              className="aspect-[16/10] w-full object-cover object-center"
             />
           </div>
         ))}

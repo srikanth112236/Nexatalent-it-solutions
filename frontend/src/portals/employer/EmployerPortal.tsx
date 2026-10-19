@@ -13,10 +13,12 @@ import {
 } from '../common/EnterprisePanels';
 import type { ActivityItem } from '../common/EnterprisePanels';
 import { getTenantId, getActiveRole } from '../../shared/auth/session';
-import { ConfirmDialog, RowMenu } from '../../shared/ui/EnterpriseKit';
+import { onboardingCompleted } from '../../shared/onboarding';
+import { RowMenu } from '../../shared/ui/EnterpriseKit';
 import type { MenuItem } from '../../shared/ui/EnterpriseKit';
 import { MfaPanel } from '../../auth/components/MfaPanel';
 import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
+import { useFormValidation, required, number, minLength } from '../../shared/validation';
 
 const navItems = [
   { label: 'Hiring Overview', path: '/employer' },
@@ -75,7 +77,6 @@ export function EmployerPortal() {
   const [candidates, setCandidates] = useState<any[]>([]);
   const [requisitions, setRequisitions] = useState<any[]>([]);
   const [allApplications, setAllApplications] = useState<any[]>([]);
-  const [subscription, setSubscription] = useState<any>(null);
   const [usage, setUsage] = useState<any>(null);
   const [outstanding, setOutstanding] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
@@ -147,6 +148,7 @@ export function EmployerPortal() {
     techStack: '',
     verificationStatus: '',
     accountStatus: '',
+    onboarding: null as any,
   });
   const [profileSaved, setProfileSaved] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
@@ -154,16 +156,35 @@ export function EmployerPortal() {
   const startEditProfile = () => { setProfileSnapshot({ ...companyProfile }); setEditingProfile(true); setSaveError(''); };
   const cancelEditProfile = () => { if (profileSnapshot) setCompanyProfile(profileSnapshot); setEditingProfile(false); setSaveError(''); };
   const viewingProfile = Boolean(companyProfile.legalName) && !editingProfile;
+  /* Onboarding is first-time only: once the company profile is saved we mark it
+     complete and stop prompting. The profile stays editable forever after. */
+  const companyOnboarded = onboardingCompleted(companyProfile);
 
   // Job Form State — full §8.4 field set (create + edit)
   const [jobForm, setJobForm] = useState<any>(blankJobForm());
+
+  /* ---------- real-time field validation for job form ---------- */
+  const jobFormValidation = useFormValidation(
+    { title: '', experienceMin: '', experienceMax: '', salaryMin: '', salaryMax: '', location: '', startDate: '', expiryDate: '' },
+    {
+      title: [required('Job title'), minLength(3, 'Job title')],
+      experienceMin: [number('Experience min')],
+      experienceMax: [number('Experience max')],
+      salaryMin: [number('Salary min')],
+      salaryMax: [number('Salary max')],
+      location: [required('Job location')],
+      startDate: [],
+      expiryDate: [],
+    },
+    { validateOnChange: true, validateOnBlur: true }
+  );
 
   useEffect(() => {
     async function fetchData() {
       setIsLoading(true);
       try {
         const tenant = getTenantId() || 'TNT-9011';
-        const [jRes, iRes, cRes, compRes, useRes, invRes, reqRes, appRes, subRes] = await Promise.all([
+        const [jRes, iRes, cRes, compRes, useRes, invRes, reqRes, appRes] = await Promise.all([
           apiClient.get<any[]>('/api/v1/jobs').catch(() => ({ data: [] as any[] })),
           apiClient.get<any[]>('/api/v1/interviews?page=1&pageSize=100').catch(() => ({ data: [] as any[] })),
           apiClient.get<any[]>('/api/v1/candidates').catch(() => ({ data: [] as any[] })),
@@ -172,7 +193,6 @@ export function EmployerPortal() {
           apiClient.get<any[]>('/api/v1/invoices').catch(() => ({ data: [] as any[] })),
           requisitionsApi.list().catch(() => ({ data: [] as any[] })),
           applicationsApi.list('?page=1&pageSize=200').catch(() => ({ data: [] as any[] })),
-          apiClient.get<any[]>('/api/v1/subscriptions').catch(() => ({ data: [] as any[] })),
         ]);
         if (jRes?.data) setJobs(jRes.data);
         if (iRes?.data) setInterviews(iRes.data);
@@ -185,8 +205,6 @@ export function EmployerPortal() {
         setRequisitions(Array.isArray(reqs) ? reqs : []);
         const apps = ((appRes as { data?: any })?.data as any[]) || (((appRes as { data?: { data?: any[] } })?.data)?.data as any[]) || [];
         setAllApplications(Array.isArray(apps) ? apps : []);
-        const subs = ((subRes as { data?: any })?.data as any[]) || [];
-        if (Array.isArray(subs) && subs.length > 0) setSubscription(subs[0]);
       } catch (err) {
         console.warn('API Error in EmployerPortal:', err);
       } finally {
@@ -422,7 +440,17 @@ export function EmployerPortal() {
     e.preventDefault();
     setSaveError('');
     try {
-      const res = await apiClient.put<any>('/api/v1/company', companyProfile);
+      const now = new Date().toISOString();
+      const body = {
+        ...companyProfile,
+        onboarding: {
+          ...(companyProfile.onboarding || {}),
+          completed: true,
+          completedAt: companyProfile.onboarding?.completedAt || now,
+          updatedAt: now,
+        },
+      };
+      const res = await apiClient.put<any>('/api/v1/company', body);
       if ((res as { data?: any })?.data) {
         setCompanyProfile((prev) => ({ ...prev, ...(res as { data: any }).data }));
       }
@@ -545,7 +573,7 @@ export function EmployerPortal() {
         {currentTab === 'overview' && (
           <OverviewDashboard
             jobs={jobs} requisitions={requisitions} applications={allApplications}
-            interviews={interviews} usage={usage} subscription={subscription}
+            interviews={interviews} usage={usage}
             outstanding={outstanding} isLoading={isLoading} navigate={navigate}
             onNewJob={openNewJob}
           />
@@ -579,7 +607,16 @@ export function EmployerPortal() {
             <CompanyStatusBanner
               verification={companyProfile.verificationStatus}
               account={companyProfile.accountStatus}
+              onboarded={companyOnboarded}
             />
+
+            {/* Onboarding is first-time only — shown until the company profile is saved. */}
+            {!companyOnboarded && (
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold flex items-center justify-between gap-3">
+                <span>Complete your company setup once to publish requirements and post jobs. Your details are saved in this profile and editable later.</span>
+                <button type="button" onClick={startEditProfile} className="px-4 py-2 rounded-xl bg-amber-600 text-white font-bold shrink-0">Complete setup</button>
+              </div>
+            )}
 
             {profileSaved && (
               <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
@@ -886,7 +923,7 @@ export function EmployerPortal() {
             </form>
             )}
             {/* Phase 4: branches live under the company that owns them */}
-            <CompanyBranches />
+            <BranchesPanel />
           </div>
         )}
 
@@ -1258,9 +1295,11 @@ export function EmployerPortal() {
                             type="text"
                             required
                             value={jobForm.title}
-                            onChange={(e) => setJobForm({ ...jobForm, title: e.target.value })}
-                            className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 font-semibold text-slate-900 outline-none focus:border-blue-600"
+                            onChange={(e) => { setJobForm({ ...jobForm, title: e.target.value }); jobFormValidation.setField('title', e.target.value); }}
+                            onBlur={() => jobFormValidation.setTouchedField('title')}
+                            className={`w-full bg-slate-50 border border-slate-300 rounded-xl p-3 font-semibold text-slate-900 outline-none focus:border-blue-600 ${jobFormValidation.errorFor('title') ? 'border-red-400 focus:border-red-400' : ''}`}
                           />
+                            {jobFormValidation.errorFor('title') && <p className="text-xs text-red-600 font-bold mt-1 ml-2">{jobFormValidation.errorFor('title')}</p>}
                         </div>
                         <div>
                           <label className="block font-bold text-slate-700 mb-1">Department</label>
@@ -1580,76 +1619,15 @@ function JobApplicantsATS({ job, apps, candidates, onFullBoard }: { job: any; ap
   );
 }
 
-/* ---------- E6: company onboarding states (§8.1) ---------- */
-function CompanyBranches() {
-  const [rows, setRows] = useState<any[]>([]);
-  const [name, setName] = useState('');
-  const [city, setCity] = useState('');
-  const [msg, setMsg] = useState('');
-  const [removeFor, setRemoveFor] = useState<any>(null);
-  const load = async () => {
-    try {
-      const res: any = await directoryApi.branches();
-      const list = Array.isArray((res as any)?.data) ? (res as any).data : [];
-      setRows(list);
-    } catch { /* best-effort */ }
-  };
-  useEffect(() => { load(); }, []);
-  const create = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-    try {
-      await directoryApi.createBranch({ name: name.trim(), city: city.trim() || undefined });
-      setName(''); setCity(''); setMsg('Branch added.');
-      load();
-    } catch (err: any) { setMsg(err?.response?.data?.message || 'Could not add branch.'); }
-  };
-  const remove = async () => {
-    if (!removeFor) return;
-    try { await directoryApi.deleteBranch(removeFor.id); setMsg('Branch removed.'); setRemoveFor(null); load(); }
-    catch (err: any) { setMsg(err?.response?.data?.message || 'Could not remove branch.'); }
-  };
-  return (
-    <div className="pt-2 mt-2 border-t border-slate-100">
-      <h4 className="text-sm font-extrabold text-slate-900">Branches</h4>
-      <p className="text-xs text-slate-500">Hiring locations under your company. Requisitions and jobs reference these branches.</p>
-      {rows.length === 0 ? (
-        <div className="text-xs text-slate-500 font-medium mt-2">No branches yet — add your first hiring location.</div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-          {rows.map((b: any) => (
-            <div key={b.id} className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between gap-2">
-              <div><div className="font-bold text-slate-900">{b.name}</div><div className="text-slate-500 font-mono">{b.id} • {b.city || '—'} • {b.status || 'Active'}</div></div>
-              <button type="button" onClick={() => setRemoveFor(b)} className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-red-600">Remove</button>
-            </div>
-          ))}
-        </div>
-      )}
-      <form onSubmit={create} className="flex flex-col sm:flex-row gap-2 mt-3">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Branch name *" className="flex-1 p-3 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs outline-none" />
-        <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" className="w-full sm:w-44 p-3 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs outline-none" />
-        <button className="px-5 py-3 rounded-xl bg-slate-900 text-white font-bold text-xs">Add branch</button>
-      </form>
-      {msg && <div className="text-xs font-bold text-slate-600 mt-2">{msg}</div>}
-      <ConfirmDialog
-        open={removeFor !== null}
-        title={`Remove branch ${removeFor?.name || ''}?`}
-        body="Requisitions linked to this branch keep their stored branch name. This cannot be undone."
-        confirmLabel="Remove branch"
-        onCancel={() => setRemoveFor(null)}
-        onConfirm={remove}
-      />
-    </div>
-  );
-}
 const COMPANY_STATE_ORDER = ['Invited', 'Registration In Progress', 'Verification Pending', 'Approved', 'Active'];
-function CompanyStatusBanner({ verification, account }: { verification: string; account: string }) {
+function CompanyStatusBanner({ verification, account, onboarded }: { verification: string; account: string; onboarded?: boolean }) {
   const v = verification || 'Pending';
   const a = account || 'Invited';
   const nextStep =
     a === 'Active' ? 'Your company is live — publish requisitions and jobs.' :
     v === 'Rejected' ? 'Verification was rejected — contact your NexaTalent manager.' :
     v === 'Approved' ? 'Verification approved — complete any missing profile details to activate.' :
+    onboarded ? 'Setup complete — verification review follows automatically.' :
     'Complete your profile below — verification review follows automatically.';
   const pill = (label: string, value: string, tone: string) => (
     <span className={`px-3 py-1 rounded-full border font-extrabold text-xs ${tone}`}>
@@ -1681,9 +1659,9 @@ function quotaText(v: any): string {
   return v.enabled ? 'Enabled' : '—';
 }
 
-function OverviewDashboard({ jobs, requisitions, applications, interviews, usage, subscription, outstanding, isLoading, navigate, onNewJob }: {
+function OverviewDashboard({ jobs, requisitions, applications, interviews, usage, outstanding, isLoading, navigate, onNewJob }: {
   jobs: any[]; requisitions: any[]; applications: any[]; interviews: any[];
-  usage: any; subscription: any; outstanding: number; isLoading: boolean;
+  usage: any; outstanding: number; isLoading: boolean;
   navigate: (p: string) => void; onNewJob: () => void;
 }) {
   const activeReqs = requisitions.filter((r) => ['Approved', 'Sourcing'].includes(r.status));
@@ -1697,7 +1675,6 @@ function OverviewDashboard({ jobs, requisitions, applications, interviews, usage
   const searchU = u['candidates.search'] || u['search'];
   const contactU = u['candidates.contact_unlock'] || u['contact_unlock'];
   const outreachU = u['outreach.monthly_limit'] || u['outreach.send'] || u['outreach'];
-  const renewal = subscription?.renewalDate || subscription?.currentPeriodEnd || subscription?.endDate || null;
   const recentApps = [...applications].sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || ''))).slice(0, 5);
 
   const widgets: { label: string; value: string; sub: string; to: string }[] = [
@@ -1712,7 +1689,6 @@ function OverviewDashboard({ jobs, requisitions, applications, interviews, usage
     { label: 'Search Usage', value: quotaText(searchU), sub: usage?.plan ? `Plan: ${usage.plan}` : 'Talent search', to: '/employer/talent' },
     { label: 'Contact Unlock Usage', value: quotaText(contactU), sub: 'Profile unlocks', to: '/employer/talent' },
     { label: 'Outreach Usage', value: quotaText(outreachU), sub: 'Monthly quota', to: '/employer/outreach' },
-    { label: 'Renewal Date', value: renewal ? String(renewal).slice(0, 10) : (usage?.subscription || '—'), sub: subscription ? `Plan status: ${subscription.status || ''}` : 'Subscription', to: '/employer/billing' },
     { label: 'Outstanding Invoices', value: `₹${Number(outstanding || 0).toLocaleString('en-IN')}`, sub: outstanding > 0 ? 'Due now' : 'All clear', to: '/employer/billing' },
     { label: 'Recent Activity', value: recentApps.length > 0 ? recentApps[0].stage : '—', sub: recentApps.length > 0 ? `${recentApps[0].jobTitle || ''}` : 'No activity yet', to: '/employer/pipeline' },
   ];

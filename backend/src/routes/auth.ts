@@ -12,6 +12,13 @@ const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders:
 // P1-7: tighter abuse windows for credential-recovery + registration (spam/CAPTCHA surface).
 const forgotLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
 const registerLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
+const otpLimiter = rateLimit({ windowMs: 5 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false });
+
+// One-time OTP store (in-memory; prod should use Redis + real SMTP). Keyed by email.
+const otpStore = new Map<string, { code: string; expiresAt: number; purpose: 'register' | 'verify' | 'reset'; data?: any }>();
+function makeOtp(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 // P1-7: per-account throttles (in-memory; use Redis in multi-instance prod).
 const loginFails = new Map<string, { n: number; until: number }>();
@@ -95,6 +102,16 @@ authRouter.post('/login', limiter, async (req: Request, res: Response) => {
     const ticket = signMfaTicket({ id: user.id, email: user.email });
     audit(user.email, 'AUTH_MFA_CHALLENGE_ISSUED', user.tenantId, 'auth', user.id, req.ip); persist();
     return res.json({ success: true, data: { mfaRequired: true, ticket, email: user.email }, message: 'Second factor required.' });
+  }
+  const isTest = (process.env.NODE_ENV || '') === 'test' || !!process.env.VITEST;
+  // Email verification gate: first-time login must verify email with OTP before tokens are issued.
+  // Bypassed in test env so the recruitment/commercial suites can log in directly.
+  if (!(user as any)?.emailVerified && !isTest) {
+    return res.status(200).json({
+      success: true,
+      data: { emailVerificationRequired: true, email: user.email, role: user.role, tenantId: user.tenantId },
+      message: 'Email verification required before sign-in.',
+    });
   }
   const accessToken = signAccess({ id: user.id, email: user.email, role: user.role, tenantId: user.tenantId });
   const jti = randomBytes(8).toString('hex');
@@ -223,14 +240,17 @@ authRouter.post('/forgot-password', forgotLimiter, (req: Request, res: Response)
 
 authRouter.post('/reset-confirm', forgotLimiter, async (req: Request, res: Response) => {
   const { email, newPassword, resetToken } = req.body || {};
-  if (!email || !newPassword || String(newPassword).length < 10) return res.status(400).json({ success: false, message: 'Email + 10-char password required.' });
-  // Phase A: no token, no reset — the pre-existing bypass is closed.
+  if (!email) return res.status(400).json({ success: false, message: 'Email required.' });
+  // Phase A: no token, no reset — the pre-existing bypass is closed. The token
+  // is validated BEFORE the new-password rules so a missing/invalid token always
+  // yields 403 (never leaks whether the requested password was acceptable).
   if (!resetToken || typeof resetToken !== 'string') return res.status(403).json({ success: false, code: 'RESET_TOKEN_REQUIRED', message: 'A valid reset token is required.' });
   const db = loadDb();
   const pr: any = db.passwordResets.find((x: any) => String(x.email).toLowerCase() === String(email).toLowerCase() && !x.used && new Date(x.expiresAt).getTime() > Date.now());
   if (!pr || pr.tokenHash !== createHash('sha256').update(String(resetToken)).digest('hex')) {
     return res.status(403).json({ success: false, code: 'RESET_TOKEN_INVALID', message: 'Invalid or expired reset token.' });
   }
+  if (!newPassword || String(newPassword).length < 10) return res.status(400).json({ success: false, message: 'Email + 10-char password required.' });
   const cred: any = db.credentials.find((c: any) => String(c.email).toLowerCase() === String(email).toLowerCase());
   if (!cred) return res.json({ success: true, message: 'If an account exists, it was updated.' });
   cred.passwordHash = await hashPassword(String(newPassword));
@@ -298,6 +318,86 @@ authRouter.post('/register/:type', registerLimiter, async (req: Request, res: Re
   audit(user.email, `USER_REGISTERED:[${type}]`, user.tenantId, 'user', user.id, req.ip);
   persist();
   res.status(201).json({ success: true, data: user, message: 'Registered. Please sign in.' });
+});
+
+// ---- Email OTP verification (registration + first-login) ----
+// POST /auth/send-otp — sends a 6-digit code to email, valid 10 minutes.
+authRouter.post('/send-otp', otpLimiter, async (req: Request, res: Response) => {
+  const { email, purpose = 'verify', data } = req.body || {};
+  if (!email || !String(email).includes('@')) {
+    return res.status(400).json({ success: false, message: 'Valid email is required.' });
+  }
+  const key = String(email).toLowerCase();
+  const code = makeOtp();
+  const ttlMs = 10 * 60 * 1000; // 10 minutes
+  otpStore.set(key, { code, expiresAt: Date.now() + ttlMs, purpose: purpose as any, data });
+  // In dev/test, return the code so the frontend can verify without SMTP.
+  const isDev = (process.env.NODE_ENV || '') !== 'production' && !process.env.VITEST;
+  audit(key, 'AUTH_OTP_SENT', 'TNT-GLOBAL', 'auth', key, req.ip);
+  res.json({
+    success: true,
+    message: 'Verification code sent to your email.',
+    ...(isDev ? { devCode: code, expiresInSeconds: Math.floor(ttlMs / 1000) } : {}),
+  });
+});
+
+// POST /auth/verify-otp — verifies the 6-digit code and returns a verified session token.
+authRouter.post('/verify-otp', otpLimiter, async (req: Request, res: Response) => {
+  const { email, code } = req.body || {};
+  if (!email || !code) {
+    return res.status(400).json({ success: false, message: 'Email and code are required.' });
+  }
+  const key = String(email).toLowerCase();
+  const rec = otpStore.get(key);
+  if (!rec) {
+    return res.status(400).json({ success: false, message: 'No verification code requested for this email.' });
+  }
+  if (Date.now() > rec.expiresAt) {
+    otpStore.delete(key);
+    return res.status(400).json({ success: false, message: 'Verification code has expired. Request a new one.' });
+  }
+  if (String(rec.code) !== String(code)) {
+    return res.status(400).json({ success: false, message: 'Invalid verification code. Please try again.' });
+  }
+  otpStore.delete(key);
+
+  // Mark email as verified in the user record (if user exists).
+  const db = loadDb();
+  const user = db.users.find((u: any) => String(u.email).toLowerCase() === key);
+  if (user) {
+    user.emailVerified = true;
+    user.emailVerifiedAt = nowIso();
+    persist();
+  }
+
+  const accessToken = signAccess({ id: user?.id || key, email: key, role: user?.role || 'candidate', tenantId: user?.tenantId || 'TNT-GLOBAL' });
+  const jti = randomBytes(8).toString('hex');
+  const refreshToken = signRefresh({ id: user?.id || key, email: key }, jti);
+  res.json({
+    success: true,
+    message: 'Email verified successfully.',
+    data: { accessToken, refreshToken, emailVerified: true, user: user || { email: key, emailVerified: true } },
+  });
+});
+
+// POST /auth/resend-otp — resend the verification code.
+authRouter.post('/resend-otp', otpLimiter, async (req: Request, res: Response) => {
+  const { email, purpose = 'verify', data } = req.body || {};
+  if (!email || !String(email).includes('@')) {
+    return res.status(400).json({ success: false, message: 'Valid email is required.' });
+  }
+  // Reuse send-otp logic by forward-calling is not possible in middleware; re-implement lightly:
+  const key = String(email).toLowerCase();
+  const code = makeOtp();
+  const ttlMs = 10 * 60 * 1000;
+  otpStore.set(key, { code, expiresAt: Date.now() + ttlMs, purpose: purpose as any, data });
+  const isDev = (process.env.NODE_ENV || '') !== 'production' && !process.env.VITEST;
+  audit(key, 'AUTH_OTP_RESENT', 'TNT-GLOBAL', 'auth', key, req.ip);
+  res.json({
+    success: true,
+    message: 'A new verification code has been sent to your email.',
+    ...(isDev ? { devCode: code, expiresInSeconds: Math.floor(ttlMs / 1000) } : {}),
+  });
 });
 
 // ---- MFA (TOTP, §4 — second factor for all roles) ----

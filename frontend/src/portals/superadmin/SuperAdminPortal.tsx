@@ -3,14 +3,14 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { PortalShell } from '../common/PortalShell';
 import { apiClient } from '../../shared/api-client';
 import {
-  Users, ShieldCheck, Plus, Lock, Key, Building2, CreditCard, BriefcaseBusiness,
+  Users, ShieldCheck, Plus, Lock, Key, Building2, BriefcaseBusiness,
   Activity, TrendingUp, AlertTriangle, IndianRupee, UserCheck,
   FileCheck2, ArrowUpRight, ArrowRight, RefreshCw, Search, Radio, CircleDot,
-  Wallet, HandCoins, Target, CalendarClock, Sparkles, ServerCrash, BadgeCheck,
+  Wallet, Target, CalendarClock, Sparkles, ServerCrash, BadgeCheck,
 } from 'lucide-react';
 import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
 import {
-  SubscriptionsPanel, BillingPanel, InvoicesPanel, CommissionsPanel, PayrollPanel, LeadsPanel, PerformancePanel,
+  BillingPanel, CommissionsPanel, PayrollPanel, LeadsPanel, PerformancePanel,
   ReportsPanel, NotificationsPanel, AdminControlsPanel, LoginLockoutsPanel, RequisitionsPanel, ApplicationsPanel,
   CandidatesPanel, AgencyPanel, BranchesPanel, JobsPanel, SupportPanel,
   InterviewsPanel, OffersPlacementsPanel, RequirementCreatePage, JobCreatePage, RolesPanel, SkillsPanel, PaymentsRemindersPanel, TimesheetsPanel,
@@ -40,7 +40,6 @@ const navItems = [
   { label: 'Outreach', path: '/superadmin/outreach', group: 'Recruitment' },
   { label: 'Messages', path: '/superadmin/messages', group: 'Recruitment' },
   { label: 'Timesheets', path: '/superadmin/timesheets', group: 'Recruitment' },
-  { label: 'Subscriptions & Plans', path: '/superadmin/subscriptions', group: 'Commercial' },
   { label: 'Invoices', path: '/superadmin/invoices', group: 'Commercial' },
   { label: 'Payments & Reminders', path: '/superadmin/payments', group: 'Commercial' },
   { label: 'Billing & Payments', path: '/superadmin/billing', group: 'Commercial' },
@@ -82,7 +81,6 @@ export function SuperAdminPortal() {
     if (p.includes('/outreach')) return 'outreach';
     if (p.includes('/messages') || p.includes('/chat')) return 'messages';
     if (p.includes('/timesheets')) return 'timesheets';
-    if (p.includes('/subscriptions')) return 'subscriptions';
     if (p.includes('/invoices')) return 'invoices';
     if (p.includes('/superadmin/payments')) return 'payments';
     if (p.includes('/billing')) return 'billing';
@@ -104,7 +102,7 @@ export function SuperAdminPortal() {
   const [users, setUsers] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [sysSettings, setSysSettings] = useState<any>(null);
-  const [kpis, setKpis] = useState({ jobs: 0, publishedJobs: 0, applications: 0, subscriptions: 0, activeSubs: 0, outstanding: 0, overdueInvoices: 0, leads: 0, newLeads: 0, placements: 0, commissionsDue: 0 });
+  const [kpis, setKpis] = useState({ jobs: 0, publishedJobs: 0, applications: 0, outstanding: 0, overdueInvoices: 0, leads: 0, newLeads: 0, placements: 0, commissionsDue: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTick, setRefreshTick] = useState(0);
   // Live collections for breakdown charts (kept raw — never mocked)
@@ -129,10 +127,6 @@ export function SuperAdminPortal() {
     return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
   };
   const tenantName = (t: any) => t?.displayName || t?.legalName || t?.name || t?.companyName || 'Unnamed organization';
-  const tenantPlan = (t: any) => {
-    const sub = live.subs.find((s) => s.orgId === t.id || s.tenantId === t.id);
-    return sub?.planName || sub?.planId || t?.plan || t?.planName || 'No plan';
-  };
   const tenantStatus = (t: any) => t?.accountStatus || t?.status || 'Invited';
   const tenantVerify = (t: any) => t?.verificationStatus || 'Pending';
 
@@ -167,26 +161,24 @@ export function SuperAdminPortal() {
         // Live platform KPIs (§6.2) — real counts, never fabricated.
         // Totals prefer server pagination.total; breakdown lists use the loaded page.
         try {
-          const [jobsR, appsR, subsR, invsR, leadsR, placeR, commR] = await Promise.all([
+          const [jobsR, appsR, invsR, leadsR, placeR, commR, subsR] = await Promise.all([
             apiClient.get<any[]>('/api/v1/jobs?page=1&pageSize=100').catch(() => ({ data: [] as any[] })),
             apiClient.get<any[]>('/api/v1/applications?page=1&pageSize=100').catch(() => ({ data: [] as any[] })),
-            apiClient.get<any[]>('/api/v1/subscriptions?page=1&pageSize=100').catch(() => ({ data: [] as any[] })),
             apiClient.get<any[]>('/api/v1/invoices?page=1&pageSize=100').catch(() => ({ data: [] as any[] })),
             apiClient.get<any[]>('/api/v1/leads?page=1&pageSize=100').catch(() => ({ data: [] as any[] })),
             apiClient.get<any[]>('/api/v1/placements?page=1&pageSize=100').catch(() => ({ data: [] as any[] })),
             apiClient.get<any[]>('/api/v1/commissions?page=1&pageSize=100').catch(() => ({ data: [] as any[] })),
+            apiClient.get<any[]>('/api/v1/subscriptions?page=1&pageSize=100').catch(() => ({ data: [] as any[] })),
           ]);
           const arr = (r: any): any[] => (Array.isArray(r?.data) ? r.data : (Array.isArray(r?.data?.data) ? r.data.data : []));
           const tot = (r: any, list: any[]): number => Number((r as any)?.pagination?.total ?? list.length);
-          const jobsL = arr(jobsR); const appsL = arr(appsR); const subsL = arr(subsR);
-          const invsL = arr(invsR); const leadsL = arr(leadsR); const placeL = arr(placeR); const commL = arr(commR);
+          const jobsL = arr(jobsR); const appsL = arr(appsR);
+          const invsL = arr(invsR); const leadsL = arr(leadsR); const placeL = arr(placeR); const commL = arr(commR); const subsL = arr(subsR);
           setLive({ jobs: jobsL, apps: appsL, subs: subsL, invoices: invsL, leads: leadsL, placements: placeL, commissions: commL });
           setKpis({
             jobs: tot(jobsR, jobsL),
             publishedJobs: jobsL.filter((j: any) => j.status === 'Published').length,
             applications: tot(appsR, appsL),
-            subscriptions: tot(subsR, subsL),
-            activeSubs: subsL.filter((s: any) => s.status === 'Active').length,
             outstanding: invsL.reduce((a: number, i: any) => a + Number(i.balance ?? i.amountDue ?? i.total ?? 0), 0),
             overdueInvoices: invsL.filter((i: any) => Number(i.balance ?? i.amountDue ?? 0) > 0 && i.dueDate && new Date(i.dueDate) < new Date()).length,
             leads: tot(leadsR, leadsL),
@@ -255,19 +247,14 @@ export function SuperAdminPortal() {
     const suspended = tenants.filter((t) => tenantStatus(t) === 'Suspended').length;
     const activeUsers = users.filter((u) => (u.status || 'Active') === 'Active').length;
     const mfaOn = users.filter((u) => u.mfaEnabled).length;
-    const mrr = live.subs.filter((s) => s.status === 'Active').reduce((a, s) => a + Number(s.price ?? s.mrr ?? s.amount ?? 0), 0);
     const paidInvoices = live.invoices.filter((i) => Number(i.balance ?? i.amountDue ?? 0) <= 0).length;
     const hasInvoices = live.invoices.length > 0;
     const collectionRate = hasInvoices ? Math.round((paidInvoices / live.invoices.length) * 100) : 0;
     const planMix = (() => {
       const m = new Map<string, number>();
       for (const t of tenants) {
-        const p = tenantPlan(t);
+        const p = t?.plan || t?.planName || 'No plan';
         m.set(p, (m.get(p) || 0) + 1);
-      }
-      for (const s of live.subs) {
-        const p = s.planName || s.planId;
-        if (p && ![...m.keys()].some((k) => k.includes(String(p)))) m.set(String(p), (m.get(String(p)) || 0) + 1);
       }
       return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
     })();
@@ -288,14 +275,14 @@ export function SuperAdminPortal() {
       .filter((t) => {
         const q = tenantQuery.trim().toLowerCase();
         if (!q) return true;
-        return `${t.id} ${tenantName(t)} ${tenantPlan(t)} ${tenantStatus(t)}`.toLowerCase().includes(q);
+        return `${t.id} ${tenantName(t)} ${tenantStatus(t)}`.toLowerCase().includes(q);
       })
       .slice(0, 8);
     const filteredAudits = recentAudits.filter((l) => {
       if (!auditFilter) return true;
       return String(l.action || '').toLowerCase().includes(auditFilter.toLowerCase());
     });
-    return { activeTenants, pendingVerify, suspended, activeUsers, mfaOn, mrr, paidInvoices, hasInvoices, collectionRate, planMix, leadStages, funnel, maxFunnel, convRate, recentAudits: filteredAudits, tenantRows };
+    return { activeTenants, pendingVerify, suspended, activeUsers, mfaOn, paidInvoices, hasInvoices, collectionRate, planMix, leadStages, funnel, maxFunnel, convRate, recentAudits: filteredAudits, tenantRows };
   }, [tenants, users, auditLogs, live, kpis, tenantQuery, auditFilter]);
 
   const spark = (values: number[], stroke = '#087BFF') => {
@@ -359,7 +346,7 @@ export function SuperAdminPortal() {
                 Tenant estate, SaaS revenue, hiring pipeline & trust events — every number below is live from the platform API. Click any card to drill in.
               </p>
               <div className="flex flex-wrap items-center gap-2 mt-4 text-[11px] font-bold">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/10 border border-white/15 text-white"><IndianRupee size={13} className="text-emerald-300" /> MRR {inr(analytics.mrr)}</span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/10 border border-white/15 text-white"><IndianRupee size={13} className="text-emerald-300" /> MRR —</span>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/10 border border-white/15 text-white"><BadgeCheck size={13} className="text-cyan-300" /> {analytics.activeTenants} active tenants</span>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/10 border border-white/15 text-white"><AlertTriangle size={13} className={analytics.pendingVerify ? 'text-amber-300' : 'text-emerald-300'} /> {analytics.pendingVerify} pending verification</span>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/10 border border-white/15 text-white"><Activity size={13} className="text-violet-300" /> {auditLogs.length} audit events</span>
@@ -413,22 +400,6 @@ export function SuperAdminPortal() {
                 </div>
               </button>
 
-              <button type="button" onClick={() => navigate('/superadmin/subscriptions')}
-                className="group relative overflow-hidden p-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm text-left hover:-translate-y-1 hover:shadow-[0_20px_45px_-18px_rgba(5,150,105,0.45)] hover:border-emerald-300 transition-all duration-200 cursor-pointer">
-                <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-300" aria-hidden="true" />
-                <div className="flex items-start justify-between gap-2">
-                  <span className="inline-flex w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 items-center justify-center"><CreditCard size={19} /></span>
-                  <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5"><Wallet size={12} /> {kpis.activeSubs}/{kpis.subscriptions}</span>
-                </div>
-                <div className="mt-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">SaaS revenue (MRR) <ArrowUpRight size={12} className="inline text-emerald-600 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition" /></div>
-                <div className="text-3xl font-extrabold text-slate-900 tracking-tight">{inr(analytics.mrr)}</div>
-                <div className="text-xs font-bold text-slate-600 mt-1">{inr(kpis.outstanding)} outstanding · {kpis.overdueInvoices} overdue</div>
-                <div className="mt-2.5 h-2 rounded-full bg-slate-100 overflow-hidden">
-                  <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all" style={{ width: `${analytics.collectionRate}%` }} />
-                </div>
-                <div className="text-[11px] font-bold text-slate-500 mt-1">{analytics.hasInvoices ? `${analytics.collectionRate}% collected` : 'no invoices yet'}</div>
-              </button>
-
               <button type="button" onClick={() => navigate('/superadmin/jobs')}
                 className="group relative overflow-hidden p-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm text-left hover:-translate-y-1 hover:shadow-[0_20px_45px_-18px_rgba(124,58,237,0.45)] hover:border-violet-300 transition-all duration-200 cursor-pointer">
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-violet-600 to-fuchsia-400" aria-hidden="true" />
@@ -477,7 +448,6 @@ export function SuperAdminPortal() {
                 { label: 'New leads', value: `${kpis.newLeads}/${kpis.leads}`, icon: Sparkles, to: '/superadmin/leads', tint: 'text-violet-700 bg-violet-50 border-violet-200', note: 'pipeline intake' },
                 { label: 'Placements', value: `${kpis.placements}`, icon: FileCheck2, to: '/superadmin/placements', tint: 'text-emerald-700 bg-emerald-50 border-emerald-200', note: `${analytics.convRate}% app→hire` },
                 { label: 'Applications', value: `${kpis.applications}`, icon: UserCheck, to: '/superadmin/applications', tint: 'text-slate-700 bg-slate-100 border-slate-200', note: `${kpis.jobs} jobs live` },
-                { label: 'Subscriptions', value: `${kpis.activeSubs}/${kpis.subscriptions}`, icon: HandCoins, to: '/superadmin/subscriptions', tint: 'text-teal-700 bg-teal-50 border-teal-200', note: `${inr(analytics.mrr)} MRR` },
                 { label: 'Commissions due', value: `${kpis.commissionsDue}`, icon: CircleDot, to: '/superadmin/commissions', tint: kpis.commissionsDue ? 'text-amber-700 bg-amber-50 border-amber-200' : 'text-slate-600 bg-slate-100 border-slate-200', note: kpis.commissionsDue ? 'approve & pay' : 'settled' },
                 { label: 'Audit events', value: `${auditLogs.length}`, icon: Activity, to: '/superadmin/audit-logs', tint: 'text-slate-700 bg-slate-100 border-slate-200', note: 'immutable trail' },
               ].map((c) => (
@@ -499,9 +469,8 @@ export function SuperAdminPortal() {
               <div className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-sm">
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-1.5"><Wallet size={15} className="text-emerald-600" /> Revenue & plan mix</h3>
-                  <button type="button" onClick={() => navigate('/superadmin/subscriptions')} className="text-[11px] font-extrabold text-[#087BFF] hover:underline cursor-pointer">Plans →</button>
                 </div>
-                <p className="text-[11px] text-slate-500 font-medium mb-3">Live MRR {inr(analytics.mrr)} · {analytics.hasInvoices ? `${analytics.collectionRate}% collected` : 'no invoices yet'} · {kpis.overdueInvoices} overdue</p>
+                <p className="text-[11px] text-slate-500 font-medium mb-3">Live MRR · {analytics.hasInvoices ? `${analytics.collectionRate}% collected` : 'no invoices yet'} · {kpis.overdueInvoices} overdue</p>
                 {analytics.planMix.length === 0 ? (
                   <div className="text-xs text-slate-500 font-medium">No tenant plans yet.</div>
                 ) : (
@@ -523,7 +492,7 @@ export function SuperAdminPortal() {
                   </div>
                 )}
                 <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                  <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-extrabold text-slate-500 uppercase">MRR</div><div className="text-sm font-extrabold text-slate-900">{inr(analytics.mrr)}</div></div>
+                  <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-extrabold text-slate-500 uppercase">MRR</div><div className="text-sm font-extrabold text-slate-900">—</div></div>
                   <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-extrabold text-slate-500 uppercase">O/S</div><div className="text-sm font-extrabold text-slate-900">{inr(kpis.outstanding)}</div></div>
                   <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-extrabold text-slate-500 uppercase">Overdue</div><div className={`text-sm font-extrabold ${kpis.overdueInvoices ? 'text-red-600' : 'text-emerald-600'}`}>{kpis.overdueInvoices}</div></div>
                 </div>
@@ -588,8 +557,8 @@ export function SuperAdminPortal() {
               <div className="xl:col-span-3 bg-white rounded-3xl border border-slate-200/90 p-5 shadow-sm space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
                   <div>
-                    <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-1.5"><Building2 size={15} className="text-[#087BFF]" /> Tenants & SaaS subscriptions</h3>
-                    <p className="text-[11px] text-slate-500 font-medium">Live directory — names, plans (subscription-joined) and seats always resolve.</p>
+                    <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-1.5"><Building2 size={15} className="text-[#087BFF]" /> Tenants</h3>
+                    <p className="text-[11px] text-slate-500 font-medium">Live directory — names, plans and seats always resolve.</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="relative">
@@ -623,7 +592,6 @@ export function SuperAdminPortal() {
                             <div className="font-bold text-slate-900 truncate max-w-[220px]">{tenantName(t)}</div>
                             <div className="text-[10px] text-slate-500 font-mono">{tenantVerify(t)} verification</div>
                           </td>
-                          <td className="px-4 py-2.5"><span className="px-2 py-0.5 rounded-full bg-blue-50 text-[#087BFF] border border-blue-200 font-bold text-[11px] whitespace-nowrap">{tenantPlan(t)}</span></td>
                           <td className="px-4 py-2.5 font-bold whitespace-nowrap">{t.seats ?? '—'}</td>
                           <td className="px-4 py-2.5">
                             <span className={`px-2 py-0.5 rounded-full font-bold text-[11px] border whitespace-nowrap ${tenantStatus(t) === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : tenantStatus(t) === 'Suspended' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>{tenantStatus(t)}</span>
@@ -926,8 +894,7 @@ export function SuperAdminPortal() {
           </div>
         )}
         {currentTab === 'timesheets' && <TimesheetsPanel canApprove />}
-        {currentTab === 'subscriptions' && <SubscriptionsPanel />}
-        {currentTab === 'invoices' && <InvoicesPanel />}
+        {currentTab === 'invoices' && <PaymentsRemindersPanel />}
         {currentTab === 'payments' && <PaymentsRemindersPanel />}
         {currentTab === 'billing' && <BillingPanel />}
         {currentTab === 'commissions' && (<div className="space-y-4"><PayrollPanel /><CommissionsPanel /></div>)}

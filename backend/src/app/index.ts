@@ -299,7 +299,10 @@ export function createApp(): Express {
   app.put('/api/v1/company', requireAuth(['employer','superadmin','company_admin']), (req: Request, res: Response) => {
     const db = loadDb(); const t = tenantOf(req); const b: any = req.body || {};
     if (!b.legalName && !b.name) return res.status(400).json({ success: false, message: 'legalName required.' });
-    const patch = pick<any>(req.body, ['legalName', 'displayName', 'entityType', 'industry', 'subIndustry', 'companySize', 'website', 'description', 'countryOfIncorporation', 'registrationNumber', 'gstin', 'taxIds', 'registeredAddress', 'headquarters', 'operatingLocations', 'logoRef', 'primaryContactName', 'primaryContactDesignation', 'businessEmail', 'businessPhone', 'billingContact', 'financeEmail', 'hqLocation', 'employeeCount', 'domain', 'techStack']);
+    if (b.gstin && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/i.test(String(b.gstin).trim())) {
+      return res.status(400).json({ success: false, message: 'Invalid GSTIN format (e.g. 29AABCT1011A1Z5).' });
+    }
+    const patch = pick<any>(req.body, ['legalName', 'displayName', 'entityType', 'industry', 'subIndustry', 'companySize', 'website', 'description', 'countryOfIncorporation', 'registrationNumber', 'gstin', 'taxIds', 'registeredAddress', 'headquarters', 'operatingLocations', 'logoRef', 'primaryContactName', 'primaryContactDesignation', 'businessEmail', 'businessPhone', 'billingContact', 'financeEmail', 'hqLocation', 'employeeCount', 'domain', 'techStack', 'onboarding']);
     let p: any = db.companyProfiles.find((x: any) => x.tenantId === t || x.orgId === t);
     if (!p) { p = { id: uid('COM'), tenantId: t, orgId: t, createdAt: nowIso(), ...patch }; db.companyProfiles.unshift(p); }
     else Object.assign(p, patch, { updatedAt: nowIso() });

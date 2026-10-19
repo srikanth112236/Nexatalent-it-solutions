@@ -31,7 +31,7 @@ export function WebsiteHeader() {
             <Link to="/candidates" style={{ transition: 'color 0.2s' }}>For Candidates</Link>
             <Link to="/case-studies" style={{ transition: 'color 0.2s' }}>Case Studies</Link>
             <Link to="/design-system" style={{ transition: 'color 0.2s' }}>Tokens</Link>
-            <Link to="/components" style={{ color: 'var(--color-primary, #3b82f6)' }}>Components</Link>
+            <Link to="/components" style={{ color: '#ffffff' }}>Components</Link>
           </nav>
         </div>
 
@@ -53,9 +53,10 @@ export function WebsiteHeader() {
               fontSize: '0.875rem',
               fontWeight: 600,
               padding: '0.5rem 1.125rem',
-              backgroundColor: 'var(--color-primary, #3b82f6)',
+              backgroundColor: '#000000',
               color: '#ffffff',
               borderRadius: '8px',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
               transition: 'background-color 0.2s',
             }}
           >

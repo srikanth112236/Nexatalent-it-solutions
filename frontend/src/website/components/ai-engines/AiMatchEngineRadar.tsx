@@ -112,8 +112,8 @@ export function AiMatchEngineRadar() {
           viewport={{ once: true }}
           className="flex items-center justify-center gap-2 mb-4"
         >
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm">
-            <BarChart3 className="w-3.5 h-3.5 text-emerald-600" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-neutral-100 text-black border border-neutral-300 shadow-sm">
+            <BarChart3 className="w-3.5 h-3.5 text-black" />
             <span>NEXA AI MATCH ENGINE (6-FACTOR ANALYSIS)</span>
           </div>
         </motion.div>
@@ -166,17 +166,13 @@ export function AiMatchEngineRadar() {
                 onClick={() => setSelectedIdx(idx)}
                 className={`text-left p-4 rounded-xl border transition-all ${
                   selectedIdx === idx
-                    ? 'bg-slate-50 border-emerald-500 shadow-md ring-1 ring-emerald-500/30'
+                    ? 'bg-slate-50 border-black shadow-md ring-1 ring-black/20'
                     : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-sm font-bold text-slate-900">{cand.name}</span>
-                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-black ${
-                    cand.overallMatch >= 90
-                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                      : 'bg-teal-100 text-teal-800 border border-teal-200'
-                  }`}>
+                  <span className="text-xs px-2.5 py-0.5 rounded-full font-black bg-neutral-100 text-black border border-neutral-300">
                     {cand.overallMatch}% Match
                   </span>
                 </div>
@@ -186,7 +182,7 @@ export function AiMatchEngineRadar() {
                   <span>•</span>
                   <span>{cand.location.split('(')[0]}</span>
                   <span>•</span>
-                  <span className="text-emerald-700 font-bold">{cand.noticePeriod.split('(')[0]}</span>
+                  <span className="text-black font-bold">{cand.noticePeriod.split('(')[0]}</span>
                 </div>
               </motion.button>
             ))}
@@ -203,22 +199,22 @@ export function AiMatchEngineRadar() {
             {/* Header info */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
               <div>
-                <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 mb-1">
-                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                <div className="inline-flex items-center gap-1.5 text-xs font-bold text-black mb-1">
+                  <CheckCircle className="w-3.5 h-3.5 text-black" />
                   <span>Verified Match Profile</span>
                 </div>
                 <h3 className="text-xl sm:text-2xl font-black text-slate-950">{candidate.name}</h3>
                 <p className="text-sm text-slate-700 font-medium">{candidate.role} • {candidate.experience}</p>
-                <p className="text-xs text-slate-500 mt-1">{candidate.location} • <span className="text-emerald-700 font-bold">{candidate.noticePeriod}</span></p>
+                <p className="text-xs text-slate-500 mt-1">{candidate.location} • <span className="text-black font-bold">{candidate.noticePeriod}</span></p>
               </div>
 
               {/* Overall Score Badge */}
-              <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-xl border border-emerald-200 shadow-sm">
+              <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-xl border border-neutral-300 shadow-sm">
                 <div className="text-right">
                   <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Overall AI Match</div>
-                  <div className="text-2xl sm:text-3xl font-black text-emerald-700">{candidate.overallMatch}%</div>
+                  <div className="text-2xl sm:text-3xl font-black text-black">{candidate.overallMatch}%</div>
                 </div>
-                <Award className="w-8 h-8 text-emerald-600" />
+                <Award className="w-8 h-8 text-black" />
               </div>
             </div>
 
@@ -226,7 +222,7 @@ export function AiMatchEngineRadar() {
             <div className="mt-6 mb-8">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center justify-between">
                 <span>Multi-Factor Fit Breakdown</span>
-                <span className="text-emerald-700 font-mono text-[11px] font-bold">Weighted Precision Index</span>
+                <span className="text-black font-mono text-[11px] font-bold">Weighted Precision Index</span>
               </h4>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
@@ -234,7 +230,7 @@ export function AiMatchEngineRadar() {
                 <div>
                   <div className="flex justify-between text-xs mb-1">
                     <span className="text-slate-700 font-semibold">Technical Skills (Java, Spring, Microservices)</span>
-                    <span className="font-bold text-emerald-700">{candidate.factors.technicalSkills}%</span>
+                    <span className="font-bold text-black">{candidate.factors.technicalSkills}%</span>
                   </div>
                   <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
                     <motion.div
@@ -242,7 +238,7 @@ export function AiMatchEngineRadar() {
                       whileInView={{ width: `${candidate.factors.technicalSkills}%` }}
                       viewport={{ once: true }}
                       transition={{ duration: 0.8 }}
-                      className="h-full bg-emerald-600 rounded-full"
+                      className="h-full bg-black rounded-full"
                     />
                   </div>
                 </div>
@@ -251,7 +247,7 @@ export function AiMatchEngineRadar() {
                 <div>
                   <div className="flex justify-between text-xs mb-1">
                     <span className="text-slate-700 font-semibold">Experience Depth & Tenancy</span>
-                    <span className="font-bold text-emerald-700">{candidate.factors.experience}%</span>
+                    <span className="font-bold text-black">{candidate.factors.experience}%</span>
                   </div>
                   <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
                     <motion.div
@@ -259,7 +255,7 @@ export function AiMatchEngineRadar() {
                       whileInView={{ width: `${candidate.factors.experience}%` }}
                       viewport={{ once: true }}
                       transition={{ duration: 0.8 }}
-                      className="h-full bg-emerald-600 rounded-full"
+                      className="h-full bg-black rounded-full"
                     />
                   </div>
                 </div>
@@ -268,7 +264,7 @@ export function AiMatchEngineRadar() {
                 <div>
                   <div className="flex justify-between text-xs mb-1">
                     <span className="text-slate-700 font-semibold">Architecture & Role Responsibilities</span>
-                    <span className="font-bold text-emerald-700">{candidate.factors.responsibilities}%</span>
+                    <span className="font-bold text-black">{candidate.factors.responsibilities}%</span>
                   </div>
                   <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
                     <motion.div
@@ -276,7 +272,7 @@ export function AiMatchEngineRadar() {
                       whileInView={{ width: `${candidate.factors.responsibilities}%` }}
                       viewport={{ once: true }}
                       transition={{ duration: 0.8 }}
-                      className="h-full bg-emerald-600 rounded-full"
+                      className="h-full bg-black rounded-full"
                     />
                   </div>
                 </div>
@@ -285,7 +281,7 @@ export function AiMatchEngineRadar() {
                 <div>
                   <div className="flex justify-between text-xs mb-1">
                     <span className="text-slate-700 font-semibold">Location Proximity (Bangalore)</span>
-                    <span className="font-bold text-emerald-700">{candidate.factors.location}%</span>
+                    <span className="font-bold text-black">{candidate.factors.location}%</span>
                   </div>
                   <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
                     <motion.div
@@ -293,7 +289,7 @@ export function AiMatchEngineRadar() {
                       whileInView={{ width: `${candidate.factors.location}%` }}
                       viewport={{ once: true }}
                       transition={{ duration: 0.8 }}
-                      className="h-full bg-emerald-600 rounded-full"
+                      className="h-full bg-black rounded-full"
                     />
                   </div>
                 </div>
@@ -302,7 +298,7 @@ export function AiMatchEngineRadar() {
                 <div>
                   <div className="flex justify-between text-xs mb-1">
                     <span className="text-slate-700 font-semibold">Notice Period Match (Immediate)</span>
-                    <span className="font-bold text-emerald-700">{candidate.factors.noticePeriod}%</span>
+                    <span className="font-bold text-black">{candidate.factors.noticePeriod}%</span>
                   </div>
                   <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
                     <motion.div
@@ -310,7 +306,7 @@ export function AiMatchEngineRadar() {
                       whileInView={{ width: `${candidate.factors.noticePeriod}%` }}
                       viewport={{ once: true }}
                       transition={{ duration: 0.8 }}
-                      className="h-full bg-emerald-600 rounded-full"
+                      className="h-full bg-black rounded-full"
                     />
                   </div>
                 </div>
@@ -319,7 +315,7 @@ export function AiMatchEngineRadar() {
                 <div>
                   <div className="flex justify-between text-xs mb-1">
                     <span className="text-slate-700 font-semibold">CTC & Budget Alignment (Under ₹18 LPA)</span>
-                    <span className="font-bold text-emerald-700">{candidate.factors.ctc}%</span>
+                    <span className="font-bold text-black">{candidate.factors.ctc}%</span>
                   </div>
                   <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
                     <motion.div
@@ -327,7 +323,7 @@ export function AiMatchEngineRadar() {
                       whileInView={{ width: `${candidate.factors.ctc}%` }}
                       viewport={{ once: true }}
                       transition={{ duration: 0.8 }}
-                      className="h-full bg-emerald-600 rounded-full"
+                      className="h-full bg-black rounded-full"
                     />
                   </div>
                 </div>
@@ -335,24 +331,24 @@ export function AiMatchEngineRadar() {
             </div>
 
             {/* Recruiter Human Note */}
-            <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200 mb-6 flex items-start gap-3">
-              <UserCheck className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div className="p-4 rounded-xl bg-neutral-100 border border-neutral-300 mb-6 flex items-start gap-3">
+              <UserCheck className="w-5 h-5 text-black flex-shrink-0 mt-0.5" />
               <div className="text-xs">
-                <span className="text-blue-900 font-bold block mb-0.5">Recruiter Verification Assessment</span>
-                <span className="text-blue-800 leading-relaxed">{candidate.recruiterNote}</span>
+                <span className="text-black font-bold block mb-0.5">Recruiter Verification Assessment</span>
+                <span className="text-neutral-800 leading-relaxed">{candidate.recruiterNote}</span>
               </div>
             </div>
 
             {/* Actions for Client */}
             <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-200">
               <div className="text-xs text-slate-600 font-medium">
-                Current CTC: <strong className="text-slate-900">{candidate.currentCTC}</strong> • Expected: <strong className="text-emerald-700 font-bold">{candidate.expectedCTC}</strong>
+                Current CTC: <strong className="text-slate-900">{candidate.currentCTC}</strong> • Expected: <strong className="text-black font-bold">{candidate.expectedCTC}</strong>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => alert(`Shortlisted ${candidate.name} for Client Review.`)}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all shadow-md active:scale-95"
+                  className="px-4 py-2 rounded-xl bg-black hover:bg-neutral-800 text-white font-bold text-xs transition-all shadow-md active:scale-95"
                 >
                   Shortlist Candidate
                 </button>
