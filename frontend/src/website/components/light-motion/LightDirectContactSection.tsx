@@ -85,7 +85,7 @@ export const LightDirectContactSection: React.FC = () => {
                 </div>
                 <div>
                   <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Corporate HQ & Registered Office</div>
-                  <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.4 }}>4th & 7th Floor, Skyline Icon, Andheri - Kurla Rd, Chimatpada, Marol, Andheri East, Mumbai, MH 400059</div>
+                  <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.4 }}>4th and 7th Floor, Skyline Icon, Andheri - Kurla Rd, Chimatpada, Marol, Andheri East, Mumbai, Maharashtra 400059</div>
                 </div>
               </div>
             </div>

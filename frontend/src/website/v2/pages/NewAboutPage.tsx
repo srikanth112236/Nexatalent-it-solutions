@@ -98,7 +98,7 @@ const TAGS = [
 ];
 
 const OFFICES = [
-  ['Mumbai', 'Corporate HQ — Andheri East', '4th & 7th Floor, Skyline Icon, Andheri–Kurla Rd, Marol, Mumbai 400059'],
+  ['Mumbai', 'Corporate HQ — Andheri East', '4th and 7th Floor, Skyline Icon, Andheri - Kurla Rd, Chimatpada, Marol, Andheri East, Mumbai, Maharashtra 400059'],
   ['Bengaluru', 'Technology hub — SaaS, AI & GCC pods', 'Engineering talent delivery for product companies and global capability centers'],
   ['Dubai', 'Enterprise delivery — GCC & global mandates', 'Support for Middle East enterprises scaling offshore engineering teams'],
 ];

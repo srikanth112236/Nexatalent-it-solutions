@@ -68,7 +68,7 @@ export function V2Footer() {
             Nexa Talent IT Solutions Pvt. Ltd. — technology recruitment and staffing across IT, contract and executive talent.
           </p>
           <ul className="space-y-1.5 text-xs text-black">
-            <li className="flex items-start gap-2"><MapPin size={14} className="mt-0.5 shrink-0 text-black" aria-hidden /> Andheri East, Mumbai 400059</li>
+            <li className="flex items-start gap-2"><MapPin size={14} className="mt-0.5 shrink-0 text-black" aria-hidden /> 4th and 7th Floor, Skyline Icon, Andheri - Kurla Rd, Chimatpada, Marol, Andheri East, Mumbai, Maharashtra 400059</li>
             <li><a href="tel:+917019696166" className="flex items-center gap-2 hover:text-black"><PhoneCall size={14} className="text-black" aria-hidden /> +91 70196 96166</a></li>
             <li><a href="mailto:info@nexatalentitsolutions.com" className="flex items-center gap-2 hover:text-black"><Mail size={14} className="text-black" aria-hidden /> info@nexatalentitsolutions.com</a></li>
           </ul>

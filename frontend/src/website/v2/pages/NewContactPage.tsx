@@ -26,7 +26,7 @@ const OFFICES = [
   {
     city: 'Mumbai',
     role: 'Corporate HQ — Andheri East',
-    lines: ['4th & 7th Floor, Skyline Icon', 'Andheri–Kurla Rd, Marol', 'Mumbai 400059'],
+    lines: ['4th and 7th Floor, Skyline Icon', 'Andheri - Kurla Rd, Chimatpada, Marol', 'Andheri East, Mumbai, Maharashtra 400059'],
   },
   {
     city: 'Bengaluru',

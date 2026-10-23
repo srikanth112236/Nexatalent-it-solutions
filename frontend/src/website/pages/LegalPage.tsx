@@ -52,7 +52,7 @@ const LEGAL_SECTIONS = [
       },
       {
         heading: '8. Grievance Redressal & Data Protection Officer',
-        text: 'In accordance with the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021 and DPDP Act 2023, the appointed Data Protection Officer is: Executive Compliance Desk, NEXA TALENT IT SOLUTIONS PRIVATE LIMITED, 4th and 7th Floor, Skyline Icon, Andheri - Kurla Rd, Marol, Andheri East, Mumbai 400059. Direct Grievance Email: info@nexatalentitsolutions.com. Phone: +91 70196 96166. Acknowledgement SLA: within 24 hours; resolution within 15 working days.'
+        text: 'In accordance with the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021 and DPDP Act 2023, the appointed Data Protection Officer is: Executive Compliance Desk, NEXA TALENT IT SOLUTIONS PRIVATE LIMITED, 4th and 7th Floor, Skyline Icon, Andheri - Kurla Rd, Chimatpada, Marol, Andheri East, Mumbai, Maharashtra 400059. Direct Grievance Email: info@nexatalentitsolutions.com. Phone: +91 70196 96166. Acknowledgement SLA: within 24 hours; resolution within 15 working days.'
       }
     ]
   },
@@ -386,7 +386,7 @@ export function LegalPage() {
               <div style={{ fontSize: '0.75rem', color: '#000000', lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                 <div><strong>Entity:</strong> NEXA TALENT IT SOLUTIONS PRIVATE LIMITED</div>
                 <div><strong>CIN:</strong> U72200MH2021PTC145678</div>
-                <div><strong>Location:</strong> Skyline Icon, Marol, Mumbai 400059</div>
+                <div><strong>Location:</strong> 4th and 7th Floor, Skyline Icon, Andheri - Kurla Rd, Chimatpada, Marol, Andheri East, Mumbai, Maharashtra 400059</div>
                 <div><strong>Email:</strong> info@nexatalentitsolutions.com</div>
               </div>
             </div>

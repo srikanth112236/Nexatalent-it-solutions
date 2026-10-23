@@ -620,7 +620,7 @@ export function JobDetailPage() {
                 <div className="font-bold text-sm text-black">Nexa Talent IT Solutions Executive Desk</div>
                 <div className="text-black">Email: <a href="mailto:info@nexatalentitsolutions.com" className="text-black font-bold">info@nexatalentitsolutions.com</a></div>
                 <div className="text-black">Hotline: <a href="tel:+917019696166" className="text-black font-bold">+91 70196 96166</a></div>
-                <div className="text-black text-[11px] pt-1">Corporate HQ: Skyline Icon, Marol, Andheri East, Mumbai 400059</div>
+                <div className="text-black text-[11px] pt-1">Corporate HQ: 4th and 7th Floor, Skyline Icon, Andheri - Kurla Rd, Chimatpada, Marol, Andheri East, Mumbai, Maharashtra 400059</div>
               </div>
             </div>
 
