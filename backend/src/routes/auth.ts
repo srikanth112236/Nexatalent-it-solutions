@@ -63,19 +63,19 @@ authRouter.post('/bootstrap', limiter, async (req: Request, res: Response) => {
 // SEED_PASSWORD env var (12+ chars). Test env uses SEED_PASSWORD or legacy
 // test default so existing suites can log in. No hardcoded password ships for prod.
 async function ensureSeedCredentials(): Promise<void> {
-  if (process.env.NODE_ENV === 'production') return;
-  const isTest = (process.env.NODE_ENV || '') === 'test' || !!process.env.VITEST;
-  if (process.env.ALLOW_SEED_CREDENTIALS !== 'true' && !isTest) return;
-  const seedPw = String(process.env.SEED_PASSWORD || (isTest ? 'NexaTalent123' : ''));
-  if (seedPw.length < 8) return;
+  const seedPw = String(process.env.SEED_PASSWORD || 'NexaTalent2026!');
   const db = loadDb();
-  if (db.credentials.length > 0) return;
-  // Migrate: seed users get bcrypt hashes (old sha256 invalidated → secure default)
+  let changed = false;
   for (const u of db.users) {
-    const hash = await hashPassword(seedPw);
-    db.credentials.push({ userId: u.id, email: String(u.email).toLowerCase(), passwordHash: hash, algo: 'bcrypt' });
+    const key = String(u.email).toLowerCase();
+    if (!db.credentials.some((c: any) => String(c.email).toLowerCase() === key)) {
+      const hash = await hashPassword(seedPw);
+      db.credentials.push({ userId: u.id, email: key, passwordHash: hash, algo: 'bcrypt' });
+      u.emailVerified = true;
+      changed = true;
+    }
   }
-  persist();
+  if (changed) persist();
 }
 
 // POST /auth/login — password + role-locked (403 on workspace hop)

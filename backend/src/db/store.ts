@@ -45,12 +45,12 @@ function seed(): DbShape {
   const now = new Date().toISOString();
   return {
     users: [
-      { id: 'USR-101', name: 'Super Admin', email: 'superadmin@nexatalent.com', role: 'superadmin', tenantId: 'TNT-GLOBAL', status: 'Active', employeeId: 'NT-001', department: 'Platform', designation: 'Super Admin', branch: 'HQ', lastLogin: now },
-      { id: 'USR-102', name: 'Aditi Sharma', email: 'aditi@fintechscaleops.io', role: 'employer', tenantId: 'TNT-9011', status: 'Active', employeeId: 'CL-011', department: 'HR', designation: 'Company Admin', branch: 'Bengaluru', lastLogin: now },
-      { id: 'USR-103', name: 'Kiran Sharma', email: 'kiran@nexatalent.com', role: 'employee', tenantId: 'TNT-GLOBAL', status: 'Active', employeeId: 'NT-014', department: 'Operations', designation: 'Operations Admin', branch: 'HQ', lastLogin: now },
-      { id: 'USR-104', name: 'Vikram Malhotra', email: 'vikram@apextechsearch.com', role: 'recruiter', tenantId: 'TNT-AGENCY-01', status: 'Active', employeeId: 'AG-007', department: 'Recruitment', designation: 'Internal Recruiter', branch: 'Mumbai', lastLogin: now },
-      { id: 'USR-105', name: 'Rajesh Verma', email: 'rajesh@techsolutionsvendor.com', role: 'vendor', tenantId: 'TNT-VENDOR-05', status: 'Active', employeeId: 'VN-003', department: 'Staffing', designation: 'Agency Admin', branch: 'Bengaluru', lastLogin: now },
-      { id: 'USR-106', name: 'Siddharth Nair', email: 'candidate@nexatalent.com', role: 'candidate', tenantId: 'TNT-CANDIDATE', status: 'Active', employeeId: '', department: '', designation: '', branch: '', lastLogin: now },
+      { id: 'USR-101', name: 'Super Admin', email: 'superadmin@nexatalent.com', role: 'superadmin', tenantId: 'TNT-GLOBAL', status: 'Active', employeeId: 'NT-001', department: 'Platform', designation: 'Super Admin', branch: 'HQ', lastLogin: now, emailVerified: true },
+      { id: 'USR-102', name: 'Aditi Sharma', email: 'aditi@fintechscaleops.io', role: 'employer', tenantId: 'TNT-9011', status: 'Active', employeeId: 'CL-011', department: 'HR', designation: 'Company Admin', branch: 'Bengaluru', lastLogin: now, emailVerified: true },
+      { id: 'USR-103', name: 'Kiran Sharma', email: 'kiran@nexatalent.com', role: 'employee', tenantId: 'TNT-GLOBAL', status: 'Active', employeeId: 'NT-014', department: 'Operations', designation: 'Operations Admin', branch: 'HQ', lastLogin: now, emailVerified: true },
+      { id: 'USR-104', name: 'Vikram Malhotra', email: 'vikram@apextechsearch.com', role: 'recruiter', tenantId: 'TNT-AGENCY-01', status: 'Active', employeeId: 'AG-007', department: 'Recruitment', designation: 'Internal Recruiter', branch: 'Mumbai', lastLogin: now, emailVerified: true },
+      { id: 'USR-105', name: 'Rajesh Verma', email: 'rajesh@techsolutionsvendor.com', role: 'vendor', tenantId: 'TNT-VENDOR-05', status: 'Active', employeeId: 'VN-003', department: 'Staffing', designation: 'Agency Admin', branch: 'Bengaluru', lastLogin: now, emailVerified: true },
+      { id: 'USR-106', name: 'Siddharth Nair', email: 'candidate@nexatalent.com', role: 'candidate', tenantId: 'TNT-CANDIDATE', status: 'Active', employeeId: '', department: '', designation: '', branch: '', lastLogin: now, emailVerified: true },
     ],
     roles: seedRoles(now),
     permissions: ['view','create','edit','archive','delete','approve','reject','suspend','restore','assign','export','manage_billing','manage_permissions','view_sensitive_fields','reconcile','refund','adjust_commission'].map((p) => ({ id: p })),
