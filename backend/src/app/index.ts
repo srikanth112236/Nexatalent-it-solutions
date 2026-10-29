@@ -43,6 +43,8 @@ export function createApp(): Express {
         config.corsOrigins.includes(origin) ||
         origin.endsWith('.azurestaticapps.net') ||
         origin.endsWith('.azurewebsites.net') ||
+        origin.endsWith('nexatalentitsolutions.com') ||
+        origin.includes('nexatalentitsolutions.com') ||
         origin.includes('localhost')
       ) return callback(null, true);
       return callback(new Error(`CORS blocked for origin: ${origin}`));
