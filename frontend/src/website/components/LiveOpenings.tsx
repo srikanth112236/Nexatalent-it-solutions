@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 const API_BASE =
   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) ||
-  'http://localhost:5000';
+  'http://52.176.21.187:5000';
 
 interface PublicJob {
   id: string;

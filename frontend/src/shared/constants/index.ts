@@ -40,6 +40,10 @@ export const AUTH_STORAGE_KEYS = {
   ACTIVE_TENANT_ID: 'nexatalent_tenant_id',
 } as const;
 
+export const API_BASE_URL =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  'http://52.176.21.187:5000';
+
 export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: '/api/v1/auth/login',

@@ -30,7 +30,7 @@ export interface LeadCaptureResult {
 }
 
 const API_BASE =
-  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:5000';
+  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://52.176.21.187:5000';
 
 /** POST a website lead to /api/v1/enquiries (public, rate-limited, 24h dedupe). */
 export async function submitLead(p: LeadCapturePayload): Promise<LeadCaptureResult> {

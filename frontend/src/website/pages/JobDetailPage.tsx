@@ -308,7 +308,7 @@ export function JobDetailPage() {
     let live = true;
     const base =
       (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) ||
-      'http://localhost:5000';
+      'http://52.176.21.187:5000';
     fetch(`${base}/api/v1/jobs-public/${encodeURIComponent(jobSlug)}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('not found'))))
       .then((body) => { if (live) setLiveJob(body?.data || null); })
@@ -340,7 +340,7 @@ export function JobDetailPage() {
     try {
       const base =
         (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) ||
-        'http://localhost:5000';
+        'http://52.176.21.187:5000';
       const res = await fetch(`${base}/api/v1/enquiries`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

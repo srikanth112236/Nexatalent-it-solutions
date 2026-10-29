@@ -193,7 +193,7 @@ export function ContactPage() {
     try {
       const base =
         (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) ||
-        'http://localhost:5000';
+        'http://52.176.21.187:5000';
       const res = await fetch(`${base}/api/v1/enquiries`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
