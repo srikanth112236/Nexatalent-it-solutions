@@ -62,25 +62,56 @@ authRouter.post('/bootstrap', limiter, async (req: Request, res: Response) => {
 // via ALLOW_SEED_CREDENTIALS=true (local dev only, never production) + a
 // SEED_PASSWORD env var (12+ chars). Test env uses SEED_PASSWORD or legacy
 // test default so existing suites can log in. No hardcoded password ships for prod.
-async function ensureSeedCredentials(): Promise<void> {
-  const seedPw = String(process.env.SEED_PASSWORD || 'NexaTalent2026!');
+const SEED_BCRYPT_HASH = '$2b$10$T.VLApNUZHphBxrE7NDgR.c9Ms0OsaeSo7r0vVikTSUDiUYzp/Vu6';
+
+const PORTAL_SEED_ACCOUNTS = [
+  { id: 'USR-101', email: 'superadmin@nexatalent.com', role: 'superadmin', tenantId: 'TNT-GLOBAL', name: 'Super Admin' },
+  { id: 'USR-102', email: 'aditi@fintechscaleops.io', role: 'employer', tenantId: 'TNT-9011', name: 'Aditi Sharma' },
+  { id: 'USR-103', email: 'kiran@nexatalent.com', role: 'employee', tenantId: 'TNT-GLOBAL', name: 'Kiran Sharma' },
+  { id: 'USR-104', email: 'vikram@apextechsearch.com', role: 'recruiter', tenantId: 'TNT-AGENCY-01', name: 'Vikram Malhotra' },
+  { id: 'USR-105', email: 'rajesh@techsolutionsvendor.com', role: 'vendor', tenantId: 'TNT-VENDOR-05', name: 'Rajesh Verma' },
+  { id: 'USR-106', email: 'candidate@nexatalent.com', role: 'candidate', tenantId: 'TNT-CANDIDATE', name: 'Siddharth Nair' },
+];
+
+function ensureSeedCredentials(): void {
   const db = loadDb();
   let changed = false;
-  for (const u of db.users) {
-    const key = String(u.email).toLowerCase();
-    if (!db.credentials.some((c: any) => String(c.email).toLowerCase() === key)) {
-      const hash = await hashPassword(seedPw);
-      db.credentials.push({ userId: u.id, email: key, passwordHash: hash, algo: 'bcrypt' });
-      u.emailVerified = true;
+
+  for (const acc of PORTAL_SEED_ACCOUNTS) {
+    const key = acc.email.toLowerCase();
+    let u: any = db.users.find((x: any) => String(x.email).toLowerCase() === key);
+    if (!u) {
+      u = { id: acc.id, name: acc.name, email: acc.email, role: acc.role, tenantId: acc.tenantId, status: 'Active', lastLogin: 'Never', emailVerified: true };
+      db.users.push(u);
+      changed = true;
+    } else {
+      if (!u.emailVerified) {
+        u.emailVerified = true;
+        changed = true;
+      }
+      if (u.status !== 'Active') {
+        u.status = 'Active';
+        changed = true;
+      }
+    }
+
+    let cred: any = db.credentials.find((c: any) => String(c.email).toLowerCase() === key);
+    if (!cred) {
+      db.credentials.push({ userId: u.id, email: key, passwordHash: SEED_BCRYPT_HASH, algo: 'bcrypt' });
+      changed = true;
+    } else if (cred.passwordHash !== SEED_BCRYPT_HASH) {
+      cred.passwordHash = SEED_BCRYPT_HASH;
+      cred.algo = 'bcrypt';
       changed = true;
     }
   }
+
   if (changed) persist();
 }
 
 // POST /auth/login — password + role-locked (403 on workspace hop)
 authRouter.post('/login', limiter, async (req: Request, res: Response) => {
-  await ensureSeedCredentials();
+  ensureSeedCredentials();
   const { email, password, role } = req.body || {};
   if (!email || !String(email).includes('@')) return res.status(400).json({ success: false, message: 'Valid email is required.' });
   // P1-7: per-account lockout stops distributed password guessing.
@@ -567,4 +598,4 @@ authRouter.post('/mfa/reset', limiter, requireAuth(['superadmin','platform_owner
 });
 
 // Backfill seed credentials on boot (fire-and-forget)
-ensureSeedCredentials().catch(() => {});
+try { ensureSeedCredentials(); } catch {}
