@@ -39,7 +39,12 @@ export function createApp(): Express {
         }
         return callback(null, true);
       }
-      if (config.corsOrigins.includes(origin)) return callback(null, true);
+      if (
+        config.corsOrigins.includes(origin) ||
+        origin.endsWith('.azurestaticapps.net') ||
+        origin.endsWith('.azurewebsites.net') ||
+        origin.includes('localhost')
+      ) return callback(null, true);
       return callback(new Error(`CORS blocked for origin: ${origin}`));
     },
     credentials: true,
