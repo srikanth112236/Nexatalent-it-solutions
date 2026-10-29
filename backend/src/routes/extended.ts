@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { loadDb, persist, uid, nowIso, audit } from '../db/store.js';
 import { requireAuth, requirePermission, ctxOf, denyFinanceUnlessGranted, FINANCE_VIEWERS } from '../middleware/rbac.js';
 import { paginate, paged } from '../validate/schemas.js';
+import { uploadFile, downloadFile, deleteFile, isBlobStorageConfigured, DEFAULT_CONTAINER } from '../storage/blob.js';
 
 export const extendedRouter = Router();
 const UPLOAD_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'data', 'uploads');
@@ -61,6 +62,11 @@ extendedRouter.post('/documents', requireAuth(['candidate', 'superadmin', 'agenc
   const prev = db.documents.filter((d: any) => d.ownerEmail === owner && d.kind === row.kind).length;
   row.version = prev + 1;
   writeFileSync(join(UPLOAD_DIR, `${row.id}.bin`), buf);
+  if (isBlobStorageConfigured()) {
+    uploadFile(DEFAULT_CONTAINER, `${row.id}.bin`, buf, mime).catch((err) => {
+      console.warn('[BlobStorage] Async upload failed for', row.id, err);
+    });
+  }
   db.documents.unshift(row);
   // link latest resume onto the profile
   if (row.kind === 'resume') {
@@ -77,14 +83,22 @@ extendedRouter.get('/documents', requireAuth(), (req, res) => {
   else if (![...PLATFORM, 'operations_admin', 'employee'].includes(ctx.role)) rows = rows.filter((d) => d.orgId === ctx.tenantId);
   res.json({ success: true, data: rows.map(({ ...d }) => d) });
 });
-extendedRouter.get('/documents/:id/download', requireAuth(), (req, res) => {
+extendedRouter.get('/documents/:id/download', requireAuth(), async (req, res) => {
   const db = loadDb(); const ctx = ctxOf(req);
   const d: any = db.documents.find((x: any) => x.id === req.params.id);
   if (!d) return res.status(404).json({ success: false, message: 'Not found.' });
   if (ctx.role === 'candidate' && String(d.ownerEmail).toLowerCase() !== ctx.email.toLowerCase()) return res.status(404).json({ success: false, message: 'Not found.' });
   if (![...PLATFORM, 'operations_admin', 'employee'].includes(ctx.role) && d.orgId !== ctx.tenantId && String(d.ownerEmail).toLowerCase() !== ctx.email.toLowerCase()) return res.status(404).json({ success: false, message: 'Not found.' });
   try {
-    const buf = readFileSync(join(UPLOAD_DIR, `${d.id}.bin`));
+    let buf: Buffer;
+    const localPath = join(UPLOAD_DIR, `${d.id}.bin`);
+    if (existsSync(localPath)) {
+      buf = readFileSync(localPath);
+    } else if (isBlobStorageConfigured()) {
+      buf = await downloadFile(DEFAULT_CONTAINER, `${d.id}.bin`);
+    } else {
+      return res.status(410).json({ success: false, message: 'File no longer available.' });
+    }
     res.setHeader('Content-Type', d.mime);
     // P1-6: strip CR/LF + quotes to block header injection; nosniff blunts MIME sniff XSS.
     const safeName = String(d.name || 'file').replace(/["\r\n\\]/g, '').slice(0, 160) || 'file';
@@ -105,6 +119,9 @@ extendedRouter.delete('/documents/:id', requireAuth(), (req, res) => {
   if (!isOwner && !isPlatform && !isOrgAdmin) return res.status(404).json({ success: false, message: 'Not found.' });
   const [removed] = db.documents.splice(ix, 1);
   try { const p = join(UPLOAD_DIR, `${removed.id}.bin`); if (existsSync(p)) unlinkSync(p); } catch { /* file best-effort */ }
+  if (isBlobStorageConfigured()) {
+    deleteFile(DEFAULT_CONTAINER, `${removed.id}.bin`).catch(() => {});
+  }
   if (removed.kind === 'resume') {
     const remaining = db.documents.filter((x: any) => x.ownerEmail === removed.ownerEmail && x.kind === 'resume').sort((a: any, b: any) => Number(b.version || 0) - Number(a.version || 0))[0];
     const p: any = db.candidateProfiles.find((x: any) => String(x.email).toLowerCase() === String(removed.ownerEmail).toLowerCase());

@@ -7,6 +7,7 @@ import { loadDb, persist, uid, nowIso, audit, pushHistory } from '../db/store.js
 import { notify } from '../domain/pipeline.js';
 import { requireAuth, ctxOf } from '../middleware/rbac.js';
 import { leadSchema, paginate, paged } from '../validate/schemas.js';
+import { uploadFile, downloadFile, isBlobStorageConfigured, DEFAULT_CONTAINER } from '../storage/blob.js';
 
 export const salesRouter = Router();
 // Phase 7: public enquiries are rate-limited and never trust client owner/status.
@@ -56,6 +57,13 @@ salesRouter.post('/enquiries', enquiryLimiter, (req: Request, res: Response) => 
     ensureUploadDir();
     resumeRef = uid('RES');
     writeFileSync(join(UPLOAD_DIR, `${resumeRef}.bin`), buf);
+    if (isBlobStorageConfigured()) {
+      const ext = (name.split('.').pop() || 'pdf').toLowerCase();
+      const mime = ext === 'doc' ? 'application/msword' : ext === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/pdf';
+      uploadFile(DEFAULT_CONTAINER, `${resumeRef}.bin`, buf, mime).catch((err) => {
+        console.warn('[BlobStorage] Async resume upload failed for lead', err);
+      });
+    }
     resumeName = name;
     resumeSize = buf.length;
   }
@@ -158,7 +166,7 @@ salesRouter.get('/leads/:id/activities', requireAuth(['superadmin','platform_own
   res.json({ success: true, data: loadDb().leadActivities.filter((a: any) => a.leadId === req.params.id) });
 });
 // ---- Lead resume download (Careers / candidate applications; hiring desk only) ----
-salesRouter.get('/leads/:id/resume', requireAuth(['superadmin','platform_owner','sales_admin','sales_manager','employee','bda','operations_admin']), (req, res) => {
+salesRouter.get('/leads/:id/resume', requireAuth(['superadmin','platform_owner','sales_admin','sales_manager','employee','bda','operations_admin']), async (req, res) => {
   const l: any = loadDb().leads.find((x: any) => x.id === req.params.id);
   if (!l || !l.resumeRef) return res.status(404).json({ success: false, message: 'No resume on this lead.' });
   const ctx = ctxOf(req);
@@ -166,7 +174,15 @@ salesRouter.get('/leads/:id/resume', requireAuth(['superadmin','platform_owner',
     return res.status(404).json({ success: false, message: 'Lead not found.' });
   }
   try {
-    const buf = readFileSync(join(UPLOAD_DIR, `${l.resumeRef}.bin`));
+    let buf: Buffer;
+    const localPath = join(UPLOAD_DIR, `${l.resumeRef}.bin`);
+    if (existsSync(localPath)) {
+      buf = readFileSync(localPath);
+    } else if (isBlobStorageConfigured()) {
+      buf = await downloadFile(DEFAULT_CONTAINER, `${l.resumeRef}.bin`);
+    } else {
+      return res.status(410).json({ success: false, message: 'Resume file no longer available.' });
+    }
     const ext = (String(l.resumeName || '').split('.').pop() || 'pdf').toLowerCase();
     const mime = ext === 'doc' ? 'application/msword' : ext === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/pdf';
     res.setHeader('Content-Type', mime);

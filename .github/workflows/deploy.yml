@@ -1,0 +1,81 @@
+name: Deploy Backend to Azure VM
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    name: Build, Push to ACR and Deploy to Azure VM
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to Azure Container Registry (ACR)
+        run: |
+          az acr login --name ${{ secrets.ACR_NAME }}
+
+      - name: Build and Push Docker Image
+        run: |
+          ACR_SERVER="${{ secrets.AZURE_REGISTRY }}"
+          IMAGE_TAG="${{ github.sha }}"
+          
+          docker build -t ${ACR_SERVER}/nexatalent-backend:${IMAGE_TAG} -t ${ACR_SERVER}/nexatalent-backend:latest -f backend/Dockerfile backend/
+          docker push ${ACR_SERVER}/nexatalent-backend:${IMAGE_TAG}
+          docker push ${ACR_SERVER}/nexatalent-backend:latest
+
+      - name: Deploy to Azure VM via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.VM_IP }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            echo "==== Logging into ACR on VM ===="
+            echo "${{ secrets.ACR_PASSWORD }}" | sudo docker login ${{ secrets.AZURE_REGISTRY }} -u ${{ secrets.ACR_USERNAME }} --password-stdin
+
+            echo "==== Pulling latest image ===="
+            sudo docker pull ${{ secrets.AZURE_REGISTRY }}/nexatalent-backend:latest
+
+            echo "==== Ensuring persistent data directory exists ===="
+            mkdir -p /home/${{ secrets.VM_USER }}/nexatalent-data/uploads
+
+            echo "==== Stopping previous container ===="
+            sudo docker stop nexatalent-backend || true
+            sudo docker rm nexatalent-backend || true
+
+            echo "==== Running updated backend container ===="
+            sudo docker run -d \
+              --name nexatalent-backend \
+              -p 5000:5000 \
+              --restart unless-stopped \
+              -v /home/${{ secrets.VM_USER }}/nexatalent-data:/app/data \
+              -e NODE_ENV=production \
+              -e PORT=5000 \
+              -e CLIENT_URL="${{ secrets.CLIENT_URL }}" \
+              -e CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}" \
+              -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+              -e REFRESH_TOKEN_SECRET="${{ secrets.REFRESH_TOKEN_SECRET }}" \
+              -e PAYMENT_WEBHOOK_SECRET="${{ secrets.PAYMENT_WEBHOOK_SECRET }}" \
+              -e BOOTSTRAP_KEY="${{ secrets.BOOTSTRAP_KEY }}" \
+              -e AZURE_STORAGE_CONNECTION_STRING="${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}" \
+              -e AZURE_STORAGE_ACCOUNT="${{ secrets.AZURE_STORAGE_ACCOUNT }}" \
+              -e AZURE_STORAGE_KEY="${{ secrets.AZURE_STORAGE_KEY }}" \
+              -e AZURE_STORAGE_CONTAINER="${{ secrets.AZURE_STORAGE_CONTAINER }}" \
+              ${{ secrets.AZURE_REGISTRY }}/nexatalent-backend:latest
+
+            echo "==== Cleaning up unused images ===="
+            sudo docker image prune -f
+
+            echo "==== Verifying running container ===="
+            sudo docker ps --filter "name=nexatalent-backend"
