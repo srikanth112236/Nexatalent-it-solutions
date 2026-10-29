@@ -191,9 +191,7 @@ export function ContactPage() {
     }
     setSending(true);
     try {
-      const base =
-        (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) ||
-        'http://52.176.21.187:5000';
+      const base = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '' : ((typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || '');
       const res = await fetch(`${base}/api/v1/enquiries`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

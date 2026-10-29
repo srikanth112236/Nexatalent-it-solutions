@@ -40,9 +40,21 @@ export const AUTH_STORAGE_KEYS = {
   ACTIVE_TENANT_ID: 'nexatalent_tenant_id',
 } as const;
 
-export const API_BASE_URL =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
-  'http://52.176.21.187:5000';
+export function getApiBaseUrl(): string {
+  const envUrl = typeof import.meta !== 'undefined' ? (import.meta as any).env?.VITE_API_BASE_URL : undefined;
+  if (typeof envUrl === 'string' && envUrl.length > 0) return envUrl;
+  if (typeof window !== 'undefined') {
+    if (window.location.protocol === 'https:') {
+      return '';
+    }
+    if (window.location.hostname === 'localhost') {
+      return 'http://localhost:5000';
+    }
+  }
+  return '';
+}
+
+export const API_BASE_URL = getApiBaseUrl();
 
 export const API_ENDPOINTS = {
   AUTH: {

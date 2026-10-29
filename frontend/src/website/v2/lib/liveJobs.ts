@@ -1,7 +1,6 @@
 import type { V2Job } from '../data/jobs';
 
-const API_BASE =
-  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://52.176.21.187:5000';
+const API_BASE = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '' : ((typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || '');
 
 /** Raw public job shape from GET /api/v1/jobs-public. */
 export interface PublicJobApi {

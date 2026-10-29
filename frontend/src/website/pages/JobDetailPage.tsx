@@ -306,9 +306,7 @@ export function JobDetailPage() {
   useEffect(() => {
     if (!jobSlug || !/^JOB-/i.test(jobSlug)) return;
     let live = true;
-    const base =
-      (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) ||
-      'http://52.176.21.187:5000';
+    const base = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '' : ((typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || '');
     fetch(`${base}/api/v1/jobs-public/${encodeURIComponent(jobSlug)}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('not found'))))
       .then((body) => { if (live) setLiveJob(body?.data || null); })
@@ -338,9 +336,7 @@ export function JobDetailPage() {
       return;
     }
     try {
-      const base =
-        (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) ||
-        'http://52.176.21.187:5000';
+      const base = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '' : ((typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || '');
       const res = await fetch(`${base}/api/v1/enquiries`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

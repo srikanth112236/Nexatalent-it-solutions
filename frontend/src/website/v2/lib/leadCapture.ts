@@ -29,8 +29,7 @@ export interface LeadCaptureResult {
   error?: string;
 }
 
-const API_BASE =
-  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://52.176.21.187:5000';
+const API_BASE = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '' : ((typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || '');
 
 /** POST a website lead to /api/v1/enquiries (public, rate-limited, 24h dedupe). */
 export async function submitLead(p: LeadCapturePayload): Promise<LeadCaptureResult> {

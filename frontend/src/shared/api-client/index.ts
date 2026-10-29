@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { ApiResponse } from '../types';
-import { AUTH_STORAGE_KEYS } from '../constants';
+import { AUTH_STORAGE_KEYS, getApiBaseUrl } from '../constants';
 
 export class ApiError extends Error {
   statusCode: number;
@@ -23,7 +23,7 @@ class ApiClient {
   }> = [];
 
   constructor() {
-    const baseURL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || 'http://52.176.21.187:5000';
+    const baseURL = getApiBaseUrl();
 
     this.axiosInstance = axios.create({
       baseURL,
