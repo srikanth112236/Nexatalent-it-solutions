@@ -56,6 +56,8 @@ class ApiClient {
           const token = localStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
           if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
+            config.headers['X-Access-Token'] = `Bearer ${token}`;
+            config.headers['X-Nexa-Authorization'] = `Bearer ${token}`;
           }
           const tenantId = localStorage.getItem(AUTH_STORAGE_KEYS.ACTIVE_TENANT_ID);
           if (tenantId && config.headers && !config.headers['X-Tenant-ID']) {
@@ -89,6 +91,8 @@ class ApiClient {
               .then((token) => {
                 if (originalRequest.headers && token) {
                   originalRequest.headers.Authorization = `Bearer ${token}`;
+                  originalRequest.headers['X-Access-Token'] = `Bearer ${token}`;
+                  originalRequest.headers['X-Nexa-Authorization'] = `Bearer ${token}`;
                 }
                 return this.axiosInstance(originalRequest);
               })

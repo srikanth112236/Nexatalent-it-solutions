@@ -83,10 +83,15 @@ function suspended(email: string): boolean {
 /** Verifies real JWT, revocation, suspension. Attaches AuthCtx. */
 export function requireAuth(allowedRoles?: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
-    // Legacy compat: old opaque NEXA-* tokens issued before upgrade.
-    // Phase A: legacy tokens are time-boxed (24 h) and suspension-checked.
-    const header = String(req.headers.authorization || '');
-    const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+    // Legacy compat + custom proxy headers (handles Azure Static Web Apps proxying)
+    const header = String(
+      req.headers['x-access-token'] ||
+      req.headers['x-nexa-authorization'] ||
+      req.headers['x-authorization'] ||
+      req.headers.authorization ||
+      ''
+    );
+    const token = header.startsWith('Bearer ') ? header.slice(7).trim() : header.trim();
     if (!token) return res.status(401).json({ success: false, message: 'Authentication required. Please sign in.' });
     if (token.startsWith('NEXA-')) {
       const sess = loadDb().sessions.find((s: any) => s.accessToken === token);

@@ -51,7 +51,7 @@ export function createApp(): Express {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID', 'X-Requested-With', 'X-Provider-Signature'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Access-Token', 'X-Nexa-Authorization', 'X-Authorization', 'X-Tenant-ID', 'X-Requested-With', 'X-Provider-Signature'],
     optionsSuccessStatus: 204,
   }));
   // Phase A: 8 MB covers ~5 MB base64 resumes; per-type/MB checks still run in routes.

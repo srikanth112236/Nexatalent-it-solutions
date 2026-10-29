@@ -26,6 +26,21 @@ app.http('proxy', {
         headers['origin'] = 'https://www.nexatalentitsolutions.com';
       }
 
+      // Preserve JWT token across SWA header proxy
+      const clientAuth =
+        request.headers.get('x-access-token') ||
+        request.headers.get('x-nexa-authorization') ||
+        request.headers.get('x-authorization') ||
+        request.headers.get('authorization') ||
+        '';
+
+      if (clientAuth) {
+        const fullToken = clientAuth.startsWith('Bearer ') ? clientAuth : `Bearer ${clientAuth}`;
+        headers['authorization'] = fullToken;
+        headers['x-access-token'] = fullToken;
+        headers['x-nexa-authorization'] = fullToken;
+      }
+
       const options = {
         method: request.method,
         headers,
