@@ -233,7 +233,7 @@ export function CrudToolbar({ search, onSearch, searchPh, status, onStatus, stat
         )}
         {onCreate && (
           <button type="button" onClick={onCreate}
-            className="px-4 py-2 rounded-xl bg-[#087BFF] hover:bg-blue-600 text-white font-bold text-xs shadow-md whitespace-nowrap">
+            className="px-4 py-2 rounded-xl bg-[#0B5FD9] hover:bg-blue-600 text-white font-bold text-xs shadow-md whitespace-nowrap">
             {createLabel || '+ New'}
           </button>
         )}
@@ -427,7 +427,7 @@ export function GlobalCreateModal({ open, onClose, title, subtitle, submitLabel 
               catch (e) { setLocalError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || (e as Error)?.message || 'Failed. Try again.'); }
               finally { setWorking(false); }
             }}
-            className="px-6 py-2.5 rounded-xl bg-[#087BFF] hover:bg-blue-600 text-white font-bold text-xs shadow-md disabled:opacity-50 mt-3"
+            className="px-6 py-2.5 rounded-xl bg-[#0B5FD9] hover:bg-blue-600 text-white font-bold text-xs shadow-md disabled:opacity-50 mt-3"
           >
             {(busy || working) ? 'Creating…' : submitLabel}
           </button>

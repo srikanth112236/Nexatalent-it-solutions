@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { loadDb, persist, uid, nowIso, audit } from '../db/store.js';
-import { requireAuth, requirePermission, ctxOf, tenantOf, ALL_ROLES, PERMISSIONS, effectivePermissions } from '../middleware/rbac.js';
+import { requireAuth, requirePermission, ctxOf, tenantOf, isAllTenant, ALL_ROLES, PERMISSIONS, effectivePermissions } from '../middleware/rbac.js';
 import { paginate, paged } from '../validate/schemas.js';
 
 export const directoryRouter = Router();
@@ -426,7 +426,7 @@ directoryRouter.post('/exports/log', requireAuth(), requirePermission('export'),
       rows: () => {
         const db = loadDb(); let list = db.applications as any[];
         if (ctx.role === 'candidate') list = list.filter((a: any) => String(a.candidateEmail).toLowerCase() === ctx.email.toLowerCase());
-        else if (!['superadmin', 'platform_owner', 'operations_admin', 'employee', 'internal_recruiter'].includes(ctx.role)) list = list.filter((a: any) => a.orgId === ctx.tenantId);
+        else if (!['superadmin', 'platform_owner', 'operations_admin', 'internal_recruiter'].includes(ctx.role)) list = list.filter((a: any) => a.orgId === tenantOf(req));
         return list.slice(0, 2000).map((a: any) => ({ id: a.id, jobId: a.jobId, jobTitle: a.jobTitle, candidateEmail: a.candidateEmail, stage: a.stage, orgId: a.orgId, createdAt: a.createdAt, updatedAt: a.updatedAt }));
       },
     },
@@ -434,7 +434,7 @@ directoryRouter.post('/exports/log', requireAuth(), requirePermission('export'),
       cols: ['id', 'title', 'companyName', 'location', 'status', 'employmentType', 'createdAt'],
       rows: () => {
         const db = loadDb(); let list = db.jobs as any[];
-        if (!['superadmin', 'platform_owner', 'operations_admin', 'employee'].includes(ctx.role)) list = list.filter((j: any) => j.orgId === ctx.tenantId || j.status === 'Published');
+        if (!isAllTenant(ctx.role)) { const scope = tenantOf(req); list = list.filter((j: any) => j.orgId === scope || j.status === 'Published'); }
         return list.slice(0, 2000).map((j: any) => ({ id: j.id, title: j.title, companyName: j.companyName, location: j.location, status: j.status, employmentType: j.employmentType, createdAt: j.createdAt }));
       },
     },
@@ -451,7 +451,7 @@ directoryRouter.post('/exports/log', requireAuth(), requirePermission('export'),
       cols: ['id', 'number', 'orgId', 'status', 'total', 'balance', 'dueDate'],
       rows: () => {
         const db = loadDb(); let list = db.invoices as any[];
-        if (!['superadmin', 'platform_owner', 'finance_admin', 'finance_staff', 'operations_admin', 'employee'].includes(ctx.role)) list = list.filter((i: any) => i.orgId === ctx.tenantId);
+        if (!['superadmin', 'platform_owner', 'finance_admin', 'finance_staff', 'operations_admin'].includes(ctx.role)) list = list.filter((i: any) => i.orgId === tenantOf(req));
         return list.slice(0, 2000).map((i: any) => ({ id: i.id, number: i.number, orgId: i.orgId, status: i.status, total: i.total, balance: i.balance, dueDate: i.dueDate }));
       },
     },
@@ -562,7 +562,14 @@ directoryRouter.get('/directory/candidates', requireAuth(['superadmin','platform
     if (k && (!lastInterview[k] || at >= lastInterview[k])) lastInterview[k] = at;
   }
   let rows = (db.candidateProfiles as any[]).map((c) => {
-    const base = canSee ? c : { ...c, phone: '**********', currentCtc: 'Restricted' };
+    const base = canSee
+      ? c
+      : {
+          ...c,
+          email: String(c.email || '').replace(/(^.).*(@.*$)/, '$1***$2'),
+          phone: '**********',
+          currentCtc: 'Restricted',
+        };
     const email = String(c.email || '').toLowerCase();
     const stamps = [c.updatedAt, c.createdAt, latestStage[email]?.at, lastInterview[email]].filter(Boolean).map(String);
     const lastActivity = stamps.length ? stamps.sort()[stamps.length - 1] : null;
@@ -596,7 +603,7 @@ directoryRouter.get('/directory/candidates', requireAuth(['superadmin','platform
   res.json({ success: true, ...paged(rows, page, pageSize) });
 });
 // Candidate 360° — the 12 spec tabs served from one audited read
-directoryRouter.get('/directory/candidates/:id/360', requireAuth(['superadmin','platform_owner','operations_admin','candidate']), (req, res) => {
+directoryRouter.get('/directory/candidates/:id/360', requireAuth(['superadmin','platform_owner','operations_admin','internal_recruiter','support_admin','employee','candidate']), (req, res) => {
   const db = loadDb(); const ctx = ctxOf(req);
   const c: any = db.candidateProfiles.find((x: any) => x.id === req.params.id);
   if (!c) return res.status(404).json({ success: false, message: 'Not found.' });
@@ -922,23 +929,23 @@ directoryRouter.patch('/notifications/:id/read', requireAuth(), (req, res) => {
 });
 
 // Reports (§6.14) with definitions + freshness
-directoryRouter.get('/reports/:name', requireAuth(['superadmin','platform_owner','operations_admin','finance_admin','sales_admin','employee']), (req, res) => {
+directoryRouter.get('/reports/:name', requireAuth(['superadmin','platform_owner','operations_admin','finance_admin','sales_admin']), (req, res) => {
   const db = loadDb(); const name = req.params.name;
   // Phase C: least-privilege per report — finance aggregates stay with finance,
   // candidate PII aggregates stay off the sales desk.
   const REPORT_ROLES: Record<string, string[]> = {
-    'candidate-pipeline': ['superadmin','platform_owner','operations_admin','employee'],
-    'requisition-ageing': ['superadmin','platform_owner','operations_admin','employee'],
-    'receivables': ['superadmin','platform_owner','finance_admin','operations_admin','employee'],
-    'commission-liabilities': ['superadmin','platform_owner','finance_admin','operations_admin','employee'],
-    'sales-pipeline': ['superadmin','platform_owner','sales_admin','operations_admin','employee'],
-    'recruiter-workload': ['superadmin','platform_owner','operations_admin','employee'],
-    'interview-offer': ['superadmin','platform_owner','operations_admin','employee'],
-    'offer-joining': ['superadmin','platform_owner','operations_admin','employee'],
-    'company-hiring': ['superadmin','platform_owner','operations_admin','employee'],
-    'subscription-revenue': ['superadmin','platform_owner','finance_admin','operations_admin','employee'],
-    'agency-performance': ['superadmin','platform_owner','operations_admin','employee'],
-    'duplicates': ['superadmin','platform_owner','operations_admin','employee'],
+    'candidate-pipeline': ['superadmin','platform_owner','operations_admin'],
+    'requisition-ageing': ['superadmin','platform_owner','operations_admin'],
+    'receivables': ['superadmin','platform_owner','finance_admin','operations_admin'],
+    'commission-liabilities': ['superadmin','platform_owner','finance_admin','operations_admin'],
+    'sales-pipeline': ['superadmin','platform_owner','sales_admin','operations_admin'],
+    'recruiter-workload': ['superadmin','platform_owner','operations_admin'],
+    'interview-offer': ['superadmin','platform_owner','operations_admin'],
+    'offer-joining': ['superadmin','platform_owner','operations_admin'],
+    'company-hiring': ['superadmin','platform_owner','operations_admin'],
+    'subscription-revenue': ['superadmin','platform_owner','finance_admin','operations_admin'],
+    'agency-performance': ['superadmin','platform_owner','operations_admin'],
+    'duplicates': ['superadmin','platform_owner','operations_admin'],
   };
   const allowed = REPORT_ROLES[name];
   if (allowed && !allowed.includes(ctxOf(req).role)) {

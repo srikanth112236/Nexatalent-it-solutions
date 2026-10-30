@@ -264,7 +264,7 @@ export function SuperAdminPortal() {
       return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
     })();
     const funnel = [
-      { label: 'Published jobs', value: kpis.publishedJobs, color: '#087BFF' },
+      { label: 'Published jobs', value: kpis.publishedJobs, color: '#0B5FD9' },
       { label: 'Applications', value: kpis.applications, color: '#7C3AED' },
       { label: 'Placements', value: kpis.placements, color: '#059669' },
     ];
@@ -285,7 +285,7 @@ export function SuperAdminPortal() {
     return { activeTenants, pendingVerify, suspended, activeUsers, mfaOn, paidInvoices, hasInvoices, collectionRate, planMix, leadStages, funnel, maxFunnel, convRate, recentAudits: filteredAudits, tenantRows };
   }, [tenants, users, auditLogs, live, kpis, tenantQuery, auditFilter]);
 
-  const spark = (values: number[], stroke = '#087BFF') => {
+  const spark = (values: number[], stroke = '#0B5FD9') => {
     if (!values.length) values = [0, 0, 0, 0, 0, 0];
     const w = 120; const h = 36;
     const max = Math.max(1, ...values);
@@ -322,7 +322,7 @@ export function SuperAdminPortal() {
         {/* Modern command hero — dashboard only */}
         {currentTab === 'overview' && (
         <div className="relative overflow-hidden rounded-3xl border border-slate-900/10 shadow-[0_24px_60px_-24px_rgba(7,27,58,0.5)]">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#071B3A] via-[#0B2E5E] to-[#087BFF]" aria-hidden="true" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#071B3A] via-[#0B2E5E] to-[#0B5FD9]" aria-hidden="true" />
           <div className="absolute -right-20 -top-24 w-96 h-96 rounded-full bg-cyan-400/20 blur-3xl" aria-hidden="true" />
           <div className="absolute -left-16 -bottom-28 w-80 h-80 rounded-full bg-amber-400/20 blur-3xl" aria-hidden="true" />
           <div className="relative p-6 sm:p-7 flex flex-col lg:flex-row lg:items-center gap-5 justify-between">
@@ -386,16 +386,16 @@ export function SuperAdminPortal() {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
               <button type="button" onClick={() => navigate('/superadmin/organizations')}
                 className="group relative overflow-hidden p-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm text-left hover:-translate-y-1 hover:shadow-[0_20px_45px_-18px_rgba(8,123,255,0.45)] hover:border-blue-300 transition-all duration-200 cursor-pointer">
-                <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#087BFF] to-cyan-400" aria-hidden="true" />
+                <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#0B5FD9] to-cyan-400" aria-hidden="true" />
                 <div className="flex items-start justify-between gap-2">
-                  <span className="inline-flex w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 text-[#087BFF] items-center justify-center"><Building2 size={19} /></span>
+                  <span className="inline-flex w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 text-[#0B5FD9] items-center justify-center"><Building2 size={19} /></span>
                   <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5"><TrendingUp size={12} /> Live</span>
                 </div>
-                <div className="mt-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Tenant estate <ArrowUpRight size={12} className="inline text-[#087BFF] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition" /></div>
+                <div className="mt-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Tenant estate <ArrowUpRight size={12} className="inline text-[#0B5FD9] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition" /></div>
                 <div className="text-3xl font-extrabold text-slate-900 tracking-tight">{tenants.length} <span className="text-sm font-bold text-slate-500">tenants</span></div>
                 <div className="text-xs font-bold text-slate-600 mt-1">{analytics.activeTenants} active · {analytics.pendingVerify} pending · {analytics.suspended} suspended</div>
                 <div className="mt-2 flex items-end justify-between gap-2">
-                  {spark(tenantBuckets, '#087BFF')}
+                  {spark(tenantBuckets, '#0B5FD9')}
                   <span className="text-[11px] font-bold text-blue-700">Verify queue →</span>
                 </div>
               </button>
@@ -452,10 +452,10 @@ export function SuperAdminPortal() {
                 { label: 'Audit events', value: `${auditLogs.length}`, icon: Activity, to: '/superadmin/audit-logs', tint: 'text-slate-700 bg-slate-100 border-slate-200', note: 'immutable trail' },
               ].map((c) => (
                 <button key={c.label} type="button" onClick={() => navigate(c.to)} title={`Open ${c.label}`}
-                  className="group p-3.5 bg-white rounded-2xl border border-slate-200/90 shadow-sm text-left hover:-translate-y-0.5 hover:shadow-md hover:border-[#087BFF] transition-all cursor-pointer">
+                  className="group p-3.5 bg-white rounded-2xl border border-slate-200/90 shadow-sm text-left hover:-translate-y-0.5 hover:shadow-md hover:border-[#0B5FD9] transition-all cursor-pointer">
                   <div className="flex items-center justify-between gap-2">
                     <span className={`inline-flex w-8 h-8 rounded-xl border items-center justify-center ${c.tint}`}><c.icon size={15} /></span>
-                    <ArrowRight size={13} className="text-slate-300 group-hover:text-[#087BFF] group-hover:translate-x-0.5 transition" />
+                    <ArrowRight size={13} className="text-slate-300 group-hover:text-[#0B5FD9] group-hover:translate-x-0.5 transition" />
                   </div>
                   <div className="mt-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">{c.label}</div>
                   <div className="text-xl font-extrabold text-slate-900 leading-tight">{c.value}</div>
@@ -477,7 +477,7 @@ export function SuperAdminPortal() {
                   <div className="space-y-2.5">
                     {analytics.planMix.map(([plan, count], i) => {
                       const pct = Math.round((count / Math.max(1, tenants.length)) * 100);
-                      const colors = ['#087BFF', '#059669', '#7C3AED', '#F59E0B'];
+                      const colors = ['#0B5FD9', '#059669', '#7C3AED', '#F59E0B'];
                       return (
                         <div key={plan} className="flex items-center gap-2.5">
                           <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: colors[i % colors.length] }} />
@@ -501,7 +501,7 @@ export function SuperAdminPortal() {
               <div className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-sm">
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-1.5"><TrendingUp size={15} className="text-violet-600" /> Sales & hiring motion</h3>
-                  <button type="button" onClick={() => navigate('/superadmin/leads')} className="text-[11px] font-extrabold text-[#087BFF] hover:underline cursor-pointer">Pipeline →</button>
+                  <button type="button" onClick={() => navigate('/superadmin/leads')} className="text-[11px] font-extrabold text-[#0B5FD9] hover:underline cursor-pointer">Pipeline →</button>
                 </div>
                 <p className="text-[11px] text-slate-500 font-medium mb-3">{kpis.newLeads} new of {kpis.leads} leads · {kpis.placements} placements closed</p>
                 {analytics.leadStages.length === 0 ? (
@@ -528,7 +528,7 @@ export function SuperAdminPortal() {
               </div>
 
               <div className="bg-slate-900 rounded-3xl p-5 shadow-sm text-white relative overflow-hidden">
-                <div className="absolute -right-16 -top-16 w-56 h-56 rounded-full bg-[#087BFF]/30 blur-3xl" aria-hidden="true" />
+                <div className="absolute -right-16 -top-16 w-56 h-56 rounded-full bg-[#0B5FD9]/30 blur-3xl" aria-hidden="true" />
                 <div className="relative">
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="text-sm font-extrabold flex items-center gap-1.5"><AlertTriangle size={15} className="text-amber-300" /> Needs your decision</h3>
@@ -557,13 +557,13 @@ export function SuperAdminPortal() {
               <div className="xl:col-span-3 bg-white rounded-3xl border border-slate-200/90 p-5 shadow-sm space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
                   <div>
-                    <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-1.5"><Building2 size={15} className="text-[#087BFF]" /> Tenants</h3>
+                    <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-1.5"><Building2 size={15} className="text-[#0B5FD9]" /> Tenants</h3>
                     <p className="text-[11px] text-slate-500 font-medium">Live directory — names, plans and seats always resolve.</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="relative">
                       <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input value={tenantQuery} onChange={(e) => setTenantQuery(e.target.value)} placeholder="Search tenants…" className="pl-8 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:border-[#087BFF] w-48" />
+                      <input value={tenantQuery} onChange={(e) => setTenantQuery(e.target.value)} placeholder="Search tenants…" className="pl-8 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:border-[#0B5FD9] w-48" />
                     </div>
                     <button type="button" onClick={() => navigate('/superadmin/organizations')} className="px-3 py-2 rounded-xl bg-slate-900 text-white font-bold text-[11px] hover:bg-slate-700 transition cursor-pointer whitespace-nowrap">Manage all →</button>
                   </div>
@@ -612,7 +612,7 @@ export function SuperAdminPortal() {
                     <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-1.5"><Radio size={15} className="text-emerald-600" /> Live audit stream</h3>
                     <p className="text-[11px] text-slate-500 font-medium">Newest first · immutable security trail</p>
                   </div>
-                  <button type="button" onClick={() => navigate('/superadmin/audit-logs')} className="text-[11px] font-extrabold text-[#087BFF] hover:underline cursor-pointer whitespace-nowrap">Full log →</button>
+                  <button type="button" onClick={() => navigate('/superadmin/audit-logs')} className="text-[11px] font-extrabold text-[#0B5FD9] hover:underline cursor-pointer whitespace-nowrap">Full log →</button>
                 </div>
                 <div className="flex gap-1.5">
                   {['', 'TENANT', 'USER', 'BILLING'].map((f) => (
@@ -652,7 +652,7 @@ export function SuperAdminPortal() {
             <div className="flex justify-end">
               <button
                 onClick={() => setShowTenantModal(true)}
-                className="px-4 py-2 rounded-xl bg-[#087BFF] hover:bg-blue-600 text-white font-bold text-xs shadow-md flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                className="px-4 py-2 rounded-xl bg-[#0B5FD9] hover:bg-blue-600 text-white font-bold text-xs shadow-md flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
               >
                 <Plus size={15} /> Provision Tenant
               </button>
@@ -731,7 +731,7 @@ export function SuperAdminPortal() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
                 <div className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
-                  <Key size={16} className="text-[#087BFF]" /> JWT Authentication Policies
+                  <Key size={16} className="text-[#0B5FD9]" /> JWT Authentication Policies
                 </div>
                 <div className="space-y-3 text-xs">
                   <div>

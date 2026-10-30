@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { apiClient } from '../api-client';
 import { API_ENDPOINTS } from '../constants';
 import type { UserRole } from '../types';
-import { clearSession, getAccessToken, getActiveRole, getTenantId, getUserEmail, isTokenExpired, persistSession } from './session';
+import { clearSession, getAccessToken, getActiveRole, getRefreshToken, getTenantId, getUserEmail, isTokenExpired, persistSession, syncSessionIdentity } from './session';
 
 export interface AuthUser {
   id?: string;
@@ -53,12 +53,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await apiClient.get<any>(API_ENDPOINTS.AUTH.ME);
       const me = (res as any)?.data || res;
       if (me?.email || me?.role) {
-        setUser({
-          id: me.id,
-          email: me.email || getUserEmail() || '',
-          role: (me.role || getActiveRole() || 'candidate') as UserRole,
-          tenantId: me.tenantId || getTenantId() || undefined,
-        });
+        const serverRole = (me.role || getActiveRole() || 'candidate') as UserRole;
+        const serverTenant = me.tenantId || getTenantId() || undefined;
+        const serverEmail = me.email || getUserEmail() || '';
+        // The server is authoritative: refresh the cached hint so a stale or
+        // hand-edited role can never keep the wrong workspace painted.
+        syncSessionIdentity({ role: serverRole, tenantId: serverTenant, email: serverEmail });
+        setUser({ id: me.id, email: serverEmail, role: serverRole, tenantId: serverTenant });
       } else {
         // /me unavailable but token present — keep lightweight session from storage
         const role = getActiveRole();
@@ -107,9 +108,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout: AuthContextValue['logout'] = useCallback(async (reason) => {
     const email = getUserEmail();
     const tenantId = getTenantId();
+    const refreshToken = getRefreshToken();
     try {
       if (getAccessToken()) {
-        await apiClient.post(API_ENDPOINTS.AUTH.LOGOUT, { email, tenantId, reason: reason || 'USER_SIGN_OUT' });
+        // Send the refresh token too — without it the server can only audit the
+        // event and the refresh token stays valid until it expires.
+        await apiClient.post(API_ENDPOINTS.AUTH.LOGOUT, { email, tenantId, reason: reason || 'USER_SIGN_OUT', refreshToken });
       }
     } catch {
       // Server logout best-effort; local session is always cleared below.

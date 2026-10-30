@@ -77,6 +77,19 @@ export function persistSession(s: PersistedSession) {
   if (s.email) localStorage.setItem('user_email', s.email);
 }
 
+/**
+ * Reconcile the locally cached role/tenant with what the server reports.
+ * The cached values are only a rendering hint (the API enforces roles), but a
+ * stale or hand-edited value must never keep painting a workspace the server
+ * has not granted.
+ */
+export function syncSessionIdentity(identity: { role?: UserRole | null; tenantId?: string | null; email?: string | null }) {
+  if (typeof window === 'undefined') return;
+  if (identity.role) localStorage.setItem(AUTH_STORAGE_KEYS.ACTIVE_ROLE, identity.role);
+  if (identity.tenantId) localStorage.setItem(AUTH_STORAGE_KEYS.ACTIVE_TENANT_ID, identity.tenantId);
+  if (identity.email) localStorage.setItem('user_email', identity.email);
+}
+
 /** Clears every auth-related key in both storages. Single source of truth for logout. */
 export function clearSession() {
   if (typeof window === 'undefined') return;

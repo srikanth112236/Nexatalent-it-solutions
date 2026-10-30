@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { loadDb, persist, uid, nowIso, audit } from '../db/store.js';
-import { requireAuth, requirePermission, ctxOf, tenantOf, denyFinanceUnlessGranted, FINANCE_VIEWERS } from '../middleware/rbac.js';
+import { requireAuth, requirePermission, ctxOf, tenantOf, denyFinanceUnlessGranted, FINANCE_VIEWERS, isAllTenant } from '../middleware/rbac.js';
 import { invoiceSchema, paymentSchema, commissionAgreementSchema, agreementTemplateSchema, feeSlabSchema, invoiceSeriesSchema, paginate, paged } from '../validate/schemas.js';
 import { emit, claimIdempotency } from '../events/bus.js';
 import { mailConfigured } from '../events/mailer.js';
@@ -870,7 +870,7 @@ commercialRouter.get('/commission-agreements/match', requireAuth(['employer','su
   const app: any = db.applications.find((a: any) => a.id === req.query.applicationId);
   if (!app) return res.status(404).json({ success: false, message: 'Application not found.' });
   const ctx = ctxOf(req);
-  if (!['superadmin','platform_owner','finance_admin','employee','operations_admin'].includes(ctx.role) && app.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Application not found.' });
+  if (!isAllTenant(ctx.role) && ctx.role !== 'finance_admin' && app.orgId !== tenantOf(req)) return res.status(404).json({ success: false, message: 'Application not found.' });
   const agreement = matchAgreement(db, app);
   if (!agreement) return res.status(422).json({ success: false, code: 'NO_AGREEMENT', message: 'No accepted commercial agreement covers this hire. Ask your NexaTalent manager to activate one before recording the joining.' });
   const offer: any = db.offers.filter((o: any) => o.applicationId === app.id).sort((x: any, y: any) => String(y.createdAt).localeCompare(String(x.createdAt)))[0] || null;

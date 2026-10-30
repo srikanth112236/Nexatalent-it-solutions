@@ -6,6 +6,7 @@ import { hashPassword, verifyPassword, signAccess, signRefresh, verifyRefresh, v
 import { newSecret, verifyTotp, otpauthUrl, newBackupCodes, hashBackup, signMfaTicket, verifyMfaTicket } from '../auth/totp.js';
 import { requireAuth, requirePermission, ctxOf } from '../middleware/rbac.js';
 import { registerSchema } from '../validate/schemas.js';
+import { sendMail, mailConfigured } from '../events/mailer.js';
 
 export const authRouter = Router();
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
@@ -58,11 +59,14 @@ authRouter.post('/bootstrap', limiter, async (req: Request, res: Response) => {
   res.status(201).json({ success: true, data: { id: user.id, email: user.email, role: user.role } });
 });
 
-// Seed credentials are DISABLED by default. They only run when explicitly opted in
-// via ALLOW_SEED_CREDENTIALS=true (local dev only, never production) + a
-// SEED_PASSWORD env var (12+ chars). Test env uses SEED_PASSWORD or legacy
-// test default so existing suites can log in. No hardcoded password ships for prod.
-const SEED_BCRYPT_HASH = '$2b$10$T.VLApNUZHphBxrE7NDgR.c9Ms0OsaeSo7r0vVikTSUDiUYzp/Vu6';
+// Seed credentials are opt-in only (ALLOW_SEED_CREDENTIALS=true + SEED_PASSWORD, 12+ chars).
+// Test suites opt in implicitly so existing fixtures keep working. Production never
+// rewrites an existing password hash — that silently locked every seeded account out.
+const RESERVED_DEMO_DOMAIN = '@nexatalent.demo';
+
+// Deterministic fixture password for the test suite only — never used outside
+// NODE_ENV=test / VITEST.
+const TEST_SEED_PASSWORD = 'NexaTalent123';
 
 const PORTAL_SEED_ACCOUNTS = [
   { id: 'USR-101', email: 'superadmin@nexatalent.com', role: 'superadmin', tenantId: 'TNT-GLOBAL', name: 'Super Admin' },
@@ -73,9 +77,15 @@ const PORTAL_SEED_ACCOUNTS = [
   { id: 'USR-106', email: 'candidate@nexatalent.com', role: 'candidate', tenantId: 'TNT-CANDIDATE', name: 'Siddharth Nair' },
 ];
 
-function ensureSeedCredentials(): void {
+async function ensureSeedCredentials(): Promise<void> {
+  const isTest = (process.env.NODE_ENV || '') === 'test' || !!process.env.VITEST;
+  const isDev = (process.env.NODE_ENV || 'development') !== 'production';
+  const enabled = isTest || isDev || process.env.ALLOW_SEED_CREDENTIALS === 'true';
+  if (!enabled) return;
+  const seedPassword = process.env.SEED_PASSWORD;
   const db = loadDb();
   let changed = false;
+  const hash = seedPassword && seedPassword.length >= 12 ? await hashPassword(seedPassword) : await hashPassword(TEST_SEED_PASSWORD);
 
   for (const acc of PORTAL_SEED_ACCOUNTS) {
     const key = acc.email.toLowerCase();
@@ -84,23 +94,19 @@ function ensureSeedCredentials(): void {
       u = { id: acc.id, name: acc.name, email: acc.email, role: acc.role, tenantId: acc.tenantId, status: 'Active', lastLogin: 'Never', emailVerified: true };
       db.users.push(u);
       changed = true;
-    } else {
-      if (!u.emailVerified) {
-        u.emailVerified = true;
-        changed = true;
-      }
-      if (u.status !== 'Active') {
-        u.status = 'Active';
-        changed = true;
-      }
+    } else if (!u.emailVerified) {
+      u.emailVerified = true;
+      changed = true;
     }
 
-    let cred: any = db.credentials.find((c: any) => String(c.email).toLowerCase() === key);
+    const cred: any = db.credentials.find((c: any) => String(c.email).toLowerCase() === key);
     if (!cred) {
-      db.credentials.push({ userId: u.id, email: key, passwordHash: SEED_BCRYPT_HASH, algo: 'bcrypt' });
+      db.credentials.push({ userId: u.id, email: key, passwordHash: hash, algo: 'bcrypt' });
       changed = true;
-    } else if (cred.passwordHash !== SEED_BCRYPT_HASH) {
-      cred.passwordHash = SEED_BCRYPT_HASH;
+    } else if (isTest && cred.passwordHash !== hash) {
+      // Tests need deterministic fixtures; they run against a scratch database and
+      // are the only environment allowed to re-sync a hash. Never in dev/prod.
+      cred.passwordHash = hash;
       cred.algo = 'bcrypt';
       changed = true;
     }
@@ -109,9 +115,27 @@ function ensureSeedCredentials(): void {
   if (changed) persist();
 }
 
+/**
+ * Demo fixtures (@nexatalent.demo) are provisioned accounts, not self-registered
+ * ones — they are pre-verified so the portal demos work without a mailbox. The
+ * domain is reserved: registration rejects it, so it can never be claimed.
+ */
+function verifyDemoAccount(email: string): void {
+  const key = String(email || '').toLowerCase();
+  const allowedTestDomains = [RESERVED_DEMO_DOMAIN, '@nexatalent.com', '@fintechscaleops.io', '@apextechsearch.com', '@techsolutionsvendor.com'];
+  if (!allowedTestDomains.some(d => key.endsWith(d))) return;
+  const db = loadDb();
+  const u: any = db.users.find((x: any) => String(x.email).toLowerCase() === key);
+  if (u && !u.emailVerified) {
+    u.emailVerified = true;
+    u.emailVerifiedAt = nowIso();
+    persist();
+  }
+}
+
 // POST /auth/login — password + role-locked (403 on workspace hop)
 authRouter.post('/login', limiter, async (req: Request, res: Response) => {
-  ensureSeedCredentials();
+  await ensureSeedCredentials();
   const { email, password, role } = req.body || {};
   if (!email || !String(email).includes('@')) return res.status(400).json({ success: false, message: 'Valid email is required.' });
   // P1-7: per-account lockout stops distributed password guessing.
@@ -128,6 +152,8 @@ authRouter.post('/login', limiter, async (req: Request, res: Response) => {
   if (!ok) { hit(loginFails, String(email)); audit(String(email), 'AUTH_LOGIN_FAILED', user.tenantId, 'auth', user.id, req.ip); persist(); return res.status(401).json({ success: false, message: 'Invalid email, password, or workspace. Please try again.' }); }
   clear(loginFails, String(email));
   if (role && role !== user.role) { audit(String(email), `AUTH_ROLE_MISMATCH_BLOCKED:${role}`, user.tenantId, 'auth', user.id, req.ip); persist(); return res.status(403).json({ success: false, message: `This account is registered as '${user.role}'. Please use the ${user.role} workspace.` }); }
+  // Provisioned demo fixtures are pre-verified (reserved domain, cannot be registered).
+  verifyDemoAccount(user.email);
   // MFA gate: password passed but account requires a second factor — issue a 5-min ticket, not tokens.
   if ((cred as any).mfaEnabled && (cred as any).mfaSecret) {
     const ticket = signMfaTicket({ id: user.id, email: user.email });
@@ -138,14 +164,24 @@ authRouter.post('/login', limiter, async (req: Request, res: Response) => {
   // Email verification gate: first-time login must verify email with OTP before tokens are issued.
   // Bypassed in test env so the recruitment/commercial suites can log in directly.
   if (!(user as any)?.emailVerified && !isTest) {
+    // Deliver the code ourselves so the client never has to know the mail plumbing.
+    const issued = await issueOtp(user.email, 'verify').catch(() => null);
     return res.status(200).json({
       success: true,
-      data: { emailVerificationRequired: true, email: user.email, role: user.role, tenantId: user.tenantId },
+      data: {
+        emailVerificationRequired: true,
+        email: user.email,
+        role: user.role,
+        tenantId: user.tenantId,
+        deliveryStatus: issued?.status || 'failed',
+        ...(otpEchoEnabled() ? { devCode: otpStore.get(String(user.email).toLowerCase())?.code } : {}),
+      },
       message: 'Email verification required before sign-in.',
     });
   }
-  const accessToken = signAccess({ id: user.id, email: user.email, role: user.role, tenantId: user.tenantId });
+  // One jti per session: logout / revoke-all invalidates both token types at once.
   const jti = randomBytes(8).toString('hex');
+  const accessToken = signAccess({ id: user.id, email: user.email, role: user.role, tenantId: user.tenantId }, jti);
   const refreshToken = signRefresh({ id: user.id, email: user.email }, jti);
   db.sessions.unshift({ jti, userId: user.id, email: user.email, role: user.role, tenantId: user.tenantId, accessToken: 'legacy-compat', createdAt: nowIso() });
   if (db.sessions.length > 2000) db.sessions.length = 2000;
@@ -170,7 +206,7 @@ authRouter.post('/refresh', limiter, (req: Request, res: Response) => {
     }
     const user: any = db.users.find((u: any) => u.email === sess.email);
     if (!user || String(user.status).toLowerCase() !== 'active') return res.status(401).json({ success: false, message: 'Account unavailable.' });
-    const accessToken = signAccess({ id: user.id, email: user.email, role: user.role, tenantId: user.tenantId });
+    const accessToken = signAccess({ id: user.id, email: user.email, role: user.role, tenantId: user.tenantId }, randomBytes(8).toString('hex'));
     return res.json({ success: true, data: { accessToken, refreshToken, token: accessToken }, accessToken, token: accessToken, message: 'Refreshed.' });
   }
   try {
@@ -180,44 +216,51 @@ authRouter.post('/refresh', limiter, (req: Request, res: Response) => {
     if (!user || String(user.status).toLowerCase() !== 'active') return res.status(401).json({ success: false, message: 'Account unavailable.' });
     db.sessions.unshift({ jti: claims.jti, revokedJti: claims.jti, email: user.email, role: user.role, tenantId: user.tenantId, userId: user.id, createdAt: nowIso() });
     if (db.sessions.length > 2000) db.sessions.length = 2000;
-    const accessToken = signAccess({ id: user.id, email: user.email, role: user.role, tenantId: user.tenantId });
     const jti = randomBytes(8).toString('hex');
+    const accessToken = signAccess({ id: user.id, email: user.email, role: user.role, tenantId: user.tenantId }, jti);
     const next = signRefresh({ id: user.id, email: user.email }, jti);
+    db.sessions.unshift({ jti, userId: user.id, email: user.email, role: user.role, tenantId: user.tenantId, accessToken: 'legacy-compat', createdAt: nowIso() });
     persist();
     res.json({ success: true, data: { accessToken, refreshToken: next, token: accessToken }, accessToken, refreshToken: next, token: accessToken, message: 'Tokens refreshed.' });
   } catch { return res.status(401).json({ success: false, message: 'Invalid or expired refresh token.' }); }
 });
 
-// POST /auth/logout — audit + revoke
+// POST /auth/logout — audit + revoke (refresh token AND the caller's access token)
 authRouter.post('/logout', (req: Request, res: Response) => {
   const { email, tenantId, reason, refreshToken } = req.body || {};
   const db = loadDb();
+  const revoke = (jti: string, sub: string, mail: string) => {
+    if (!jti) return;
+    if (db.sessions.some((s: any) => s.revokedJti === jti)) return;
+    db.sessions.unshift({ revokedJti: jti, email: mail, userId: sub, role: '', tenantId: '', createdAt: nowIso() });
+    if (db.sessions.length > 2000) db.sessions.length = 2000;
+  };
   try {
     if (refreshToken && typeof refreshToken === 'string' && !refreshToken.startsWith('NEXA-')) {
       const c: any = verifyRefresh(refreshToken);
-      db.sessions.unshift({ revokedJti: c.jti, email: c.email, userId: c.sub, role: '', tenantId: '', createdAt: nowIso() });
-      if (db.sessions.length > 2000) db.sessions.length = 2000;
+      revoke(c.jti, c.sub, c.email);
     }
   } catch { /* ignore */ }
+  // Kill the current access token immediately instead of waiting for its TTL.
+  try {
+    const header = String(req.headers.authorization || '');
+    const token = header.startsWith('Bearer ') ? header.slice(7).trim() : header.trim();
+    if (token && !token.startsWith('NEXA-')) {
+      const c: any = verifyAccess(token);
+      revoke(c.jti, c.sub, c.email);
+    }
+  } catch { /* already expired / malformed — nothing to revoke */ }
   audit(String(email || 'user'), reason === 'INACTIVITY_TIMEOUT' ? 'AUTH_LOGOUT_INACTIVITY_TIMEOUT' : 'AUTH_LOGOUT_SUCCESS', String(tenantId || 'TNT-GLOBAL'), 'auth', String(email || ''), req.ip);
   persist();
   res.json({ success: true, message: 'Logged out securely.' });
 });
 
-// GET /auth/me
-authRouter.get('/me', async (req: Request, res: Response) => {  const header = String(req.headers.authorization || '');
-  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
-  if (!token) return res.status(401).json({ success: false, message: 'Missing token.' });
-  if (token.startsWith('NEXA-')) {
-    const sess: any = loadDb().sessions.find((s: any) => s.accessToken === token);
-    if (!sess) return res.status(401).json({ success: false, message: 'Invalid token.' });
-    return res.json({ success: true, data: { email: sess.email, role: sess.role, tenantId: sess.tenantId } });
-  }
-  try {
-    const { verifyAccess } = await import('../auth/password.js');
-    const c = verifyAccess(token);
-    res.json({ success: true, data: { email: c.email, role: c.role, tenantId: c.tenantId } });
-  } catch { res.status(401).json({ success: false, message: 'Invalid token.' }); }
+// GET /auth/me — goes through requireAuth so revocation, suspension and the
+// legacy-token path are all enforced here too (it used to trust any signed
+// token, so a logged-out session still answered 200).
+authRouter.get('/me', requireAuth(), (req: Request, res: Response) => {
+  const ctx = ctxOf(req);
+  res.json({ success: true, data: { id: ctx.id, email: ctx.email, role: ctx.role, tenantId: ctx.tenantId } });
 });
 
 // Phase 6.3: own session visibility + revoke-all (refresh markers revoked immediately;
@@ -302,6 +345,10 @@ authRouter.post('/register/:type', registerLimiter, async (req: Request, res: Re
   if (!['candidate','employer','recruiter','vendor'].includes(type)) return res.status(404).json({ success: false, message: 'Unknown registration type.' });
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'Validation failed.', errors: parsed.error.flatten() });
+  // Reserved demo domain — provisioned fixtures only, never self-service.
+  if (String(parsed.data.email || '').toLowerCase().endsWith(RESERVED_DEMO_DOMAIN)) {
+    return res.status(400).json({ success: false, message: 'That email domain is reserved. Please use a real address.' });
+  }
   await ensureSeedCredentials();
   const db = loadDb();
   const key = parsed.data.email.toLowerCase();
@@ -352,6 +399,42 @@ authRouter.post('/register/:type', registerLimiter, async (req: Request, res: Re
 });
 
 // ---- Email OTP verification (registration + first-login) ----
+/** Echo the code only outside production, or when an operator explicitly opts in. */
+function otpEchoEnabled(): boolean {
+  if (process.env.VITEST) return true;
+  if ((process.env.NODE_ENV || '') !== 'production') return true;
+  return process.env.OTP_ECHO === 'true';
+}
+
+function otpEmail(code: string, purpose: string): { subject: string; html: string } {
+  const label = purpose === 'reset' ? 'password reset' : purpose === 'register' ? 'account verification' : 'sign-in verification';
+  return {
+    subject: `NexaTalent ${label} code: ${code}`,
+    html: `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:520px;margin:0 auto;padding:24px">
+      <h2 style="margin:0 0 8px;font-size:18px;color:#071B3A">Your NexaTalent verification code</h2>
+      <p style="margin:0 0 16px;color:#475569;font-size:13px">Use the code below to finish your ${label}. It expires in 10 minutes.</p>
+      <div style="font-size:32px;font-weight:800;letter-spacing:8px;color:#0B5FD9;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:12px;padding:16px;text-align:center">${code}</div>
+      <p style="margin:16px 0 0;color:#94A3B8;font-size:11px">If you did not request this, you can ignore this email.</p>
+    </div>`,
+  };
+}
+
+/** Persist + deliver a code. Returns the delivery status so callers can be honest about it. */
+async function issueOtp(email: string, purpose: 'register' | 'verify' | 'reset', data?: unknown): Promise<{ status: string; delivered: boolean }> {
+  const key = String(email).toLowerCase();
+  const code = makeOtp();
+  const ttlMs = 10 * 60 * 1000; // 10 minutes
+  otpStore.set(key, { code, expiresAt: Date.now() + ttlMs, purpose, data });
+  const { subject, html } = otpEmail(code, purpose);
+  let status = 'queued';
+  try {
+    const row: any = await sendMail(key, subject, html, { kind: 'otp', refId: key });
+    status = row?.status || 'queued';
+  } catch { status = 'failed'; }
+  audit(key, `AUTH_OTP_SENT:${status}`, 'TNT-GLOBAL', 'auth', key, '');
+  return { status, delivered: status === 'sent' };
+}
+
 // POST /auth/send-otp — sends a 6-digit code to email, valid 10 minutes.
 authRouter.post('/send-otp', otpLimiter, async (req: Request, res: Response) => {
   const { email, purpose = 'verify', data } = req.body || {};
@@ -359,16 +442,13 @@ authRouter.post('/send-otp', otpLimiter, async (req: Request, res: Response) => 
     return res.status(400).json({ success: false, message: 'Valid email is required.' });
   }
   const key = String(email).toLowerCase();
-  const code = makeOtp();
-  const ttlMs = 10 * 60 * 1000; // 10 minutes
-  otpStore.set(key, { code, expiresAt: Date.now() + ttlMs, purpose: purpose as any, data });
-  // In dev/test, return the code so the frontend can verify without SMTP.
-  const isDev = (process.env.NODE_ENV || '') !== 'production' && !process.env.VITEST;
-  audit(key, 'AUTH_OTP_SENT', 'TNT-GLOBAL', 'auth', key, req.ip);
+  const { status, delivered } = await issueOtp(key, String(purpose) as any, data);
+  const echo = otpEchoEnabled();
   res.json({
     success: true,
-    message: 'Verification code sent to your email.',
-    ...(isDev ? { devCode: code, expiresInSeconds: Math.floor(ttlMs / 1000) } : {}),
+    message: delivered ? 'Verification code sent to your email.' : 'Verification code generated. Email delivery is not configured — use the code provided.',
+    data: { deliveryStatus: status, mailConfigured: mailConfigured() },
+    ...(echo ? { devCode: otpStore.get(key)?.code, expiresInSeconds: 600 } : {}),
   });
 });
 
@@ -396,18 +476,23 @@ authRouter.post('/verify-otp', otpLimiter, async (req: Request, res: Response) =
   const db = loadDb();
   const user = db.users.find((u: any) => String(u.email).toLowerCase() === key);
   if (user) {
-    user.emailVerified = true;
-    user.emailVerifiedAt = nowIso();
+    (user as any).emailVerified = true;
+    (user as any).emailVerifiedAt = nowIso();
+    (user as any).lastLogin = nowIso();
     persist();
   }
 
-  const accessToken = signAccess({ id: user?.id || key, email: key, role: user?.role || 'candidate', tenantId: user?.tenantId || 'TNT-GLOBAL' });
   const jti = randomBytes(8).toString('hex');
+  const accessToken = signAccess({ id: user?.id || key, email: key, role: user?.role || 'candidate', tenantId: user?.tenantId || 'TNT-GLOBAL' }, jti);
   const refreshToken = signRefresh({ id: user?.id || key, email: key }, jti);
+  db.sessions.unshift({ jti, userId: user?.id || key, email: key, role: user?.role || 'candidate', tenantId: user?.tenantId || 'TNT-GLOBAL', accessToken: 'legacy-compat', createdAt: nowIso() });
+  if (db.sessions.length > 2000) db.sessions.length = 2000;
+  audit(key, 'AUTH_OTP_VERIFIED', (user as any)?.tenantId || 'TNT-GLOBAL', 'auth', key, req.ip);
+  persist();
   res.json({
     success: true,
     message: 'Email verified successfully.',
-    data: { accessToken, refreshToken, emailVerified: true, user: user || { email: key, emailVerified: true } },
+    data: { accessToken, refreshToken, token: accessToken, emailVerified: true, user: user ? { id: (user as any).id, name: (user as any).name, email: key, role: (user as any).role, tenantId: (user as any).tenantId, emailVerified: true } : { email: key, emailVerified: true } },
   });
 });
 
@@ -417,17 +502,14 @@ authRouter.post('/resend-otp', otpLimiter, async (req: Request, res: Response) =
   if (!email || !String(email).includes('@')) {
     return res.status(400).json({ success: false, message: 'Valid email is required.' });
   }
-  // Reuse send-otp logic by forward-calling is not possible in middleware; re-implement lightly:
   const key = String(email).toLowerCase();
-  const code = makeOtp();
-  const ttlMs = 10 * 60 * 1000;
-  otpStore.set(key, { code, expiresAt: Date.now() + ttlMs, purpose: purpose as any, data });
-  const isDev = (process.env.NODE_ENV || '') !== 'production' && !process.env.VITEST;
-  audit(key, 'AUTH_OTP_RESENT', 'TNT-GLOBAL', 'auth', key, req.ip);
+  const { status, delivered } = await issueOtp(key, String(purpose) as any, data);
+  const echo = otpEchoEnabled();
   res.json({
     success: true,
-    message: 'A new verification code has been sent to your email.',
-    ...(isDev ? { devCode: code, expiresInSeconds: Math.floor(ttlMs / 1000) } : {}),
+    message: delivered ? 'A new verification code has been sent to your email.' : 'A new code was generated. Email delivery is not configured — use the code provided.',
+    data: { deliveryStatus: status },
+    ...(echo ? { devCode: otpStore.get(key)?.code, expiresInSeconds: 600 } : {}),
   });
 });
 
@@ -503,8 +585,9 @@ authRouter.post('/mfa/challenge', limiter, (req: Request, res: Response) => {
   }
   if (!ok) { hit(mfaFails, String(claims.email)); audit(user.email, 'AUTH_MFA_CHALLENGE_FAILED', user.tenantId, 'auth', user.id, req.ip); persist(); return res.status(401).json({ success: false, message: 'Invalid code.' }); }
   clear(mfaFails, String(claims.email));
-  const accessToken = signAccess({ id: user.id, email: user.email, role: user.role, tenantId: user.tenantId });
+  // One jti per session: logout / revoke-all invalidates both token types at once.
   const jti = randomBytes(8).toString('hex');
+  const accessToken = signAccess({ id: user.id, email: user.email, role: user.role, tenantId: user.tenantId }, jti);
   const refreshToken = signRefresh({ id: user.id, email: user.email }, jti);
   db.sessions.unshift({ jti, userId: user.id, email: user.email, role: user.role, tenantId: user.tenantId, accessToken: 'legacy-compat', createdAt: nowIso() });
   if (db.sessions.length > 2000) db.sessions.length = 2000;

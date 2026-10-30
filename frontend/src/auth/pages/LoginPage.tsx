@@ -28,6 +28,9 @@ export function LoginPage() {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSent, setForgotSent] = useState(false);
   const [forgotError, setForgotError] = useState('');
+  const [mfa, setMfa] = useState<{ ticket: string; email: string } | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaBusy, setMfaBusy] = useState(false);
 
   /* ---- Main login form validation ---- */
   const loginForm = useFormValidation(
@@ -62,13 +65,23 @@ export function LoginPage() {
       const body = res?.data && (res.data.accessToken || res.data.user || res.data.mfaRequired || res.data.emailVerificationRequired) ? res.data : res;
       const accessToken: string | undefined = body?.accessToken || body?.token;
       const serverRole = body?.user?.role as UserRole | undefined;
-      
-      // Email verification required before sign-in
-      if (body?.emailVerificationRequired) {
-        navigate(`/auth/otp-verify?email=${encodeURIComponent(body.data.email)}&mode=login`, { replace: true });
+
+      // Second factor required — verify the TOTP code before issuing tokens.
+      if (body?.mfaRequired) {
+        setMfa({ ticket: String(body.ticket || body.mfaTicket || ''), email: body.email || loginForm.values.email.trim() });
         return;
       }
-      
+
+      // Email verification required before sign-in. The server has already sent
+      // the code; carry the address (and any dev echo) across to the OTP page.
+      if (body?.emailVerificationRequired) {
+        const target = body.email || body.data?.email || loginForm.values.email.trim();
+        const params = new URLSearchParams({ email: String(target), mode: 'login' });
+        if (body.devCode) params.set('devCode', String(body.devCode));
+        navigate(`/auth/otp-verify?${params.toString()}`, { replace: true });
+        return;
+      }
+
       if (!accessToken || !serverRole || !ROLE_DEFAULT_REDIRECTS[serverRole]) {
         throw new Error('Invalid email or password. Please try again.');
       }
@@ -95,6 +108,34 @@ export function LoginPage() {
         setLoginError(serverMsg);
       }
     } finally {
+    }
+  };
+
+  const handleMfaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mfa) return;
+    setLoginError('');
+    setMfaBusy(true);
+    try {
+      const res = await apiClient.post<any>('/api/v1/auth/mfa/challenge', { ticket: mfa.ticket, otp: mfaCode.trim() });
+      const body = res?.data ?? res;
+      const token: string | undefined = body?.accessToken || body?.token;
+      const role = body?.user?.role as UserRole | undefined;
+      if (!token || !role || !ROLE_DEFAULT_REDIRECTS[role]) {
+        throw new Error('That code did not work. Please try again.');
+      }
+      persistSession({
+        accessToken: token,
+        refreshToken: body?.refreshToken,
+        role,
+        tenantId: body?.user?.tenantId,
+        email: body?.user?.email || mfa.email,
+      });
+      navigate(ROLE_DEFAULT_REDIRECTS[role], { replace: true });
+    } catch (err: any) {
+      setLoginError(err?.response?.data?.message || err?.message || 'Second factor verification failed.');
+    } finally {
+      setMfaBusy(false);
     }
   };
 
@@ -129,6 +170,43 @@ export function LoginPage() {
           </div>
         )}
 
+          {mfa ? (
+            <form onSubmit={handleMfaSubmit} className="mt-6 space-y-4" noValidate>
+              <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-xs font-semibold text-blue-900">
+                Two-factor authentication is on for <span className="font-extrabold">{mfa.email}</span>. Enter the 6-digit
+                code from your authenticator app, or a backup code.
+              </div>
+              <div>
+                <label htmlFor="login-mfa" className="block text-xs font-bold text-slate-900 uppercase tracking-wider mb-1.5">
+                  Authentication code *
+                </label>
+                <input
+                  id="login-mfa"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value)}
+                  placeholder="123456 or backup code"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-3 text-slate-900 font-mono font-bold text-sm tracking-widest focus:bg-white focus:border-black outline-none"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={mfaBusy || mfaCode.trim().length < 6}
+                className="w-full py-3.5 px-5 rounded-xl bg-black hover:bg-neutral-800 text-white font-bold text-xs shadow-lg shadow-black/10 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <span>{mfaBusy ? 'Verifying…' : 'Verify and sign in'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMfa(null); setMfaCode(''); setLoginError(''); }}
+                className="w-full text-xs font-bold text-slate-600 hover:text-black"
+              >
+                Use a different account
+              </button>
+            </form>
+          ) : (
           <form onSubmit={handleLogin} className="mt-6 space-y-4" noValidate>
             <div>
               <label className="block text-xs font-bold text-slate-900 uppercase tracking-wider mb-1.5">
@@ -192,6 +270,7 @@ export function LoginPage() {
               <ArrowRight className="w-4 h-4" />
             </button>
            </form>
+          )}
 
       {/* Registration Links for All Roles */}
       <div className="mt-6 pt-4 border-t border-slate-200 space-y-2 text-xs font-bold text-slate-600">

@@ -16,6 +16,9 @@ import {
   TrendingUp,
   Bookmark,
   Mail,
+  Zap,
+  Phone,
+  MessageCircle,
 } from 'lucide-react';
 import { V2Navbar } from '../components/V2Navbar';
 import { V2Footer } from '../components/V2Footer';
@@ -29,6 +32,12 @@ import { JobDetailPage as LegacyJobDetailPage } from '../../pages/JobDetailPage'
 
 /** Industry context keyed by domain — compact market facts for the detail sidebar/section. */
 const INDUSTRY: Record<string, { blurb: string; median: string; demand: string; note: string }> = {
+  'Cloud & Enterprise': {
+    blurb: 'Cloud-native enterprise platforms, microservices architecture, and large-scale data processing solutions across India tech hubs.',
+    median: 'Competitive CTC',
+    demand: 'Very high',
+    note: 'Golang + React + GCP full-stack skillsets command high premiums; immediate joiners prioritized.',
+  },
   'SaaS & Product': {
     blurb: 'Product engineering organisations building multi-tenant platforms for global customers — the most competitive talent market in India, led by Bengaluru and Hyderabad.',
     median: '₹24–40 LPA (mid-senior IC)',
@@ -139,6 +148,8 @@ export function NewJobDetailPage() {
     ['Work mode', job.workMode],
     ['Employment', job.type],
     ['Department', job.department],
+    ...(job.noticePeriod ? [['Notice period', job.noticePeriod]] as [string, string][] : []),
+    ...(job.openings ? [['Open positions', `${job.openings} opening`]] as [string, string][] : []),
     ['Posted', job.posted],
   ];
 
@@ -222,11 +233,11 @@ export function NewJobDetailPage() {
                     <Bookmark size={16} fill={saved ? 'currentColor' : 'none'} aria-hidden />
                   </button>
                   <button
-                    onClick={() => setLoginOpen(true)}
+                    onClick={() => setApplyOpen(true)}
                     className="group inline-flex min-h-[44px] items-center gap-2.5 rounded-xl bg-black py-1.5 pl-5 pr-1.5 text-[13px] font-bold text-white shadow-md shadow-black/10 transition-all hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
                   >
                     Apply Now
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-black transition-transform group-hover:tranneutral-x-0.5">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-black transition-transform group-hover:translate-x-0.5">
                       <ArrowRight size={14} aria-hidden />
                     </span>
                   </button>
@@ -244,7 +255,27 @@ export function NewJobDetailPage() {
                 <span className="text-[11px] font-semibold text-black">
                   Market note: <span className="text-black">{industry.note}</span>
                 </span>
-              </div>
+              
+              {job.noticePeriod ? (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900">
+                  <div className="flex items-center gap-2 text-[12.5px] font-bold">
+                    <Zap size={16} className="shrink-0 text-amber-600" aria-hidden />
+                    <span>Hiring Notice: <span className="font-extrabold text-black">{job.noticePeriod}</span></span>
+                  </div>
+                  {job.contactWhatsapp ? (
+                    <a
+                      href={'https://wa.me/' + job.contactWhatsapp.replace(/[^0-9]/g, '') + '?text=' + encodeURIComponent('Hi, I am interested in the ' + job.title + ' role.')}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-extrabold text-white shadow-sm hover:bg-emerald-700"
+                    >
+                      <MessageCircle size={13} aria-hidden /> Quick Chat on WhatsApp
+                    </a>
+                  ) : null}
+                </div>
+              ) : null}
+
+</div>
 
               {/* skills */}
               <ul className="mt-4 flex flex-wrap gap-1.5">
@@ -380,6 +411,77 @@ export function NewJobDetailPage() {
               </section>
 
               <div className="h-px bg-neutral-200" aria-hidden />
+
+              
+              <div className="h-px bg-neutral-200" aria-hidden />
+
+              <section aria-label="How to apply" className="rounded-2xl border-2 border-black bg-neutral-50 p-6 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-black text-white">
+                    <Mail size={16} aria-hidden />
+                  </span>
+                  <div>
+                    <h3 className="text-[16px] font-black text-black">How to Apply</h3>
+                    <p className="text-[11.5px] font-bold uppercase tracking-wider text-black/60">Fast-track direct application</p>
+                  </div>
+                </div>
+
+                <p className="mt-3.5 text-[13px] leading-relaxed text-black">
+                  Interested candidates can apply directly with their resume or reach our hiring team with the following details:
+                </p>
+
+                <ul className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[12.5px] font-semibold text-black">
+                  {(job.applyInstructions ?? [
+                    'Total Experience',
+                    'Relevant Experience in Go, React.js, GCP & BigQuery',
+                    'Current CTC',
+                    'Expected CTC',
+                    'Notice Period / Earliest Joining Date',
+                    'Current Location',
+                  ]).map((item) => (
+                    <li key={item} className="flex items-center gap-2 rounded-lg bg-white border border-neutral-200 px-3 py-2">
+                      <Check size={13} className="text-black shrink-0" strokeWidth={3} aria-hidden />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-5 flex flex-wrap items-center gap-3 pt-4 border-t border-neutral-200">
+                  <button
+                    onClick={() => setApplyOpen(true)}
+                    className="inline-flex min-h-[42px] items-center gap-2 rounded-xl bg-black px-5 text-[12.5px] font-extrabold text-white shadow hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-black"
+                  >
+                    Apply Now — No Login <ArrowRight size={14} aria-hidden />
+                  </button>
+
+                  <a
+                    href={'mailto:' + (job.contactEmail || 'info@nexatalentitsolutions.com') + '?subject=' + encodeURIComponent('Application for ' + job.title)}
+                    className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-neutral-300 bg-white px-4 text-[12.5px] font-bold text-black hover:border-black"
+                  >
+                    <Mail size={14} aria-hidden /> {job.contactEmail || 'info@nexatalentitsolutions.com'}
+                  </a>
+
+                  {job.contactWhatsapp ? (
+                    <a
+                      href={'https://wa.me/' + job.contactWhatsapp.replace(/[^0-9]/g, '') + '?text=' + encodeURIComponent('Hi, I am interested in applying for ' + job.title + ' role.')}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-[42px] items-center gap-2 rounded-xl bg-emerald-600 px-4 text-[12.5px] font-bold text-white hover:bg-emerald-700 shadow-sm"
+                    >
+                      <MessageCircle size={14} aria-hidden /> WhatsApp: {job.contactWhatsapp}
+                    </a>
+                  ) : null}
+
+                  {job.contactPhone ? (
+                    <a
+                      href={'tel:' + job.contactPhone.replace(/[^0-9+]/g, '')}
+                      className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-neutral-300 bg-white px-4 text-[12.5px] font-bold text-black hover:border-black"
+                    >
+                      <Phone size={14} aria-hidden /> Call: {job.contactPhone}
+                    </a>
+                  ) : null}
+                </div>
+              </section>
 
               {/* INDUSTRY SNAPSHOT */}
               <section aria-label="Industry snapshot">

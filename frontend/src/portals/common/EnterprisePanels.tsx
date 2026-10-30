@@ -135,7 +135,7 @@ export function SkillPicker({ value, onChange, placeholder = 'Type to search ski
         <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1.5 rounded-xl bg-slate-50 border border-slate-200" data-lenis-prevent>
           {sugs.filter((s) => !selected.some((x) => x.toLowerCase() === String(s.name).toLowerCase())).map((s: any) => (
             <button key={s.id} type="button" onClick={() => toggle(s.name)} title={s.category}
-              className="px-2 py-0.5 rounded-full bg-white border border-slate-200 font-bold text-[11px] hover:border-[#087BFF]">+ {s.name}</button>
+              className="px-2 py-0.5 rounded-full bg-white border border-slate-200 font-bold text-[11px] hover:border-[#0B5FD9]">+ {s.name}</button>
           ))}
           {dq.trim() && !sugs.some((s) => String(s.name).toLowerCase() === dq.trim().toLowerCase()) && (
             <button type="button" onClick={() => toggle(dq.trim())} className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 font-bold text-[11px]">+ Use “{dq.trim()}”</button>
@@ -455,7 +455,7 @@ export function InfoTip({ title, body }: { title: string; body: React.ReactNode 
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} aria-label={`About: ${title}`} title={title}
-        className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-full bg-slate-200 hover:bg-[#087BFF] hover:text-white text-slate-600 text-[11px] font-extrabold shrink-0">i</button>
+        className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-full bg-slate-200 hover:bg-[#0B5FD9] hover:text-white text-slate-600 text-[11px] font-extrabold shrink-0">i</button>
       <Modal open={open} onClose={() => setOpen(false)} title={title}>
         <div className="text-xs text-slate-700 space-y-2 leading-relaxed">{body}</div>
       </Modal>
@@ -879,7 +879,7 @@ export function RequisitionsPanel() {
         return (
           <span className="inline-flex flex-col gap-1" title={`Applied ${f.applied} → Screening ${f.screening} → Interview ${f.interview} → Offer ${f.offer} → Hired ${f.hired}`}>
             <span className="flex items-end gap-1.5">
-              {step(f.applied, 'Applied', '#087BFF')}{step(f.interview, 'Interview', '#F59E0B')}{step(f.hired, 'Hired', '#10B981')}
+              {step(f.applied, 'Applied', '#0B5FD9')}{step(f.interview, 'Interview', '#F59E0B')}{step(f.hired, 'Hired', '#10B981')}
             </span>
             <span className="text-[10px] font-bold text-slate-500">{f.applications} apps → {f.hired} hired</span>
           </span>
@@ -967,7 +967,7 @@ export function RequisitionsPanel() {
               <div className="absolute right-0 top-full mt-1 z-50 w-52 bg-white rounded-2xl border border-slate-200 shadow-xl p-2 space-y-0.5 max-h-72 overflow-y-auto" data-lenis-prevent>
                 {REQ_ALL_COLUMNS.map((c) => (
                   <label key={c.key} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-slate-50 text-xs font-semibold cursor-pointer">
-                    <input type="checkbox" checked={visibleCols.includes(c.key)} onChange={() => setVisibleCols((v) => v.includes(c.key) ? v.filter((k) => k !== c.key) : [...v, c.key])} className="w-3.5 h-3.5 accent-[#087BFF]" />
+                    <input type="checkbox" checked={visibleCols.includes(c.key)} onChange={() => setVisibleCols((v) => v.includes(c.key) ? v.filter((k) => k !== c.key) : [...v, c.key])} className="w-3.5 h-3.5 accent-[#0B5FD9]" />
                     {c.label}
                   </label>
                 ))}
@@ -981,7 +981,7 @@ export function RequisitionsPanel() {
       {selected.size > 0 && (
         <div className="flex flex-wrap items-center gap-2 p-3 rounded-2xl bg-blue-50 border border-blue-200 text-xs font-bold" role="toolbar" aria-label="Bulk actions">
           <span className="text-blue-900">{selected.size} selected</span>
-          <button type="button" disabled={busy} onClick={doBulkApprove} className="px-3 py-1.5 rounded-lg bg-[#087BFF] text-white disabled:opacity-50">Approve eligible</button>
+          <button type="button" disabled={busy} onClick={doBulkApprove} className="px-3 py-1.5 rounded-lg bg-[#0B5FD9] text-white disabled:opacity-50">Approve eligible</button>
           <button type="button" onClick={() => openAssign(rows.filter((r) => selected.has(r.id)))} className="px-3 py-1.5 rounded-lg bg-white border border-blue-300 text-blue-800">Assign recruiter…</button>
           <ExportButton filename="requirements-selected.csv" rows={rows.filter((r) => selected.has(r.id))} columns={['id', 'title', 'orgId', 'openings', 'status']} label="Export selected" />
           <button type="button" onClick={() => setSelected(new Set())} className="px-3 py-1.5 rounded-lg text-slate-500">Clear</button>
@@ -1015,7 +1015,7 @@ export function RequisitionsPanel() {
           <table className="w-full text-left text-xs min-w-[980px]">
             <thead className="bg-slate-50/80 backdrop-blur sticky top-0 z-10">
               <tr className="text-slate-500 font-extrabold uppercase tracking-wider text-[10px]">
-              <th className="px-2 py-2.5 w-8"><input type="checkbox" aria-label="Select page" checked={rows.length > 0 && rows.every((r) => selected.has(r.id))} onChange={toggleSelectPage} className="w-3.5 h-3.5 accent-[#087BFF]" /></th>
+              <th className="px-2 py-2.5 w-8"><input type="checkbox" aria-label="Select page" checked={rows.length > 0 && rows.every((r) => selected.has(r.id))} onChange={toggleSelectPage} className="w-3.5 h-3.5 accent-[#0B5FD9]" /></th>
               <th className="px-2 py-2.5 w-8" aria-label="Expand" />
               {cols.map((c) => <th key={c.key} className="px-3 py-2.5">{c.label}</th>)}
               <th className="px-3 py-2.5 text-right">Actions</th>
@@ -1024,7 +1024,7 @@ export function RequisitionsPanel() {
               {rows.map((r) => (
                 <Fragment key={r.id}>
                 <tr className="hover:bg-slate-50/70 align-top">
-                  <td className="px-2 py-2.5"><input type="checkbox" aria-label={`Select ${r.id}`} checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="w-3.5 h-3.5 accent-[#087BFF]" /></td>
+                  <td className="px-2 py-2.5"><input type="checkbox" aria-label={`Select ${r.id}`} checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="w-3.5 h-3.5 accent-[#0B5FD9]" /></td>
                   <td className="px-2 py-2.5">
                     <button type="button" onClick={() => toggleExpand(r)} aria-expanded={expanded[r.id] !== undefined} aria-label={expanded[r.id] !== undefined ? 'Collapse linked jobs' : 'Expand linked jobs'} className="p-1 rounded-lg hover:bg-slate-200 text-slate-500 font-bold">
                       {expanded[r.id] !== undefined ? '▾' : '▸'}
@@ -1428,7 +1428,7 @@ export function RequirementPipeline({ reqId, onClose, onDecide, onEdit, onAssign
                   {FUNNEL_STEPS.map((s) => (
                     <div key={s} className="flex-1 min-w-0">
                       <div className="text-center font-extrabold text-sm">{f[s]}</div>
-                      <div className={`h-2 rounded-full ${f[s] > 0 ? 'bg-[#087BFF]' : 'bg-slate-200'}`} style={{ opacity: 0.45 + (0.55 * f[s]) / max }} />
+                      <div className={`h-2 rounded-full ${f[s] > 0 ? 'bg-[#0B5FD9]' : 'bg-slate-200'}`} style={{ opacity: 0.45 + (0.55 * f[s]) / max }} />
                       <div className="text-center text-[10px] font-bold text-slate-500 mt-1 truncate">{FUNNEL_LABELS[s]}</div>
                     </div>
                   ))}
@@ -1804,7 +1804,7 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
             </div>
             <div className="flex flex-wrap gap-2">
               {!['Hired', 'Withdrawn', 'Rejected', 'Offer'].includes(detail.stage) && (
-                <button type="button" onClick={() => { setOfferOpen((v) => !v); setJoinOpen(false); }} className={`px-4 py-2.5 rounded-xl font-bold text-xs ${offerOpen ? 'bg-slate-900 text-white' : 'bg-[#087BFF] text-white'}`}>Issue offer…</button>
+                <button type="button" onClick={() => { setOfferOpen((v) => !v); setJoinOpen(false); }} className={`px-4 py-2.5 rounded-xl font-bold text-xs ${offerOpen ? 'bg-slate-900 text-white' : 'bg-[#0B5FD9] text-white'}`}>Issue offer…</button>
               )}
               {!['Hired', 'Withdrawn', 'Rejected'].includes(detail.stage) && (
                 <button type="button" onClick={() => { setJoinOpen((v) => !v); setOfferOpen(false); if (!joinOpen) { setJoinForm({ joinDate: '', feeBasis: '' }); setJoinMatch(null); } }} className={`px-4 py-2.5 rounded-xl border font-bold text-xs ${joinOpen ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200'}`}>Record joining…</button>
@@ -1840,7 +1840,7 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
                 <Field label="Joining date"><DatePicker value={offerForm.joinDate} onChange={(v) => setOfferForm({ ...offerForm, joinDate: v })} ariaLabel="Joining date" /></Field>
                 <div className="flex justify-end gap-2">
                   <button type="button" onClick={() => setOfferOpen(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
-                  <button type="button" disabled={!(offerTotal(offerForm) > 0)} onClick={() => doOffer()} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50">Issue offer</button>
+                  <button type="button" disabled={!(offerTotal(offerForm) > 0)} onClick={() => doOffer()} className="px-4 py-2.5 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs disabled:opacity-50">Issue offer</button>
                 </div>
                 <p className="text-[11px] text-slate-500 font-medium">The breakup sums to Total CTC — that total is issued as the offer CTC and becomes the default fee basis at joining. Application moves to Offer.</p>
               </div>
@@ -1873,7 +1873,7 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
                 )}
                 <div className="flex justify-end gap-2">
                   <button type="button" onClick={() => { setJoinOpen(false); setJoinMatch(null); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
-                  <button type="button" disabled={!joinForm.joinDate} onClick={doJoin} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50">Record joining</button>
+                  <button type="button" disabled={!joinForm.joinDate} onClick={doJoin} className="px-4 py-2.5 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs disabled:opacity-50">Record joining</button>
                 </div>
                 <p className="text-[11px] text-slate-500 font-medium">Joining mints the placement, resolves the commission agreement and moves the application to Hired.</p>
               </div>
@@ -1994,7 +1994,7 @@ export function ApplicationsKanban({ apps, onOpen, onDropMove }: { apps: any[]; 
             {c.items.map((a) => (
               <div key={a.id} draggable onDragStart={() => setDragId(a.id)}
                 onClick={() => onOpen(a)}
-                className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs cursor-grab active:cursor-grabbing hover:border-[#087BFF]">
+                className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs cursor-grab active:cursor-grabbing hover:border-[#0B5FD9]">
                 <div className="font-extrabold text-slate-900 truncate">{a.jobTitle || a.jobId}</div>
                 <div className="text-slate-500 font-medium truncate">{a.candidateEmail}</div>
                 <div className="font-mono text-[10px] text-slate-400">{a.id}</div>
@@ -2474,7 +2474,7 @@ export function InterviewsPanel() {
                           <div key={ft.label} className="flex items-center gap-2">
                             <span className="w-28 shrink-0 text-[11px] font-bold text-slate-600 truncate">{ft.label}</span>
                             <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                              <div className="h-full rounded-full bg-[#087BFF]" style={{ width: `${ft.max ? Math.round((ft.got / ft.max) * 100) : 0}%` }} />
+                              <div className="h-full rounded-full bg-[#0B5FD9]" style={{ width: `${ft.max ? Math.round((ft.got / ft.max) * 100) : 0}%` }} />
                             </div>
                             <span className="w-12 shrink-0 text-right text-[11px] font-extrabold text-slate-800">{ft.got}/{ft.max}</span>
                           </div>
@@ -2624,7 +2624,7 @@ export function ChatPanel({ initialAppId = '' }: { initialAppId?: string } = {})
       ) : (
         <div className="flex flex-wrap gap-1.5">
           {convs.map((c) => (
-            <button key={c.id} type="button" onClick={() => open(c.id)} className={`px-3 py-1.5 rounded-lg font-bold text-[11px] border ${active === c.id ? 'bg-[#087BFF] text-white border-blue-600' : 'bg-white border-slate-200 text-slate-700'}`}>{c.id}</button>
+            <button key={c.id} type="button" onClick={() => open(c.id)} className={`px-3 py-1.5 rounded-lg font-bold text-[11px] border ${active === c.id ? 'bg-[#0B5FD9] text-white border-blue-600' : 'bg-white border-slate-200 text-slate-700'}`}>{c.id}</button>
           ))}
         </div>
       )}
@@ -3091,7 +3091,7 @@ export function TalentPoolsPanel() {
                     <span className="block font-bold text-slate-900 text-[13px] leading-5 truncate">{m.candidate?.name || 'Unknown candidate'}</span>
                     <span className="block text-[11px] text-slate-500 font-medium truncate">{m.candidate ? `${m.candidate.roleTitle || '—'} • ${m.candidate.experienceYears ?? '—'}y • ${m.candidate.location || '—'}` : 'profile no longer on file'}</span>
                   </span>
-                  {m.applicationId && <span className="px-2 py-0.5 rounded-full bg-blue-50 text-[#087BFF] border border-blue-200 font-bold text-[10px] shrink-0">in pipeline</span>}
+                  {m.applicationId && <span className="px-2 py-0.5 rounded-full bg-blue-50 text-[#0B5FD9] border border-blue-200 font-bold text-[10px] shrink-0">in pipeline</span>}
                   {staleOf(m) && <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-bold text-[10px] shrink-0">stale</span>}
                 </button>
               ))}
@@ -3111,7 +3111,7 @@ export function TalentPoolsPanel() {
               {skillMix.length === 0 ? <div className="text-[11px] text-slate-500">No skill data on file.</div> : skillMix.map(([s, n]) => (
                 <div key={s} className="flex items-center gap-2">
                   <span className="w-32 text-[11px] font-bold text-slate-600 truncate">{s}</span>
-                  <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-[#087BFF]" style={{ width: `${Math.round((n / Math.max(1, members.length)) * 100)}%` }} /></div>
+                  <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-[#0B5FD9]" style={{ width: `${Math.round((n / Math.max(1, members.length)) * 100)}%` }} /></div>
                   <span className="w-8 text-right text-[11px] font-extrabold">{n}</span>
                 </div>
               ))}
@@ -3154,7 +3154,7 @@ export function TalentPoolsPanel() {
             <div className="space-y-2">
               <div className="text-[11px] font-bold text-slate-500">Pool: {drawerPool?.name || memberDetail.poolId} • Added by {memberDetail.addedBy || '—'}</div>
               <div className="flex gap-2 flex-wrap">
-                {!staleOf(memberDetail) && <button type="button" onClick={() => openShortlist(memberDetail, memberDetail.poolId || drawerPool?.id)} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs cursor-pointer">Shortlist to job →</button>}
+                {!staleOf(memberDetail) && <button type="button" onClick={() => openShortlist(memberDetail, memberDetail.poolId || drawerPool?.id)} className="px-4 py-2.5 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs cursor-pointer">Shortlist to job →</button>}
                 <button type="button" onClick={() => startOutreach([memberDetail.candidateEmail], memberDetail.candidate?.name || 'member')} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs cursor-pointer">Start outreach →</button>
                 <button type="button" onClick={() => setRemoveMember({ poolId: memberDetail.poolId || drawerPool?.id, memberId: memberDetail.id, label: memberDetail.candidate?.name || 'member' })} className="px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 font-bold text-xs cursor-pointer">Remove</button>
               </div>
@@ -3395,7 +3395,7 @@ export function CandidateSearchPanel() {
         className="w-full flex items-center justify-between gap-2 px-3 py-2.5 bg-slate-50 hover:bg-slate-100 transition">
         <span className="text-xs font-extrabold text-slate-800">{title}</span>
         <span className="flex items-center gap-1.5 shrink-0">
-          {count > 0 && <span className="px-1.5 py-0.5 rounded-full bg-[#087BFF] text-white font-extrabold text-[10px]">{count}</span>}
+          {count > 0 && <span className="px-1.5 py-0.5 rounded-full bg-[#0B5FD9] text-white font-extrabold text-[10px]">{count}</span>}
           <span className="text-slate-400 text-xs">{openGroup === id ? '▴' : '▾'}</span>
         </span>
       </button>
@@ -3404,7 +3404,7 @@ export function CandidateSearchPanel() {
   );
   const checkRow = (label: string, checked: boolean, onToggle: () => void, count?: number) => (
     <label className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
-      <input type="checkbox" checked={checked} onChange={onToggle} className="w-4 h-4 accent-[#087BFF] shrink-0" />
+      <input type="checkbox" checked={checked} onChange={onToggle} className="w-4 h-4 accent-[#0B5FD9] shrink-0" />
       <span className="flex-1 min-w-0 text-xs font-semibold text-slate-800 truncate">{label}</span>
       {count !== undefined && <span className="text-[10px] font-bold text-slate-400 shrink-0">{count}</span>}
     </label>
@@ -3550,7 +3550,7 @@ export function CandidateSearchPanel() {
             <div className="flex flex-wrap gap-1.5">
               {['Immediate', '15 days', '30 days', '60 days', '90 days'].map((a) => (
                 <button key={a} type="button" onClick={() => setF({ ...f, availability: f.availability === a ? '' : a })}
-                  className={`px-2.5 py-1.5 rounded-lg border font-bold text-[11px] transition ${f.availability === a ? 'bg-[#087BFF] text-white border-blue-600' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-400'}`}>{a}</button>
+                  className={`px-2.5 py-1.5 rounded-lg border font-bold text-[11px] transition ${f.availability === a ? 'bg-[#0B5FD9] text-white border-blue-600' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-400'}`}>{a}</button>
               ))}
             </div>
           ))}
@@ -3558,14 +3558,14 @@ export function CandidateSearchPanel() {
             <div className="flex flex-wrap gap-1.5">
               {[{ v: '', l: 'Any' }, { v: 'yes', l: 'Has resume' }, { v: 'no', l: 'No resume' }].map((o) => (
                 <button key={o.l} type="button" onClick={() => setF({ ...f, resume: o.v })}
-                  className={`px-2.5 py-1.5 rounded-lg border font-bold text-[11px] transition ${f.resume === o.v ? 'bg-[#087BFF] text-white border-blue-600' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-400'}`}>{o.l}</button>
+                  className={`px-2.5 py-1.5 rounded-lg border font-bold text-[11px] transition ${f.resume === o.v ? 'bg-[#0B5FD9] text-white border-blue-600' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-400'}`}>{o.l}</button>
               ))}
             </div>
           ))}
         </div>
         <div className="shrink-0 px-4 py-3 border-t border-slate-200 flex gap-2">
           <button type="button" onClick={clearFilters} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Clear all</button>
-          <button type="button" onClick={() => { setFilterOpen(false); search(1); }} className="flex-1 px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs">Show results</button>
+          <button type="button" onClick={() => { setFilterOpen(false); search(1); }} className="flex-1 px-4 py-2.5 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs">Show results</button>
         </div>
       </aside>
       {detail && (
@@ -3669,7 +3669,7 @@ export function CandidateSearchPanel() {
                           <div key={ft.label} className="flex items-center gap-2">
                             <span className="w-28 shrink-0 text-[11px] font-bold text-slate-600 truncate">{ft.label}</span>
                             <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                              <div className="h-full rounded-full bg-[#087BFF]" style={{ width: `${ft.max ? Math.round((ft.got / ft.max) * 100) : 0}%` }} />
+                              <div className="h-full rounded-full bg-[#0B5FD9]" style={{ width: `${ft.max ? Math.round((ft.got / ft.max) * 100) : 0}%` }} />
                             </div>
                             <span className="w-12 shrink-0 text-right text-[11px] font-extrabold text-slate-800">{ft.got}/{ft.max}</span>
                           </div>
@@ -3722,8 +3722,8 @@ export function CandidateSearchPanel() {
                     {pools.map((p: any) => (
                       <button key={p.id} type="button" onClick={() => setShortPool(p.id)}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border text-left text-xs transition ${shortPool === p.id ? 'bg-blue-50/70 border-blue-300 shadow-[0_1px_2px_rgba(15,23,42,0.06)]' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
-                        <span aria-hidden="true" className={`w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center ${shortPool === p.id ? 'border-[#087BFF]' : 'border-slate-300'}`}>
-                          {shortPool === p.id && <span className="w-2 h-2 rounded-full bg-[#087BFF]" />}
+                        <span aria-hidden="true" className={`w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center ${shortPool === p.id ? 'border-[#0B5FD9]' : 'border-slate-300'}`}>
+                          {shortPool === p.id && <span className="w-2 h-2 rounded-full bg-[#0B5FD9]" />}
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block font-bold text-slate-900 truncate">{p.name}</span>
@@ -3736,7 +3736,7 @@ export function CandidateSearchPanel() {
               {ok && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{ok}</div>}
               <div className="flex justify-end gap-2">
                 <button type="button" onClick={() => setDetailTab('profile')} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Back</button>
-                <button type="button" disabled={!shortPool || pools.length === 0} onClick={shortlist} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50">Shortlist to pool</button>
+                <button type="button" disabled={!shortPool || pools.length === 0} onClick={shortlist} className="px-4 py-2.5 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs disabled:opacity-50">Shortlist to pool</button>
               </div>
             </div>
           )}
@@ -3965,12 +3965,12 @@ export function OffersPlacementsPanel() {
             <div className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button type="button" onClick={() => setOffer({ ...offer, letterMode: 'generate' })}
-                  className={`text-left p-3.5 rounded-2xl border-2 transition ${offer.letterMode === 'generate' ? 'border-[#087BFF] bg-blue-50/60' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                  className={`text-left p-3.5 rounded-2xl border-2 transition ${offer.letterMode === 'generate' ? 'border-[#0B5FD9] bg-blue-50/60' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
                   <div className="text-xs font-extrabold text-slate-900">✨ Generate with NexaTalent</div>
                   <div className="text-[11px] text-slate-600 font-medium mt-1">Full 5-section letter, auto-filled with candidate, role, CTC and terms. Recommended.</div>
                 </button>
                 <button type="button" onClick={() => setOffer({ ...offer, letterMode: 'upload' })}
-                  className={`text-left p-3.5 rounded-2xl border-2 transition ${offer.letterMode === 'upload' ? 'border-[#087BFF] bg-blue-50/60' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                  className={`text-left p-3.5 rounded-2xl border-2 transition ${offer.letterMode === 'upload' ? 'border-[#0B5FD9] bg-blue-50/60' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
                   <div className="text-xs font-extrabold text-slate-900">📎 Upload company letter</div>
                   <div className="text-[11px] text-slate-600 font-medium mt-1">Direct hires on company letterhead — attach your own PDF/DOC.</div>
                 </button>
@@ -5642,15 +5642,15 @@ export function AgreementTemplatesPanel({ templates, onChanged }: { templates: a
                 <div className="flex flex-wrap items-center gap-1 p-1.5 rounded-xl bg-slate-100 border border-slate-200">
                   {[['H2', 'formatBlock', '<h2>'], ['H3', 'formatBlock', '<h3>'], ['¶', 'formatBlock', '<p>'], ['B', 'bold'], ['I', 'italic'], ['U', 'underline'], ['S', 'strikeThrough']].map(([label, cmd, val]) => (
                     <button key={label as string} type="button" title={label as string} onMouseDown={(e) => e.preventDefault()} onClick={() => tplCmd(cmd as string, val as string)}
-                      className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-[#087BFF]">{label}</button>
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-[#0B5FD9]">{label}</button>
                   ))}
                   {[['≡L', 'justifyLeft'], ['≡C', 'justifyCenter'], ['≡R', 'justifyRight'], ['≡J', 'justifyFull']].map(([label, cmd]) => (
                     <button key={label as string} type="button" title={`Align ${label}`} onMouseDown={(e) => e.preventDefault()} onClick={() => tplCmd(cmd as string)}
-                      className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-[#087BFF]">{label}</button>
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-[#0B5FD9]">{label}</button>
                   ))}
                   {[['• List', 'insertUnorderedList'], ['1. List', 'insertOrderedList'], ['❝', 'formatBlock', '<blockquote>'], ['―', 'insertHorizontalRule']].map(([label, cmd, val]) => (
                     <button key={label as string} type="button" title={label as string} onMouseDown={(e) => e.preventDefault()} onClick={() => tplCmd(cmd as string, val as string)}
-                      className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-[#087BFF]">{label}</button>
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-[#0B5FD9]">{label}</button>
                   ))}
                   <select aria-label="Font size" title="Font size" className="px-1.5 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px]" defaultValue="" onChange={(e) => { if (e.target.value) { tplCmd('fontSize', e.target.value); e.target.value = ''; } }}>
                     <option value="">A±</option>
@@ -5659,11 +5659,11 @@ export function AgreementTemplatesPanel({ templates, onChanged }: { templates: a
                   <label title="Text color" className="px-2 py-1 rounded-lg bg-white border border-slate-200 font-bold text-[11px] cursor-pointer">A<input type="color" className="sr-only" onChange={(e) => tplCmd('foreColor', e.target.value)} /></label>
                   <label title="Highlight" className="px-2 py-1 rounded-lg bg-white border border-slate-200 font-bold text-[11px] cursor-pointer">▮<input type="color" className="sr-only" defaultValue="#fef08a" onChange={(e) => tplCmd('hiliteColor', e.target.value)} /></label>
                   <button type="button" title="Clear formatting" onMouseDown={(e) => e.preventDefault()} onClick={() => tplCmd('removeFormat')}
-                    className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-[#087BFF]">⌫</button>
+                    className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-[#0B5FD9]">⌫</button>
                   <button type="button" title="Undo" onMouseDown={(e) => e.preventDefault()} onClick={() => tplCmd('undo')}
-                    className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-[#087BFF]">↩</button>
+                    className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-[#0B5FD9]">↩</button>
                   <button type="button" title="Redo" onMouseDown={(e) => e.preventDefault()} onClick={() => tplCmd('redo')}
-                    className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-[#087BFF]">↪</button>
+                    className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:border-[#0B5FD9]">↪</button>
                   <select aria-label="Insert placeholder" title="Insert placeholder" className="px-2 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px]" defaultValue="" onChange={(e) => { if (e.target.value) { tplToken(e.target.value); e.target.value = ''; } }}>
                     <option value="">+ {'{{field}}'}</option>
                     {TEMPLATE_TOKENS.map((tok) => <option key={tok} value={tok}>{`{{${tok}}}`}</option>)}
@@ -5671,7 +5671,7 @@ export function AgreementTemplatesPanel({ templates, onChanged }: { templates: a
                 </div>
                 <div ref={tplBodyRef} contentEditable suppressContentEditableWarning
                   key={editingTpl || 'new'}
-                  className="min-h-[280px] p-4 rounded-xl bg-white border border-slate-200 text-xs leading-relaxed focus:outline-none focus:border-[#087BFF]"
+                  className="min-h-[280px] p-4 rounded-xl bg-white border border-slate-200 text-xs leading-relaxed focus:outline-none focus:border-[#0B5FD9]"
                   dangerouslySetInnerHTML={{ __html: sanitizeHtml(tplBodySeed) }} />
               </>
             ) : (
@@ -6028,7 +6028,7 @@ export function CommissionsPanel() {
                 <div className="p-4 rounded-2xl bg-white border border-slate-200 text-xs leading-relaxed max-h-[320px] overflow-y-auto" data-lenis-prevent
                   dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }} />
                 <div className="flex flex-wrap gap-2">
-                  {!agDetail?.companyAccepted ? <button type="button" onClick={() => accept(agDetail.id)} className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-xs">Mark accepted</button> : null}
+                  {!agDetail?.companyAccepted ? <button type="button" onClick={() => accept(agDetail.id)} className="px-4 py-2 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs">Mark accepted</button> : null}
                   <button type="button" onClick={async () => { try { await openPdfBlob(await billingApi.agreementPdf(agDetail.id), `Agreement-${agDetail.id}.pdf`); } catch (e) { setError(errMsg(e)); } }} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">Download PDF (server)</button>
                   <button type="button" onClick={() => downloadDocFile(title, title, html)} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">Download .doc</button>
                   <button type="button" onClick={() => printHtmlDocument(title, html)} className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs">Print / PDF</button>
@@ -6189,7 +6189,7 @@ export function CommissionsPanel() {
             ))}
           </div>
           <div className="flex flex-wrap gap-2 pt-1">
-            {commDetail.approvalStatus !== 'Approved' ? <button type="button" onClick={() => setApproveFor(commDetail)} className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-xs">Approve commission…</button> : null}
+            {commDetail.approvalStatus !== 'Approved' ? <button type="button" onClick={() => setApproveFor(commDetail)} className="px-4 py-2 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs">Approve commission…</button> : null}
             {commDetail.approvalStatus === 'Approved' && monthsLeft(commDetail) > 0 ? <button type="button" onClick={() => { setInvoiceFor(commDetail); }} className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs">{commDetail.basisType === 'monthly_ctc' ? `Generate month invoice (${Number(commDetail.billedMonths || 0) + 1}/${commDetail.contractMonths || 12})…` : 'Generate invoice…'}</button> : null}
             {commDetail.approvalStatus === 'Approved' && commDetail.paymentStatus !== 'Paid' ? <button type="button" onClick={() => { setPayoutFor(commDetail); }} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-xs">Process payout…</button> : null}
             {!agencyFinanceView ? <button type="button" onClick={() => { setClawFor(commDetail); setClawForm({ amount: '', reason: '', override: false }); }} className="px-4 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700 font-bold text-xs">Clawback…</button> : null}
@@ -6662,7 +6662,7 @@ export function LeadsKanban({ leads, onOpen, onDropMove }: { leads: any[]; onOpe
             {c.items.map((l) => (
               <div key={l.id} draggable onDragStart={() => setDragId(l.id)}
                 onClick={() => onOpen(l)}
-                className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs cursor-grab active:cursor-grabbing hover:border-[#087BFF]">
+                className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs cursor-grab active:cursor-grabbing hover:border-[#0B5FD9]">
                 <div className="font-extrabold text-slate-900 truncate">{l.contactName}</div>
                 <div className="text-slate-500 font-medium truncate">{l.companyName}</div>
                 <div className="font-mono text-[10px] text-slate-400">{l.id} • ₹{Number(l.value || 0).toLocaleString('en-IN')}</div>
@@ -6810,8 +6810,8 @@ export function PerformancePanel() {
             ['Overdue', kpi.overdueFollowups, () => drillLeads('Overdue follow-ups', undefined, (l) => !!(l.nextFollowUp && new Date(l.nextFollowUp) < new Date()))],
           ] as Array<[string, unknown, () => void]>).map(([k, v, go]) => (
             <button key={k as string} type="button" onClick={go} title={`Drill into ${k}`}
-              className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-left hover:border-[#087BFF] hover:shadow-sm transition cursor-pointer">
-              <div className="text-[10px] font-bold text-slate-500 truncate">{k} <span className="text-[#087BFF]">→</span></div>
+              className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-left hover:border-[#0B5FD9] hover:shadow-sm transition cursor-pointer">
+              <div className="text-[10px] font-bold text-slate-500 truncate">{k} <span className="text-[#0B5FD9]">→</span></div>
               <div className="text-base font-extrabold truncate">{String(v)}</div>
             </button>
           ))}
@@ -7167,7 +7167,7 @@ export function SubmissionsPanel({ canReview = false }: { canReview?: boolean })
             <div className="space-y-2">
               {!canReview ? <div className="text-[11px] text-slate-500 font-medium">Review actions need an employer reviewer account.</div> : (
                 <>
-                  <button type="button" disabled={busy || !!detail.applicationId || ['Rejected', 'Withdrawn'].includes(detail.status)} onClick={() => doAccept(detail)} className="w-full py-3 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-40 cursor-pointer">
+                  <button type="button" disabled={busy || !!detail.applicationId || ['Rejected', 'Withdrawn'].includes(detail.status)} onClick={() => doAccept(detail)} className="w-full py-3 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs disabled:opacity-40 cursor-pointer">
                     {busy ? 'Accepting…' : detail.applicationId ? `Already in pipeline (${detail.applicationId})` : 'Accept to pipeline →'}
                   </button>
                   <div className="flex gap-2 flex-wrap">
@@ -8589,7 +8589,7 @@ export function RolesPanel() {
             <div className="flex flex-wrap gap-1.5">
               {ALL_PERMISSIONS.map((p) => (
                 <button key={p} type="button" onClick={() => setEditPerms((x) => (x.includes(p) ? x.filter((y) => y !== p) : [...x, p]))}
-                  className={`px-2.5 py-1 rounded-full border font-bold text-[11px] ${editPerms.includes(p) ? 'bg-[#087BFF] text-white border-[#087BFF]' : 'bg-white text-slate-600 border-slate-200'}`}>{p}</button>
+                  className={`px-2.5 py-1 rounded-full border font-bold text-[11px] ${editPerms.includes(p) ? 'bg-[#0B5FD9] text-white border-[#0B5FD9]' : 'bg-white text-slate-600 border-slate-200'}`}>{p}</button>
               ))}
             </div>
           </div>
@@ -9583,7 +9583,7 @@ export function JobDrawerActions({ job, requirement, onDone }: { job: any; requi
     <div className="flex flex-wrap items-center gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200" role="toolbar" aria-label="Job actions">
       {buttons.map((b) => (
         <button key={b.label} type="button" disabled={busy} onClick={() => openConfirm(b.to)}
-          className={`px-4 py-2 rounded-xl font-bold text-xs disabled:opacity-50 ${b.primary ? 'bg-[#087BFF] text-white' : b.danger ? 'bg-white border border-red-200 text-red-600' : 'bg-white border border-slate-200'}`}>{b.label}</button>
+          className={`px-4 py-2 rounded-xl font-bold text-xs disabled:opacity-50 ${b.primary ? 'bg-[#0B5FD9] text-white' : b.danger ? 'bg-white border border-red-200 text-red-600' : 'bg-white border border-slate-200'}`}>{b.label}</button>
       ))}
       {locks.length > 0 && (
         <div className="w-full space-y-1 pt-1 border-t border-slate-200">
@@ -9649,7 +9649,7 @@ export function JobsKanban({ jobs, onOpen, onDropMove }: { jobs: any[]; onOpen: 
                 <div className="flex items-center justify-between gap-1">
                   <span className="text-[10px] font-bold text-slate-400">exp {String(j.expiryDate || '').slice(0, 10) || '—'}</span>
                   {next ? <button type="button" title={`Advance to ${next}`} onClick={(e) => { e.stopPropagation(); onDropMove(j, next); }}
-                    className="px-2 py-0.5 rounded-lg bg-[#087BFF] text-white text-[10px] font-extrabold hover:bg-blue-600">→ {next}</button> : null}
+                    className="px-2 py-0.5 rounded-lg bg-[#0B5FD9] text-white text-[10px] font-extrabold hover:bg-blue-600">→ {next}</button> : null}
                 </div>
               </div>
               );

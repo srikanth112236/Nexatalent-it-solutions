@@ -13,7 +13,7 @@ const LOCATIONS = [
   { city: 'Hyderabad', note: 'GCC & platform teams', openings: 8 },
   { city: 'Mumbai', note: 'BFSI, HFT & media', openings: 6 },
   { city: 'Chennai', note: 'GCC, SaaS & manufacturing', openings: 7 },
-  { city: 'Pune', note: 'Automotive & manufacturing', openings: 5 },
+  { city: 'Pune', note: 'Golang, Cloud & Enterprise', openings: 6 },
 ];
 
 const CATEGORIES = ['All Roles', 'Engineering', 'Data & AI', 'Leadership', 'Operations'];
@@ -91,7 +91,7 @@ export function NewCareersPage() {
     const term = q.trim().toLowerCase();
     return allJobs.filter((r) => {
       const matchQ = !term || `${r.title} ${r.domain} ${r.type} ${r.location} ${r.skills.join(' ')}`.toLowerCase().includes(term);
-      const matchLoc = loc === 'Anywhere' || r.location === loc || (loc === 'Remote' && r.location.includes('Remote'));
+      const matchLoc = loc === 'Anywhere' || r.location === loc || r.location.toLowerCase().includes(loc.toLowerCase()) || (loc === 'Remote' && r.location.includes('Remote'));
       const matchCat = category === 'All Roles' || r.category === category;
       const matchTab = tab === 'premium' ? r.premium : true;
       return matchQ && matchLoc && matchCat && matchTab;

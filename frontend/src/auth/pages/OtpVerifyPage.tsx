@@ -4,22 +4,42 @@
    ============================================================================ */
 
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
 import { apiClient } from '../../shared/api-client';
 import { Logo } from '../../website/components/Logo';
+import { persistSession } from '../../shared/auth/session';
+import type { UserRole } from '../../shared/types';
+import { ROLE_DEFAULT_REDIRECTS } from '../../shared/constants';
 
-export function OtpVerifyPage({ email, purpose = 'verify', mode }: { email?: string; purpose?: string; mode?: 'register' | 'login' | 'reset' }) {
+export function OtpVerifyPage({ email, purpose, mode }: { email?: string; purpose?: string; mode?: 'register' | 'login' | 'reset' }) {
   const navigate = useNavigate();
-  const [code, setCode] = useState('');
-  const [activeCode, setActiveCode] = useState<string[]>(['', '', '', '', '', '']);
+  const [params] = useSearchParams();
+
+  // The route is mounted without props, so the address travels in the query
+  // string (?email=…&mode=login). Without this the page showed a blank address
+  // and every verification request failed with "email required".
+  const queryEmail = params.get('email') || '';
+  const queryMode = params.get('mode');
+  const targetEmail = (email || queryEmail).trim();
+  const effectiveMode: 'register' | 'login' | 'reset' | 'verify' =
+    mode || (queryMode === 'register' || queryMode === 'login' || queryMode === 'reset' ? queryMode : 'verify');
+  const effectivePurpose = purpose || (effectiveMode === 'register' ? 'register' : 'verify');
+  const devCode = params.get('devCode') || '';
+
+  const splitCode = (value: string) => {
+    const digits = String(value || '').replace(/\D/g, '').slice(0, 6).split('');
+    while (digits.length < 6) digits.push('');
+    return digits;
+  };
+
+  const [code, setCode] = useState(devCode.replace(/\D/g, '').slice(0, 6));
+  const [activeCode, setActiveCode] = useState<string[]>(splitCode(devCode));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
   const [secondsLeft, setSecondsLeft] = useState(600); // 10 minutes
   const [resendEnabled, setResendEnabled] = useState(false);
-
-  const targetEmail = email || '';
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -81,6 +101,10 @@ export function OtpVerifyPage({ email, purpose = 'verify', mode }: { email?: str
     e.preventDefault();
     setError('');
     setOk('');
+    if (!targetEmail) {
+      setError('No email address to verify. Please sign in again.');
+      return;
+    }
     if (code.length !== 6) {
       setError('Please enter all 6 digits of the code.');
       return;
@@ -95,7 +119,7 @@ export function OtpVerifyPage({ email, purpose = 'verify', mode }: { email?: str
 
       /* If this was a registration, complete the account creation now that
          email is verified, then start onboarding animation. */
-      if (mode === 'register') {
+      if (effectiveMode === 'register') {
         const pendingRaw = sessionStorage.getItem('nexatalent:pending_register');
         if (pendingRaw) {
           const pending = JSON.parse(pendingRaw);
@@ -108,10 +132,28 @@ export function OtpVerifyPage({ email, purpose = 'verify', mode }: { email?: str
           navigate('/onboarding/animation?role=candidate', { replace: true });
         }, 1500);
       } else {
-        setOk(body?.message || 'Email verified successfully.');
-        setTimeout(() => {
-          navigate('/login', { replace: true });
-        }, 1500);
+        // Sign-in verification hands back a real session — persist it and land
+        // in the caller's own workspace instead of bouncing to /login.
+        const token: string | undefined = body?.accessToken || body?.token;
+        const role = body?.user?.role as UserRole | undefined;
+        if (token && role && ROLE_DEFAULT_REDIRECTS[role]) {
+          persistSession({
+            accessToken: token,
+            refreshToken: body?.refreshToken,
+            role,
+            tenantId: body?.user?.tenantId,
+            email: body?.user?.email || targetEmail,
+          });
+          setOk('Email verified. Taking you to your workspace…');
+          setTimeout(() => {
+            navigate(ROLE_DEFAULT_REDIRECTS[role], { replace: true });
+          }, 700);
+        } else {
+          setOk(body?.message || 'Email verified successfully.');
+          setTimeout(() => {
+            navigate('/login', { replace: true });
+          }, 1500);
+        }
       }
     } catch (err: any) {
       setError(err?.response?.data?.message || err?.message || 'Verification failed. Please try again.');
@@ -124,10 +166,16 @@ export function OtpVerifyPage({ email, purpose = 'verify', mode }: { email?: str
     setError('');
     setOk('');
     try {
-      await apiClient.post<any>('/api/v1/auth/resend-otp', {
+      const res = await apiClient.post<any>('/api/v1/auth/resend-otp', {
         email: targetEmail,
-        purpose,
+        purpose: effectivePurpose,
       });
+      // Local/dev convenience: the API may echo the generated code.
+      const echoed = (res as any)?.data?.devCode || (res as any)?.devCode;
+      if (echoed) {
+        setActiveCode(splitCode(String(echoed)));
+        setCode(String(echoed));
+      }
       setSecondsLeft(600);
       setResendEnabled(false);
       setOk('A new code has been sent to your email.');
@@ -156,11 +204,11 @@ export function OtpVerifyPage({ email, purpose = 'verify', mode }: { email?: str
           <Logo />
           <div className="mt-8">
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-              {mode === 'register' ? 'Verify Your Email' : 'Verify Your Identity'}
+              {effectiveMode === 'register' ? 'Verify Your Email' : 'Verify Your Identity'}
             </h1>
             <p className="text-slate-600 text-sm mt-1">
               Enter the 6-digit code sent to{' '}
-              <span className="font-bold text-slate-900">{targetEmail}</span>.
+              <span className="font-bold text-slate-900">{targetEmail || 'your email'}</span>.
             </p>
             <p className="text-xs text-slate-500 mt-1">
               Code expires in{' '}

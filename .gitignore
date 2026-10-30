@@ -37,6 +37,7 @@ tmp/
 temp/
 coverage/
 *.tsbuildinfo
+scripts/tmp-*.mjs
 
 # Local runtime state (seeded JSON DB + uploaded binaries, recreated on boot)
 backend/data/

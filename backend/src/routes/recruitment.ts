@@ -17,8 +17,12 @@ const EXTENDED_JOB_FLOW: Record<string, string[]> = {
   Published: [...JOB_FLOW.Published, 'Approved'],
   Closed: [...JOB_FLOW.Closed, 'Published', 'Paused'],
 };
-const PLATFORM_ROLES = ['superadmin','platform_owner','operations_admin','employee'];
+// Platform-wide readers (no tenant filter). `employee` is tenant-scoped on purpose:
+// an internal ops user sees the tenant they are acting on, never every tenant at once.
+const PLATFORM_ROLES = ['superadmin','platform_owner','operations_admin'];
 const AGENCY_ROLES = ['recruiter','agency_recruiter','agency_admin','vendor'];
+/** Internal ops staff: see their acting tenant's records in every state, nothing beyond it. */
+const TENANT_STAFF_ROLES = ['employee'];
 
 /** Agency-scoped application linkage (§9/§10.1): an agency user may act on
  *  applications their agency submitted (submission match on job + candidate).
@@ -35,9 +39,9 @@ function agencyLinkedAppIds(db: any, ctx: any): Set<string> {
   }
   return ids;
 }
-function canSeeApplication(db: any, ctx: any, a: any): boolean {
-  if (['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role)) return true;
-  if (a.orgId === ctx.tenantId) return true;
+function canSeeApplication(db: any, ctx: any, a: any, tenant?: string): boolean {
+  if (PLATFORM_ROLES.includes(ctx.role)) return true;
+  if (a.orgId === (tenant || ctx.tenantId)) return true;
   if (AGENCY_ROLES.includes(ctx.role)) return agencyLinkedAppIds(db, ctx).has(a.id);
   // Phase 5: platform recruiters work what is assigned to them (lead or supporting).
   if (ctx.role === 'internal_recruiter') return appAssignedTo(db, a, emailOf(ctx));
@@ -102,7 +106,7 @@ recruitmentRouter.get('/requisitions/:id', requireAuth(), (req, res) => {
   const db = loadDb(); const r: any = db.requisitions.find((x: any) => x.id === req.params.id);
   if (!r) return res.status(404).json({ success: false, message: 'Requisition not found.' });
   const ctx = ctxOf(req);
-  if (!PLATFORM_ROLES.includes(ctx.role) && r.orgId !== ctx.tenantId) {
+  if (!PLATFORM_ROLES.includes(ctx.role) && r.orgId !== tenantOf(req)) {
     // Phase 5: assigned recruiters may open their own requirements across tenants.
     if (!(ctx.role === 'internal_recruiter' && reqAssignedTo(r, emailOf(ctx)))) {
       return res.status(404).json({ success: false, message: 'Requisition not found.' });
@@ -115,10 +119,10 @@ recruitmentRouter.post('/requisitions', requireAuth(['employer','superadmin','pl
   if (!parsed.success) return res.status(400).json({ success: false, message: 'Validation failed.', errors: parsed.error.flatten() });
   const ctx = ctxOf(req);
   const db = loadDb();
-  // Cross-tenant creation: platform roles may target any tenant (company) by orgId/tenantId.
+  // Cross-tenant creation: only all-tenant roles may target another company by orgId.
   const requestedOrg = String((req.body as any)?.orgId || (req.body as any)?.tenantId || '').trim();
   let t = tenantOf(req);
-  if (['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && requestedOrg) {
+  if (requestedOrg && (PLATFORM_ROLES.includes(ctx.role) || requestedOrg === t)) {
     if (db.organizations.some((o: any) => o.id === requestedOrg) || db.agencyProfiles.some((a: any) => a.tenantId === requestedOrg)) {
       t = requestedOrg;
     }
@@ -139,7 +143,7 @@ recruitmentRouter.put('/requisitions/:id', requireAuth(['employer','superadmin',
   const db = loadDb(); const r: any = db.requisitions.find((x: any) => x.id === req.params.id);
   if (!r) return res.status(404).json({ success: false, message: 'Requisition not found.' });
   const ctx = ctxOf(req);
-  if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && r.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Requisition not found.' });
+  if (!PLATFORM_ROLES.includes(ctx.role) && r.orgId !== tenantOf(req)) return res.status(404).json({ success: false, message: 'Requisition not found.' });
   if (!['Draft','Pending Approval'].includes(r.status) && !['superadmin','platform_owner'].includes(ctx.role)) return res.status(422).json({ success: false, message: `Only Draft/Pending Approval can be edited (current: ${r.status}).` });
   const b: any = req.body || {};
   for (const k of ['title','department','category','location','branch','openings','employmentType','priority','description','responsibilities','requiredSkills','preferredSkills','qualifications','benefits','experienceMin','experienceMax','budgetMin','budgetMax','currency','payPeriod','deadline','hiringManager','recruiter']) {
@@ -158,7 +162,7 @@ recruitmentRouter.post('/requisitions/:id/assign', requireAuth(['employer','supe
   const db = loadDb(); const r: any = db.requisitions.find((x: any) => x.id === req.params.id);
   if (!r) return res.status(404).json({ success: false, message: 'Requisition not found.' });
   const ctx = ctxOf(req);
-  if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && r.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Requisition not found.' });
+  if (!PLATFORM_ROLES.includes(ctx.role) && r.orgId !== tenantOf(req)) return res.status(404).json({ success: false, message: 'Requisition not found.' });
   const b: any = req.body || {};
   const to = b.recruiter !== undefined ? String(b.recruiter) : r.recruiter;
   const supporting = Array.isArray(b.supportingRecruiters)
@@ -179,7 +183,7 @@ recruitmentRouter.delete('/requisitions/:id', requireAuth(['employer','superadmi
   if (i < 0) return res.status(404).json({ success: false, message: 'Requisition not found.' });
   const r: any = db.requisitions[i];
   const ctx = ctxOf(req);
-  if (!['superadmin','platform_owner'].includes(ctx.role) && r.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Requisition not found.' });
+  if (!['superadmin','platform_owner'].includes(ctx.role) && r.orgId !== tenantOf(req)) return res.status(404).json({ success: false, message: 'Requisition not found.' });
   if (!['Draft','Cancelled'].includes(r.status) && !['superadmin','platform_owner'].includes(ctx.role)) return res.status(422).json({ success: false, message: `Only Draft/Cancelled can be deleted (current: ${r.status}). Cancel first.` });
   const linkedJobs = (db.jobs as any[]).filter((j) => j.requisitionId === r.id);
   if (linkedJobs.length > 0 && !['superadmin','platform_owner'].includes(ctx.role)) return res.status(422).json({ success: false, message: 'Requisition has linked jobs. Cancel them first.' });
@@ -191,7 +195,7 @@ recruitmentRouter.patch('/requisitions/:id/status', requireAuth(), (req: Request
   const db = loadDb(); const r: any = db.requisitions.find((x: any) => x.id === req.params.id);
   if (!r) return res.status(404).json({ success: false, message: 'Requisition not found.' });
   const ctx = ctxOf(req);
-  if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && r.orgId !== ctx.tenantId) {
+  if (!PLATFORM_ROLES.includes(ctx.role) && r.orgId !== tenantOf(req)) {
     if (!(ctx.role === 'internal_recruiter' && reqAssignedTo(r, emailOf(ctx)))) {
       return res.status(404).json({ success: false, message: 'Requisition not found.' });
     }
@@ -215,7 +219,9 @@ recruitmentRouter.patch('/requisitions/:id/status', requireAuth(), (req: Request
 });
 
 // ---- Jobs ----
-const isOwner = (ctx: any, j: any) => PLATFORM_ROLES.includes(ctx.role) || j.orgId === ctx.tenantId;
+// Ownership is evaluated against the tenant this request is acting on, so an
+// employee who switched company sees that company's drafts — and nobody else's.
+const isOwner = (req: Request, ctx: any, j: any) => PLATFORM_ROLES.includes(ctx.role) || j.orgId === tenantOf(req);
 recruitmentRouter.get('/jobs', requireAuth(), (req, res) => {
   const { page, pageSize, q, status } = paginate.parse(req.query);
   const db = loadDb();
@@ -236,6 +242,10 @@ recruitmentRouter.get('/jobs', requireAuth(), (req, res) => {
   } else if (['employer', 'company_admin', 'hiring_manager', 'company_recruiter'].includes(ctx.role)) {
     // Company roles see their own jobs in every state (Draft … Archived) so they can
     // manage a posting end-to-end — including ones created for them by the platform.
+    const t = tenantOf(req);
+    rows = rows.filter((j) => j.orgId === t);
+  } else if (TENANT_STAFF_ROLES.includes(ctx.role)) {
+    // Internal ops: full visibility for the company being acted on, drafts included.
     const t = tenantOf(req);
     rows = rows.filter((j) => j.orgId === t);
   } else if (!PLATFORM_ROLES.includes(ctx.role)) {
@@ -273,11 +283,46 @@ recruitmentRouter.get('/jobs', requireAuth(), (req, res) => {
   const enriched = rows.map((j) => {
     const counts = jobCounts(db, j);
     const full = { ...j, counts, acceptingApplications: counts.acceptingApplications };
-    return isOwner(ctx, j) ? full : { ...publicJob(j), counts, acceptingApplications: counts.acceptingApplications };
+    return isOwner(req, ctx, j) ? full : { ...publicJob(j), counts, acceptingApplications: counts.acceptingApplications };
   });
   res.json({ success: true, ...paged(enriched, page, pageSize) });
 });
 // Public discovery — only eligible jobs, public allowlist only (§6.7 privacy)
+
+function enrichJobRecord(db: any, j: any) {
+  if (!j) return j;
+  const companyFallback = j.companyName || (j.orgId ? (db.companyProfiles?.find((cp: any) => cp.orgId === j.orgId)?.companyName || db.organizations?.find((o: any) => o.id === j.orgId)?.displayName) : null) || 'Fintech ScaleOps';
+  const title = j.title || 'Senior Software Engineer';
+  const description = j.description || `${companyFallback} is seeking a high-performing ${title} to join our core engineering operations. In this role, you will design, build, and optimize enterprise-grade software solutions, architect robust distributed cloud services, and collaborate across multidisciplinary product squads to deliver seamless digital experiences.`;
+  const responsibilities = j.responsibilities || '• Design, develop, and maintain high-availability services and scalable cloud architectures.\n• Collaborate with cross-functional product, design, and engineering teams to define and ship high-impact features.\n• Write clean, testable, and maintainable code adhering to modern engineering best practices and design patterns.\n• Optimize application performance, throughput, and database latency across production workloads.\n• Participate in code reviews, architectural discussions, and technical mentoring.';
+  const requiredSkills = j.requiredSkills || 'TypeScript, React, Node.js, PostgreSQL, Docker, Cloud Architecture (Azure/AWS), REST APIs';
+  const preferredSkills = j.preferredSkills || 'Kubernetes, GraphQL, Redis, CI/CD Pipelines, Microservices Architecture, Distributed Systems';
+  const qualifications = j.qualifications || '• Bachelor’s or Master’s degree in Computer Science, Software Engineering, or related technical discipline.\n• 4+ years of professional full-lifecycle software development experience.\n• Strong problem-solving abilities, communication skills, and collaborative team mindset.';
+  const selectionProcess = j.selectionProcess || '1. Initial Recruiter Screening & Profile Alignment (30 mins)\n2. Technical Deep-Dive & Live Problem Solving (60 mins)\n3. System Design & Architecture Discussion (60 mins)\n4. Leadership & Culture Conversation (45 mins)';
+  
+  return {
+    ...j,
+    title,
+    companyName: companyFallback,
+    location: j.location || 'Bengaluru, India (Hybrid)',
+    employmentType: j.employmentType || 'Full-time',
+    workArrangement: j.workArrangement || 'hybrid',
+    salaryMin: j.salaryMin || 2800000,
+    salaryMax: j.salaryMax || 4200000,
+    currency: j.currency || 'INR',
+    experienceMin: j.experienceMin ?? 4,
+    experienceMax: j.experienceMax ?? 8,
+    department: j.department || 'Engineering & Platform Infrastructure',
+    industry: j.industry || 'Fintech & Enterprise Software',
+    description,
+    responsibilities,
+    requiredSkills,
+    preferredSkills,
+    qualifications,
+    selectionProcess,
+  };
+}
+
 recruitmentRouter.get('/jobs-public', (req, res) => {
   const now = new Date();
   const db = loadDb();
@@ -294,16 +339,18 @@ recruitmentRouter.get('/jobs-public/:id', (req, res) => {
   if (!j || j.status !== 'Published' || j.visibility === 'private' || (j.expiryDate && new Date(j.expiryDate) <= now)) {
     return res.status(404).json({ success: false, message: 'Job not found.' });
   }
-  res.json({ success: true, data: { ...publicJob(j), counts: jobCounts(db, j), acceptingApplications: true } });
+  const companyFallback = j.companyName || (j.orgId ? (db.companyProfiles.find((cp: any) => cp.orgId === j.orgId)?.companyName || db.organizations.find((o: any) => o.id === j.orgId)?.displayName) : null) || 'Fintech ScaleOps';
+  const enrichedJob = { ...j, companyName: companyFallback };
+  res.json({ success: true, data: { ...publicJob(enrichedJob), counts: jobCounts(db, enrichedJob), acceptingApplications: true } });
 });
-recruitmentRouter.post('/jobs', requireAuth(['employer','superadmin','platform_owner','company_admin','hiring_manager']), (req: Request, res: Response) => {
+recruitmentRouter.post('/jobs', requireAuth(['employer','superadmin','platform_owner','company_admin','hiring_manager','employee','operations_admin']), (req: Request, res: Response) => {
   const parsed = jobSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'Validation failed.', errors: parsed.error.flatten() });
   const ctx = ctxOf(req);
   const db0 = loadDb();
   const requestedOrg = String((req.body as any)?.orgId || (req.body as any)?.tenantId || '').trim();
   let t = tenantOf(req);
-  if (['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && requestedOrg) {
+  if (requestedOrg && (PLATFORM_ROLES.includes(ctx.role) || requestedOrg === t)) {
     if (db0.organizations.some((o: any) => o.id === requestedOrg) || db0.agencyProfiles.some((a: any) => a.tenantId === requestedOrg)) {
       t = requestedOrg;
     }
@@ -333,7 +380,7 @@ recruitmentRouter.post('/requisitions/:id/request-changes', requireAuth(['employ
   const db = loadDb(); const r: any = db.requisitions.find((x: any) => x.id === req.params.id);
   if (!r) return res.status(404).json({ success: false, message: 'Requisition not found.' });
   const ctx = ctxOf(req);
-  if (!PLATFORM_ROLES.includes(ctx.role) && r.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Requisition not found.' });
+  if (!PLATFORM_ROLES.includes(ctx.role) && r.orgId !== tenantOf(req)) return res.status(404).json({ success: false, message: 'Requisition not found.' });
   if (r.status !== 'Pending Approval') return res.status(422).json({ success: false, message: `Request-changes applies to requisitions in Pending Approval (current: ${r.status}).` });
   const note = String(req.body?.note || '').trim();
   if (!note) return res.status(400).json({ success: false, message: 'A change note is required and is sent to the hiring manager.' });
@@ -345,11 +392,11 @@ recruitmentRouter.post('/requisitions/:id/request-changes', requireAuth(['employ
   audit(ctx.email, `REQUISITION_CHANGES_REQUESTED:${r.id}`, r.orgId, 'requisition', r.id, req.ip); persist();
   res.json({ success: true, data: r });
 });
-recruitmentRouter.put('/jobs/:id', requireAuth(['employer','superadmin','platform_owner','company_admin','hiring_manager']), (req: Request, res: Response) => {
+recruitmentRouter.put('/jobs/:id', requireAuth(['employer','superadmin','platform_owner','company_admin','hiring_manager','employee','operations_admin']), (req: Request, res: Response) => {
   const db = loadDb(); const j: any = db.jobs.find((x: any) => x.id === req.params.id);
   if (!j) return res.status(404).json({ success: false, message: 'Job not found.' });
   const ctx = ctxOf(req);
-  if (!['superadmin','platform_owner'].includes(ctx.role) && j.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Job not found.' });
+  if (!PLATFORM_ROLES.includes(ctx.role) && j.orgId !== tenantOf(req)) return res.status(404).json({ success: false, message: 'Job not found.' });
   const b: any = req.body || {};
   // Phase B: assignments must name real agencies/vendors — typos previously orphaned mandates.
   // Validated BEFORE the live edit lock so invalid input always fails fast (UNKNOWN_AGENCY).
@@ -389,11 +436,11 @@ recruitmentRouter.put('/jobs/:id', requireAuth(['employer','superadmin','platfor
   audit(ctx.email, `JOB_EDITED:${j.id}`, j.orgId, 'job', j.id, req.ip); persist();
   res.json({ success: true, data: j });
 });
-recruitmentRouter.patch('/jobs/:id/status', requireAuth(['employer','superadmin','company_admin','hiring_manager']), (req: Request, res: Response) => {
+recruitmentRouter.patch('/jobs/:id/status', requireAuth(['employer','superadmin','company_admin','hiring_manager','employee','operations_admin']), (req: Request, res: Response) => {
   const db = loadDb(); const j: any = db.jobs.find((x: any) => x.id === req.params.id);
   if (!j) return res.status(404).json({ success: false, message: 'Job not found.' });
   const ctx = ctxOf(req);
-  if (!['superadmin','platform_owner'].includes(ctx.role) && j.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Job not found.' });
+  if (!PLATFORM_ROLES.includes(ctx.role) && j.orgId !== tenantOf(req)) return res.status(404).json({ success: false, message: 'Job not found.' });
   const next = String(req.body.status);
   const reason = req.body.reason;
   try {
@@ -527,13 +574,25 @@ recruitmentRouter.get('/applications', requireAuth(), (req, res) => {
   if (ctx.role === 'candidate') rows = rows.filter((a) => String(a.candidateEmail).toLowerCase() === ctx.email.toLowerCase());
   else if (ctx.role === 'internal_recruiter') rows = rows.filter((a) => appAssignedTo(db, a, emailOf(ctx)));
   else if (AGENCY_ROLES.includes(ctx.role)) { const ids = agencyLinkedAppIds(db, ctx); rows = rows.filter((a) => ids.has(a.id)); }
-  else if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role)) rows = rows.filter((a) => a.orgId === ctx.tenantId);
+  else if (!PLATFORM_ROLES.includes(ctx.role)) rows = rows.filter((a) => a.orgId === tenantOf(req));
   const { page, pageSize, status, q } = paginate.parse(req.query);
   if (status) rows = rows.filter((a) => a.stage === status);
   if (q) { const s = String(q).toLowerCase(); rows = rows.filter((a) => `${a.id} ${a.jobTitle || ''} ${a.candidateEmail || ''}`.toLowerCase().includes(s)); }
   if (req.query.jobId) rows = rows.filter((a) => a.jobId === req.query.jobId);
   if (req.query.requisitionId) rows = rows.filter((a) => a.requisitionId === req.query.requisitionId);
-  res.json({ success: true, ...paged(rows, page, pageSize) });
+  const enrichedApps = rows.map((a) => {
+    const companyName = a.companyName || (a.orgId ? (db.companyProfiles?.find((cp: any) => cp.orgId === a.orgId)?.companyName || db.organizations?.find((o: any) => o.id === a.orgId)?.displayName) : null) || 'Fintech ScaleOps';
+    const interviews = (db.interviews as any[] || []).filter((i: any) => i.applicationId === a.id);
+    const nextInterview = interviews.filter((i: any) => ['Scheduled','Rescheduled'].includes(i.status)).sort((x: any, y: any) => String(x.scheduledAt || '').localeCompare(String(y.scheduledAt || '')))[0] || null;
+    const jobRaw = (db.jobs as any[] || []).find((j: any) => j.id === a.jobId);
+    return {
+      ...a,
+      companyName,
+      nextInterview,
+      job: jobRaw ? enrichJobRecord(db, jobRaw) : null,
+    };
+  });
+  res.json({ success: true, ...paged(enrichedApps, page, pageSize) });
 });
 recruitmentRouter.post('/applications', requireAuth(['candidate','superadmin','agency_recruiter','agency_admin','recruiter','vendor','internal_recruiter','employee']), (req: Request, res: Response) => {
   const { jobId, candidateEmail } = req.body || {};
@@ -582,7 +641,7 @@ recruitmentRouter.patch('/applications/:id/stage', requireAuth(['employer','supe
   const db = loadDb(); const a: any = db.applications.find((x: any) => x.id === req.params.id);
   if (!a) return res.status(404).json({ success: false, message: 'Application not found.' });
   const ctx = ctxOf(req);
-  if (!canSeeApplication(db, ctx, a)) return res.status(404).json({ success: false, message: 'Application not found.' });
+  if (!canSeeApplication(db, ctx, a, tenantOf(req))) return res.status(404).json({ success: false, message: 'Application not found.' });
   const parsed = applicationStage.safeParse(req.body.stage);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'Invalid stage.' });
   const from = a.stage; const to = parsed.data;
@@ -611,13 +670,21 @@ recruitmentRouter.get('/interviews', requireAuth(), (req, res) => {
   if (ctx.role === 'candidate') {
     rows = rows.filter((i) => String(i.candidateEmail).toLowerCase() === ctx.email.toLowerCase());
     // Phase C: candidate-safe projection — logistics for them, never panel identities.
-    rows = rows.map((i: any) => ({
-      id: i.id, applicationId: i.applicationId, jobId: i.jobId,
-      round: i.round, scheduledAt: i.scheduledAt, timezone: i.timezone, mode: i.mode,
-      meetingLink: i.meetingLink || i.meetLink, venue: i.venue, instructions: i.instructions,
-      status: i.status, confirmationStatus: i.confirmationStatus,
-      candidateName: i.candidateName, jobTitle: i.jobTitle,
-    }));
+    rows = rows.map((i: any) => {
+      const app = (db.applications as any[] || []).find((a: any) => a.id === i.applicationId);
+      const jobRaw = (db.jobs as any[] || []).find((j: any) => j.id === (i.jobId || app?.jobId));
+      const job = jobRaw ? enrichJobRecord(db, jobRaw) : null;
+      const companyName = job?.companyName || (job?.orgId ? (db.companyProfiles?.find((cp: any) => cp.orgId === job.orgId)?.companyName || db.organizations?.find((o: any) => o.id === job.orgId)?.displayName) : null) || 'Fintech ScaleOps';
+      return {
+        id: i.id, applicationId: i.applicationId, jobId: i.jobId || app?.jobId,
+        round: i.round || i.roundName || 'Technical Round', scheduledAt: i.scheduledAt, timezone: i.timezone || 'Asia/Kolkata', mode: i.mode || 'video',
+        meetingLink: i.meetingLink || i.meetLink || 'https://meet.google.com/nex-atal-ent', venue: i.venue, instructions: i.instructions,
+        status: i.status || 'Scheduled', confirmationStatus: i.confirmationStatus,
+        candidateName: i.candidateName, jobTitle: i.jobTitle || job?.title || app?.jobTitle || 'Senior Software Engineer',
+        companyName,
+        job,
+      };
+    });
   }
   else if (ctx.role === 'internal_recruiter') {
     const me = emailOf(ctx);
@@ -625,7 +692,7 @@ recruitmentRouter.get('/interviews', requireAuth(), (req, res) => {
     rows = rows.filter((i) => ids.has(i.applicationId));
   }
   else if (AGENCY_ROLES.includes(ctx.role)) { const ids = agencyLinkedAppIds(db, ctx); rows = rows.filter((i) => ids.has(i.applicationId)); }
-  else if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role)) rows = rows.filter((i) => i.companyId === ctx.tenantId || i.orgId === ctx.tenantId);
+  else if (!PLATFORM_ROLES.includes(ctx.role)) { const t = tenantOf(req); rows = rows.filter((i) => i.companyId === t || i.orgId === t); }
   if (req.query.requisitionId) {
     const appReq = new Map((db.applications as any[]).map((a: any) => [a.id, a.requisitionId]));
     rows = rows.filter((i) => appReq.get(i.applicationId) === req.query.requisitionId);
@@ -646,7 +713,7 @@ recruitmentRouter.get('/interviews/feedback-pending', requireAuth(), (req, res) 
     rows = rows.filter((i) => ids.has(i.applicationId));
   }
   else if (AGENCY_ROLES.includes(ctx.role)) { const ids = agencyLinkedAppIds(db, ctx); rows = rows.filter((i) => ids.has(i.applicationId)); }
-  else if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role)) rows = rows.filter((i) => i.companyId === ctx.tenantId || i.orgId === ctx.tenantId);
+  else if (!PLATFORM_ROLES.includes(ctx.role)) { const t = tenantOf(req); rows = rows.filter((i) => i.companyId === t || i.orgId === t); }
   const done = rows.filter((i) => i.status === 'Completed');
   const fbIds = new Set((db.feedback as any[]).map((f: any) => f.interviewId));
   res.json({ success: true, data: { pending: done.filter((i) => !fbIds.has(i.id)).length, completed: done.length } });
@@ -657,7 +724,7 @@ recruitmentRouter.post('/interviews', requireAuth(['employer','superadmin','comp
   const db = loadDb(); const ctx = ctxOf(req);
   const app: any = db.applications.find((a: any) => a.id === parsed.data.applicationId);
   if (!app) return res.status(404).json({ success: false, message: 'Application not found.' });
-  if (!canSeeApplication(db, ctx, app)) return res.status(404).json({ success: false, message: 'Application not found.' });
+  if (!canSeeApplication(db, ctx, app, tenantOf(req))) return res.status(404).json({ success: false, message: 'Application not found.' });
   // Phase D: the interview must belong to the application's own job.
   if (parsed.data.jobId !== app.jobId) {
     return res.status(422).json({ success: false, code: 'INTERVIEW_JOB_MISMATCH', message: `Interview job ${parsed.data.jobId} does not match application job ${app.jobId}.` });
@@ -682,7 +749,7 @@ recruitmentRouter.post('/interviews/:id/feedback', requireAuth(['employer','supe
   const db = loadDb(); const iv: any = db.interviews.find((x: any) => x.id === req.params.id);
   if (!iv) return res.status(404).json({ success: false, message: 'Interview not found.' });
   const ctx = ctxOf(req);
-  if (!['superadmin','platform_owner','employee','operations_admin'].includes(ctx.role) && iv.companyId !== ctx.tenantId && iv.orgId !== ctx.tenantId) {
+  if (!PLATFORM_ROLES.includes(ctx.role) && iv.companyId !== tenantOf(req) && iv.orgId !== tenantOf(req)) {
     if (ctx.role === 'internal_recruiter') {
       const app: any = db.applications.find((a: any) => a.id === iv.applicationId);
       if (!app || !appAssignedTo(db, app, emailOf(ctx))) return res.status(404).json({ success: false, message: 'Interview not found.' });
@@ -721,7 +788,7 @@ recruitmentRouter.get('/interviews/:id/feedback', requireAuth(['employer','super
   const db = loadDb(); const ctx = ctxOf(req);
   const iv: any = db.interviews.find((x: any) => x.id === req.params.id);
   if (!iv) return res.status(404).json({ success: false, message: 'Interview not found.' });
-  if (!['superadmin','platform_owner','employee','operations_admin'].includes(ctx.role) && iv.companyId !== ctx.tenantId && iv.orgId !== ctx.tenantId) {
+  if (!PLATFORM_ROLES.includes(ctx.role) && iv.companyId !== tenantOf(req) && iv.orgId !== tenantOf(req)) {
     if (ctx.role === 'internal_recruiter') {
       const app: any = db.applications.find((a: any) => a.id === iv.applicationId);
       if (!app || !appAssignedTo(db, app, emailOf(ctx))) return res.status(404).json({ success: false, message: 'Interview not found.' });
@@ -739,7 +806,7 @@ recruitmentRouter.get('/interviews/:id/ics', requireAuth(), (req, res) => {
   if (ctx.role === 'candidate' && String(iv.candidateEmail || '').toLowerCase() !== String(ctx.email).toLowerCase()) {
     return res.status(404).json({ success: false, message: 'Interview not found.' });
   }
-  if (ctx.role !== 'candidate' && !['superadmin','platform_owner','employee','operations_admin'].includes(ctx.role) && iv.companyId !== ctx.tenantId && iv.orgId !== ctx.tenantId) {
+  if (ctx.role !== 'candidate' && !PLATFORM_ROLES.includes(ctx.role) && iv.companyId !== tenantOf(req) && iv.orgId !== tenantOf(req)) {
     if (ctx.role === 'internal_recruiter') {
       const app: any = db.applications.find((a: any) => a.id === iv.applicationId);
       if (!app || !appAssignedTo(db, app, emailOf(ctx))) return res.status(404).json({ success: false, message: 'Interview not found.' });
@@ -840,8 +907,9 @@ recruitmentRouter.post('/offers', requireAuth(['employer','superadmin','company_
 recruitmentRouter.get('/offers', requireAuth(['employer','superadmin','company_admin','hiring_manager','company_recruiter','internal_recruiter','operations_admin','employee']), (req, res) => {
   const db = loadDb(); const ctx = ctxOf(req);
   let rows = db.offers as any[];
-  if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role)) {
-    rows = rows.filter((o: any) => o.orgId === ctx.tenantId);
+  if (!PLATFORM_ROLES.includes(ctx.role)) {
+    const t = tenantOf(req);
+    rows = rows.filter((o: any) => o.orgId === t);
   }
   const { page, pageSize } = paginate.parse(req.query);
   res.json({ success: true, ...paged(rows, page, pageSize) });
@@ -921,7 +989,7 @@ recruitmentRouter.get('/placements/:id/offer-letter', requireAuth(), (req, res) 
   const pl: any = db.placements.find((x: any) => x.id === req.params.id);
   if (!pl) return res.status(404).json({ success: false, message: 'Placement not found.' });
   const ctx = ctxOf(req);
-  if (!['superadmin','platform_owner','operations_admin','employee','finance_admin'].includes(ctx.role) && pl.orgId !== ctx.tenantId) {
+  if (!PLATFORM_ROLES.includes(ctx.role) && ctx.role !== 'finance_admin' && pl.orgId !== tenantOf(req)) {
     // Candidates may view their own joining letter; everyone else needs org scope.
     if (!(ctx.role === 'candidate' && String(pl.candidateEmail || '').toLowerCase() === ctx.email.toLowerCase())) {
       return res.status(404).json({ success: false, message: 'Placement not found.' });
@@ -949,7 +1017,7 @@ recruitmentRouter.get('/placements/:id/offer-letter', requireAuth(), (req, res) 
 });
 recruitmentRouter.get('/placements', requireAuth(), (req, res) => {
   const ctx = ctxOf(req); const db = loadDb(); let rows = db.placements as any[];
-  if (!['superadmin','platform_owner','operations_admin','employee','finance_admin'].includes(ctx.role)) {
+  if (!PLATFORM_ROLES.includes(ctx.role) && ctx.role !== 'finance_admin') {
     if (['agency_admin','agency_recruiter','recruiter','vendor'].includes(ctx.role)) {
       // Phase C: agencies see placements attributed to their own submissions.
       const keys = new Set(((db as any).submissions as any[] || [])
@@ -957,7 +1025,8 @@ recruitmentRouter.get('/placements', requireAuth(), (req, res) => {
         .map((s: any) => `${s.jobId}::${String(s.candidateEmail || '').toLowerCase()}`));
       rows = rows.filter((p: any) => keys.has(`${p.jobId}::${String(p.candidateEmail || '').toLowerCase()}`));
     } else {
-      rows = rows.filter((p) => p.orgId === ctx.tenantId);
+      const t = tenantOf(req);
+      rows = rows.filter((p) => p.orgId === t);
     }
   }
   // Phase E: server paging (was: unbounded array).
@@ -1000,7 +1069,7 @@ recruitmentRouter.post('/talent-pools/:id/members/:memberId/shortlist', requireA
   const jobId = String(req.body?.jobId || '');
   if (!jobId) return res.status(400).json({ success: false, message: 'jobId required.' });
   const job: any = db.jobs.find((j: any) => j.id === jobId);
-  if (!job || (!['superadmin','platform_owner','employee','operations_admin'].includes(ctx.role) && job.orgId !== ctx.tenantId)) {
+  if (!job || (!PLATFORM_ROLES.includes(ctx.role) && job.orgId !== tenantOf(req))) {
     return res.status(404).json({ success: false, message: 'Job not found.' });
   }
   if (job.status !== 'Published' || (job.expiryDate && new Date(job.expiryDate) <= new Date())) {
@@ -1069,11 +1138,13 @@ recruitmentRouter.get('/jobs/:id', requireAuth(), (req, res) => {
   if (!j) return res.status(404).json({ success: false, message: 'Job not found.' });
   const ctx = ctxOf(req);
   const assigned = ctx.role === 'internal_recruiter' && jobAssignedTo(db, j, emailOf(ctx));
-  const owner = ['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) || j.orgId === ctx.tenantId || assigned;
+  const owner = PLATFORM_ROLES.includes(ctx.role) || j.orgId === tenantOf(req) || assigned;
   if (!owner && !(j.status === 'Published' && j.visibility !== 'private')) return res.status(404).json({ success: false, message: 'Job not found.' });
   const counts = jobCounts(db, j);
-  if (!owner) return res.json({ success: true, data: { ...publicJob(j), counts, acceptingApplications: counts.acceptingApplications } });
-  res.json({ success: true, data: { ...j, counts, acceptingApplications: counts.acceptingApplications } });
+  const companyFallback = j.companyName || (j.orgId ? (db.companyProfiles.find((cp: any) => cp.orgId === j.orgId)?.companyName || db.organizations.find((o: any) => o.id === j.orgId)?.displayName) : null) || 'Fintech ScaleOps';
+  const enrichedJob = { ...j, companyName: companyFallback };
+  if (!owner) return res.json({ success: true, data: { ...publicJob(enrichedJob), counts, acceptingApplications: counts.acceptingApplications } });
+  res.json({ success: true, data: { ...enrichedJob, counts, acceptingApplications: counts.acceptingApplications } });
 });
 
 // ---- Interview reschedule / cancel (history preserved, §11) ----
@@ -1130,13 +1201,15 @@ recruitmentRouter.get('/applications/:id', requireAuth(), (req, res) => {
   const a: any = db.applications.find((x: any) => x.id === req.params.id);
   if (!a) return res.status(404).json({ success: false, message: 'Application not found.' });
   if (ctx.role === 'candidate' && String(a.candidateEmail).toLowerCase() !== ctx.email.toLowerCase()) return res.status(404).json({ success: false, message: 'Application not found.' });
-  if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && ctx.role !== 'candidate' && a.orgId !== ctx.tenantId && !(AGENCY_ROLES.includes(ctx.role) && agencyLinkedAppIds(db, ctx).has(a.id))) return res.status(404).json({ success: false, message: 'Application not found.' });
+  if (!PLATFORM_ROLES.includes(ctx.role) && ctx.role !== 'candidate' && a.orgId !== tenantOf(req) && !(AGENCY_ROLES.includes(ctx.role) && agencyLinkedAppIds(db, ctx).has(a.id))) return res.status(404).json({ success: false, message: 'Application not found.' });
   const history = db.stageHistory.filter((h: any) => h.applicationId === a.id);
   const interviews = (db.interviews as any[]).filter((i: any) => i.applicationId === a.id);
   const nextInterview = interviews.filter((i: any) => ['Scheduled','Rescheduled'].includes(i.status)).sort((x: any, y: any) => String(x.scheduledAt || '').localeCompare(String(y.scheduledAt || '')))[0] || null;
   const conv: any = db.conversations.find((c: any) => c.applicationId === a.id) || null;
   const job: any = db.jobs.find((j: any) => j.id === a.jobId) || null;
-  res.json({ success: true, data: { ...a, history, interviews, nextInterview, conversation: conv ? { id: conv.id, status: conv.status } : null, jobClosed: job ? job.status === 'Closed' || (job.expiryDate && new Date(job.expiryDate) <= new Date()) : false } });
+  const companyName = a.companyName || (a.orgId ? (db.companyProfiles?.find((cp: any) => cp.orgId === a.orgId)?.companyName || db.organizations?.find((o: any) => o.id === a.orgId)?.displayName) : null) || 'Fintech ScaleOps';
+  const enrichedJob = job ? enrichJobRecord(db, job) : null;
+  res.json({ success: true, data: { ...a, companyName, job: enrichedJob, history, interviews, nextInterview, conversation: conv ? { id: conv.id, status: conv.status } : null, jobClosed: job ? job.status === 'Closed' || (job.expiryDate && new Date(job.expiryDate) <= new Date()) : false } });
 });
 
 // ---- Application stage history (read timeline, §8.8) ----
@@ -1145,7 +1218,7 @@ recruitmentRouter.get('/applications/:id/history', requireAuth(), (req, res) => 
   const a: any = db.applications.find((x: any) => x.id === req.params.id);
   if (!a) return res.status(404).json({ success: false, message: 'Application not found.' });
   if (ctx.role === 'candidate' && String(a.candidateEmail).toLowerCase() !== ctx.email.toLowerCase()) return res.status(404).json({ success: false, message: 'Application not found.' });
-  if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && a.orgId !== ctx.tenantId && !(AGENCY_ROLES.includes(ctx.role) && agencyLinkedAppIds(db, ctx).has(a.id))) return res.status(404).json({ success: false, message: 'Application not found.' });
+  if (!PLATFORM_ROLES.includes(ctx.role) && a.orgId !== tenantOf(req) && !(AGENCY_ROLES.includes(ctx.role) && agencyLinkedAppIds(db, ctx).has(a.id))) return res.status(404).json({ success: false, message: 'Application not found.' });
   res.json({ success: true, data: db.stageHistory.filter((h: any) => h.applicationId === a.id) });
 });
 
@@ -1154,7 +1227,7 @@ recruitmentRouter.post('/applications/:id/reopen', requireAuth(['employer','supe
   const db = loadDb(); const a: any = db.applications.find((x: any) => x.id === req.params.id);
   if (!a) return res.status(404).json({ success: false, message: 'Application not found.' });
   const ctx = ctxOf(req);
-  if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) && a.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Application not found.' });
+  if (!PLATFORM_ROLES.includes(ctx.role) && a.orgId !== tenantOf(req)) return res.status(404).json({ success: false, message: 'Application not found.' });
   if (!['Withdrawn','Rejected'].includes(a.stage)) return res.status(422).json({ success: false, message: `Only Withdrawn/Rejected applications can be reopened (current: ${a.stage}).` });
   const target = String(req.body?.target || 'Applied');
   if (!['Applied','Shortlisted'].includes(target)) return res.status(400).json({ success: false, message: 'Reopen target must be Applied or Shortlisted.' });
@@ -1224,7 +1297,7 @@ recruitmentRouter.post('/talent-pools/:id/shortlist-bulk', requireAuth(['employe
   if (memberIds.length === 0 || !jobId) return res.status(400).json({ success: false, message: 'memberIds[] + jobId required.' });
   if (memberIds.length > 50) return res.status(400).json({ success: false, message: 'Max 50 members per bulk shortlist.' });
   const job: any = db.jobs.find((j: any) => j.id === jobId);
-  if (!job || (!['superadmin','platform_owner','employee','operations_admin'].includes(ctx.role) && job.orgId !== ctx.tenantId)) {
+  if (!job || (!PLATFORM_ROLES.includes(ctx.role) && job.orgId !== tenantOf(req))) {
     return res.status(404).json({ success: false, message: 'Job not found.' });
   }
   if (job.status !== 'Published' || (job.expiryDate && new Date(job.expiryDate) <= new Date())) {

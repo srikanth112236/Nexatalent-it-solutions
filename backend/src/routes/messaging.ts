@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { loadDb, persist, uid, nowIso, audit } from '../db/store.js';
-import { requireAuth, ctxOf } from '../middleware/rbac.js';
+import { requireAuth, ctxOf, tenantOf, isAllTenant } from '../middleware/rbac.js';
 import { messageSchema } from '../validate/schemas.js';
 
 /** Interview-only chat (§13). Eligibility enforced on every call. */
@@ -40,7 +40,7 @@ messagingRouter.get('/conversations', requireAuth(), (req, res) => {
       return agencyLinkedToApp(db, ctx, app);
     });
   }
-  else if (!['superadmin','platform_owner','employee','operations_admin'].includes(ctx.role)) rows = rows.filter((c) => c.companyId === ctx.tenantId);
+  else if (!isAllTenant(ctx.role)) rows = rows.filter((c) => c.companyId === tenantOf(req));
   res.json({ success: true, data: rows });
 });
 

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { apiClient } from '../api-client';
 import { getAccessToken } from '../auth/session';
 
@@ -35,8 +35,7 @@ export function invalidateCollections(keys?: string[]) {
       e.updatedAt = 0;
       e.data = null;
       notify(k);
-    }
-    return;
+    }    return;
   }
   for (const k of keys) {
     const e = cache.get(k);
@@ -116,4 +115,28 @@ export function useCollection<T>(key: string, endpoint: string) {
 
   const entry = getEntry<T>(key);
   return { data: entry.data, loading: entry.loading, error: entry.error, refresh };
+}
+
+/**
+ * Cross-portal sync bus. `syncAll()` broadcasts `nexa:sync` after every
+ * successful mutation, but nothing listened — so caches stayed stale and each
+ * portal only refreshed on a full reload. Registering once here makes the
+ * broadcast actually invalidate cached collections.
+ */
+if (typeof window !== 'undefined') {
+  window.addEventListener('nexa:sync', () => invalidateCollections());
+}
+
+/**
+ * Let a panel with its own local state join the sync bus: pass its `load`
+ * function and it re-fetches whenever any portal completes a mutation.
+ */
+export function usePortalSync(refresh: () => void) {
+  const ref = useRef(refresh);
+  ref.current = refresh;
+  useEffect(() => {
+    const onSync = () => ref.current();
+    window.addEventListener('nexa:sync', onSync);
+    return () => window.removeEventListener('nexa:sync', onSync);
+  }, []);
 }

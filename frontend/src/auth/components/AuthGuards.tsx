@@ -3,6 +3,8 @@ import { Navigate, useLocation } from 'react-router-dom';
 import type { UserRole } from '../../shared/types';
 import { ROLE_DEFAULT_REDIRECTS } from '../../shared/constants';
 import { getAccessToken, getActiveRole, getTenantId, isTokenExpired } from '../../shared/auth/session';
+import { useAuth } from '../../shared/auth/AuthContext';
+import { InlineLoading } from '../../shared/ui/DataState';
 
 interface AuthGuardProps {
   children: ReactNode;
@@ -27,12 +29,27 @@ interface RoleGuardProps {
 }
 
 export function RoleGuard({ allowedRoles, children }: RoleGuardProps) {
-  // Role is bound at login to the server-issued session (persistSession).
-  // It is still client-readable, so the backend MUST re-enforce roles per API.
-  const activeRole = getActiveRole() || 'candidate';
+  const { user, isLoading } = useAuth();
+  const location = useLocation();
 
-  if (!allowedRoles.includes(activeRole)) {
-    const defaultRedirect = ROLE_DEFAULT_REDIRECTS[activeRole] || '/login';
+  // Wait for the /auth/me answer before painting a protected workspace. The
+  // cached role is client-editable (localStorage), so it must never decide on
+  // its own whether a console renders.
+  if (isLoading) {
+    return (
+      <div className="min-h-[60vh] grid place-items-center">
+        <InlineLoading message="Verifying your access…" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (!allowedRoles.includes(user.role)) {
+    // Send the caller to the workspace their *server* role actually owns.
+    const defaultRedirect = ROLE_DEFAULT_REDIRECTS[user.role] || '/login';
     return <Navigate to={defaultRedirect} replace />;
   }
 
@@ -53,4 +70,9 @@ export function TenantGuard({ children }: TenantGuardProps) {
   }
 
   return <>{children}</>;
+}
+
+/** Kept for callers that only need the cached hint (never for access decisions). */
+export function cachedRoleOrNull(): UserRole | null {
+  return getActiveRole();
 }

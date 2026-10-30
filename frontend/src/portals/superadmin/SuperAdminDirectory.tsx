@@ -286,7 +286,7 @@ export function OrganizationsManager({ tenants, setTenants, onAudit }: {
           </div>
           <div className="flex justify-end gap-2 pt-1">
             <button type="button" onClick={() => setEditing(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
-            <button disabled={busy || !editForm.legalName.trim()} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50">{busy ? 'Saving…' : 'Save changes'}</button>
+            <button disabled={busy || !editForm.legalName.trim()} className="px-4 py-2.5 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs disabled:opacity-50">{busy ? 'Saving…' : 'Save changes'}</button>
           </div>
         </form>
       </Modal>
@@ -313,7 +313,7 @@ export function OrganizationsManager({ tenants, setTenants, onAudit }: {
             <div className="flex items-end"><span className="text-[11px] text-slate-500 font-medium pb-2">Tenant: <strong className="font-mono">{inviteFor?.id}</strong></span></div>
             <div className="sm:col-span-2 flex justify-end gap-2">
               <button type="button" onClick={() => setInviteFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
-              <button disabled={busy || !inviteForm.email.trim()} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50">{busy ? 'Inviting…' : 'Invite administrator'}</button>
+              <button disabled={busy || !inviteForm.email.trim()} className="px-4 py-2.5 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs disabled:opacity-50">{busy ? 'Inviting…' : 'Invite administrator'}</button>
             </div>
           </form>
         )}
@@ -325,7 +325,7 @@ export function OrganizationsManager({ tenants, setTenants, onAudit }: {
           <Field label="Sales owner"><input className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" value={mgrForm.salesOwner} onChange={(e) => setMgrForm({ ...mgrForm, salesOwner: e.target.value })} placeholder="Name or email" /></Field>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setMgrFor(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
-            <button disabled={busy} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50">{busy ? 'Saving…' : 'Assign'}</button>
+            <button disabled={busy} className="px-4 py-2.5 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs disabled:opacity-50">{busy ? 'Saving…' : 'Assign'}</button>
           </div>
         </form>
       </Modal>
@@ -601,7 +601,7 @@ export function UsersManager({ users, setUsers }: { users: any[]; setUsers: (u: 
           ]} />
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => { openEdit(detail); setDetail(null); }} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs">Edit</button>
+            <button type="button" onClick={() => { openEdit(detail); setDetail(null); }} className="px-4 py-2.5 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs">Edit</button>
             <button type="button" onClick={() => { setStatusFor(detail); setDetail(null); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Suspend / Reactivate</button>
             {detail.mfaEnabled && <button type="button" onClick={() => { setMfaFor(detail); }} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Reset MFA</button>}
           </div>
@@ -672,7 +672,7 @@ export function UsersManager({ users, setUsers }: { users: any[]; setUsers: (u: 
           <Field label="End date"><DatePicker value={editForm.endDate} onChange={(v) => setEditForm({ ...editForm, endDate: v })} ariaLabel="End date" placeholder="End date" /></Field>
           <div className="sm:col-span-2 flex justify-end gap-2">
             <button type="button" onClick={() => setEditing(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
-            <button disabled={busy} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50">{busy ? 'Saving…' : 'Save changes'}</button>
+            <button disabled={busy} className="px-4 py-2.5 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs disabled:opacity-50">{busy ? 'Saving…' : 'Save changes'}</button>
           </div>
         </form>
       </Modal>

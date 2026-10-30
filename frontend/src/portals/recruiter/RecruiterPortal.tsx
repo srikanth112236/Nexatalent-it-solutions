@@ -369,7 +369,7 @@ export function RecruiterPortal() {  const location = useLocation();
         {currentTab === 'overview' && (
         <div className="bg-white p-4 rounded-3xl border border-slate-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-[#087BFF] border border-blue-200 mb-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-[#0B5FD9] border border-blue-200 mb-2">
               <Briefcase size={14} /> Agency Partner Workspace
             </div>
             <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
@@ -381,7 +381,7 @@ export function RecruiterPortal() {  const location = useLocation();
           </div>
           <button
             onClick={() => openSubmitModal(jobs[0]?.id || '', jobs[0]?.title || '')}
-            className="px-5 py-3.5 rounded-xl bg-[#087BFF] hover:bg-blue-600 text-white font-bold text-xs shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0"
+            className="px-5 py-3.5 rounded-xl bg-[#0B5FD9] hover:bg-blue-600 text-white font-bold text-xs shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0"
           >
             <Plus size={16} /> Submit Candidate to Mandate
           </button>
@@ -419,7 +419,7 @@ export function RecruiterPortal() {  const location = useLocation();
                   <input value={agencyForm.address} onChange={(e) => setAgencyForm({ ...agencyForm, address: e.target.value })} className="mt-1 w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-900 outline-none" />
                 </label>
                 <div className="sm:col-span-2 flex gap-2">
-                  <button type="submit" disabled={agencyBusy} className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold disabled:opacity-50">{agencyBusy ? 'Saving…' : 'Save profile'}</button>
+                  <button type="submit" disabled={agencyBusy} className="px-4 py-2 rounded-xl bg-[#0B5FD9] text-white font-bold disabled:opacity-50">{agencyBusy ? 'Saving…' : 'Save profile'}</button>
                   <button type="button" onClick={() => setAgencyEditing(false)} className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold">Cancel</button>
                 </div>
                 <p className="sm:col-span-2 text-[11px] text-slate-500 font-medium">Verification + account status are managed by the platform and are read-only here.</p>
@@ -453,7 +453,7 @@ export function RecruiterPortal() {  const location = useLocation();
                   {rows.map(([name, v]) => (
                     <div key={name} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2 flex-wrap text-xs">
                       <div className="min-w-0"><div className="font-extrabold text-slate-900 text-sm truncate">{name}</div><div className="text-slate-500 font-medium">{[...v.locations].slice(0, 3).join(' • ') || 'Location —'}</div></div>
-                      <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-[#087BFF] border border-blue-200 font-bold text-[11px]">{v.mandates} mandate{v.mandates === 1 ? '' : 's'}</span>
+                      <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-[#0B5FD9] border border-blue-200 font-bold text-[11px]">{v.mandates} mandate{v.mandates === 1 ? '' : 's'}</span>
                     </div>
                   ))}
                 </div>
@@ -482,7 +482,7 @@ export function RecruiterPortal() {  const location = useLocation();
                   <div className="sm:col-span-3 p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
                     <div className="font-bold text-slate-500 uppercase text-[10px]">Pipeline by stage</div>
                     {entries.length === 0 ? <div className="font-medium text-slate-500">No submissions yet.</div> : entries.map(([s, n]) => (
-                      <div key={s} className="flex items-center gap-2"><span className="w-36 text-[11px] font-bold text-slate-600 truncate">{s}</span><div className="flex-1 h-2 rounded-full bg-slate-200/70 overflow-hidden"><div className="h-full rounded-full bg-[#087BFF]" style={{ width: `${Math.round((n / max) * 100)}%` }} /></div><span className="w-8 text-right font-extrabold">{n}</span></div>
+                      <div key={s} className="flex items-center gap-2"><span className="w-36 text-[11px] font-bold text-slate-600 truncate">{s}</span><div className="flex-1 h-2 rounded-full bg-slate-200/70 overflow-hidden"><div className="h-full rounded-full bg-[#0B5FD9]" style={{ width: `${Math.round((n / max) * 100)}%` }} /></div><span className="w-8 text-right font-extrabold">{n}</span></div>
                     ))}
                   </div>
                 </div>
@@ -506,7 +506,7 @@ export function RecruiterPortal() {  const location = useLocation();
               <div className="p-4 bg-white rounded-3xl border border-slate-200/90 shadow-sm space-y-1">
                 <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Assigned Client Mandates</div>
                 <div className="text-3xl font-extrabold text-slate-900">{jobs.length} Active</div>
-                <div className="text-xs font-bold text-[#087BFF]">Fee per commission agreement</div>
+                <div className="text-xs font-bold text-[#0B5FD9]">Fee per commission agreement</div>
               </div>
               <div className="p-4 bg-white rounded-3xl border border-slate-200/90 shadow-sm space-y-1">
                 <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Agency Pipeline</div>
@@ -528,7 +528,7 @@ export function RecruiterPortal() {  const location = useLocation();
               <div className="p-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm space-y-1">
                 <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Interviews</div>
                 <div className="text-2xl font-extrabold text-slate-900">{interviews.filter((i) => ['Scheduled', 'Rescheduled'].includes(i.status)).length}</div>
-                <div className="text-xs font-bold text-[#087BFF]">{interviews.length} total</div>
+                <div className="text-xs font-bold text-[#0B5FD9]">{interviews.length} total</div>
               </div>
               <div className="p-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm space-y-1">
                 <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Feedback Pending</div>
@@ -560,7 +560,7 @@ export function RecruiterPortal() {  const location = useLocation();
                     </div>
                     <button
                       onClick={() => openSubmitModal(j.id, j.title)}
-                      className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-xs hover:bg-blue-600 cursor-pointer"
+                      className="px-4 py-2 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs hover:bg-blue-600 cursor-pointer"
                     >
                       + Submit Profile
                     </button>
@@ -595,7 +595,7 @@ export function RecruiterPortal() {  const location = useLocation();
                   <div key={idx} className="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-xs text-[#087BFF] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">{job.id}</span>
+                        <span className="font-mono font-bold text-xs text-[#0B5FD9] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">{job.id}</span>
                         <span className="font-extrabold text-slate-900 text-sm">{job.title}</span>
                         {job.assignedToMe && <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[10px]">Assigned to me</span>}
                       </div>
@@ -605,7 +605,7 @@ export function RecruiterPortal() {  const location = useLocation();
                     </div>
                     <button
                       onClick={() => openSubmitModal(job.id, job.title)}
-                      className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs hover:bg-blue-600 cursor-pointer shrink-0"
+                      className="px-4 py-2.5 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs hover:bg-blue-600 cursor-pointer shrink-0"
                     >
                       Submit Candidate
                     </button>
@@ -628,7 +628,7 @@ export function RecruiterPortal() {  const location = useLocation();
               <input value={texp} onChange={(e) => setTexp(e.target.value)} placeholder="Min exp (yrs)" type="number" min={0} aria-label="Min experience" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none" />
               <input value={tloc} onChange={(e) => setTloc(e.target.value)} placeholder="Location" aria-label="Location" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none" />
               <Select value={tier} onChange={setTier} ariaLabel="Access tier" options={[{ value: 'preview', label: 'Preview (masked)' }, { value: 'full', label: 'Full profile' }, { value: 'contact', label: 'Contact unlock' }]} />
-              <button type="button" onClick={runTalentSearch} disabled={tLoading} className="col-span-2 lg:col-span-1 px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs flex items-center justify-center gap-1 disabled:opacity-50"><Search size={13} /> Search</button>
+              <button type="button" onClick={runTalentSearch} disabled={tLoading} className="col-span-2 lg:col-span-1 px-4 py-2.5 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs flex items-center justify-center gap-1 disabled:opacity-50"><Search size={13} /> Search</button>
             </div>
             </FilterPanel>
             {tUpgrade && (
@@ -649,7 +649,7 @@ export function RecruiterPortal() {  const location = useLocation();
                       <div className="text-xs text-slate-500 font-medium">{c.roleTitle || ''} • {c.experienceYears ?? '—'} yrs • {c.location || ''}{c.email ? ` • ${c.email}` : ''}{c.phone ? ` • ${c.phone}` : ''}</div>
                       <div className="text-[11px] text-slate-500 font-medium">Source: {c.submittedBy || 'platform'} • Ownership is shared — colleagues may act on authorized records.</div>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-[#087BFF] border border-blue-200 font-bold text-[11px]">{tierUsed}</span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-[#0B5FD9] border border-blue-200 font-bold text-[11px]">{tierUsed}</span>
                   </div>
                 ))}
               </div>
@@ -668,7 +668,7 @@ export function RecruiterPortal() {  const location = useLocation();
                   <div className="text-[11px] text-slate-500 font-medium">{a.jobTitle || a.jobId}</div></>
                 ) },
                 { key: 'stage', label: 'Stage', render: (a) => (
-                  <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-[#087BFF] border border-blue-200 font-extrabold text-[11px] whitespace-nowrap">{a.stage}</span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-[#0B5FD9] border border-blue-200 font-extrabold text-[11px] whitespace-nowrap">{a.stage}</span>
                 ) },
                 { key: 'updated', label: 'Updated', render: (a) => (
                   <span className="text-[11px] text-slate-500 font-medium whitespace-nowrap">{String(a.updatedAt || '').slice(0, 16).replace('T', ' ')}</span>
@@ -701,7 +701,7 @@ export function RecruiterPortal() {  const location = useLocation();
                   <div className="text-[11px] text-slate-500 font-medium">{a.jobTitle || a.jobId} • Applied {String(a.createdAt || '').slice(0, 10)}</div></>
                 ) },
                 { key: 'stage', label: 'Stage', render: (a) => (
-                  <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-[#087BFF] border border-blue-200 font-extrabold text-[11px] whitespace-nowrap">{a.stage}</span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-[#0B5FD9] border border-blue-200 font-extrabold text-[11px] whitespace-nowrap">{a.stage}</span>
                 ) },
                 { key: 'updated', label: 'Updated', render: (a) => (
                   <span className="text-[11px] text-slate-500 font-medium whitespace-nowrap">{String(a.updatedAt || '').slice(0, 16).replace('T', ' ')}</span>
@@ -710,11 +710,11 @@ export function RecruiterPortal() {  const location = useLocation();
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <Select value={advStage} onChange={setAdvStage} ariaLabel="Next stage" options={STAGES.map((s) => ({ value: s, label: s }))} />
                     <input value={advReason} onChange={(e) => setAdvReason(e.target.value)} placeholder="Reason (for Rejected…)" aria-label="Move reason" className="w-40 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none" />
-                    <button type="button" onClick={() => advanceStage(a.id)} disabled={advBusy} className="px-3 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-[11px] disabled:opacity-50">Review…</button>
+                    <button type="button" onClick={() => advanceStage(a.id)} disabled={advBusy} className="px-3 py-2 rounded-xl bg-[#0B5FD9] text-white font-bold text-[11px] disabled:opacity-50">Review…</button>
                     <button type="button" onClick={() => { setAdvFor(''); setAdvReason(''); }} className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-[11px]">Cancel</button>
                   </div>
                 ) : (
-                  <button type="button" onClick={() => { setAdvFor(a.id); setAdvStage(a.stage); }} className="px-3 py-1.5 rounded-lg bg-blue-50 text-[#087BFF] border border-blue-200 font-bold text-[11px] hover:bg-blue-100 whitespace-nowrap">Advance…</button>
+                  <button type="button" onClick={() => { setAdvFor(a.id); setAdvStage(a.stage); }} className="px-3 py-1.5 rounded-lg bg-blue-50 text-[#0B5FD9] border border-blue-200 font-bold text-[11px] hover:bg-blue-100 whitespace-nowrap">Advance…</button>
                 ) },
               ]}
             />
@@ -772,7 +772,7 @@ export function RecruiterPortal() {  const location = useLocation();
               <input value={taskForm.dueDate} onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })} type="date" aria-label="Due date" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none" />
               <div className="flex gap-2">
                 <Select value={taskForm.priority} onChange={(v) => setTaskForm({ ...taskForm, priority: v })} ariaLabel="Priority" options={['High', 'Medium', 'Low'].map((v) => ({ value: v, label: v }))} />
-                <button type="submit" disabled={taskBusy} className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50 shrink-0">Add</button>
+                <button type="submit" disabled={taskBusy} className="px-4 py-2 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs disabled:opacity-50 shrink-0">Add</button>
               </div>
             </form>
             {isLoading ? (
@@ -857,7 +857,7 @@ export function RecruiterPortal() {  const location = useLocation();
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full py-3.5 rounded-xl bg-[#087BFF] hover:bg-blue-600 text-white font-bold shadow-md cursor-pointer mt-3"
+                    className="w-full py-3.5 rounded-xl bg-[#0B5FD9] hover:bg-blue-600 text-white font-bold shadow-md cursor-pointer mt-3"
                   >
                     {isSubmitting ? 'Attaching…' : 'Attach to Mandate'}
                   </button>

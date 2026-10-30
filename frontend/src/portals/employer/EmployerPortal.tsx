@@ -470,7 +470,7 @@ export function EmployerPortal() {
         {currentTab === 'overview' && (
         <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-[#087BFF] border border-blue-200 mb-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-[#0B5FD9] border border-blue-200 mb-2">
               <Building2 size={14} /> {companyProfile.legalName || getTenantId() || 'Employer Workspace'}
             </div>
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
@@ -483,7 +483,7 @@ export function EmployerPortal() {
 
           <button
             onClick={openNewJob}
-            className="px-5 py-3.5 rounded-xl bg-[#087BFF] hover:bg-blue-600 text-white font-bold text-xs shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0"
+            className="px-5 py-3.5 rounded-xl bg-[#0B5FD9] hover:bg-blue-600 text-white font-bold text-xs shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0"
           >
             <Plus size={16} /> Post New Requirement
           </button>
@@ -558,7 +558,7 @@ export function EmployerPortal() {
                   {teamMembers.slice(0, 50).map((m: any) => (
                     <div key={m.id || m.email} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2 flex-wrap text-xs">
                       <div className="min-w-0"><div className="font-extrabold text-slate-900 truncate">{m.name || m.email}</div><div className="text-slate-500 font-medium truncate">{m.email}</div></div>
-                      <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-[#087BFF] border border-blue-200 font-bold text-[11px]">{m.role} • {m.status || 'Active'}</span>
+                      <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-[#0B5FD9] border border-blue-200 font-bold text-[11px]">{m.role} • {m.status || 'Active'}</span>
                     </div>
                   ))}
                 </div>
@@ -633,7 +633,7 @@ export function EmployerPortal() {
             {viewingProfile ? (
               <div className="space-y-5">
                 <div className="flex items-start gap-4 p-5 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-[#0B2E5E] text-white relative overflow-hidden">
-                  <div className="absolute -right-16 -top-16 w-56 h-56 rounded-full bg-[#087BFF]/30 blur-3xl" aria-hidden="true" />
+                  <div className="absolute -right-16 -top-16 w-56 h-56 rounded-full bg-[#0B5FD9]/30 blur-3xl" aria-hidden="true" />
                   <span aria-hidden="true" className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 text-white font-extrabold text-xl flex items-center justify-center shrink-0 relative">
                     {companyProfile.legalName.trim().charAt(0).toUpperCase()}
                   </span>
@@ -916,7 +916,7 @@ export function EmployerPortal() {
 
               <button
                 type="submit"
-                className="px-6 py-3 rounded-xl bg-[#087BFF] hover:bg-blue-600 text-white font-bold text-xs shadow-md cursor-pointer"
+                className="px-6 py-3 rounded-xl bg-[#0B5FD9] hover:bg-blue-600 text-white font-bold text-xs shadow-md cursor-pointer"
               >
                 Save Profile & KYC Details
               </button>
@@ -936,10 +936,10 @@ export function EmployerPortal() {
                 ['live', 'Live', 'bg-emerald-500', 'Published — hiring now'],
                 ['paused', 'Paused', 'bg-amber-500', 'Pipeline frozen'],
                 ['closed', 'Closed', 'bg-slate-400', 'Fully closed'],
-                ['draft', 'Drafts', 'bg-[#087BFF]', 'Needs review'],
+                ['draft', 'Drafts', 'bg-[#0B5FD9]', 'Needs review'],
               ] as const).map(([v, label, dot, sub]) => (
                 <button key={v} type="button" onClick={() => setReqTab(reqTab === v ? 'all' : v)}
-                  className={`p-4 bg-white rounded-2xl border shadow-sm text-left transition cursor-pointer hover:-translate-y-0.5 hover:shadow ${reqTab === v ? 'border-[#087BFF] ring-2 ring-blue-100' : 'border-slate-200/90'}`}>
+                  className={`p-4 bg-white rounded-2xl border shadow-sm text-left transition cursor-pointer hover:-translate-y-0.5 hover:shadow ${reqTab === v ? 'border-[#0B5FD9] ring-2 ring-blue-100' : 'border-slate-200/90'}`}>
                   <div className="flex items-center gap-1.5">
                     <span className={`w-2 h-2 rounded-full ${dot}`} />
                     <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">{label}</span>
@@ -964,7 +964,7 @@ export function EmployerPortal() {
                       items={jobs.map((j: any) => ({ key: String(j.id), query: String(j.id), title: String(j.title || j.id), meta: [j.location, j.employmentType].filter(Boolean).join(' • '), status: j.status }))}
                       onPick={(it) => setSearchQuery(it.query ?? it.key)} />
                   </div>
-                  <button onClick={openNewJob} className="px-4 py-2 bg-[#087BFF] hover:bg-blue-600 text-white font-bold text-xs rounded-xl flex items-center gap-1 cursor-pointer whitespace-nowrap">
+                  <button onClick={openNewJob} className="px-4 py-2 bg-[#0B5FD9] hover:bg-blue-600 text-white font-bold text-xs rounded-xl flex items-center gap-1 cursor-pointer whitespace-nowrap">
                     <Plus size={14} /> New Job
                   </button>
                 </div>
@@ -984,7 +984,7 @@ export function EmployerPortal() {
                     const frozen = job.status === 'Paused';
                     return (
                     <div key={job.id} className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 hover:bg-blue-50/30 transition">
-                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${job.status === 'Published' ? 'bg-emerald-500' : job.status === 'Paused' ? 'bg-amber-500' : job.status === 'Closed' ? 'bg-slate-400' : 'bg-[#087BFF]'}`} title={job.status} />
+                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${job.status === 'Published' ? 'bg-emerald-500' : job.status === 'Paused' ? 'bg-amber-500' : job.status === 'Closed' ? 'bg-slate-400' : 'bg-[#0B5FD9]'}`} title={job.status} />
                       <button type="button" onClick={() => setJobDetail(job)} className="flex-1 min-w-0 text-left cursor-pointer" title="View details">
                         <div className="font-extrabold text-slate-900 text-sm truncate">{job.title || job.id}</div>
                         <div className="text-[11px] text-slate-500 font-medium truncate">
@@ -1059,7 +1059,7 @@ export function EmployerPortal() {
                 )}
                 <div className="flex justify-end gap-2">
                   <button type="button" onClick={() => setJobAction(null)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
-                  <button type="button" onClick={runJobAction} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs capitalize">Confirm {jobAction.kind}</button>
+                  <button type="button" onClick={runJobAction} className="px-4 py-2.5 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs capitalize">Confirm {jobAction.kind}</button>
                 </div>
               </div>
             )}
@@ -1195,7 +1195,7 @@ export function EmployerPortal() {
                 <div className="text-3xl font-extrabold text-slate-900">
                   {candidates.length === 0 ? '—' : `${Math.round((offerCount / candidates.length) * 100)}%`}
                 </div>
-                <div className="text-xs font-bold text-[#087BFF]">{offerCount} offers from {candidates.length} candidates</div>
+                <div className="text-xs font-bold text-[#0B5FD9]">{offerCount} offers from {candidates.length} candidates</div>
               </div>
               <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
                 <div className="text-xs font-bold text-slate-500 uppercase">Vetting Throughput</div>
@@ -1220,7 +1220,7 @@ export function EmployerPortal() {
                     {entries.length === 0 ? <div className="text-xs text-slate-500 font-medium">No applications yet.</div> : entries.map(([s, n]) => (
                       <div key={s} className="flex items-center gap-2">
                         <span className="w-32 text-[11px] font-bold text-slate-600 truncate">{s}</span>
-                        <div className="flex-1 h-2 rounded-full bg-slate-200/70 overflow-hidden"><div className="h-full rounded-full bg-[#087BFF]" style={{ width: `${Math.round((n / max) * 100)}%` }} /></div>
+                        <div className="flex-1 h-2 rounded-full bg-slate-200/70 overflow-hidden"><div className="h-full rounded-full bg-[#0B5FD9]" style={{ width: `${Math.round((n / max) * 100)}%` }} /></div>
                         <span className="w-8 text-right text-xs font-extrabold text-slate-900">{n}</span>
                       </div>
                     ))}
@@ -1256,7 +1256,7 @@ export function EmployerPortal() {
                   <h3 className="text-xl font-extrabold text-slate-900">{editingJob ? `Edit Job — ${editingJob.id}` : 'Create Job Posting'}</h3>
                   <p className="text-xs text-slate-500 font-medium">Full §8.4 field set. Link an approved requisition where possible.</p>
                 </div>
-                <span className="px-3 py-1 rounded-full bg-blue-50 text-[#087BFF] border border-blue-200 font-extrabold text-xs">
+                <span className="px-3 py-1 rounded-full bg-blue-50 text-[#0B5FD9] border border-blue-200 font-extrabold text-xs">
                   Step {wizardStep} of 4
                 </span>
               </div>
@@ -1490,7 +1490,7 @@ export function EmployerPortal() {
                       <button
                         type="button"
                         onClick={() => setWizardStep(wizardStep + 1)}
-                        className="px-6 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold hover:bg-blue-600 cursor-pointer flex items-center gap-2"
+                        className="px-6 py-2.5 rounded-xl bg-[#0B5FD9] text-white font-bold hover:bg-blue-600 cursor-pointer flex items-center gap-2"
                       >
                         <span>Next Step</span>
                         <ArrowRight size={14} />
@@ -1591,7 +1591,7 @@ function JobApplicantsATS({ job, apps, candidates, onFullBoard }: { job: any; ap
     <div>
       <div className="flex items-center justify-between gap-2 mb-1 px-0.5">
         <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Applicants & ATS ({apps.length})</div>
-        <button type="button" onClick={onFullBoard} className="text-[11px] font-extrabold text-[#087BFF] hover:underline cursor-pointer whitespace-nowrap">Full pipeline →</button>
+        <button type="button" onClick={onFullBoard} className="text-[11px] font-extrabold text-[#0B5FD9] hover:underline cursor-pointer whitespace-nowrap">Full pipeline →</button>
       </div>
       <div className="text-[10px] text-slate-400 font-medium mb-1.5 px-0.5">v1 scoring — required skills 70 · preferred 15 · experience 15. Full ATS engine coming later.</div>
       <DrawerList items={ranked} empty="No applications for this job yet."
@@ -1644,7 +1644,7 @@ function CompanyStatusBanner({ verification, account, onboarded }: { verificatio
         {COMPANY_STATE_ORDER.map((s, i) => {
           const done = a === 'Active' || (v === 'Approved' && i <= 3) || i < 2;
           const current = !done && ((a === 'Invited' && i === 0) || (v === 'Pending' && i === 2));
-          return <div key={s} title={s} className={`h-2 flex-1 rounded-full ${done ? 'bg-emerald-500' : current ? 'bg-[#087BFF]' : 'bg-slate-200'}`} />;
+          return <div key={s} title={s} className={`h-2 flex-1 rounded-full ${done ? 'bg-emerald-500' : current ? 'bg-[#0B5FD9]' : 'bg-slate-200'}`} />;
         })}
       </div>
       <div className="text-xs font-bold text-slate-600">{nextStep} <span className="font-medium text-slate-500">(Verification and account status are managed by SuperAdmin.)</span></div>
@@ -1697,14 +1697,14 @@ function OverviewDashboard({ jobs, requisitions, applications, interviews, usage
   return (
     <div className="space-y-6">
       <div className="flex justify-end">
-        <button type="button" onClick={onNewJob} className="px-5 py-3 rounded-xl bg-[#087BFF] hover:bg-blue-600 text-white font-bold text-xs shadow-md cursor-pointer">+ Post New Requirement</button>
+        <button type="button" onClick={onNewJob} className="px-5 py-3 rounded-xl bg-[#0B5FD9] hover:bg-blue-600 text-white font-bold text-xs shadow-md cursor-pointer">+ Post New Requirement</button>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {widgets.map((w) => (
           <button key={w.label} type="button" onClick={() => navigate(w.to)} className="p-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm space-y-1 text-left hover:border-blue-300 hover:shadow transition-all cursor-pointer">
             <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{w.label}</div>
             <div className="text-2xl font-extrabold text-slate-900 truncate">{w.value}</div>
-            <div className="text-[11px] font-bold text-[#087BFF] truncate">{w.sub} →</div>
+            <div className="text-[11px] font-bold text-[#0B5FD9] truncate">{w.sub} →</div>
           </button>
         ))}
       </div>

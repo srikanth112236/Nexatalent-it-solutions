@@ -3,7 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Logo } from '../../website/components/Logo';
 import { User, LogOut, ShieldCheck, Building2, Menu, X, ChevronsLeft, ChevronsRight, ChevronDown } from 'lucide-react';
 import { apiClient } from '../../shared/api-client';
-import { clearSession, getTenantId, getUserEmail, getActiveRole } from '../../shared/auth/session';
+import { clearSession, getTenantId, getUserEmail, getActiveRole, getRefreshToken } from '../../shared/auth/session';
+import { useAuth } from '../../shared/auth/AuthContext';
 import { directoryApi } from '../../shared/enterprise/phaseApi';
 import { Select } from '../../shared/ui/EnterpriseKit';
 
@@ -61,13 +62,17 @@ export function PortalShell({ portalTitle, portalRole, navItems, children }: Por
     setManualGroup(next);
     try { localStorage.setItem(GROUPS_KEY, next); } catch { /* noop */ }
   };
-  const activeTenantId = getTenantId() || 'TNT-9011';
+  // Server-verified role first (AuthProvider reconciles it on boot); the cached
+  // copy is only a fallback while /auth/me is in flight.
+  const { user: authUser } = useAuth();
+  const effectiveRole = authUser?.role || getActiveRole() || '';
+  const activeTenantId = authUser?.tenantId || getTenantId() || 'TNT-9011';
   const userEmail = getUserEmail() || `${portalRole || 'user'}@nexatalent.com`;
   const safeNavItems = Array.isArray(navItems) ? navItems : [];
   const fallbackPath = safeNavItems[0]?.path || '/login';
   const roleInitial = (portalRole || 'U').charAt(0).toUpperCase();
 
-  const isPlatformRole = ['superadmin', 'platform_owner', 'operations_admin', 'employee'].includes(getActiveRole() || '');
+  const isPlatformRole = ['superadmin', 'platform_owner', 'operations_admin', 'employee'].includes(effectiveRole);
   const [tenantOptions, setTenantOptions] = useState<{ id: string; label: string }[]>([]);
   useEffect(() => {
     if (!isPlatformRole) return;
@@ -130,6 +135,9 @@ export function PortalShell({ portalTitle, portalRole, navItems, children }: Por
         email: userEmail,
         tenantId: activeTenantId,
         reason: 'USER_SIGN_OUT',
+        // Without this the server can only audit the logout — the refresh token
+        // would stay valid for up to 7 days.
+        refreshToken: getRefreshToken(),
       });
     } catch (err) {
       // P6: log status only — full err may hold tokens/PII/URLs.
@@ -161,8 +169,8 @@ export function PortalShell({ portalTitle, portalRole, navItems, children }: Por
             aria-hidden="true"
             className={`inline-flex w-8 h-8 rounded-lg font-extrabold text-[12px] items-center justify-center transition-all duration-150 ${
               isActive
-                ? 'bg-[#087BFF] text-white shadow-[0_10px_24px_-8px_rgba(8,123,255,0.65)]'
-                : 'bg-slate-100 text-slate-500 group-hover:bg-blue-50 group-hover:text-[#087BFF]'
+                ? 'bg-[#0B5FD9] text-white shadow-[0_10px_24px_-8px_rgba(8,123,255,0.65)]'
+                : 'bg-slate-100 text-slate-500 group-hover:bg-blue-50 group-hover:text-[#0B5FD9]'
             }`}
           >
             {initial}
@@ -172,7 +180,7 @@ export function PortalShell({ portalTitle, portalRole, navItems, children }: Por
             <span
               aria-hidden="true"
               className={`absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-full transition-all duration-150 ${
-                isActive ? 'bg-[#087BFF] shadow-[0_0_12px_rgba(8,123,255,0.8)]' : 'bg-transparent group-hover:bg-slate-200'
+                isActive ? 'bg-[#0B5FD9] shadow-[0_0_12px_rgba(8,123,255,0.8)]' : 'bg-transparent group-hover:bg-slate-200'
               }`}
             />
             <span
@@ -217,11 +225,11 @@ export function PortalShell({ portalTitle, portalRole, navItems, children }: Por
               onClick={() => toggleGroup(g.name as string, open)}
               aria-expanded={open}
               className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.14em] transition-colors ${
-                open ? 'text-[#0B5FD9]' : 'text-slate-400 hover:text-[#087BFF] hover:bg-slate-100/70'
+                open ? 'text-[#0B5FD9]' : 'text-slate-400 hover:text-[#0B5FD9] hover:bg-slate-100/70'
               }`}
             >
               <span className="flex items-center gap-1.5">
-                {hasActive && <span className="h-1.5 w-1.5 rounded-full bg-[#087BFF]" aria-hidden="true" />}
+                {hasActive && <span className="h-1.5 w-1.5 rounded-full bg-[#0B5FD9]" aria-hidden="true" />}
                 {g.name}
               </span>
               <ChevronDown
@@ -267,7 +275,7 @@ export function PortalShell({ portalTitle, portalRole, navItems, children }: Por
               )}
             </Link>
             <div className={`mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-[#0B5FD9] border border-blue-100 ${collapsed ? 'lg:hidden' : ''}`}>
-              <Building2 size={12} className="text-[#087BFF]" />
+              <Building2 size={12} className="text-[#0B5FD9]" />
               <span className="truncate max-w-[190px]">{portalTitle}</span>
             </div>
           </div>
@@ -280,7 +288,7 @@ export function PortalShell({ portalTitle, portalRole, navItems, children }: Por
           {/* User card — pinned */}
           <div className={`p-2.5 border-t border-slate-100 bg-slate-50/60 shrink-0 ${collapsed ? 'lg:px-1.5' : ''}`}>
             <div className={`flex items-center gap-2 mb-2 px-1 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#087BFF] to-[#35A7FF] text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-[0_8px_16px_-8px_rgba(8,123,255,0.7)]" title={userEmail}>
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0B5FD9] to-[#35A7FF] text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-[0_8px_16px_-8px_rgba(8,123,255,0.7)]" title={userEmail}>
                 {roleInitial}
               </div>
               <div className={`overflow-hidden ${collapsed ? 'lg:hidden' : ''}`}>
@@ -292,7 +300,7 @@ export function PortalShell({ portalTitle, portalRole, navItems, children }: Por
             <button
               onClick={handleSignOut}
               title="Sign Out via API"
-              className={`flex items-center justify-center gap-2 w-full py-2 rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50/60 font-bold text-xs transition-all cursor-pointer ${collapsed ? 'lg:px-0' : ''}`}
+              className={`flex items-center justify-center gap-2 w-full py-2 rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-red-700 hover:border-red-200 hover:bg-red-50/60 font-bold text-xs transition-all cursor-pointer ${collapsed ? 'lg:px-0' : ''}`}
             >
               <LogOut size={14} />
               <span className={collapsed ? 'lg:hidden' : ''}>Sign Out</span>
@@ -332,11 +340,11 @@ export function PortalShell({ portalTitle, portalRole, navItems, children }: Por
               </span>
               {isPlatformRole && tenantOptions.length > 0 && (
                 <div className="hidden md:flex items-center gap-1.5 ml-2">
-                  <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Act as</label>
+                  <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Act as</span>
                   <Select
                     value={activeTenantId}
                     onChange={switchTenant}
-                    ariaLabel="Switch active company tenant"
+                    ariaLabel="Act as — switch active company tenant"
                     options={tenantOptions.map((t) => ({ value: t.id, label: `${t.label} (${t.id})` }))}
                     searchable
                   />
@@ -346,11 +354,11 @@ export function PortalShell({ portalTitle, portalRole, navItems, children }: Por
 
             <div className="flex items-center gap-4 text-xs">
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 font-bold text-slate-700">
-                <User size={14} className="text-[#087BFF]" />
+                <User size={14} className="text-[#0B5FD9]" />
                 <span className="capitalize">{portalRole} Workspace</span>
               </div>
 
-              <Link to="/" className="font-bold text-slate-500 hover:text-[#087BFF] transition-colors">
+              <Link to="/" className="font-bold text-slate-500 hover:text-[#0B5FD9] transition-colors">
                 ← Public Website
               </Link>
             </div>

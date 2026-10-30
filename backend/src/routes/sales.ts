@@ -5,7 +5,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { loadDb, persist, uid, nowIso, audit, pushHistory } from '../db/store.js';
 import { notify } from '../domain/pipeline.js';
-import { requireAuth, ctxOf } from '../middleware/rbac.js';
+import { requireAuth, ctxOf, tenantOf, isAllTenant } from '../middleware/rbac.js';
 import { leadSchema, paginate, paged } from '../validate/schemas.js';
 import { uploadFile, downloadFile, isBlobStorageConfigured, DEFAULT_CONTAINER } from '../storage/blob.js';
 
@@ -366,7 +366,7 @@ salesRouter.get('/submissions', requireAuth(), (req, res) => {
   const { page, pageSize } = paginate.parse(req.query);
   const ctx = ctxOf(req); let rows = (loadDb() as any).submissions as any[] || [];
   if (['agency_admin','agency_recruiter','vendor','recruiter'].includes(ctx.role)) rows = rows.filter((s) => s.agencyId === ctx.tenantId || s.submittedBy === ctx.email);
-  else if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role)) rows = rows.filter((s) => s.orgId === ctx.tenantId);
+  else if (!isAllTenant(ctx.role)) rows = rows.filter((s) => s.orgId === tenantOf(req));
   res.json({ success: true, ...paged(rows, page, pageSize) });
 });
 salesRouter.post('/submissions', requireAuth(['agency_admin','agency_recruiter','recruiter','vendor','superadmin']), (req: Request, res: Response) => {
@@ -395,7 +395,7 @@ salesRouter.patch('/submissions/:id/status', requireAuth(['employer','superadmin
   const db: any = loadDb(); const s: any = (db.submissions || []).find((x: any) => x.id === req.params.id);
   if (!s) return res.status(404).json({ success: false, message: 'Not found.' });
   const ctx = ctxOf(req);
-  if (!['superadmin','platform_owner','employee','operations_admin'].includes(ctx.role) && s.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Not found.' });
+  if (!isAllTenant(ctx.role) && s.orgId !== tenantOf(req)) return res.status(404).json({ success: false, message: 'Not found.' });
   s.status = req.body.status || s.status; s.updatedAt = nowIso();
   audit(ctxOf(req).email, `SUBMISSION_STATUS:${s.id}->${s.status}`, s.orgId, 'submission', s.id, req.ip); persist();
   res.json({ success: true, data: s });
@@ -407,7 +407,7 @@ salesRouter.post('/submissions/:id/accept', requireAuth(['employer','superadmin'
   const s: any = (db.submissions || []).find((x: any) => x.id === req.params.id);
   if (!s) return res.status(404).json({ success: false, message: 'Not found.' });
   const ctx = ctxOf(req);
-  if (!['superadmin','platform_owner','employee','operations_admin'].includes(ctx.role) && s.orgId !== ctx.tenantId) return res.status(404).json({ success: false, message: 'Not found.' });
+  if (!isAllTenant(ctx.role) && s.orgId !== tenantOf(req)) return res.status(404).json({ success: false, message: 'Not found.' });
   if (['Rejected','Withdrawn'].includes(s.status)) return res.status(422).json({ success: false, code: 'SUBMISSION_DEAD', message: `Submission is ${s.status} — cannot accept.` });
   const job: any = db.jobs.find((j: any) => j.id === s.jobId);
   if (!job) return res.status(404).json({ success: false, message: 'Linked job not found.' });

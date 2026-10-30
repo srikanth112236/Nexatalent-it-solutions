@@ -22,12 +22,12 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
-export interface AccessClaims { sub: string; email: string; role: string; tenantId: string; type: 'access' }
+export interface AccessClaims { sub: string; email: string; role: string; tenantId: string; type: 'access'; jti?: string }
 export interface RefreshClaims { sub: string; email: string; type: 'refresh'; jti: string }
 
-export function signAccess(user: { id: string; email: string; role: string; tenantId: string }): string {
+export function signAccess(user: { id: string; email: string; role: string; tenantId: string }, jti?: string): string {
   return (jwt as any).sign(
-    { sub: user.id, email: user.email, role: user.role, tenantId: user.tenantId, type: 'access' },
+    { sub: user.id, email: user.email, role: user.role, tenantId: user.tenantId, type: 'access', ...(jti ? { jti } : {}) },
     config.jwt.secret,
     { expiresIn: ACCESS_TTL },
   );

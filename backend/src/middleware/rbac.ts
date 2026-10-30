@@ -109,6 +109,13 @@ export function requireAuth(allowedRoles?: string[]) {
     try {
       const claims = verifyAccess(token);
       if (!claims || claims.type !== 'access') throw new Error('bad token');
+      // Immediate revocation: logout/revoke-all writes the token's jti to the
+      // sessions table, so a signed access token stops working without waiting
+      // for its 15-minute TTL.
+      if ((claims as any).jti) {
+        const revoked = loadDb().sessions.some((s: any) => s.revokedJti === (claims as any).jti);
+        if (revoked) return res.status(401).json({ success: false, message: 'Session revoked. Please sign in again.' });
+      }
       if (suspended(claims.email)) return res.status(403).json({ success: false, message: 'Account suspended. Contact support.' });
       if (allowedRoles && !allowedRoles.includes(claims.role)) {
         return res.status(403).json({ success: false, message: `Access denied for role '${claims.role}'.` });
@@ -132,12 +139,27 @@ export function requirePermission(...perms: string[]) {
   };
 }
 
-/** Tenant isolation: platform roles bypass; others locked to own tenant unless superadmin. */
+/**
+ * Roles that may read across every tenant with no scope filter.
+ * `employee` is deliberately NOT here: an internal ops employee is a tenant
+ * operator, scoped to the tenant they are currently acting on (X-Tenant-ID).
+ */
+export const ALL_TENANT_ROLES = ['superadmin', 'platform_owner', 'operations_admin'] as const;
+
+export function isAllTenant(role: string): boolean {
+  return (ALL_TENANT_ROLES as readonly string[]).includes(role);
+}
+
+/**
+ * Active tenant for this request. Platform roles may select any tenant through
+ * the "Act as" switcher (X-Tenant-ID). Everyone else is pinned to the tenant
+ * baked into their token — the client claim is never trusted.
+ */
 export function tenantOf(req: Request): string {
   const ctx = (req as any).auth as AuthCtx | undefined;
   const header = String(req.headers['x-tenant-id'] || (req.query as any).tenant || (req.body as any)?.tenantId || '');
   if (!ctx) return header;
-  if (['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role)) {
+  if (isAllTenant(ctx.role) || ctx.role === 'employee') {
     return header || ctx.tenantId;
   }
   return ctx.tenantId; // ignore client claim — server is source of truth
@@ -177,7 +199,7 @@ export const FINANCE_BLOCKED_ROLES = [
 // is refused at the gate; a finance grant is required to read these ledgers.
 export const FINANCE_VIEWERS = [
   'superadmin', 'platform_owner', 'finance_admin', 'finance_staff',
-  'operations_admin', 'employee',
+  'operations_admin',
 ] as const;
 
 const FINANCE_GRANTS = ['manage_billing', 'reconcile', 'adjust_commission', 'refund'];

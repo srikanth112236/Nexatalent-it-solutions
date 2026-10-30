@@ -134,7 +134,7 @@ export function Company360Drawer({ tenantId, onClose, onChanged }: { tenantId: s
                       setInviteCreds({ email: invite.email.trim(), password });
                       setInvite({ name: '', email: '', role: 'company_admin' });
                     }, 'Administrator invited.')}
-                    className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50 shrink-0">Invite admin</button>
+                    className="px-4 py-2 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs disabled:opacity-50 shrink-0">Invite admin</button>
                 </div>
               )}
               <DrawerList items={data.users || []} empty="No users in this organization." label="Organization users"
@@ -157,7 +157,7 @@ export function Company360Drawer({ tenantId, onClose, onChanged }: { tenantId: s
                     await directoryApi.createBranch({ name: branchForm.name.trim(), city: branchForm.city.trim(), orgId: tenantId });
                     setBranchForm({ name: '', city: '' });
                   }, 'Branch added to this organization.')}
-                  className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50 shrink-0">Add branch</button>
+                  className="px-4 py-2 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs disabled:opacity-50 shrink-0">Add branch</button>
               </div>
               <DrawerList items={data.branches || []} empty="No branches yet." label="Branches"
                 render={(b) => (
@@ -171,7 +171,7 @@ export function Company360Drawer({ tenantId, onClose, onChanged }: { tenantId: s
             <div className="space-y-2">
               <div className="flex justify-end">
                 <button type="button" onClick={() => { onClose(); navigate(`/superadmin/requisitions/new?orgId=${encodeURIComponent(tenantId)}`); }}
-                  className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-xs">+ Create requirement for this company</button>
+                  className="px-4 py-2 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs">+ Create requirement for this company</button>
               </div>
               <DrawerList items={data.requisitions || []} empty="No requisitions." label="Requisitions"
                 render={(r) => (
@@ -185,7 +185,7 @@ export function Company360Drawer({ tenantId, onClose, onChanged }: { tenantId: s
             <div className="space-y-2">
               <div className="flex justify-end">
                 <button type="button" onClick={() => { onClose(); navigate(`/superadmin/jobs/new?orgId=${encodeURIComponent(tenantId)}`); }}
-                  className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-xs">+ Create job for this company</button>
+                  className="px-4 py-2 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs">+ Create job for this company</button>
               </div>
               <DrawerList items={data.jobs || []} empty="No jobs." label="Jobs"
                 render={(j) => (
@@ -545,7 +545,7 @@ export function Candidate360Drawer({ candidateId, onClose }: { candidateId: stri
                     className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-blue-500" />
                   <button type="button" disabled={busy || !infoMsg.trim()}
                     onClick={() => act(() => directoryApi.requestInfo(candidateId, infoMsg.trim()).then(() => setInfoMsg('')), 'Information requested (candidate notified).')}
-                    className="px-4 py-2 rounded-xl bg-[#087BFF] hover:bg-blue-600 text-white font-bold text-xs disabled:opacity-50">Request info</button>
+                    className="px-4 py-2 rounded-xl bg-[#0B5FD9] hover:bg-blue-600 text-white font-bold text-xs disabled:opacity-50">Request info</button>
                 </div>
               </Section>
               <Section title={`Privacy deletion requests (${(data.deletionRequests || []).length})`}>
@@ -784,7 +784,7 @@ export function AgencyDrawer({ agencyId, onClose }: { agencyId: string; onClose:
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="text-[11px] font-bold text-slate-500">{(data.jobs || []).length} assigned • {(data.jobs || []).filter((j: any) => j.status === 'Published').length} live published</div>
-                <button type="button" onClick={openAssign} className="px-4 py-2 rounded-xl bg-[#087BFF] hover:bg-blue-600 text-white font-bold text-xs shadow-md">+ Assign jobs</button>
+                <button type="button" onClick={openAssign} className="px-4 py-2 rounded-xl bg-[#0B5FD9] hover:bg-blue-600 text-white font-bold text-xs shadow-md">+ Assign jobs</button>
               </div>
               {(data.jobs || []).length === 0 ? (
                 <Empty title="No jobs assigned yet" hint="Allocate published requisitions so this agency can start submitting candidates. Only explicitly assigned jobs accept their submissions." action={<button type="button" onClick={openAssign} className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs">Assign jobs…</button>} />
@@ -881,7 +881,7 @@ export function AgencyDrawer({ agencyId, onClose }: { agencyId: string; onClose:
           {jobs.length === 0 && <div className="text-xs text-slate-500">No published jobs available.</div>}
           {jobs.map((j) => (
             <label key={j.id} className={`flex items-center gap-3 p-3 rounded-xl border text-xs cursor-pointer transition ${assignSel.has(j.id) ? 'bg-blue-50/60 border-blue-300' : 'bg-slate-50 border-slate-200 hover:border-slate-300'}`}>
-              <input type="checkbox" checked={assignSel.has(j.id)} onChange={() => setAssignSel((s) => { const n = new Set(s); if (n.has(j.id)) n.delete(j.id); else n.add(j.id); return n; })} className="w-4 h-4 accent-[#087BFF] shrink-0" />
+              <input type="checkbox" checked={assignSel.has(j.id)} onChange={() => setAssignSel((s) => { const n = new Set(s); if (n.has(j.id)) n.delete(j.id); else n.add(j.id); return n; })} className="w-4 h-4 accent-[#0B5FD9] shrink-0" />
               <span className="min-w-0 flex-1"><strong className="text-[13px]">{j.title}</strong><span className="block text-[11px] text-slate-500 font-medium"><span className="font-mono">{j.id}</span> • {j.orgId || ''} • {j.location || '—'}</span></span>
               <StatusPill value={j.status} />
             </label>
@@ -889,7 +889,7 @@ export function AgencyDrawer({ agencyId, onClose }: { agencyId: string; onClose:
         </div>
         <div className="flex justify-end gap-2 pt-3">
           <button type="button" onClick={() => setShowAssign(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs">Cancel</button>
-          <button type="button" disabled={busy} onClick={saveAssign} className="px-4 py-2.5 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50">{busy ? 'Saving…' : `Save (${assignSel.size} assigned)`}</button>
+          <button type="button" disabled={busy} onClick={saveAssign} className="px-4 py-2.5 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs disabled:opacity-50">{busy ? 'Saving…' : `Save (${assignSel.size} assigned)`}</button>
         </div>
       </Modal>
     </DetailDrawer>

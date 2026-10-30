@@ -3,6 +3,7 @@ import { MapPin, ArrowRight, Briefcase } from 'lucide-react';
 import { CreamSection, SectionHead, PillButton } from '../components/ui';
 
 const ROLES = [
+  { title: 'Full Stack Developer | Golang + React.js + GCP', meta: 'Pune • Hybrid • 6–7 yrs • Immediate', type: 'Permanent' },
   { title: 'Senior Backend Engineer (Java)', meta: 'Bengaluru • Hybrid • 5–8 yrs', type: 'Permanent' },
   { title: 'React + Node Pod (4 engineers)', meta: 'Remote India • Contract', type: 'Contract' },
   { title: 'Low-Latency C++ Developer', meta: 'Mumbai • Onsite • HFT', type: 'Permanent' },

@@ -153,7 +153,7 @@ export function PaymentRemindersPage() {
           className={`w-full py-3.5 px-5 rounded-xl flex items-center justify-center gap-2 font-bold text-xs transition-all disabled:opacity-50 ${
             schedBusy || !canBill
               ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
-              : 'bg-[#087BFF] hover:bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+              : 'bg-[#0B5FD9] hover:bg-blue-600 text-white shadow-lg shadow-blue-500/20'
           }`}
         >
           <RefreshCw size={16} className={schedBusy ? 'animate-spin' : ''} />
@@ -262,7 +262,7 @@ export function PaymentRemindersPage() {
           <input
             type="text"
             placeholder="Invoice ID or company…"
-            className="w-64 px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold outline-none focus:border-[#087BFF]"
+            className="w-64 px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold outline-none focus:border-[#0B5FD9]"
           />
           <button
             type="button"

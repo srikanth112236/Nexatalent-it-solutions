@@ -543,3 +543,6 @@ export function DatePicker({ value, onChange, placeholder = 'Pick a date', ariaL
     </>
   );
 }
+
+
+export { ModernDatePicker } from './ModernDatePicker';

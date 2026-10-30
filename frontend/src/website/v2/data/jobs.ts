@@ -22,9 +22,103 @@ export type V2Job = {
   niceToHave: string[];
   benefits: string[];
   interviewStages: { name: string; duration: string; focus: string }[];
+  noticePeriod?: string;
+  openings?: number;
+  contactEmail?: string;
+  contactPhone?: string;
+  contactWhatsapp?: string;
+  applyInstructions?: string[];
 };
 
 export const V2_JOBS: V2Job[] = [
+  {
+    slug: 'full-stack-developer-golang-react-gcp',
+    title: 'Full Stack Developer | Golang + React.js + GCP',
+    category: 'Engineering',
+    type: 'Permanent',
+    posted: 'Today',
+    salary: 'Competitive CTC',
+    location: 'Pune',
+    domain: 'Cloud & Enterprise',
+    premium: true,
+    experience: '6–7 yrs',
+    workMode: 'Hybrid',
+    department: 'Full Stack & Cloud Engineering',
+    clientType: 'Enterprise Cloud & Data Solutions',
+    noticePeriod: 'Immediate Joiners or Within 1 Week',
+    openings: 1,
+    contactEmail: 'info@nexatalentitsolutions.com',
+    contactPhone: '+91 70196 96166',
+    contactWhatsapp: '+91 9036227317',
+    summary:
+      'We are looking for an experienced Full Stack Developer with strong expertise in Golang, React.js, Google Cloud Platform (GCP), and BigQuery to develop scalable, cloud-native applications and enterprise-grade solutions. Priority for immediate joiners and candidates who can join within 1 week / 7 days.',
+    aboutCompany:
+      'NexaTalent IT Solutions is hiring for a high-impact engineering team based in Pune, India. The team designs and delivers resilient, cloud-native enterprise products, distributed microservices in Go, modern interactive React interfaces, and large-scale data processing engines on GCP & BigQuery.',
+    skills: [
+      'Golang (Go)',
+      'React.js',
+      'Google Cloud Platform (GCP)',
+      'BigQuery',
+      'REST APIs',
+      'Microservices',
+      'Distributed Systems',
+      'JavaScript / TypeScript',
+      'HTML / CSS',
+      'SQL',
+      'Docker',
+      'Kubernetes',
+      'CI/CD',
+      'System Design',
+      'Cloud Run',
+      'GKE',
+      'Cloud Functions',
+    ],
+    responsibilities: [
+      'Design and develop scalable full-stack applications using Go and React.js.',
+      'Build robust APIs, microservices, and cloud-based data solutions on GCP.',
+      'Translate business requirements into high-performance technical specifications and scalable system architectures.',
+      'Collaborate with customers, product managers, architects, QA, and DevOps teams across the engineering lifecycle.',
+      'Drive features through the complete Product Development Life Cycle (PDLC) from conception to production deployment.',
+      'Troubleshoot production issues, ensure high availability, and optimize application latency and database performance.',
+    ],
+    requirements: [
+      '6–7 years of professional full-stack development experience with Golang and React.js.',
+      'Strong hands-on expertise in Golang (Go), building REST APIs, microservices, and distributed systems.',
+      'Proficiency in React.js, JavaScript/TypeScript, modern HTML/CSS, and state management.',
+      'Practical production experience with Google Cloud Platform (GCP) (Cloud Run, GKE, Cloud Functions).',
+      'Hands-on experience with BigQuery, SQL, and large-scale data processing pipelines.',
+      'Experience with containerization and orchestration using Docker, Kubernetes, and automated CI/CD pipelines.',
+      'Excellent problem-solving, system design, scalability, and analytical skills.',
+      'Notice Period: Immediate joiners or candidates who can join within 1 week / 7 days (Top Priority).',
+    ],
+    niceToHave: [
+      'Strong customer interaction and stakeholder management capabilities.',
+      'Ability to independently own features from conception to production.',
+      'Performance tuning and query optimization for high-volume BigQuery datasets.',
+      'Experience with cloud monitoring, logging, and distributed tracing in GCP.',
+    ],
+    benefits: [
+      'Competitive CTC — tailored to experience, technical expertise, current CTC, and interview performance',
+      'Hybrid work mode in Pune with collaborative engineering culture',
+      'Direct ownership of enterprise-grade cloud-native platforms',
+      'Comprehensive health coverage and performance incentives',
+      'Fast-track interview process with immediate offer rollout for qualified joiners',
+    ],
+    interviewStages: [
+      { name: 'Profile Screen & Alignment', duration: '30 min', focus: 'Role fit, Go + React background, notice period & CTC' },
+      { name: 'Technical & System Design', duration: '60 min', focus: 'Golang microservices, React state, GCP & BigQuery architecture' },
+      { name: 'Leadership & Feature Ownership', duration: '45 min', focus: 'Product lifecycle, stakeholder collaboration, problem solving' },
+      { name: 'Offer & Expedited Onboarding', duration: '48 hrs', focus: 'Final CTC rollout and expedited 1-week joining' },
+    ],
+    applyInstructions: [
+      'Total Experience',
+      'Relevant Experience in Go, React.js, GCP & BigQuery',
+      'Current CTC',
+      'Expected CTC',
+      'Notice Period / Earliest Joining Date',
+      'Current Location',
+    ],
+  },
   {
     slug: 'senior-backend-engineer-java',
     title: 'Senior Backend Engineer (Java)',

@@ -12,7 +12,7 @@ import { commercialRouter } from '../routes/commercial.js';
 import { salesRouter } from '../routes/sales.js';
 import { directoryRouter } from '../routes/directory.js';
 import { extendedRouter } from '../routes/extended.js';
-import { requireAuth, ctxOf, tenantOf, maskCandidate } from '../middleware/rbac.js';
+import { requireAuth, ctxOf, tenantOf, maskCandidate, isAllTenant } from '../middleware/rbac.js';
 
 function pick<T extends Record<string, unknown>>(obj: unknown, keys: string[]): T {
   const out: Record<string, unknown> = {};
@@ -29,7 +29,24 @@ export function createApp(): Express {
   const app = express();
   loadDb();
 
-  app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
+  // This server only ever returns JSON/CSV/binary documents, so a locked-down CSP is
+  // safe here. The SPA shell is served by the edge host and carries its own policy.
+  app.use(helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        'default-src': ["'none'"],
+        'base-uri': ["'none'"],
+        'form-action': ["'none'"],
+        'frame-ancestors': ["'none'"],
+        'script-src': ["'none'"],
+        'object-src': ["'none'"],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'same-site' },
+    referrerPolicy: { policy: 'no-referrer' },
+  }));
   app.use(cors({
     origin: (origin, callback) => {
       // P2-9: in prod, non-browser (no origin) clients are denied unless explicitly allowed.
@@ -39,14 +56,22 @@ export function createApp(): Express {
         }
         return callback(null, true);
       }
-      if (
-        config.corsOrigins.includes(origin) ||
-        origin.endsWith('.azurestaticapps.net') ||
-        origin.endsWith('.azurewebsites.net') ||
-        origin.endsWith('nexatalentitsolutions.com') ||
-        origin.includes('nexatalentitsolutions.com') ||
-        origin.includes('localhost')
-      ) return callback(null, true);
+      let parsed: URL;
+      try { parsed = new URL(origin); } catch { return callback(new Error(`CORS blocked for origin: ${origin}`)); }
+      // Exact host matching only — suffix/`includes` checks let
+      // https://nexatalentitsolutions.com.attacker.io through.
+      const host = parsed.hostname.toLowerCase();
+      const isTrustedHost =
+        host === 'nexatalentitsolutions.com' ||
+        host === 'www.nexatalentitsolutions.com' ||
+        host === 'nexatalent.com' ||
+        host === 'www.nexatalent.com' ||
+        host.endsWith('.azurestaticapps.net') ||
+        host.endsWith('.azurewebsites.net') ||
+        host === 'localhost' ||
+        host === '127.0.0.1' ||
+        host === '[::1]';
+      if (config.corsOrigins.includes(origin) || isTrustedHost) return callback(null, true);
       return callback(new Error(`CORS blocked for origin: ${origin}`));
     },
     credentials: true,
@@ -96,13 +121,15 @@ export function createApp(): Express {
     // Phase C: effective grants (not just the role template) decide unmasking.
     const canSee = (ctx.permissions || []).includes('view_sensitive_fields');
     let profiles = db.candidateProfiles as any[];
-    if (!['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role)) {
-      // Companies/agencies resolve only candidates already in their own pipeline.
+    if (!isAllTenant(ctx.role)) {
+      // Companies/agencies (and tenant-scoped staff) resolve only candidates already
+      // in the pipeline of the tenant they are acting on.
+      const scope = tenantOf(req);
       const mine = new Set(
-        (db.applications as any[]).filter((a: any) => a.orgId === ctx.tenantId).map((a: any) => String(a.candidateEmail || '').toLowerCase())
+        (db.applications as any[]).filter((a: any) => a.orgId === scope).map((a: any) => String(a.candidateEmail || '').toLowerCase())
       );
       for (const s of ((db as any).submissions as any[]) || []) {
-        if (s.agencyId === ctx.tenantId) mine.add(String(s.candidateEmail || '').toLowerCase());
+        if (s.agencyId === scope) mine.add(String(s.candidateEmail || '').toLowerCase());
       }
       profiles = profiles.filter((c: any) => mine.has(String(c.email || '').toLowerCase()));
     }
@@ -120,7 +147,7 @@ export function createApp(): Express {
     const ctx = ctxOf(req);
     const linked = (db.applications as any[]).some((a: any) =>
       String(a.candidateEmail || '').toLowerCase() === String(cand.email || '').toLowerCase() &&
-      (['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role) || a.orgId === ctx.tenantId));
+      (isAllTenant(ctx.role) || a.orgId === tenantOf(req)));
     if (!linked) return res.status(404).json({ success: false, message: 'Candidate not found.' });
     const to = String(req.body.stage || '');
     const allowed = ['Applied','Screening','Shortlisted','Interview Scheduled','Interview Completed','Selected','Offer','Hired','Rejected','Withdrawn','On Hold'];
@@ -149,7 +176,7 @@ export function createApp(): Express {
   app.get('/api/v1/agencies', requireAuth(), (req: Request, res: Response) => {
     const ctx = ctxOf(req);
     const db = loadDb();
-    if (['superadmin','platform_owner','operations_admin','employee'].includes(ctx.role)) {
+    if (isAllTenant(ctx.role)) {
       return res.json({ success: true, data: db.agencyProfiles });
     }
     if (['agency_admin','agency_recruiter','recruiter','vendor'].includes(ctx.role)) {
@@ -171,8 +198,10 @@ export function createApp(): Express {
   app.get('/api/v1/crm', requireAuth(['employee','superadmin','sales_admin','sales_manager','operations_admin','bda']), (req: Request, res: Response) => {
     const db = loadDb();
     const ctx = ctxOf(req);
-    // Phase A: BDA/employee see owned accounts only — same rule as GET /leads.
-    // Link leads → converted organizations (created with leadId on convert) → open requisitions.
+    const allTenant = isAllTenant(ctx.role);
+    // Accounts = real organizations (converted clients); leads = the sales pipeline.
+    // Previously this endpoint returned leads only and the UI labelled them "client
+    // accounts", so a freshly converted client looked like it had vanished.
     const orgsByLead = new Map<string, string[]>();
     for (const o of db.organizations as any[]) {
       if ((o as any).leadId) {
@@ -181,22 +210,73 @@ export function createApp(): Express {
         orgsByLead.set((o as any).leadId, arr);
       }
     }
+    const ownedLeads = (db.leads as any[]).filter((l: any) =>
+      allTenant ? true : (['bda', 'employee'].includes(ctx.role) ? (!l.owner || l.owner === ctx.email) : (!l.owner || l.owner === ctx.email)));
+    const ownedLeadIds = new Set(ownedLeads.map((l: any) => l.id));
     const OPEN_REQ = ['Approved', 'Sourcing', 'Pending Approval'];
-    const data = db.leads
-      .filter((l: any) => ['bda','employee'].includes(ctx.role) ? (!l.owner || l.owner === ctx.email) : true)
-      .map((l: any) => {
+    const openReqsFor = (orgId: string) => (db.requisitions as any[]).filter((r: any) => r.orgId === orgId && OPEN_REQ.includes(r.status)).length;
+    const leadById = new Map(ownedLeads.map((l: any) => [l.id, l]));
+
+    const accounts = (db.organizations as any[])
+      .filter((o: any) => allTenant || ownedLeadIds.has(o.leadId) || o.id === ctx.tenantId)
+      .map((o: any) => {
+        const lead: any = leadById.get(o.leadId) || null;
+        const activeReqs = openReqsFor(o.id);
+        const overdue = lead?.nextFollowUp && new Date(lead.nextFollowUp) < new Date();
+        return {
+          id: o.id,
+          kind: 'account' as const,
+          clientName: o.displayName || o.legalName,
+          accountOwner: lead?.owner || o.accountOwner || '',
+          industry: o.industry || lead?.industry || '',
+          stage: o.accountStatus || o.status || 'Active',
+          contractStatus: o.verificationStatus || '',
+          activeReqs,
+          contactEmail: lead?.email || o.businessEmail || '',
+          value: lead?.value ?? null,
+          slaHealth: overdue ? 'Follow-up overdue' : activeReqs > 0 ? 'Hiring' : 'On Track',
+          nextFollowUp: lead?.nextFollowUp || null,
+          leadId: o.leadId || null,
+          createdDate: o.createdDate || null,
+        };
+      });
+
+    const leads = ownedLeads.map((l: any) => {
       const orgIds = orgsByLead.get(l.id) || [];
-      const activeReqs = (db.requisitions as any[]).filter((r) => orgIds.includes(r.orgId) && OPEN_REQ.includes(r.status)).length;
+      const activeReqs = orgIds.reduce((n: number, id: string) => n + openReqsFor(id), 0);
       const overdue = l.nextFollowUp && new Date(l.nextFollowUp) < new Date();
       return {
-        id: l.id, clientName: l.companyName, accountOwner: l.owner,
-        industry: l.industry || '', stage: l.stage || 'New',
-        activeReqs, contactEmail: l.email, value: l.value ?? null,
+        id: l.id,
+        kind: 'lead' as const,
+        clientName: l.companyName,
+        accountOwner: l.owner,
+        industry: l.industry || '',
+        stage: l.stage || 'New',
+        contractStatus: '',
+        activeReqs,
+        contactEmail: l.email,
+        value: l.value ?? null,
         slaHealth: overdue ? 'Follow-up overdue' : (l.stage === 'Won' ? 'Won' : 'On Track'),
         nextFollowUp: l.nextFollowUp || null,
+        leadId: l.id,
+        createdDate: l.createdAt ? String(l.createdAt).slice(0, 10) : null,
       };
     });
-    res.json({ success: true, data });
+
+    // Newest accounts first, then the live pipeline.
+    const data = [...accounts, ...leads].sort((a: any, b: any) => (b.activeReqs - a.activeReqs) || String(a.clientName || '').localeCompare(String(b.clientName || '')));
+    res.json({
+      success: true,
+      data,
+      accounts,
+      leads,
+      summary: {
+        accounts: accounts.length,
+        leads: leads.length,
+        openReqs: accounts.reduce((n: number, a: any) => n + a.activeReqs, 0),
+        overdueFollowUps: leads.filter((l: any) => l.slaHealth === 'Follow-up overdue').length,
+      },
+    });
   });
   app.get('/api/v1/contractors', requireAuth(), (req: Request, res: Response) => {
     const ctx = ctxOf(req);
@@ -209,8 +289,9 @@ export function createApp(): Express {
     }
     const canSee = (ctx.permissions || []).includes('view_sensitive_fields');
     let rows = loadDb().contractors as any[];
-    if (!['superadmin', 'platform_owner', 'operations_admin', 'employee', 'finance_admin'].includes(ctx.role)) {
-      rows = rows.filter((c: any) => !c.tenantId || c.tenantId === ctx.tenantId);
+    if (!isAllTenant(ctx.role) && ctx.role !== 'finance_admin') {
+      const scope = tenantOf(req);
+      rows = rows.filter((c: any) => !c.tenantId || c.tenantId === scope);
     }
     rows = rows.map((c: any) => (canSee ? c : { ...c, hourlyRate: 'Restricted' }));
     return res.json({ success: true, data: rows });
@@ -227,8 +308,9 @@ export function createApp(): Express {
     const ctx = ctxOf(req);
     let rows = (loadDb() as any).compliance || [];
     // P1-5: tenant-scoped — non-platform sees own org only.
-    if (!['superadmin', 'platform_owner', 'operations_admin', 'employee'].includes(ctx.role)) {
-      rows = rows.filter((c: any) => c.orgId === ctx.tenantId);
+    if (!isAllTenant(ctx.role)) {
+      const scope = tenantOf(req);
+      rows = rows.filter((c: any) => c.orgId === scope);
     }
     return res.json({ success: true, data: rows });
   });
@@ -279,8 +361,9 @@ export function createApp(): Express {
       if (email !== ctx.email.toLowerCase()) return res.status(404).json({ success: false, message: 'No profile yet.' });
       return res.json({ success: true, data: p });
     }
-    if (['superadmin', 'platform_owner', 'operations_admin', 'employee'].includes(ctx.role)) {
-      return res.json({ success: true, data: p });
+    if (isAllTenant(ctx.role) || ctx.role === 'employee') {
+      const canSee = (ctx.permissions || []).includes('view_sensitive_fields');
+      return res.json({ success: true, data: canSee ? p : maskCandidate(p, false) });
     }
     const linked = (db.applications as any[]).some((a: any) =>
       String(a.candidateEmail || '').toLowerCase() === email &&
@@ -297,9 +380,10 @@ export function createApp(): Express {
     const db = loadDb();
     let rows = db.applications.filter((a: any) => String(a.candidateEmail).toLowerCase() === email);
     if (ctx.role === 'candidate') rows = rows.filter((a: any) => String(a.candidateEmail).toLowerCase() === ctx.email.toLowerCase());
-    else if (!['superadmin', 'platform_owner', 'operations_admin', 'employee'].includes(ctx.role)) {
+    else if (!isAllTenant(ctx.role)) {
       // Phase 4: companies/agencies see only their own scope — never another tenant's rows.
-      rows = rows.filter((a: any) => a.orgId === ctx.tenantId);
+      const scope = tenantOf(req);
+      rows = rows.filter((a: any) => a.orgId === scope);
     }
     res.json({ success: true, data: rows });
   });

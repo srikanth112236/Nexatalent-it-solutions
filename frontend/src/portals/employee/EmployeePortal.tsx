@@ -1,15 +1,32 @@
-import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { PortalShell } from '../common/PortalShell';
-import { ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Compass, Loader2 } from 'lucide-react';
 import { apiClient } from '../../shared/api-client';
 import { platformApi, salesApi } from '../../shared/enterprise/phaseApi';
-import { syncAll } from '../common/EnterprisePanels';
-import { LeadsPanel, PerformancePanel, NotificationsPanel, PayrollPanel, RequisitionsPanel, JobsPanel, ApplicationsPanel, InterviewsPanel, CandidatesPanel } from '../common/EnterprisePanels';
+import {
+  ApplicationsPanel,
+  CandidatesPanel,
+  InterviewsPanel,
+  JobCreatePage,
+  JobsPanel,
+  LeadsPanel,
+  NotificationsPanel,
+  PayrollPanel,
+  PerformancePanel,
+  RequirementCreatePage,
+  RequisitionsPanel,
+  syncAll,
+} from '../common/EnterprisePanels';
 import { WebsiteLeadsPanel } from '../common/WebsiteLeadsPanel';
 import { MfaPanel } from '../../auth/components/MfaPanel';
 import { Select } from '../../shared/ui/EnterpriseKit';
 import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
+import { usePortalSync } from '../../shared/data/store';
+import { getUserEmail } from '../../shared/auth/session';
+import { EmployeeDashboard } from './EmployeeDashboard';
+import { EmployeeCrmPanel } from './EmployeeCrmPanel';
+import { EmployeeSettingsPanel } from './EmployeeSettingsPanel';
 
 const navItems = [
   { label: 'Overview', path: '/employee' },
@@ -32,31 +49,78 @@ const navItems = [
   { label: 'Settings', path: '/employee/settings', group: 'Workspace' },
 ];
 
+const TITLES: Record<string, string> = {
+  overview: 'Overview',
+  crm: 'CRM & Accounts',
+  requisitions: 'My Requirements',
+  'requisitions-new': 'New Requirement',
+  jobs: 'Mandate Jobs',
+  'jobs-new': 'New Job',
+  applications: 'Candidate Pipeline',
+  candidates: 'Candidate Search',
+  interviews: 'Interviews',
+  tasks: 'Recruitment Tasks',
+  targets: 'Quarterly Targets',
+  payroll: 'Payroll',
+  leads: 'Sales Leads Pipeline',
+  'website-leads': 'Website Leads',
+  activities: 'Activities',
+  performance: 'Sales Performance',
+  reports: 'Delivery Reports',
+  security: 'Security',
+  notifications: 'Notifications',
+  settings: 'Settings',
+};
+
+const SUBTITLES: Record<string, string> = {
+  crm: 'The clients you own and the leads feeding them.',
+  requisitions: 'Roles your clients have signed off on.',
+  jobs: 'Published mandates accepting applications.',
+  applications: 'Every candidate moving through your mandates.',
+  candidates: 'Search the agency-wide candidate pool.',
+  interviews: 'Schedules, panel feedback and outcomes.',
+  tasks: 'Your delivery checklist — toggle to complete.',
+  targets: 'Won versus goal, per owner and period.',
+  activities: 'Calls, meetings, proposals and follow-ups.',
+  settings: 'Profile, notifications and session security.',
+};
+
+function resolveTab(pathname: string): string {
+  const path = pathname.replace(/\/+$/, '') || '/employee';
+  if (path === '/employee') return 'overview';
+  const rest = path.slice('/employee'.length); // e.g. "/requisitions/new"
+  const segments = rest.split('/').filter(Boolean);
+  if (segments.length === 0) return 'overview';
+
+  // Exact two-segment creators first, so /requisitions/new never falls back
+  // to the list panel (it used to render "My Requirements" instead of the form).
+  if (segments[0] === 'requisitions' && segments[1] === 'new') return 'requisitions-new';
+  if (segments[0] === 'jobs' && segments[1] === 'new') return 'jobs-new';
+
+  const root = segments[0];
+  const known = new Set([
+    'crm', 'requisitions', 'jobs', 'applications', 'candidates', 'interviews', 'tasks',
+    'targets', 'payroll', 'leads', 'website-leads', 'activities', 'performance',
+    'reports', 'security', 'notifications', 'settings',
+  ]);
+  if (known.has(root)) return root;
+  return 'notfound';
+}
+
+function displayName(email: string): string {
+  const local = String(email || '').split('@')[0] || '';
+  return local
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+    .join(' ');
+}
+
 export function EmployeePortal() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const currentTab = resolveTab(location.pathname);
 
-  const currentTab = (() => {
-    const p = location.pathname;
-    if (p.includes('/crm')) return 'crm';
-    if (p.includes('/requisitions')) return 'requisitions';
-    if (p.includes('/applications') || p.includes('/pipeline')) return 'applications';
-    if (p.includes('/candidates')) return 'candidates';
-    if (p.includes('/interviews')) return 'interviews';
-    if (p.includes('/jobs')) return 'jobs';
-    if (p.includes('/tasks')) return 'tasks';
-    if (p.includes('/targets')) return 'targets';
-    if (p.includes('/payroll')) return 'payroll';
-    if (p.includes('/website-leads')) return 'website-leads';
-    if (p.includes('/leads') || p.includes('/pipeline')) return 'leads';
-    if (p.includes('/activities')) return 'activities';
-    if (p.includes('/performance')) return 'performance';
-    if (p.includes('/security')) return 'security';
-    if (p.includes('/notifications') || p.includes('/settings')) return 'notifications';
-    if (p.includes('/reports')) return 'reports';
-    return 'overview';
-  })();
-
-  const [crmAccounts, setCrmAccounts] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activities, setActivities] = useState<any[]>([]);
@@ -67,27 +131,45 @@ export function EmployeePortal() {
   const [targetsLoading, setTargetsLoading] = useState(false);
   const [taskForm, setTaskForm] = useState({ title: '', client: '', dueDate: '', priority: 'Medium' });
   const [taskBusy, setTaskBusy] = useState(false);
+  const [crmSummary, setCrmSummary] = useState<{ accounts: number; openReqs: number }>({ accounts: 0, openReqs: 0 });
 
-  useEffect(() => {
-    async function fetchData() {
-      setIsLoading(true);
-      try {
-        const [cRes, tRes] = await Promise.all([
-          apiClient.get<any[]>('/api/v1/crm').catch(() => ({ data: [] as any[] })),
-          apiClient.get<any[]>('/api/v1/tasks').catch(() => ({ data: [] as any[] })),
-        ]);
-        if (cRes?.data) setCrmAccounts(cRes.data);
-        if (tRes?.data) setTasks(tRes.data);
-      } catch (err) {
-        console.warn('API Error in EmployeePortal:', err);
-      } finally {
-        setIsLoading(false);
-      }
+  const fetchTasks = useCallback(async () => {
+    try {
+      const res: any = await apiClient.get<any[]>('/api/v1/tasks');
+      const rows = Array.isArray(res?.data) ? res.data : Array.isArray((res?.data as any)?.data) ? (res.data as any).data : [];
+      setTasks(rows);
+    } catch {
+      setTasks([]);
     }
-    fetchData();
   }, []);
 
-  /* ---------- unified activities feed (§10.2) ---------- */
+  const fetchCrm = useCallback(async () => {
+    try {
+      const res: any = await apiClient.get<any>('/api/v1/crm');
+      const body = res?.data ?? res;
+      const rows: any[] = Array.isArray(body) ? body : Array.isArray(body?.data) ? body.data : [];
+      const accounts = Array.isArray(body?.accounts) ? body.accounts : rows.filter((r) => r.kind !== 'lead');
+      setCrmSummary({
+        accounts: (body?.summary?.accounts ?? accounts.length) || 0,
+        openReqs: body?.summary?.openReqs ?? accounts.reduce((n: number, a: any) => n + (Number(a.activeReqs) || 0), 0),
+      });
+    } catch {
+      setCrmSummary({ accounts: 0, openReqs: 0 });
+    }
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      setIsLoading(true);
+      await Promise.all([fetchTasks(), fetchCrm()]);
+      setIsLoading(false);
+    })();
+  }, [fetchTasks, fetchCrm]);
+
+  // Any portal mutation re-fetches the shared lists.
+  usePortalSync(() => { fetchTasks(); fetchCrm(); });
+
+  /* ---------- unified activities feed ---------- */
   useEffect(() => {
     if (currentTab !== 'activities') return;
     (async () => {
@@ -95,9 +177,10 @@ export function EmployeePortal() {
       try {
         const sp = new URLSearchParams({ page: '1', pageSize: '50' });
         if (actKind) sp.set('kind', actKind);
-        const res = await salesApi.activitiesFeed(`?${sp.toString()}`);
-        const body = (res as { data?: any })?.data as any;
-        setActivities(Array.isArray(body?.data) ? body.data : []);
+        const res: any = await salesApi.activitiesFeed(`?${sp.toString()}`);
+        // The API answers {success, data:[…]}; unwrap once, never twice.
+        const body = res?.data ?? res;
+        setActivities(Array.isArray(body) ? body : Array.isArray(body?.data) ? body.data : []);
       } catch {
         setActivities([]);
       } finally {
@@ -106,21 +189,21 @@ export function EmployeePortal() {
     })();
   }, [currentTab, actKind]);
 
-  /* ---------- sales targets with live progress (won vs goal) ---------- */
+  /* ---------- sales targets with live progress ---------- */
   useEffect(() => {
     if (currentTab !== 'targets') return;
     (async () => {
       setTargetsLoading(true);
       try {
         const res = await salesApi.targets();
-        const rows = (((res as { data?: any[] })?.data || []) as any[]);
+        const rows = ((res as { data?: any[] })?.data || []) as any[];
         setSalesTargets(rows);
         const owners = [...new Set(rows.map((t) => t.owner).filter(Boolean))];
         const prog: Record<string, any> = {};
         await Promise.all(owners.map(async (o) => {
           try {
-            const p = await salesApi.performance(`?owner=${encodeURIComponent(o)}`);
-            prog[o] = (p as { data?: any })?.data || null;
+            const p = await salesApi.performance(`?owner=${encodeURIComponent(String(o))}`);
+            prog[String(o)] = (p as { data?: any })?.data || null;
           } catch { /* best-effort */ }
         }));
         setTargetProgress(prog);
@@ -137,7 +220,12 @@ export function EmployeePortal() {
     if (!taskForm.title.trim()) return;
     setTaskBusy(true);
     try {
-      const created = (await platformApi.createTask({ title: taskForm.title.trim(), client: taskForm.client.trim(), dueDate: taskForm.dueDate || undefined, priority: taskForm.priority })) as { data?: any };
+      const created = (await platformApi.createTask({
+        title: taskForm.title.trim(),
+        client: taskForm.client.trim(),
+        dueDate: taskForm.dueDate || undefined,
+        priority: taskForm.priority,
+      })) as { data?: any };
       if (created?.data) setTasks((x) => [created.data, ...x]);
       setTaskForm({ title: '', client: '', dueDate: '', priority: 'Medium' });
       syncAll();
@@ -149,200 +237,174 @@ export function EmployeePortal() {
   };
 
   const handleToggleTask = async (taskId: string) => {
-    const task = tasks.find(t => t.id === taskId);
+    const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
     const prev = tasks;
     const newStatus = task?.status === 'Completed' ? 'Pending' : 'Completed';
-    setTasks(prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+    setTasks(prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
     try {
       await apiClient.patch(`/api/v1/tasks/${taskId}`, { status: newStatus });
-    } catch (err) {
-      console.warn('Task patch API notice:', err);
+      syncAll();
+    } catch {
       setTasks(prev);
     }
   };
 
-  // All KPIs computed live from API data — no static figures.
-  const pendingTasks = tasks.filter(t => t.status !== 'Completed');
-  const completedTasks = tasks.filter(t => t.status === 'Completed');
+  const pendingTasks = tasks.filter((t) => t.status !== 'Completed');
+  const completedTasks = tasks.filter((t) => t.status === 'Completed');
   const completionRate = tasks.length === 0 ? 0 : Math.round((completedTasks.length / tasks.length) * 100);
-  const totalOpenReqs = crmAccounts.reduce((sum, a) => sum + (Number(a.activeReqs) || 0), 0);
+  const totalOpenReqs = crmSummary.openReqs;
+  const userEmail = getUserEmail() || '';
+  const userName = displayName(userEmail);
+
+  const showPageHeader = currentTab !== 'overview' && currentTab !== 'notfound';
 
   return (
     <PortalShell portalTitle="Internal Employee Portal" portalRole="employee" navItems={navItems}>
-      <div className="max-w-6xl mx-auto space-y-4">
-        
-        {/* Top Header — dashboard only */}
-        {currentTab === 'overview' && (
-        <div className="bg-white p-4 rounded-3xl border border-slate-200/90 shadow-sm flex items-center justify-between">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-[#087BFF] border border-blue-200 mb-2">
-              <ShieldCheck size={14} /> Internal Ops Delivery Team
-            </div>
-            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
-              NexaTalent Ops & Account Delivery Workspace
-            </h1>
-            <p className="text-xs text-slate-600 font-medium mt-1">
-              Manage client account SLAs, candidate vetting workflows, recruitment tasks, and quarterly targets.
-            </p>
-          </div>
-        </div>
-        )}
-
-        {/* Page title — spec §5.2 (sidebar owns navigation; shell owns context) */}
-        <div className="px-1">
-          <h2 className="text-base font-extrabold text-slate-900">{navItems.find((n) => location.pathname === n.path)?.label || navItems.filter((n) => n.path !== '/employee' && location.pathname.startsWith(n.path)).sort((a, b) => b.path.length - a.path.length)[0]?.label || navItems[0].label}</h2>
-        </div>
-
-        {/* TAB 1: OVERVIEW */}
-        {currentTab === 'overview' && (
-          <div className="space-y-6">
-            {isLoading ? (
-              <InlineLoading message="Loading workspace…" />
-            ) : (
-            <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-white rounded-3xl border border-slate-200/90 shadow-sm space-y-1">
-                <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Assigned Client Accounts</div>
-                <div className="text-3xl font-extrabold text-slate-900">{crmAccounts.length} Clients</div>
-                <div className="text-xs font-bold text-[#087BFF]">{totalOpenReqs} Open Requisitions</div>
-              </div>
-              <div className="p-4 bg-white rounded-3xl border border-slate-200/90 shadow-sm space-y-1">
-                <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tasks Due Today</div>
-                <div className="text-3xl font-extrabold text-slate-900">{pendingTasks.length} Pending</div>
-                <div className="text-xs font-bold text-amber-600">{completedTasks.length} Completed</div>
-              </div>
-              <div className="p-4 bg-white rounded-3xl border border-slate-200/90 shadow-sm space-y-1">
-                <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Task Completion</div>
-                <div className="text-3xl font-extrabold text-slate-900">{completionRate}% Done</div>
-                <div className="text-xs font-bold text-emerald-600">{tasks.length} Total Tasks</div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-3xl border border-slate-200/90 p-4 shadow-sm space-y-3">
-              <h3 className="text-base font-extrabold text-slate-900">Active Managed Client Accounts</h3>
-              {crmAccounts.length === 0 ? (
-                <EmptyState title="No client accounts" message="Accounts assigned to you will appear here." />
-              ) : (
-              <div className="space-y-3">
-                {crmAccounts.map((acc, idx) => (
-                  <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-                    <div>
-                      <div className="font-extrabold text-slate-900 text-sm">{acc.clientName}</div>
-                      <div className="text-xs text-slate-500 font-medium mt-0.5">Industry: {acc.industry} • Active Reqs: {acc.activeReqs}</div>
-                    </div>
-                    <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-xs">
-                      {acc.slaHealth}
-                    </span>
-                  </div>
-                ))}
-              </div>
+      <div className="mx-auto max-w-[1200px] space-y-4">
+        {showPageHeader && (
+          <div className="flex flex-wrap items-end justify-between gap-2 px-1">
+            <div>
+              <h1 className="text-lg font-extrabold tracking-tight text-slate-900">
+                {TITLES[currentTab] || 'Workspace'}
+              </h1>
+              {SUBTITLES[currentTab] && (
+                <p className="mt-0.5 text-xs font-medium text-slate-500">{SUBTITLES[currentTab]}</p>
               )}
             </div>
-            </>
-            )}
-          </div>
-        )}
-
-        {/* TAB 2: CRM & ACCOUNTS */}
-        {currentTab === 'crm' && (
-          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 shadow-sm space-y-3">
-            <h3 className="text-base font-extrabold text-slate-900">Enterprise Client Accounts Directory</h3>
-            {isLoading ? (
-              <InlineLoading message="Loading accounts…" />
-            ) : crmAccounts.length === 0 ? (
-              <EmptyState title="No accounts found" message="Client accounts synced from the server will appear here." />
-            ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
-                    <th className="pb-2">Account ID</th>
-                    <th className="pb-2">Client Organization</th>
-                    <th className="pb-2">Industry Domain</th>
-                    <th className="pb-2">Account Owner</th>
-                    <th className="pb-2">Open Requisitions</th>
-                    <th className="pb-2">SLA Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-                  {crmAccounts.map((c, i) => (
-                    <tr key={i} className="hover:bg-slate-50">
-                      <td className="py-2 font-mono font-bold text-slate-500">{c.id}</td>
-                      <td className="py-2 font-bold text-slate-900">{c.clientName}</td>
-                      <td className="py-2">{c.industry}</td>
-                      <td className="py-2 text-slate-600">{c.accountOwner}</td>
-                      <td className="py-2 font-bold text-[#087BFF]">{c.activeReqs} Reqs</td>
-                      <td className="py-2"><span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px]">{c.slaHealth}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+              <span className="rounded-full bg-slate-100 px-2 py-0.5">{crmSummary.accounts} clients</span>
+              <span className="rounded-full bg-slate-100 px-2 py-0.5">{totalOpenReqs} open reqs</span>
             </div>
-            )}
           </div>
         )}
 
-        {/* TAB 3: RECRUITMENT TASKS */}
+        {/* ---------------- overview ---------------- */}
+        {currentTab === 'overview' && <EmployeeDashboard userName={userName} />}
+
+        {/* ---------------- new requirement / job (full-page creators) ---------------- */}
+        {currentTab === 'requisitions-new' && <RequirementCreatePage base="/employee" />}
+        {currentTab === 'jobs-new' && <JobCreatePage base="/employee" />}
+
+        {/* ---------------- CRM ---------------- */}
+        {currentTab === 'crm' && <EmployeeCrmPanel />}
+
+        {/* ---------------- recruitment tasks ---------------- */}
         {currentTab === 'tasks' && (
-          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 shadow-sm space-y-3">
-            <h3 className="text-base font-extrabold text-slate-900">Daily Candidate Vetting & Delivery Tasks</h3>
-            <form onSubmit={createTask} className="grid grid-cols-1 sm:grid-cols-5 gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200">
-              <input value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} placeholder="Task title *" aria-label="Task title" className="sm:col-span-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none" />
-              <input value={taskForm.client} onChange={(e) => setTaskForm({ ...taskForm, client: e.target.value })} placeholder="Client" aria-label="Client" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none" />
-              <input value={taskForm.dueDate} onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })} type="date" aria-label="Due date" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none" />
+          <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">Daily candidate vetting &amp; delivery tasks</h3>
+                <p className="text-xs font-medium text-slate-500">
+                  {pendingTasks.length} open · {completedTasks.length} completed · {completionRate}% done
+                </p>
+              </div>
+              <div className="h-2 w-40 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
+                <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${completionRate}%` }} />
+              </div>
+            </div>
+
+            <form onSubmit={createTask} className="grid grid-cols-1 gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-5">
+              <input
+                value={taskForm.title}
+                onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
+                placeholder="Task title *"
+                aria-label="Task title"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-[#0B5FD9] sm:col-span-2"
+              />
+              <input
+                value={taskForm.client}
+                onChange={(e) => setTaskForm({ ...taskForm, client: e.target.value })}
+                placeholder="Client"
+                aria-label="Client"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-[#0B5FD9]"
+              />
+              <input
+                value={taskForm.dueDate}
+                onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })}
+                type="date"
+                aria-label="Due date"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-[#0B5FD9]"
+              />
               <div className="flex gap-2">
-                <Select value={taskForm.priority} onChange={(v) => setTaskForm({ ...taskForm, priority: v })} ariaLabel="Priority" options={['High', 'Medium', 'Low'].map((v) => ({ value: v, label: v }))} />
-                <button type="submit" disabled={taskBusy} className="px-4 py-2 rounded-xl bg-[#087BFF] text-white font-bold text-xs disabled:opacity-50 shrink-0">Add</button>
+                <Select
+                  value={taskForm.priority}
+                  onChange={(v) => setTaskForm({ ...taskForm, priority: v })}
+                  ariaLabel="Priority"
+                  options={['High', 'Medium', 'Low'].map((v) => ({ value: v, label: v }))}
+                />
+                <button
+                  type="submit"
+                  disabled={taskBusy || !taskForm.title.trim()}
+                  className="shrink-0 rounded-xl bg-[#0B5FD9] px-4 py-2 text-xs font-extrabold text-white disabled:opacity-50"
+                >
+                  {taskBusy ? <Loader2 size={14} className="animate-spin" /> : 'Add'}
+                </button>
               </div>
             </form>
+
             {isLoading ? (
               <InlineLoading message="Loading tasks…" />
             ) : tasks.length === 0 ? (
               <EmptyState title="No tasks assigned" message="Vetting and delivery tasks will appear here." />
             ) : (
-            <div className="space-y-3">
-              {tasks.map((task, idx) => (
-                <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => handleToggleTask(task.id)}
-                      className={`w-5 h-5 rounded-md flex items-center justify-center cursor-pointer transition-colors ${
-                        task.status === 'Completed' ? 'bg-emerald-600 text-white' : 'border border-slate-300 bg-white'
-                      }`}
-                    >
-                      {task.status === 'Completed' && <CheckCircle2 size={14} />}
-                    </button>
-                    <div>
-                      <div className={`font-extrabold text-slate-900 text-sm ${task.status === 'Completed' ? 'line-through text-slate-400' : ''}`}>
-                        {task.title}
+              <ul className="divide-y divide-slate-100">
+                {tasks.map((task) => {
+                  const done = task.status === 'Completed';
+                  const overdue = task.dueDate && String(task.dueDate).slice(0, 10) < new Date().toISOString().slice(0, 10);
+                  return (
+                    <li key={task.id} className="flex items-center justify-between gap-3 py-2.5">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleTask(task.id)}
+                          aria-label={done ? `Mark "${task.title}" as pending` : `Mark "${task.title}" as complete`}
+                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md transition-colors ${
+                            done ? 'bg-emerald-600 text-white' : 'border border-slate-300 bg-white text-transparent hover:border-slate-400'
+                          }`}
+                        >
+                          <CheckCircle2 size={14} />
+                        </button>
+                        <div className="min-w-0">
+                          <div className={`truncate text-sm font-extrabold ${done ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
+                            {task.title}
+                          </div>
+                          <div className={`mt-0.5 truncate text-[11px] font-semibold ${overdue && !done ? 'text-red-700' : 'text-slate-500'}`}>
+                            {task.client ? `${task.client} · ` : ''}
+                            {task.dueDate ? `${overdue && !done ? 'Overdue' : 'Due'} ${String(task.dueDate).slice(0, 10)}` : 'No due date'}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-slate-500 font-medium mt-0.5">Client: {task.client} • Due: {task.dueDate}</div>
-                    </div>
-                  </div>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
-                    task.priority === 'High' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-slate-100 text-slate-700'
-                  }`}>
-                    {task.priority} Priority
-                  </span>
-                </div>
-              ))}
-            </div>
+                      <span
+                        className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-extrabold ${
+                          task.priority === 'High'
+                            ? 'border-red-200 bg-red-50 text-red-700'
+                            : 'border-slate-200 bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        {task.priority || 'Medium'}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
           </div>
         )}
 
-        {/* TAB 4: SALES TARGETS (live: won vs goal per owner) */}
+        {/* ---------------- targets ---------------- */}
         {currentTab === 'targets' && (
-          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-5 shadow-sm space-y-4">
-            <div className="border-b border-slate-100 pb-4 flex items-center justify-between gap-2 flex-wrap">
+          <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
               <div>
-                <h3 className="text-lg font-extrabold text-slate-900">Sales Targets & Attainment</h3>
-                <p className="text-xs text-slate-500">Live wins vs goal per owner. Set or edit targets under Sales Performance.</p>
+                <h3 className="text-base font-extrabold text-slate-900">Sales targets &amp; attainment</h3>
+                <p className="text-xs font-medium text-slate-500">Live wins versus goal per owner. Edit targets under Sales Performance.</p>
               </div>
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
-                <div className="font-extrabold text-slate-900 text-sm">Task attainment (delivery)</div>
-                <div className="font-mono text-[#087BFF] font-bold">{completedTasks.length} / {tasks.length} ({completionRate}%)</div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs">
+                <div className="text-sm font-extrabold text-slate-900">Task attainment</div>
+                <div className="font-mono font-bold text-[#0B5FD9]">
+                  {completedTasks.length} / {tasks.length} ({completionRate}%)
+                </div>
               </div>
             </div>
 
@@ -351,104 +413,139 @@ export function EmployeePortal() {
             ) : salesTargets.length === 0 ? (
               <EmptyState title="No sales targets" message="Managers set owner/period/goal targets — progress appears here automatically." />
             ) : (
-            <div className="space-y-3">
-              {salesTargets.map((t) => {
-                const perf = targetProgress[t.owner];
-                const won = perf ? Number(perf.won || 0) : null;
-                const goal = Number(t.goal || 0);
-                const pct = won === null || goal <= 0 ? null : Math.min(100, Math.round((won / goal) * 100));
-                return (
-                  <div key={t.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <div className="font-extrabold text-slate-900 text-sm">{t.owner} • {t.period}</div>
-                      <div className="text-xs font-bold text-slate-600">Goal <span className="font-mono">{goal}</span>{won !== null && <> • Won <span className="font-mono text-emerald-700">{won}</span></>}</div>
-                    </div>
-                    {pct === null ? (
-                      <div className="text-[11px] text-slate-500 font-medium">Progress unavailable for this owner/period.</div>
-                    ) : (
-                      <div>
-                        <div className="flex justify-between text-[11px] font-bold text-slate-700 mb-1">
-                          <span>Attainment</span>
-                          <span className="text-[#087BFF] font-mono">{pct}%</span>
-                        </div>
-                        <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${pct}%` }} />
+              <div className="space-y-3">
+                {salesTargets.map((t) => {
+                  const perf = targetProgress[t.owner];
+                  const won = perf ? Number(perf.won || 0) : null;
+                  const goal = Number(t.goal || 0);
+                  const pct = won === null || goal <= 0 ? null : Math.min(100, Math.round((won / goal) * 100));
+                  return (
+                    <div key={t.id} className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="text-sm font-extrabold text-slate-900">{t.owner} · {t.period}</div>
+                        <div className="text-xs font-bold text-slate-600">
+                          Goal <span className="font-mono">{goal}</span>
+                          {won !== null && <> · Won <span className="font-mono text-emerald-700">{won}</span></>}
                         </div>
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                      {pct === null ? (
+                        <div className="text-[11px] font-medium text-slate-500">Progress unavailable for this owner/period.</div>
+                      ) : (
+                        <div>
+                          <div className="mb-1 flex justify-between text-[11px] font-bold text-slate-700">
+                            <span>Attainment</span>
+                            <span className="font-mono text-[#0B5FD9]">{pct}%</span>
+                          </div>
+                          <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100">
+                            <div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         )}
 
-        {/* TAB 5: DELIVERY REPORTS */}
+        {/* ---------------- reports ---------------- */}
         {currentTab === 'reports' && (
-          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-5 shadow-sm space-y-4">
+          <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
             <div className="border-b border-slate-100 pb-4">
-              <h3 className="text-lg font-extrabold text-slate-900">Account & Delivery Analytics</h3>
-              <p className="text-xs text-slate-500">Operational metrics computed from live CRM and task data.</p>
+              <h3 className="text-base font-extrabold text-slate-900">Account &amp; delivery analytics</h3>
+              <p className="text-xs font-medium text-slate-500">Operational metrics computed from live CRM and task data.</p>
             </div>
 
             {isLoading ? (
               <InlineLoading message="Loading analytics…" />
             ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                <div className="text-slate-500 font-bold uppercase">Managed Accounts</div>
-                <div className="text-3xl font-extrabold text-slate-900">{crmAccounts.length}</div>
-                <div className="text-emerald-600 font-bold">{totalOpenReqs} open requisitions</div>
+              <div className="grid grid-cols-1 gap-4 text-xs md:grid-cols-3">
+                <div className="space-y-1 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                  <div className="font-bold uppercase text-slate-500">Managed accounts</div>
+                  <div className="text-3xl font-extrabold text-slate-900">{crmSummary.accounts}</div>
+                  <div className="font-bold text-emerald-700">{totalOpenReqs} open requisitions</div>
+                </div>
+                <div className="space-y-1 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                  <div className="font-bold uppercase text-slate-500">Task completion rate</div>
+                  <div className="text-3xl font-extrabold text-slate-900">{completionRate}%</div>
+                  <div className="font-bold text-[#0B5FD9]">{pendingTasks.length} tasks pending</div>
+                </div>
+                <div className="space-y-1 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                  <div className="font-bold uppercase text-slate-500">Workload assigned</div>
+                  <div className="text-3xl font-extrabold text-slate-900">{tasks.length}</div>
+                  <div className="font-bold text-emerald-700">{completedTasks.length} completed</div>
+                </div>
               </div>
-              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                <div className="text-slate-500 font-bold uppercase">Task Completion Rate</div>
-                <div className="text-3xl font-extrabold text-slate-900">{completionRate}%</div>
-                <div className="text-[#087BFF] font-bold">{pendingTasks.length} tasks pending</div>
-              </div>
-              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                <div className="text-slate-500 font-bold uppercase">Workload Assigned</div>
-                <div className="text-3xl font-extrabold text-slate-900">{tasks.length}</div>
-                <div className="text-emerald-600 font-bold">{completedTasks.length} completed</div>
-              </div>
-            </div>
             )}
           </div>
         )}
 
-        {/* TAB: UNIFIED ACTIVITIES FEED (§10.2) */}
+        {/* ---------------- activities ---------------- */}
         {currentTab === 'activities' && (
-          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 shadow-sm space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
               <div>
-                <h3 className="text-base font-extrabold text-slate-900">Sales Activity Timeline</h3>
-                <p className="text-xs text-slate-500">Calls, touches, meetings and proposals — newest first, with outcomes and follow-ups.</p>
+                <h3 className="text-base font-extrabold text-slate-900">Sales activity timeline</h3>
+                <p className="text-xs font-medium text-slate-500">Calls, touches, meetings and proposals — newest first, with outcomes and follow-ups.</p>
               </div>
-              <Select value={actKind} onChange={setActKind} ariaLabel="Activity kind" options={[{ value: '', label: 'All kinds' }, { value: 'activity', label: 'Activities' }, { value: 'meeting', label: 'Meetings' }, { value: 'proposal', label: 'Proposals' }]} />
+              <Select
+                value={actKind}
+                onChange={setActKind}
+                ariaLabel="Activity kind"
+                options={[
+                  { value: '', label: 'All kinds' },
+                  { value: 'activity', label: 'Activities' },
+                  { value: 'meeting', label: 'Meetings' },
+                  { value: 'proposal', label: 'Proposals' },
+                ]}
+              />
             </div>
             {actLoading ? (
               <InlineLoading message="Loading activities…" />
             ) : activities.length === 0 ? (
               <EmptyState title="No activity yet" message="Log lead touches, book meetings or create proposals — they land here." />
             ) : (
-            <div className="space-y-2">
-              {activities.map((a) => (
-                <div key={`${a.kind}-${a.id}`} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="font-extrabold text-slate-900 text-sm">{a.title}</div>
-                    <span className={`px-2.5 py-0.5 rounded-full font-bold text-[11px] border ${a.kind === 'meeting' ? 'bg-blue-50 text-[#087BFF] border-blue-200' : a.kind === 'proposal' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>{a.kind}</span>
+              <div className="space-y-2">
+                {activities.map((a) => (
+                  <div key={`${a.kind}-${a.id}`} className="space-y-1 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-sm font-extrabold text-slate-900">{a.title}</div>
+                      <span
+                        className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${
+                          a.kind === 'meeting'
+                            ? 'border-blue-200 bg-blue-50 text-[#0B5FD9]'
+                            : a.kind === 'proposal'
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                            : 'border-slate-200 bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        {a.kind}
+                      </span>
+                    </div>
+                    <div className="text-xs font-medium text-slate-600">
+                      {a.leadName} · {String(a.at || '').slice(0, 16).replace('T', ' ')} · Owner: {a.owner || '—'}
+                    </div>
+                    {(a.outcome || a.notes) && (
+                      <div className="text-xs text-slate-600">
+                        {a.outcome && <strong>{a.outcome} — </strong>}
+                        {a.notes}
+                      </div>
+                    )}
+                    {(a.nextAction || a.followUp) && (
+                      <div className="text-[11px] font-bold text-amber-800">
+                        Next: {a.nextAction || '—'}
+                        {a.followUp ? ` · Follow up ${String(a.followUp).slice(0, 10)}` : ''}
+                      </div>
+                    )}
                   </div>
-                  <div className="text-xs text-slate-600 font-medium">{a.leadName} • {String(a.at || '').slice(0, 16).replace('T', ' ')} • Owner: {a.owner || '—'}</div>
-                  {(a.outcome || a.notes) && <div className="text-xs text-slate-600">{a.outcome && <strong>{a.outcome} — </strong>}{a.notes}</div>}
-                  {(a.nextAction || a.followUp) && <div className="text-[11px] text-amber-700 font-bold">Next: {a.nextAction || '—'}{a.followUp ? ` • Follow up ${String(a.followUp).slice(0, 10)}` : ''}</div>}
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
             )}
           </div>
         )}
 
-        {/* ENTERPRISE: new phase modules */}
+        {/* ---------------- enterprise panels ---------------- */}
         {currentTab === 'requisitions' && <RequisitionsPanel />}
         {currentTab === 'jobs' && <JobsPanel />}
         {currentTab === 'applications' && <ApplicationsPanel />}
@@ -460,7 +557,43 @@ export function EmployeePortal() {
         {currentTab === 'performance' && <PerformancePanel />}
         {currentTab === 'security' && <MfaPanel />}
         {currentTab === 'notifications' && <NotificationsPanel />}
+        {currentTab === 'settings' && <EmployeeSettingsPanel />}
 
+        {/* ---------------- unknown employee route ---------------- */}
+        {currentTab === 'notfound' && (
+          <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+              <Compass size={22} />
+            </div>
+            <h1 className="mt-3 text-lg font-extrabold text-slate-900">This page isn&apos;t part of your workspace</h1>
+            <p className="mx-auto mt-1 max-w-md text-xs font-medium text-slate-500">
+              <span className="font-mono">{location.pathname}</span> doesn&apos;t match any employee section. Pick a destination below.
+            </p>
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => navigate('/employee', { replace: true })}
+                className="rounded-xl bg-[#071B3A] px-4 py-2 text-xs font-extrabold text-white hover:bg-[#0B2548]"
+              >
+                Back to overview
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/employee/requisitions', { replace: true })}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-extrabold text-slate-700 hover:bg-slate-50"
+              >
+                My requirements
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/employee/tasks', { replace: true })}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-extrabold text-slate-700 hover:bg-slate-50"
+              >
+                My tasks
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </PortalShell>
   );
