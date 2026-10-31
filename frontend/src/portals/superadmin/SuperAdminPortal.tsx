@@ -33,6 +33,7 @@ const navItems = [
   { label: 'Job Board (Admin)', path: '/superadmin/jobs', group: 'Recruitment' },
   { label: 'Open Positions', path: '/superadmin/open-positions', group: 'Recruitment' },
   { label: 'Applications', path: '/superadmin/applications', group: 'Recruitment' },
+  { label: 'Website Applicants', path: '/superadmin/website-leads', group: 'Recruitment' },
   { label: 'Interviews', path: '/superadmin/interviews', group: 'Recruitment' },
   { label: 'Placements', path: '/superadmin/placements', group: 'Recruitment' },
   { label: 'Talent Pools', path: '/superadmin/talent', group: 'Recruitment' },

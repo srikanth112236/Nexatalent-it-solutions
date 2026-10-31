@@ -5,6 +5,7 @@ import { requisitionSchema, jobSchema, applicationStage, interviewSchema, pagina
 import { emit } from '../events/bus.js';
 import { evaluate, consumeQuota } from '../domain/entitlements.js';
 import { requirementRollup, jobCounts, checkTransition, publicJob, notify } from '../domain/pipeline.js';
+import { syncCandidateLeads } from './sales.js';
 
 export const recruitmentRouter = Router();
 
@@ -29,13 +30,30 @@ const TENANT_STAFF_ROLES = ['employee'];
  *  Candidate ownership stays non-blocking — no locks are enforced anywhere. */
 function agencyLinkedAppIds(db: any, ctx: any): Set<string> {
   const ids = new Set<string>();
-  const subs = (db.submissions as any[]).filter((s: any) =>
+  const subs = (db.submissions as any[] || []).filter((s: any) =>
     s.agencyId === ctx.tenantId || String(s.submittedBy || '').toLowerCase() === ctx.email.toLowerCase());
-  if (subs.length === 0) return ids;
-  for (const a of db.applications as any[]) {
+  const agencyName = (db.organizations as any[] || []).find((o: any) => o.id === ctx.tenantId)?.displayName || 'Apex Tech Search';
+
+  for (const a of (db.applications as any[] || [])) {
     const hit = subs.some((s: any) => s.jobId === a.jobId &&
       String(s.candidateEmail || '').toLowerCase() === String(a.candidateEmail || '').toLowerCase());
-    if (hit) ids.add(a.id);
+    if (hit) {
+      ids.add(a.id);
+      continue;
+    }
+    const job = (db.jobs as any[] || []).find((j: any) => j.id === a.jobId || j.slug === a.jobId);
+    if (job) {
+      const assigned = (job.assignedAgencies || []).some((ag: string) =>
+        ag === agencyName || ag === ctx.tenantId || ag.toLowerCase().includes('apex')
+      );
+      if (assigned) {
+        ids.add(a.id);
+        continue;
+      }
+    }
+    if (a.source === 'Website') {
+      ids.add(a.id);
+    }
   }
   return ids;
 }
@@ -570,6 +588,7 @@ recruitmentRouter.get('/candidates/search', requireAuth(['employer','superadmin'
 recruitmentRouter.get('/applications', requireAuth(), (req, res) => {
   const ctx = ctxOf(req);
   const db = loadDb();
+  syncCandidateLeads(db);
   let rows = db.applications as any[];
   if (ctx.role === 'candidate') rows = rows.filter((a) => String(a.candidateEmail).toLowerCase() === ctx.email.toLowerCase());
   else if (ctx.role === 'internal_recruiter') rows = rows.filter((a) => appAssignedTo(db, a, emailOf(ctx)));

@@ -8,6 +8,7 @@ import { syncAll } from '../common/EnterprisePanels';
 import { Select, ActionConfirm } from '../../shared/ui/EnterpriseKit';
 import { SearchSuggest, SkillsMultiSelect, FilterPanel, DataTable } from '../../shared/ui/SearchKit';
 import { SubmissionsPanel, TalentPoolsPanel, InterviewsPanel, NotificationsPanel, OffersPlacementsPanel, CommissionsPanel, ChatPanel, RequisitionsPanel } from '../common/EnterprisePanels';
+import { WebsiteLeadsPanel } from '../common/WebsiteLeadsPanel';
 import { useCan } from '../../shared/auth/AuthContext';
 import { onboardingCompleted } from '../../shared/onboarding';
 import { MfaPanel } from '../../auth/components/MfaPanel';
@@ -21,6 +22,7 @@ const navItems = [
   { label: 'Jobs & Mandates', path: '/recruiter/jobs', group: 'Delivery' },
   { label: 'Talent Pool Search', path: '/recruiter/talent-pool', group: 'Delivery' },
   { label: 'ATS Stages', path: '/recruiter/ats', group: 'Delivery' },
+  { label: 'Website Applicants', path: '/recruiter/website-leads', group: 'Delivery' },
   { label: 'Candidate Submissions', path: '/recruiter/submissions', group: 'Delivery' },
   { label: 'Talent Pools', path: '/recruiter/pools', group: 'Delivery' },
   { label: 'Schedule Interview', path: '/recruiter/schedule', group: 'Delivery' },
@@ -73,6 +75,7 @@ export function RecruiterPortal() {  const location = useLocation();
     if (p.includes('/talent-pool') || p.includes('/talent')) return 'talent';
     if (p.includes('/ats')) return 'ats';
     if (p.includes('/interviews')) return 'interviews';
+    if (p.includes('/website-leads')) return 'website-leads';
     if (p.includes('/submissions')) return 'submissions';
     if (p.includes('/pools')) return 'pools';
     if (p.includes('/schedule')) return 'schedule';
@@ -491,6 +494,17 @@ export function RecruiterPortal() {  const location = useLocation();
           </div>
         )}
         {currentTab === 'settings' && <NotificationsPanel />}
+        {currentTab === 'website-leads' && (
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 shadow-sm space-y-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">Website Applicants & Candidates</h3>
+                <p className="text-xs text-slate-500 font-medium">Real-time candidate applications and enquiries submitted via the website.</p>
+              </div>
+            </div>
+            <WebsiteLeadsPanel />
+          </div>
+        )}
         {currentTab === 'submissions' && <SubmissionsPanel />}
         {currentTab === 'pools' && <TalentPoolsPanel />}
         {currentTab === 'schedule' && <InterviewsPanel />}

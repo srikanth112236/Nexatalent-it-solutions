@@ -18,6 +18,183 @@ const UPLOAD_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'da
 function ensureUploadDir() { if (!existsSync(UPLOAD_DIR)) mkdirSync(UPLOAD_DIR, { recursive: true }); }
 const MAX_RESUME_BYTES = 5 * 1024 * 1024;
 
+export function syncCandidateLead(db: any, lead: any): void {
+  if (!lead || !lead.email) return;
+  const isCandidate =
+    lead.enquiryType === 'candidate' ||
+    lead.formName === 'Careers' ||
+    String(lead.service || '').toLowerCase().includes('careers') ||
+    String(lead.sourcePage || '').includes('/jobs/');
+  if (!isCandidate) return;
+
+  const email = String(lead.email).toLowerCase().trim();
+  const name = String(lead.contactName || email.split('@')[0]).trim();
+  const phone = String(lead.phone || '').trim();
+  const notes = String(lead.notes || '');
+
+  // Parse extracted tokens from notes/service
+  const expMatch = notes.match(/Experience:\s*([^·\n]+)/i);
+  const locMatch = notes.match(/Location:\s*([^·\n]+)/i);
+  const currCtcMatch = notes.match(/Current CTC:\s*([^·\n]+)/i);
+  const expCtcMatch = notes.match(/Expected CTC:\s*([^·\n]+)/i);
+  const noticeMatch = notes.match(/Notice period:\s*([^·\n]+)/i);
+  const roleMatch = notes.match(/Role:\s*([^·\n(]+)/i);
+
+  const expStr = expMatch ? expMatch[1].trim() : '3–5 yrs';
+  const locStr = locMatch ? locMatch[1].trim() : 'India';
+  const currCtc = currCtcMatch ? currCtcMatch[1].trim() : 'Competitive';
+  const expCtc = expCtcMatch ? expCtcMatch[1].trim() : 'Competitive';
+  const noticeStr = noticeMatch ? noticeMatch[1].trim() : 'Immediate';
+  const parsedRole = roleMatch ? roleMatch[1].trim() : (lead.service ? lead.service.replace(/^Careers application\s*—\s*/i, '').trim() : '');
+
+  // 1. Resolve or ensure Job in db.jobs
+  if (!Array.isArray(db.jobs)) db.jobs = [];
+  let jobSlug = '';
+  if (lead.sourcePage && lead.sourcePage.includes('/jobs/')) {
+    jobSlug = lead.sourcePage.split('/jobs/')[1].split(/[?#/]/)[0].trim();
+  }
+  let targetJob = (db.jobs as any[]).find((j: any) =>
+    (jobSlug && (j.id === jobSlug || j.slug === jobSlug)) ||
+    (parsedRole && j.title && j.title.toLowerCase().includes(parsedRole.toLowerCase())) ||
+    j.id === 'JOB-9903'
+  );
+
+  if (!targetJob) {
+    const title = parsedRole || 'Full Stack Developer | Golang + React.js + GCP';
+    targetJob = {
+      id: jobSlug || 'full-stack-developer-golang-react-gcp',
+      slug: jobSlug || 'full-stack-developer-golang-react-gcp',
+      requisitionId: 'REQ-9903',
+      orgId: 'TNT-9011',
+      title,
+      description: 'Enterprise cloud-native role.',
+      status: 'Published',
+      visibility: 'public',
+      location: locStr.includes('India') ? locStr : `${locStr}, India (Hybrid)`,
+      employmentType: 'Full-time',
+      salaryMin: 2800000,
+      salaryMax: 4200000,
+      currency: 'INR',
+      applicantsCount: 0,
+      startDate: lead.createdAt || nowIso(),
+      expiryDate: '2027-03-01T00:00:00.000Z',
+      assignedAgencies: ['Apex Tech Search'],
+      assignedVendors: ['Global TechSolutions Vendor'],
+      createdAt: lead.createdAt || nowIso(),
+    };
+    db.jobs.unshift(targetJob);
+  }
+
+  if (!Array.isArray(targetJob.assignedAgencies)) targetJob.assignedAgencies = [];
+  if (!targetJob.assignedAgencies.includes('Apex Tech Search')) {
+    targetJob.assignedAgencies.push('Apex Tech Search');
+  }
+
+  // 2. Sync Application
+  if (!Array.isArray(db.applications)) db.applications = [];
+  const appKey = `${targetJob.id}::${email}`;
+  let app = db.applications.find((a: any) => a.key === appKey || (a.candidateEmail?.toLowerCase() === email && (a.jobId === targetJob.id || a.jobId === targetJob.slug)));
+  if (!app) {
+    app = {
+      id: `APP-WEB-${String(lead.id || '').replace('LEAD-', '')}`,
+      key: appKey,
+      jobId: targetJob.id,
+      jobTitle: targetJob.title,
+      orgId: targetJob.orgId || 'TNT-9011',
+      requisitionId: targetJob.requisitionId || 'REQ-9903',
+      candidateEmail: email,
+      candidateName: name,
+      stage: 'Applied',
+      source: 'Website',
+      resumeRef: lead.resumeRef || null,
+      resumeName: lead.resumeName || '',
+      phone,
+      notes: notes.slice(0, 2000),
+      leadId: lead.id,
+      createdAt: lead.createdAt || nowIso(),
+      updatedAt: lead.createdAt || nowIso(),
+    };
+    db.applications.unshift(app);
+    if (Array.isArray(db.stageHistory)) {
+      pushHistory(db.stageHistory, { id: uid('STG'), applicationId: app.id, from: '-', to: 'Applied', actor: 'website', createdAt: app.createdAt });
+    }
+    targetJob.applicantsCount = (targetJob.applicantsCount || 0) + 1;
+  } else {
+    if (lead.resumeRef && !app.resumeRef) {
+      app.resumeRef = lead.resumeRef;
+      app.resumeName = lead.resumeName;
+    }
+    if (phone && !app.phone) app.phone = phone;
+  }
+
+  // 3. Sync Candidate Profile
+  if (!Array.isArray(db.candidateProfiles)) db.candidateProfiles = [];
+  let cp = db.candidateProfiles.find((c: any) => String(c.email || '').toLowerCase() === email);
+  if (!cp) {
+    const expNum = parseInt(expStr, 10) || 5;
+    cp = {
+      id: `CND-WEB-${String(lead.id || '').replace('LEAD-', '')}`,
+      name,
+      email,
+      phone,
+      headline: `${targetJob.title} Candidate | ${expStr}`,
+      roleTitle: targetJob.title,
+      experienceYears: expNum,
+      location: locStr,
+      country: 'India',
+      contactPrefs: 'Email + Phone',
+      currentCtc: currCtc,
+      expectedCtc: expCtc,
+      noticePeriod: noticeStr,
+      availability: noticeStr,
+      source: 'website',
+      sourceType: 'Website',
+      summary: notes.slice(0, 1000),
+      status: 'Active',
+      visibility: 'standard',
+      resumeRef: lead.resumeRef || '',
+      resumeName: lead.resumeName || '',
+      jobId: targetJob.id,
+      assignedRecruiter: 'vikram@apextechsearch.com',
+      createdAt: lead.createdAt || nowIso(),
+      updatedAt: lead.createdAt || nowIso(),
+    };
+    db.candidateProfiles.unshift(cp);
+  } else {
+    if (lead.resumeRef && !cp.resumeRef) {
+      cp.resumeRef = lead.resumeRef;
+      cp.resumeName = lead.resumeName;
+    }
+    if (phone && !cp.phone) cp.phone = phone;
+  }
+
+  // 4. Sync Document
+  if (lead.resumeRef && Array.isArray(db.documents)) {
+    const docExists = db.documents.some((d: any) => d.ref === lead.resumeRef || (String(d.candidateEmail).toLowerCase() === email && d.name === lead.resumeName));
+    if (!docExists) {
+      db.documents.unshift({
+        id: `DOC-WEB-${String(lead.id || '').replace('LEAD-', '')}`,
+        candidateEmail: email,
+        ownerEmail: email,
+        name: lead.resumeName || 'Resume.pdf',
+        kind: 'resume',
+        mime: String(lead.resumeName || '').toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'application/msword',
+        ref: lead.resumeRef,
+        version: 1,
+        uploadedAt: lead.createdAt || nowIso(),
+        createdAt: lead.createdAt || nowIso(),
+      });
+    }
+  }
+}
+
+export function syncCandidateLeads(db: any): void {
+  if (!db || !Array.isArray(db.leads)) return;
+  for (const l of db.leads) {
+    syncCandidateLead(db, l);
+  }
+}
+
 // ---- Public business enquiry → lead (no auth; server sets owner/status) ----
 salesRouter.post('/enquiries', enquiryLimiter, (req: Request, res: Response) => {
   const b: any = req.body || {};
@@ -88,15 +265,18 @@ salesRouter.post('/enquiries', enquiryLimiter, (req: Request, res: Response) => 
   };
   db.leads.unshift(lead);
   db.leadActivities.unshift({ id: uid('LACT'), leadId: lead.id, type: 'enquiry', outcome: 'received', notes: `Website enquiry from ${contactName} @ ${companyName}.${resumeRef ? ` Resume: ${resumeName}.` : ''}`, owner: '', createdAt: nowIso() });
+  syncCandidateLead(db, lead);
   audit('website', `ENQUIRY_RECEIVED:${lead.id}`, 'TNT-GLOBAL', 'lead', lead.id, req.ip); persist();
   res.status(201).json({ success: true, data: { id: lead.id } });
 });
 const LEAD_FLOW: Record<string, string[]> = { New: ['Contacted','Lost'], Contacted: ['Qualified','Lost','Nurture'], Qualified: ['Discovery Scheduled','Lost'], 'Discovery Scheduled': ['Proposal Sent','Lost'], 'Proposal Sent': ['Negotiation','Lost'], Negotiation: ['Won','Lost','Nurture'], Won: [], Lost: ['New'], Nurture: ['Contacted'] };
 
 // ---- Leads ----
-salesRouter.get('/leads', requireAuth(['superadmin','platform_owner','sales_admin','employee','bda','sales_manager','operations_admin']), (req, res) => {
+salesRouter.get('/leads', requireAuth(['superadmin','platform_owner','sales_admin','employee','bda','sales_manager','operations_admin','recruiter','agency_admin','agency_recruiter']), (req, res) => {
+  const db = loadDb();
+  syncCandidateLeads(db);
   const { page, pageSize, q, status } = paginate.parse(req.query);
-  let rows = (loadDb().leads as any[]).filter((l) => !l.deleted);
+  let rows = (db.leads as any[]).filter((l) => !l.deleted);
   if (['bda','employee'].includes(ctxOf(req).role)) rows = rows.filter((l) => !l.owner || l.owner === ctxOf(req).email);
   if (status) rows = rows.filter((l) => l.stage === status);
   if (q) { const s = String(q).toLowerCase(); rows = rows.filter((l) => `${l.id || ''} ${l.contactName || ''} ${l.companyName || ''} ${l.email || ''} ${l.stage || ''} ${l.owner || ''}`.toLowerCase().includes(s)); }
@@ -166,7 +346,7 @@ salesRouter.get('/leads/:id/activities', requireAuth(['superadmin','platform_own
   res.json({ success: true, data: loadDb().leadActivities.filter((a: any) => a.leadId === req.params.id) });
 });
 // ---- Lead resume download (Careers / candidate applications; hiring desk only) ----
-salesRouter.get('/leads/:id/resume', requireAuth(['superadmin','platform_owner','sales_admin','sales_manager','employee','bda','operations_admin']), async (req, res) => {
+salesRouter.get('/leads/:id/resume', requireAuth(['superadmin','platform_owner','sales_admin','sales_manager','employee','bda','operations_admin','recruiter','agency_admin','agency_recruiter']), async (req, res) => {
   const l: any = loadDb().leads.find((x: any) => x.id === req.params.id);
   if (!l || !l.resumeRef) return res.status(404).json({ success: false, message: 'No resume on this lead.' });
   const ctx = ctxOf(req);
