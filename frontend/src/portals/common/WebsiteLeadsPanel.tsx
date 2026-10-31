@@ -4,6 +4,7 @@ import { RefreshCw, Search, ExternalLink, Filter, ArrowUpRight, Eye, Download } 
 import { salesApi } from '../../shared/enterprise/phaseApi';
 import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
 import { Modal } from '../../shared/ui/EnterpriseKit';
+import { PdfResumeViewerModal } from '../../shared/ui/PdfResumeViewerModal';
 
 /** Website-sourced leads (all forms) — form / service / source-page tracking for Sales + Superadmin. */
 
@@ -36,6 +37,7 @@ export function WebsiteLeadsPanel() {
   const [activities, setActivities] = useState<any[]>([]);
   const [actLoading, setActLoading] = useState(false);
   const [resumeBusy, setResumeBusy] = useState(false);
+  const [pdfPreview, setPdfPreview] = useState<{ leadId: string; title: string; filename: string } | null>(null);
   const pipelineBase = location.pathname.startsWith('/employee') ? '/employee' : '/superadmin';
 
   useEffect(() => {
@@ -205,9 +207,40 @@ export function WebsiteLeadsPanel() {
                       )}
                       {l.phone && <p className="text-[11px] text-slate-500">{l.phone}</p>}
                       {l.resumeRef || l.resumeName ? (
-                        <p className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
-                          <Download size={10} aria-hidden /> Resume attached
-                        </p>
+                        <div className="mt-1 flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPdfPreview({ leadId: l.id, title: `${l.contactName || l.id} — Resume`, filename: l.resumeName || 'Resume.pdf' });
+                            }}
+                            className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-[#0265FF] border border-blue-200 hover:bg-blue-100 transition-colors"
+                          >
+                            <Eye size={10} aria-hidden /> View PDF
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                const blob = await salesApi.leadResume(l.id);
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = l.resumeName || `resume-${l.id}.pdf`;
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                                URL.revokeObjectURL(url);
+                              } catch {
+                                setError('Could not download resume.');
+                              }
+                            }}
+                            className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 border border-slate-200 hover:bg-slate-200 transition-colors"
+                          >
+                            <Download size={10} aria-hidden /> Download
+                          </button>
+                        </div>
                       ) : null}
                     </td>
                     <td className="px-3 py-2.5 font-semibold text-slate-700">{l.companyName || '—'}</td>
@@ -349,31 +382,40 @@ export function WebsiteLeadsPanel() {
                     {detail.resumeSize ? <span className="font-semibold text-slate-500"> · {(Number(detail.resumeSize) / 1024).toFixed(0)} KB</span> : null}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  disabled={resumeBusy}
-                  onClick={async () => {
-                    setResumeBusy(true);
-                    try {
-                      const blob: Blob = await salesApi.leadResume(detail.id);
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = detail.resumeName || `resume-${detail.id}`;
-                      document.body.appendChild(a);
-                      a.click();
-                      a.remove();
-                      URL.revokeObjectURL(url);
-                    } catch {
-                      setError('Could not download resume — file may no longer be available.');
-                    } finally {
-                      setResumeBusy(false);
-                    }
-                  }}
-                  className="inline-flex min-h-[38px] items-center gap-1.5 rounded-lg bg-[#0265FF] px-4 text-xs font-bold text-white hover:bg-[#0055db] disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0265FF]"
-                >
-                  <Download size={14} aria-hidden /> {resumeBusy ? 'Preparing…' : 'Download resume'}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPdfPreview({ leadId: detail.id, title: `${detail.contactName || detail.id} — Resume`, filename: detail.resumeName || 'Resume.pdf' })}
+                    className="inline-flex min-h-[38px] items-center gap-1.5 rounded-lg bg-slate-900 px-4 text-xs font-bold text-white hover:bg-slate-800 transition-colors shadow-sm focus-visible:outline-2 focus-visible:outline-[#0265FF]"
+                  >
+                    <Eye size={14} aria-hidden /> View PDF
+                  </button>
+                  <button
+                    type="button"
+                    disabled={resumeBusy}
+                    onClick={async () => {
+                      setResumeBusy(true);
+                      try {
+                        const blob: Blob = await salesApi.leadResume(detail.id);
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = detail.resumeName || `resume-${detail.id}.pdf`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        URL.revokeObjectURL(url);
+                      } catch {
+                        setError('Could not download resume — file may no longer be available.');
+                      } finally {
+                        setResumeBusy(false);
+                      }
+                    }}
+                    className="inline-flex min-h-[38px] items-center gap-1.5 rounded-lg bg-[#0265FF] px-4 text-xs font-bold text-white hover:bg-[#0055db] disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0265FF]"
+                  >
+                    <Download size={14} aria-hidden /> {resumeBusy ? 'Preparing…' : 'Download resume'}
+                  </button>
+                </div>
               </div>
             ) : null}
 
@@ -415,6 +457,14 @@ export function WebsiteLeadsPanel() {
           </div>
         )}
       </Modal>
+
+      <PdfResumeViewerModal
+        open={pdfPreview !== null}
+        onClose={() => setPdfPreview(null)}
+        title={pdfPreview?.title || 'Resume PDF'}
+        filename={pdfPreview?.filename || 'Resume.pdf'}
+        leadId={pdfPreview?.leadId}
+      />
     </div>
   );
 }

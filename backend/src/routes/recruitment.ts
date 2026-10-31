@@ -6,6 +6,11 @@ import { emit } from '../events/bus.js';
 import { evaluate, consumeQuota } from '../domain/entitlements.js';
 import { requirementRollup, jobCounts, checkTransition, publicJob, notify } from '../domain/pipeline.js';
 import { syncCandidateLeads } from './sales.js';
+import { existsSync, readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { downloadFile, isBlobStorageConfigured, DEFAULT_CONTAINER } from '../storage/blob.js';
+const UPLOAD_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'data', 'uploads');
 
 export const recruitmentRouter = Router();
 
@@ -597,18 +602,30 @@ recruitmentRouter.get('/applications', requireAuth(), (req, res) => {
   const { page, pageSize, status, q } = paginate.parse(req.query);
   if (status) rows = rows.filter((a) => a.stage === status);
   if (q) { const s = String(q).toLowerCase(); rows = rows.filter((a) => `${a.id} ${a.jobTitle || ''} ${a.candidateEmail || ''}`.toLowerCase().includes(s)); }
-  if (req.query.jobId) rows = rows.filter((a) => a.jobId === req.query.jobId);
+  if (req.query.jobId) {
+    const qJob = String(req.query.jobId).toLowerCase();
+    const matchedJob = (db.jobs as any[] || []).find((j: any) => String(j.id).toLowerCase() === qJob || String(j.slug || '').toLowerCase() === qJob);
+    const validJobIds = new Set<string>([qJob]);
+    if (matchedJob) {
+      if (matchedJob.id) validJobIds.add(String(matchedJob.id).toLowerCase());
+      if (matchedJob.slug) validJobIds.add(String(matchedJob.slug).toLowerCase());
+    }
+    rows = rows.filter((a) => validJobIds.has(String(a.jobId || '').toLowerCase()));
+  }
   if (req.query.requisitionId) rows = rows.filter((a) => a.requisitionId === req.query.requisitionId);
   const enrichedApps = rows.map((a) => {
     const companyName = a.companyName || (a.orgId ? (db.companyProfiles?.find((cp: any) => cp.orgId === a.orgId)?.companyName || db.organizations?.find((o: any) => o.id === a.orgId)?.displayName) : null) || 'Fintech ScaleOps';
     const interviews = (db.interviews as any[] || []).filter((i: any) => i.applicationId === a.id);
     const nextInterview = interviews.filter((i: any) => ['Scheduled','Rescheduled'].includes(i.status)).sort((x: any, y: any) => String(x.scheduledAt || '').localeCompare(String(y.scheduledAt || '')))[0] || null;
-    const jobRaw = (db.jobs as any[] || []).find((j: any) => j.id === a.jobId);
+    const jobRaw = (db.jobs as any[] || []).find((j: any) => j.id === a.jobId || j.slug === a.jobId);
+    const hasResume = !!(a.resumeRef || a.leadId || (db.leads as any[] || []).some((l: any) => l.resumeRef && String(l.email || '').toLowerCase() === String(a.candidateEmail || '').toLowerCase()));
     return {
       ...a,
       companyName,
       nextInterview,
       job: jobRaw ? enrichJobRecord(db, jobRaw) : null,
+      hasResume,
+      resumeUrl: hasResume ? `/api/v1/applications/${a.id}/resume` : null,
     };
   });
   res.json({ success: true, ...paged(enrichedApps, page, pageSize) });
@@ -1228,7 +1245,83 @@ recruitmentRouter.get('/applications/:id', requireAuth(), (req, res) => {
   const job: any = db.jobs.find((j: any) => j.id === a.jobId) || null;
   const companyName = a.companyName || (a.orgId ? (db.companyProfiles?.find((cp: any) => cp.orgId === a.orgId)?.companyName || db.organizations?.find((o: any) => o.id === a.orgId)?.displayName) : null) || 'Fintech ScaleOps';
   const enrichedJob = job ? enrichJobRecord(db, job) : null;
-  res.json({ success: true, data: { ...a, companyName, job: enrichedJob, history, interviews, nextInterview, conversation: conv ? { id: conv.id, status: conv.status } : null, jobClosed: job ? job.status === 'Closed' || (job.expiryDate && new Date(job.expiryDate) <= new Date()) : false } });
+  const hasResume = !!(a.resumeRef || a.leadId || (db.leads as any[] || []).some((l: any) => l.resumeRef && String(l.email || '').toLowerCase() === String(a.candidateEmail || '').toLowerCase()));
+  res.json({
+    success: true,
+    data: {
+      ...a,
+      companyName,
+      job: enrichedJob,
+      history,
+      interviews,
+      nextInterview,
+      conversation: conv ? { id: conv.id, status: conv.status } : null,
+      jobClosed: job ? job.status === 'Closed' || (job.expiryDate && new Date(job.expiryDate) <= new Date()) : false,
+      hasResume,
+      resumeUrl: hasResume ? `/api/v1/applications/${a.id}/resume` : null,
+    }
+  });
+});
+
+// ---- Application Resume Download / Preview ----
+recruitmentRouter.get('/applications/:id/resume', requireAuth(), async (req, res) => {
+  const db = loadDb();
+  const ctx = ctxOf(req);
+  const a: any = (db.applications as any[]).find((x: any) => x.id === req.params.id);
+  if (!a) return res.status(404).json({ success: false, message: 'Application not found.' });
+  if (!canSeeApplication(db, ctx, a)) return res.status(403).json({ success: false, message: 'Access denied.' });
+
+  let resumeRef = a.resumeRef;
+  let resumeName = a.resumeName || 'resume.pdf';
+
+  if (!resumeRef && a.leadId) {
+    const l = (db.leads as any[] || []).find((x: any) => x.id === a.leadId);
+    if (l && l.resumeRef) {
+      resumeRef = l.resumeRef;
+      if (l.resumeName) resumeName = l.resumeName;
+    }
+  }
+
+  if (!resumeRef && a.candidateEmail) {
+    const email = String(a.candidateEmail).toLowerCase();
+    const l = (db.leads as any[] || []).find((x: any) => String(x.email || '').toLowerCase() === email && x.resumeRef);
+    if (l) {
+      resumeRef = l.resumeRef;
+      if (l.resumeName) resumeName = l.resumeName;
+    } else {
+      const doc = (db.documents as any[] || []).find((d: any) => String(d.candidateEmail || d.ownerEmail || '').toLowerCase() === email && (d.ref || d.id));
+      if (doc) {
+        resumeRef = doc.ref || doc.id;
+        if (doc.name) resumeName = doc.name;
+      }
+    }
+  }
+
+  if (!resumeRef) {
+    return res.status(404).json({ success: false, message: 'No resume attached to this application.' });
+  }
+
+  try {
+    let buf: Buffer;
+    const localPath = join(UPLOAD_DIR, `${resumeRef}.bin`);
+    if (existsSync(localPath)) {
+      buf = readFileSync(localPath);
+    } else if (isBlobStorageConfigured()) {
+      buf = await downloadFile(DEFAULT_CONTAINER, `${resumeRef}.bin`);
+    } else {
+      return res.status(410).json({ success: false, message: 'Resume file no longer available.' });
+    }
+    const ext = (String(resumeName || '').split('.').pop() || 'pdf').toLowerCase();
+    const mime = ext === 'doc' ? 'application/msword' : ext === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/pdf';
+    res.setHeader('Content-Type', mime);
+    const safeName = String(resumeName || 'resume.pdf').replace(/["\r\n\\]/g, '').slice(0, 160) || 'resume.pdf';
+    const isInline = req.query.view === 'true' || req.query.inline === 'true';
+    res.setHeader('Content-Disposition', `${isInline ? 'inline' : 'attachment'}; filename="${safeName}"`);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.send(buf);
+  } catch {
+    res.status(410).json({ success: false, message: 'Resume file no longer available.' });
+  }
 });
 
 // ---- Application stage history (read timeline, §8.8) ----

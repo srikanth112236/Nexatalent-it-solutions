@@ -367,7 +367,8 @@ salesRouter.get('/leads/:id/resume', requireAuth(['superadmin','platform_owner',
     const mime = ext === 'doc' ? 'application/msword' : ext === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/pdf';
     res.setHeader('Content-Type', mime);
     const safeName = String(l.resumeName || 'resume').replace(/["\r\n\\]/g, '').slice(0, 160) || 'resume';
-    res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
+    const isInline = req.query.view === 'true' || req.query.inline === 'true';
+    res.setHeader('Content-Disposition', `${isInline ? 'inline' : 'attachment'}; filename="${safeName}"`);
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.send(buf);
   } catch { res.status(410).json({ success: false, message: 'Resume file no longer available.' }); }

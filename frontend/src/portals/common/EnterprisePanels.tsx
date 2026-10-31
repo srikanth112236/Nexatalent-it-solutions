@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, Fragment } from 'react';
-import { FileText, Download, ExternalLink, X } from 'lucide-react';
+import { FileText, Download, X, Eye } from 'lucide-react';
+import { PdfResumeViewerModal } from '../../shared/ui/PdfResumeViewerModal';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { apiClient } from '../../shared/api-client';
@@ -1562,7 +1563,7 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
   const [joinOpen, setJoinOpen] = useState(false);
   const [joinMatch, setJoinMatch] = useState<any>(null);
   const [joinBusy, setJoinBusy] = useState(false);
-  const [resumeOpen, setResumeOpen] = useState(false);
+  const [previewAppResume, setPreviewAppResume] = useState<{ applicationId?: string; filename?: string; title?: string } | null>(null);
   const doOffer = async () => {
     if (!detail) return;
     const ctc = offerTotal(offerForm);
@@ -1648,7 +1649,7 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
   };
   const openDetail = async (a: any) => {
     setDetail(a); setHistory([]);
-    setOfferOpen(false); setJoinOpen(false); setResumeOpen(false);
+    setOfferOpen(false); setJoinOpen(false);
     try {
       const res: any = await applicationsApi.detail(a.id);
       const full = (res as { data?: any })?.data;
@@ -1733,9 +1734,55 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
             <tbody className="divide-y divide-slate-100">
               {filteredApps.map((a) => (
                 <tr key={a.id} className="hover:bg-slate-50/70">
-                  <td className="px-4 py-3 font-mono font-bold">{a.id}</td>
+                  <td className="px-4 py-3 font-mono font-bold">
+                    <div>{a.id}</div>
+                    {(a.hasResume || a.resumeRef || a.leadId) && (
+                      <div className="mt-1 flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewAppResume({
+                              applicationId: a.id,
+                              filename: a.resumeName || 'resume.pdf',
+                              title: `${a.candidateName || a.candidateEmail} — Resume`,
+                            });
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-[#0265FF] border border-blue-200 text-[10px] font-bold hover:bg-blue-100 transition-colors"
+                        >
+                          <Eye size={10} /> View PDF
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              const blob = await (applicationsApi as any).resume(a.id);
+                              const url = URL.createObjectURL(blob);
+                              const el = document.createElement('a');
+                              el.href = url;
+                              el.download = a.resumeName || `resume-${a.id}.pdf`;
+                              document.body.appendChild(el);
+                              el.click();
+                              el.remove();
+                              URL.revokeObjectURL(url);
+                            } catch {
+                              setError('Could not download resume.');
+                            }
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-bold hover:bg-slate-200 transition-colors"
+                        >
+                          <Download size={10} />
+                        </button>
+                      </div>
+                    )}
+                  </td>
                   <td className="px-4 py-3"><div className="font-bold text-slate-900 truncate max-w-[220px]">{a.jobTitle || a.jobId}</div><div className="font-mono text-[11px] text-slate-500">{a.jobId}</div></td>
-                  <td className="px-4 py-3">{a.candidateEmail}</td>
+                  <td className="px-4 py-3">
+                    <div className="font-bold text-slate-900">{a.candidateName || a.candidateEmail}</div>
+                    {a.candidateName && <div className="text-[11px] text-slate-500">{a.candidateEmail}</div>}
+                    {a.phone && <div className="text-[11px] text-slate-400">{a.phone}</div>}
+                  </td>
                   <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${APP_STAGE_TONE[a.stage] || APP_STAGE_TONE.New}`}>{a.stage}</span></td>
                   <td className="px-4 py-3">{String(a.createdAt || '').slice(0, 10) || '—'}</td>
                   <td className="px-4 py-3"><div className="flex justify-end">{appMenuFor(a)}</div></td>
@@ -1786,6 +1833,14 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
         tone="dark"
         onConfirm={async (r) => { if (reopenFor) await reopen(reopenFor, reopenTarget, r); }}
       />
+      <PdfResumeViewerModal
+        open={previewAppResume !== null}
+        onClose={() => setPreviewAppResume(null)}
+        title={previewAppResume?.title || 'Candidate Resume'}
+        filename={previewAppResume?.filename || 'resume.pdf'}
+        applicationId={previewAppResume?.applicationId}
+      />
+
       {detail && (
         <>
           <DetailDrawer title={detail.jobTitle || detail.jobId || detail.id} subtitle={`${detail.id} • ${detail.candidateEmail || ''}`} onClose={() => setDetail(null)} width="max-w-4xl">
@@ -1909,30 +1964,45 @@ export function ApplicationsPanel({ compact = false }: { compact?: boolean }) {
             <div>
               <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5 px-0.5">Resume</div>
               <DrawerCard
-                title={detail.resumeName || 'Srikanth_M_Resume.pdf'}
-                meta="PDF resume • static test file for now — switches to the candidate's resume automatically later."
-                right={<StatusPill value="Available" />}>
+                title={detail.resumeName || 'Candidate_Resume.pdf'}
+                meta={detail.hasResume || detail.resumeRef || detail.leadId ? 'Applicant PDF resume attached to this application.' : 'Candidate resume document'}
+                right={<StatusPill value={detail.hasResume || detail.resumeRef || detail.leadId ? 'Available' : 'Standard'} />}>
                 <div className="flex flex-wrap gap-1.5">
-                  <button type="button" onClick={() => setResumeOpen((v) => !v)} className="px-3 py-1.5 rounded-lg bg-slate-900 text-white font-bold text-[11px] shadow-[0_1px_2px_rgba(15,23,42,0.05)]">{resumeOpen ? 'Hide preview' : 'View'}</button>
-                  <a href={detail.resumeUrl || '/Srikanth_M_Resume.pdf'} target="_blank" rel="noreferrer" className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px]">Open in new tab</a>
-                  <a href={detail.resumeUrl || '/Srikanth_M_Resume.pdf'} download="Srikanth_M_Resume.pdf" className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px]">Download PDF</a>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPreviewAppResume({
+                        applicationId: detail.id,
+                        filename: detail.resumeName || 'resume.pdf',
+                        title: `${detail.candidateName || detail.candidateEmail} — Resume`,
+                      });
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-[#0265FF] text-white font-bold text-[11px] shadow-[0_1px_2px_rgba(15,23,42,0.05)] hover:bg-[#0055db] transition-colors flex items-center gap-1"
+                  >
+                    <Eye size={12} /> View in PDF Viewer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const blob = await (applicationsApi as any).resume(detail.id);
+                        const url = URL.createObjectURL(blob);
+                        const el = document.createElement('a');
+                        el.href = url;
+                        el.download = detail.resumeName || `resume-${detail.id}.pdf`;
+                        document.body.appendChild(el);
+                        el.click();
+                        el.remove();
+                        URL.revokeObjectURL(url);
+                      } catch {
+                        setError('Could not download resume.');
+                      }
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 font-bold text-[11px] hover:bg-slate-50 transition-colors flex items-center gap-1"
+                  >
+                    <Download size={12} /> Download PDF
+                  </button>
                 </div>
-                {resumeOpen && (
-                  <div className="mt-2 overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-[0_6px_20px_rgba(15,23,42,0.22)]">
-                    <div className="flex items-center gap-2 px-3 py-2">
-                      <FileText size={14} className="text-slate-300 shrink-0" />
-                      <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-red-500 text-white shrink-0">PDF</span>
-                      <span className="text-[11px] font-bold text-slate-200 truncate flex-1 min-w-0">{detail.resumeName || 'Srikanth_M_Resume.pdf'}</span>
-                      <a href={detail.resumeUrl || '/Srikanth_M_Resume.pdf'} target="_blank" rel="noreferrer" aria-label="Open resume in new tab"
-                        className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10"><ExternalLink size={14} /></a>
-                      <a href={detail.resumeUrl || '/Srikanth_M_Resume.pdf'} download="Srikanth_M_Resume.pdf" aria-label="Download resume PDF"
-                        className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10"><Download size={14} /></a>
-                      <button type="button" onClick={() => setResumeOpen(false)} aria-label="Hide resume preview"
-                        className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10"><X size={14} /></button>
-                    </div>
-                    <iframe src={`${detail.resumeUrl || '/Srikanth_M_Resume.pdf'}#zoom=page-width`} title={`Resume of ${detail.candidateEmail || detail.id}`} className="block w-full h-[62vh] bg-white" />
-                  </div>
-                )}
               </DrawerCard>
             </div>
             <div>
@@ -6259,6 +6329,7 @@ export function LeadsPanel() {
   const [showCreate, setShowCreate] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [previewLeadResume, setPreviewLeadResume] = useState<{ leadId?: string; filename?: string; title?: string } | null>(null);
   const [convertId, setConvertId] = useState('');
   const [meetingLead, setMeetingLead] = useState<any>(null);
   const [meetingForm, setMeetingForm] = useState({ title: 'Follow-up meeting', date: '', hour: '10', minute: '00', outcome: '', notes: '', nextAction: '', followUp: '' });
@@ -6464,7 +6535,50 @@ export function LeadsPanel() {
             <tbody className="divide-y divide-slate-100">
               {filteredLeads.map((l) => (
                 <tr key={l.id} className="hover:bg-slate-50/70">
-                  <td className="px-4 py-3"><div className="font-bold text-slate-900">{l.contactName}</div><div className="font-mono text-[11px] text-slate-500">{l.id}</div></td>
+                  <td className="px-4 py-3">
+                    <div className="font-bold text-slate-900">{l.contactName}</div>
+                    <div className="font-mono text-[11px] text-slate-500">{l.id}</div>
+                    {(l.resumeRef || l.resumeName) && (
+                      <div className="mt-1 flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewLeadResume({
+                              leadId: l.id,
+                              filename: l.resumeName || 'resume.pdf',
+                              title: `${l.contactName || l.id} — Resume`,
+                            });
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-[#0265FF] border border-blue-200 text-[10px] font-bold hover:bg-blue-100 transition-colors"
+                        >
+                          <Eye size={10} /> View PDF
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              const blob = await salesApi.leadResume(l.id);
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = l.resumeName || `resume-${l.id}.pdf`;
+                              document.body.appendChild(a);
+                              a.click();
+                              a.remove();
+                              URL.revokeObjectURL(url);
+                            } catch {
+                              setError('Could not download resume.');
+                            }
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-bold hover:bg-slate-200 transition-colors"
+                        >
+                          <Download size={10} />
+                        </button>
+                      </div>
+                    )}
+                  </td>
                   <td className="px-4 py-3">{l.companyName}{l.mergedInto ? <span className="ml-2 px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 text-[10px]">merged</span> : null}</td>
                   <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full border font-bold text-[11px] ${LEAD_STAGE_TONE[l.stage] || LEAD_STAGE_TONE.New}`}>{l.stage}</span></td>
                   <td className="px-4 py-3 text-right font-bold">₹{Number(l.value || 0).toLocaleString('en-IN')}</td>
@@ -6615,6 +6729,49 @@ export function LeadsPanel() {
         </div>
       </Modal>
       <Modal open={detail !== null} onClose={() => setDetail(null)} title={`${detail?.contactName || ''} — ${detail?.companyName || ''}`} subtitle={`${detail?.id || ''} • ${detail?.stage || ''}`}>
+        {(detail?.resumeRef || detail?.resumeName) && (
+          <div className="mb-3 p-3.5 rounded-2xl bg-blue-50/80 border border-blue-200 flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 text-[#0265FF] flex items-center justify-center shrink-0">
+                <FileText size={20} />
+              </div>
+              <div className="min-w-0">
+                <div className="font-extrabold text-slate-900 text-xs truncate">{detail.resumeName || 'Applicant Resume (PDF)'}</div>
+                <div className="text-[10px] font-semibold text-slate-500">Resume uploaded by candidate</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setPreviewLeadResume({ leadId: detail.id, filename: detail.resumeName || 'resume.pdf', title: `${detail.contactName || detail.id} — Resume` })}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#0265FF] text-white text-xs font-bold shadow hover:bg-[#0055db] transition-colors"
+              >
+                <Eye size={13} /> View Resume PDF
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const blob = await salesApi.leadResume(detail.id);
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = detail.resumeName || `resume-${detail.id}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                  } catch {
+                    setError('Could not download resume.');
+                  }
+                }}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-100 transition-colors"
+              >
+                <Download size={13} /> Download
+              </button>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
           {[['Email', detail?.email], ['Phone', detail?.phone], ['Industry', detail?.industry], ['Source', detail?.source], ['Value', detail?.value], ['Owner', detail?.owner], ['Next follow-up', detail?.nextFollowUp], ['Consent basis', detail?.consent], ['Notes', detail?.notes]].map(([k, v]) => (
             <div key={k as string} className="p-3 rounded-xl bg-slate-50 border border-slate-200"><div className="text-[10px] font-bold text-slate-500 uppercase">{k}</div><div className="font-bold mt-1 break-words">{String(v ?? '—')}</div></div>
@@ -6626,6 +6783,14 @@ export function LeadsPanel() {
         ))}
       </Modal>
       <ConfirmDialog open={deleteFor !== null} onCancel={() => setDeleteFor(null)} title={`Delete lead ${deleteFor?.id || ''}?`} body="Won leads cannot be deleted (audit). Other leads are removed permanently." confirmLabel="Delete" onConfirm={doLeadDelete} />
+
+      <PdfResumeViewerModal
+        open={previewLeadResume !== null}
+        onClose={() => setPreviewLeadResume(null)}
+        title={previewLeadResume?.title || 'Lead Resume PDF'}
+        filename={previewLeadResume?.filename || 'resume.pdf'}
+        leadId={previewLeadResume?.leadId}
+      />
     </div>
   );
 }
