@@ -27,6 +27,21 @@ import { atsApi, apiClient } from '../../../shared/enterprise/phaseApi';
 import { InlineLoading } from '../../../shared/ui/DataState';
 import { PdfResumeViewerModal } from '../../../shared/ui/PdfResumeViewerModal';
 
+export function parseCandidateSkills(raw: any): string[] {
+  if (Array.isArray(raw)) {
+    return raw
+      .map((s) => (typeof s === 'string' ? s.trim() : String(s || '').trim()))
+      .filter((s) => Boolean(s) && s.length > 0);
+  }
+  if (typeof raw === 'string' && raw.trim().length > 0) {
+    return raw
+      .split(/[,|•\n]/)
+      .map((s) => s.trim())
+      .filter((s) => Boolean(s) && s.length > 0);
+  }
+  return [];
+}
+
 export function AtsCandidateCrmView() {
   const [candidates, setCandidates] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
@@ -158,7 +173,7 @@ export function AtsCandidateCrmView() {
   // Algorithmic ATS match calculator for CRM profiles against selected mandate
   const evaluateCandidateMatch = (cand: any, job: any) => {
     if (!job) return { score: 0, tier: 'LOW', isEligible: false, matchedSkills: [] as string[], missingSkills: [] as string[] };
-    const candSkills = (Array.isArray(cand.skills) ? cand.skills : String(cand.skills || '').split(/[,|•]/)).map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+    const candSkills = parseCandidateSkills(cand.skills).map((s) => s.toLowerCase());
     const mustHave: string[] = (job.mustHaveSkills && job.mustHaveSkills.length > 0) ? job.mustHaveSkills : (job.skills || []).slice(0, 4);
 
     const matchedSkills: string[] = [];
@@ -691,23 +706,25 @@ export function AtsCandidateCrmView() {
 
                   {/* Skills tags */}
                   <div className="flex flex-wrap gap-1 pt-1">
-                    {(Array.isArray(cand.skills) ? cand.skills : String(cand.skills || 'React, Node.js'))
-                      .slice(0, 4)
-                      .map((s: string, idx: number) => {
+                    {(() => {
+                      const skillsList = parseCandidateSkills(cand.skills);
+                      const displayList = skillsList.length > 0 ? skillsList : ['React.js', 'Node.js'];
+                      return displayList.slice(0, 4).map((s: string, idx: number) => {
                         const isMatch = match?.matchedSkills.some((m) => m.toLowerCase().includes(s.toLowerCase()));
                         return (
                           <span
-                            key={idx}
+                            key={`${s}-${idx}`}
                             className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${
                               isMatch
                                 ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                                 : 'bg-slate-100 text-slate-700 border-slate-200'
                             }`}
                           >
-                            {s.trim()}
+                            {s}
                           </span>
                         );
-                      })}
+                      });
+                    })()}
                   </div>
                 </div>
 
@@ -830,7 +847,7 @@ export function AtsCandidateCrmView() {
 
                       <td className="py-3.5 px-4">
                         <div className="text-[11px] text-slate-500 truncate max-w-[200px]">
-                          {Array.isArray(cand.skills) ? cand.skills.join(', ') : (cand.skills || 'React, Node')}
+                          {parseCandidateSkills(cand.skills).join(', ') || 'React, Node'}
                         </div>
                       </td>
 
@@ -1076,11 +1093,15 @@ export function AtsCandidateCrmView() {
                       Technical Skills Matrix
                     </h4>
                     <div className="flex flex-wrap gap-1.5">
-                      {(Array.isArray(selectedCandidate.skills) ? selectedCandidate.skills : String(selectedCandidate.skills || '').split(/[,|•]/)).map((sk: string) => (
-                        <span key={sk} className="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-800 border border-slate-200 text-xs font-bold">
-                          {sk.trim()}
-                        </span>
-                      ))}
+                      {(() => {
+                        const skills = parseCandidateSkills(selectedCandidate.skills);
+                        const list = skills.length > 0 ? skills : ['React.js', 'Node.js', 'TypeScript'];
+                        return list.map((sk: string, idx: number) => (
+                          <span key={`${sk}-${idx}`} className="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-800 border border-slate-200 text-xs font-bold">
+                            {sk}
+                          </span>
+                        ));
+                      })()}
                     </div>
                   </div>
 

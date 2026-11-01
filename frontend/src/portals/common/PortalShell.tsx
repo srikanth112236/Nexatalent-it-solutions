@@ -96,13 +96,15 @@ export function PortalShell({ portalTitle, portalRole, navItems, children }: Por
     location.pathname === item.path || (item.path !== fallbackPath && location.pathname.startsWith(item.path));
 
   const groups = useMemo(() => {
-    const out: Array<{ name: string | null; items: PortalNavItem[] }> = [];
+    const map = new Map<string | null, PortalNavItem[]>();
     for (const item of safeNavItems) {
-      const last = out[out.length - 1];
-      if (last && last.name === (item.group ?? null)) last.items.push(item);
-      else out.push({ name: item.group ?? null, items: [item] });
+      const groupKey = item.group ?? null;
+      if (!map.has(groupKey)) {
+        map.set(groupKey, []);
+      }
+      map.get(groupKey)!.push(item);
     }
-    return out;
+    return Array.from(map.entries()).map(([name, items]) => ({ name, items }));
   }, [safeNavItems]);
 
   const activeGroup = useMemo(() => {
