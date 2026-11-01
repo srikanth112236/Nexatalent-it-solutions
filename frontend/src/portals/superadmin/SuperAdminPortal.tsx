@@ -22,15 +22,21 @@ import { OrganizationsManager, UsersManager } from './SuperAdminDirectory';
 import { WebsiteLeadsPanel } from '../common/WebsiteLeadsPanel';
 import { OpenPositionsPanel } from '../common/OpenPositionsPanel';
 import { AtsDashboardView } from '../recruiter/ats/AtsDashboardView';
+import { AtsJobsView } from '../recruiter/ats/AtsJobsView';
 import { AtsJobPipelineView } from '../recruiter/ats/AtsJobPipelineView';
+import { AtsApplicantsView } from '../recruiter/ats/AtsApplicantsView';
 import { AtsCandidateCrmView } from '../recruiter/ats/AtsCandidateCrmView';
+import { AtsInterviewCalendarView } from '../recruiter/ats/AtsInterviewCalendarView';
 import { AtsBulkImportView } from '../recruiter/ats/AtsBulkImportView';
 
 const navItems = [
   { label: 'Overview', path: '/superadmin' },
   { label: 'ATS Dashboard', path: '/superadmin/ats-dashboard', group: 'ATS Suite' },
-  { label: 'Jobs & Pipeline', path: '/superadmin/ats-pipeline', group: 'ATS Suite' },
+  { label: 'Jobs & Mandates', path: '/superadmin/ats-jobs', group: 'ATS Suite' },
+  { label: 'Pipeline Kanban', path: '/superadmin/ats-pipeline', group: 'ATS Suite' },
+  { label: 'Job Applicants', path: '/superadmin/ats-applicants', group: 'ATS Suite' },
   { label: 'Candidate CRM', path: '/superadmin/ats-candidates', group: 'ATS Suite' },
+  { label: 'Interviews & Scorecards', path: '/superadmin/ats-interviews', group: 'ATS Suite' },
   { label: 'Bulk Resume Import', path: '/superadmin/ats-import', group: 'ATS Suite' },
   { label: 'Tenants & Subscriptions', path: '/superadmin/organizations', group: 'Directory' },
   { label: 'Global Directory', path: '/superadmin/users', group: 'Directory' },
@@ -73,8 +79,11 @@ export function SuperAdminPortal() {
   const currentTab = (() => {
     const p = location.pathname;
     if (p.includes('/ats-dashboard')) return 'ats-dashboard';
+    if (p.includes('/ats-jobs')) return 'ats-jobs';
     if (p.includes('/ats-pipeline')) return 'ats-pipeline';
+    if (p.includes('/ats-applicants')) return 'ats-applicants';
     if (p.includes('/ats-candidates')) return 'ats-candidates';
+    if (p.includes('/ats-interviews')) return 'ats-interviews';
     if (p.includes('/ats-import')) return 'ats-import';
     if (p.includes('/organizations')) return 'organizations';
     if (p.includes('/users')) return 'users';
@@ -394,8 +403,11 @@ export function SuperAdminPortal() {
 
         {/* ATS SUITE NATIVE MODULES */}
         {currentTab === 'ats-dashboard' && <AtsDashboardView onNavigateTab={(t) => navigate(`/superadmin/${t}`)} />}
+        {currentTab === 'ats-jobs' && <AtsJobsView onNavigatePipeline={(jId) => navigate(`/superadmin/ats-pipeline?job=${jId}`)} />}
         {currentTab === 'ats-pipeline' && <AtsJobPipelineView />}
+        {currentTab === 'ats-applicants' && <AtsApplicantsView />}
         {currentTab === 'ats-candidates' && <AtsCandidateCrmView />}
+        {currentTab === 'ats-interviews' && <AtsInterviewCalendarView />}
         {currentTab === 'ats-import' && <AtsBulkImportView onNavigateTab={(t) => navigate(`/superadmin/${t}`)} />}
 
         {/* TAB 1: OVERVIEW — modern interactive command center */}

@@ -14,15 +14,21 @@ import { onboardingCompleted } from '../../shared/onboarding';
 import { MfaPanel } from '../../auth/components/MfaPanel';
 import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
 import { AtsDashboardView } from './ats/AtsDashboardView';
+import { AtsJobsView } from './ats/AtsJobsView';
 import { AtsJobPipelineView } from './ats/AtsJobPipelineView';
+import { AtsApplicantsView } from './ats/AtsApplicantsView';
 import { AtsCandidateCrmView } from './ats/AtsCandidateCrmView';
+import { AtsInterviewCalendarView } from './ats/AtsInterviewCalendarView';
 import { AtsBulkImportView } from './ats/AtsBulkImportView';
 
 const navItems = [
   { label: 'Pipeline Overview', path: '/recruiter' },
   { label: 'ATS Dashboard', path: '/recruiter/ats-dashboard', group: 'ATS Suite' },
-  { label: 'Jobs & Pipeline', path: '/recruiter/ats-pipeline', group: 'ATS Suite' },
+  { label: 'Jobs & Mandates', path: '/recruiter/ats-jobs', group: 'ATS Suite' },
+  { label: 'Pipeline Kanban', path: '/recruiter/ats-pipeline', group: 'ATS Suite' },
+  { label: 'Job Applicants', path: '/recruiter/ats-applicants', group: 'ATS Suite' },
   { label: 'Candidate CRM', path: '/recruiter/ats-candidates', group: 'ATS Suite' },
+  { label: 'Interviews & Scorecards', path: '/recruiter/ats-interviews', group: 'ATS Suite' },
   { label: 'Bulk Resume Import', path: '/recruiter/ats-import', group: 'ATS Suite' },
   { label: 'Website Applicants', path: '/recruiter/website-leads', group: 'ATS Suite' },
   { label: 'Agency Profile', path: '/recruiter/profile', group: 'Workspace' },
@@ -76,8 +82,11 @@ export function RecruiterPortal() {
   const currentTab = (() => {
     const p = location.pathname;
     if (p.includes('/ats-dashboard')) return 'ats-dashboard';
+    if (p.includes('/ats-jobs')) return 'ats-jobs';
     if (p.includes('/ats-pipeline')) return 'ats-pipeline';
+    if (p.includes('/ats-applicants')) return 'ats-applicants';
     if (p.includes('/ats-candidates')) return 'ats-candidates';
+    if (p.includes('/ats-interviews')) return 'ats-interviews';
     if (p.includes('/ats-import')) return 'ats-import';
     if (p.includes('/jobs')) return 'jobs';
     if (p.includes('/profile')) return 'profile';
@@ -412,8 +421,11 @@ export function RecruiterPortal() {
 
         {/* ATS SUITE NATIVE MODULES */}
         {currentTab === 'ats-dashboard' && <AtsDashboardView onNavigateTab={(t) => navigate(`/recruiter/${t}`)} />}
+        {currentTab === 'ats-jobs' && <AtsJobsView onNavigatePipeline={(jId) => navigate(`/recruiter/ats-pipeline?job=${jId}`)} />}
         {currentTab === 'ats-pipeline' && <AtsJobPipelineView />}
+        {currentTab === 'ats-applicants' && <AtsApplicantsView />}
         {currentTab === 'ats-candidates' && <AtsCandidateCrmView />}
+        {currentTab === 'ats-interviews' && <AtsInterviewCalendarView />}
         {currentTab === 'ats-import' && <AtsBulkImportView onNavigateTab={(t) => navigate(`/recruiter/${t}`)} />}
 
         {/* ENTERPRISE: new phase modules */}

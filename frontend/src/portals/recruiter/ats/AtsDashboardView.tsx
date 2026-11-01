@@ -51,10 +51,10 @@ export function AtsDashboardView({ onNavigateTab }: { onNavigateTab: (tab: strin
   }
 
   const kpis = [
-    { label: 'Active Mandates', val: data.activeJobsCount, icon: Briefcase, color: 'text-blue-600 bg-blue-50 border-blue-200', tab: 'ats-pipeline' },
+    { label: 'Active Mandates', val: data.activeJobsCount, icon: Briefcase, color: 'text-blue-600 bg-blue-50 border-blue-200', tab: 'ats-jobs' },
     { label: 'Active Pipeline', val: data.activeApplicationsCount, icon: Users, color: 'text-indigo-600 bg-indigo-50 border-indigo-200', tab: 'ats-pipeline' },
-    { label: 'Interviews This Week', val: data.interviewsThisWeek, icon: Calendar, color: 'text-purple-600 bg-purple-50 border-purple-200', tab: 'interviews' },
-    { label: 'Offers in Negotiation', val: data.offersCount, icon: TrendingUp, color: 'text-amber-600 bg-amber-50 border-amber-200', tab: 'offers' },
+    { label: 'Interviews This Week', val: data.interviewsThisWeek, icon: Calendar, color: 'text-purple-600 bg-purple-50 border-purple-200', tab: 'ats-interviews' },
+    { label: 'Offers in Negotiation', val: data.offersCount, icon: TrendingUp, color: 'text-amber-600 bg-amber-50 border-amber-200', tab: 'ats-pipeline' },
     { label: 'Hired & Placed', val: data.hiredCount, icon: CheckCircle2, color: 'text-emerald-600 bg-emerald-50 border-emerald-200', tab: 'ats-pipeline' },
   ];
 
