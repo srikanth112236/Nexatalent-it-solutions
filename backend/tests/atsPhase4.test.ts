@@ -117,8 +117,11 @@ describe('ATS Phase 4: Resume Parsing & Document Extraction Engine', () => {
     expect(parsed.skills).toContain('Node.js');
     expect(parsed.skills).toContain('MongoDB');
     expect(parsed.skills).toContain('Tailwind CSS');
-    expect(parsed.education).toContain('Bachelor of Commerce (B.Com)');
+    expect(parsed.education[0]).toContain('Bachelor of Commerce (B.Com)');
     expect(parsed.education).not.toContain('Bengaluru');
     expect(parsed.fullName).not.toBe('endobj');
+    expect(parsed.summary).toContain('Senior Frontend Engineer');
+    expect(parsed.workHistory && parsed.workHistory.length).toBeGreaterThan(0);
+    expect(parsed.linkedinUrl).toContain('linkedin.com/in/srikanth');
   });
 });

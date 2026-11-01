@@ -25,6 +25,20 @@ export interface SkillsByCategory {
   qaTesting: string[];
 }
 
+export interface WorkExperienceEntry {
+  company: string;
+  role: string;
+  duration?: string;
+  highlights?: string[];
+}
+
+export interface ProjectEntry {
+  name: string;
+  role?: string;
+  technologies?: string;
+  highlights?: string[];
+}
+
 export interface ParsedResumeResult {
   fullName: string;
   email: string;
@@ -36,6 +50,10 @@ export interface ParsedResumeResult {
   skillsByCategory: SkillsByCategory;
   currentCompany: string;
   currentTitle: string;
+  summary?: string;
+  workHistory?: WorkExperienceEntry[];
+  projects?: ProjectEntry[];
+  coreStrengths?: string[];
   education: string[];
   noticePeriod: string;
   currentCtc: string;
@@ -222,7 +240,7 @@ export async function extractTextFromBuffer(buffer: Buffer, formatHint?: string)
 }
 
 /**
- * Structured resume text parser extracting metadata, skills matrix and search tokens.
+ * Structured resume text parser extracting comprehensive candidate profile metadata.
  */
 export function parseResumeText(text: string, filename = ''): ParsedResumeResult {
   const cleanText = (text || '').replace(/\r/g, '\n');
@@ -278,7 +296,28 @@ export function parseResumeText(text: string, filename = ''): ParsedResumeResult
   }
   if (!fullName) fullName = email ? email.split('@')[0].replace(/[._]/g, ' ') : 'Candidate';
 
-  // 4. Experience extraction
+  // 4. Professional Summary
+  let summary = '';
+  const sumMatch = cleanText.match(/(?:PROFESSIONAL\s+SUMMARY|SUMMARY|PROFILE|EXECUTIVE\s+SUMMARY)\s*[:–-]?\s*\n([\s\S]*?)(?=\n\s*(?:TECHNICAL\s+SKILLS|SKILLS|CORE\s+COMPETENCIES|EXPERIENCE|PROFESSIONAL\s+EXPERIENCE|WORK\s+EXPERIENCE)\b)/i);
+  if (sumMatch) {
+    summary = sumMatch[1].split('\n').map((l) => l.trim()).filter(Boolean).join(' ');
+  }
+
+  // 5. Core Strengths
+  let coreStrengths: string[] = [];
+  const csMatch = cleanText.match(/Core\s*Strengths\s*[:\s-]*([\s\S]*?)(?=\n\s*(?:PROFESSIONAL\s+EXPERIENCE|WORK\s+EXPERIENCE|EXPERIENCE|TECHNICAL\s+SKILLS)\b)/i);
+  if (csMatch) {
+    coreStrengths = csMatch[1]
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .join(' ')
+      .split(/[,|•]/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 2 && s.length < 60);
+  }
+
+  // 6. Experience extraction
   let totalExperienceYears = 0;
   let expStr = '3–5 yrs';
 
@@ -300,7 +339,72 @@ export function parseResumeText(text: string, filename = ''): ParsedResumeResult
     }
   }
 
-  // 5. Categorized Skills extraction
+  // 7. Work History & Companies Working Data
+  const workHistory: WorkExperienceEntry[] = [];
+  const expMatch = cleanText.match(/(?:PROFESSIONAL\s+EXPERIENCE|WORK\s+EXPERIENCE|WORK\s+HISTORY)([\s\S]*?)(?=\n\s*(?:FEATURED\s+PROJECT|PROJECTS|EDUCATION|PORTFOLIO|CERTIFICATIONS|AWARDS)\b)/i);
+  const dateRegex = /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}\s*[-–—to]+\s*(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}|Present|Current)\b/i;
+  const yearRangeRegex = /\b(?:20\d\d|19\d\d)\s*[-–—to]+\s*(?:20\d\d|19\d\d|Present|Current)\b/i;
+
+  if (expMatch) {
+    const expSection = expMatch[1];
+    const expLines = expSection.split('\n').map((l) => l.trim()).filter(Boolean);
+    let currentEntry: WorkExperienceEntry | null = null;
+
+    for (let i = 0; i < expLines.length; i++) {
+      const line = expLines[i];
+      const hasCompanySeparator = line.includes('—') || line.includes('–') || line.includes('|') || line.includes(' - ');
+      const isBullet = line.startsWith('•') || line.startsWith('-') || line.startsWith('*');
+
+      if (hasCompanySeparator && !isBullet) {
+        let parts: string[] = [];
+        if (line.includes('|')) {
+          parts = line.split('|').map((p) => p.trim());
+        } else if (line.includes('—')) {
+          parts = line.split('—').map((p) => p.trim());
+        } else if (line.includes('–')) {
+          parts = line.split('–').map((p) => p.trim());
+        } else {
+          parts = line.split(' - ').map((p) => p.trim());
+        }
+
+        const company = parts[0].replace(/^[•\-*]\s*/, '').trim();
+        let role = parts[1] || '';
+        let duration = '';
+
+        if (parts.length >= 3) {
+          if (dateRegex.test(parts[2]) || yearRangeRegex.test(parts[2])) {
+            duration = parts[2];
+          } else {
+            role = parts.slice(1).join(' — ');
+          }
+        }
+
+        if (!duration && i + 1 < expLines.length && (dateRegex.test(expLines[i + 1]) || yearRangeRegex.test(expLines[i + 1]))) {
+          duration = expLines[i + 1];
+          i++;
+        }
+
+        if (currentEntry) workHistory.push(currentEntry);
+
+        currentEntry = {
+          company,
+          role,
+          duration,
+          highlights: [],
+        };
+      } else if (currentEntry && isBullet) {
+        currentEntry.highlights = currentEntry.highlights || [];
+        currentEntry.highlights.push(line.replace(/^[•\-*]\s*/, '').trim());
+      } else if (currentEntry && !isBullet && (dateRegex.test(line) || yearRangeRegex.test(line))) {
+        currentEntry.duration = line;
+      } else if (currentEntry && !isBullet && currentEntry.highlights && currentEntry.highlights.length > 0) {
+        currentEntry.highlights[currentEntry.highlights.length - 1] += ' ' + line;
+      }
+    }
+    if (currentEntry) workHistory.push(currentEntry);
+  }
+
+  // 8. Categorized Skills extraction
   const textLower = cleanText.toLowerCase();
   const skillsByCategory: SkillsByCategory = {
     backend: [],
@@ -326,19 +430,63 @@ export function parseResumeText(text: string, filename = ''): ParsedResumeResult
 
   const uniqueSkills = Array.from(new Set(matchedSkills));
 
-  // 6. Education extraction
+  // 9. Featured Projects
+  const projects: ProjectEntry[] = [];
+  const projMatch = cleanText.match(/(?:FEATURED\s+PROJECT|PROJECTS|KEY\s+PROJECTS)([\s\S]*?)(?=\n\s*(?:EDUCATION|PORTFOLIO|SKILLS|CERTIFICATIONS)\b)/i);
+  if (projMatch) {
+    const projSection = projMatch[1];
+    const pLines = projSection.split('\n').map((l) => l.trim()).filter(Boolean);
+    let curProj: ProjectEntry | null = null;
+
+    for (let i = 0; i < pLines.length; i++) {
+      const l = pLines[i];
+      const isBullet = l.startsWith('•') || l.startsWith('-') || l.startsWith('*');
+      if (!isBullet && (l.includes('—') || l.includes('–') || l.includes('('))) {
+        if (curProj) projects.push(curProj);
+        let role = '';
+        if (i + 1 < pLines.length && !pLines[i + 1].startsWith('•') && !pLines[i + 1].startsWith('-')) {
+          role = pLines[i + 1];
+          i++;
+        }
+        curProj = {
+          name: l.replace(/^[•\-*]\s*/, '').trim(),
+          role,
+          highlights: [],
+        };
+      } else if (curProj && isBullet) {
+        curProj.highlights = curProj.highlights || [];
+        curProj.highlights.push(l.replace(/^[•\-*]\s*/, '').trim());
+      } else if (curProj && !isBullet && curProj.highlights && curProj.highlights.length > 0) {
+        curProj.highlights[curProj.highlights.length - 1] += ' ' + l;
+      }
+    }
+    if (curProj) projects.push(curProj);
+  }
+
+  // 10. Education extraction (degree, institution & years)
   const education: string[] = [];
-  for (const degRegex of DEGREE_PATTERNS) {
-    const degMatch = cleanText.match(degRegex);
-    if (degMatch) {
-      const val = degMatch[0].trim();
-      if (!education.some((e) => e.includes(val) || val.includes(e))) {
-        education.push(val);
+  const eduMatch = cleanText.match(/(?:EDUCATION|ACADEMICS)([\s\S]*?)(?=\n\s*(?:PORTFOLIO|CERTIFICATIONS|SKILLS|PROJECTS)\b|$)/i);
+  if (eduMatch) {
+    const eLines = eduMatch[1].split('\n').map((l) => l.trim()).filter(Boolean);
+    for (const l of eLines) {
+      if (/(?:Bachelor|Master|B\.?Tech|M\.?Tech|B\.?E\.|M\.?E\.|BCA|MCA|MBA|BBA|B\.?Com|M\.?Com|Ph\.?D|Diploma)/i.test(l)) {
+        education.push(l.replace(/^[•\-*]\s*/, '').trim());
+      }
+    }
+  }
+  if (education.length === 0) {
+    for (const degRegex of DEGREE_PATTERNS) {
+      const degMatch = cleanText.match(degRegex);
+      if (degMatch) {
+        const val = degMatch[0].trim();
+        if (!education.some((e) => e.includes(val) || val.includes(e))) {
+          education.push(val);
+        }
       }
     }
   }
 
-  // 7. Location extraction
+  // 11. Location extraction
   let location = 'India';
   for (const city of CITIES) {
     const cityRegex = new RegExp(`\\b${city}\\b`, 'i');
@@ -348,7 +496,7 @@ export function parseResumeText(text: string, filename = ''): ParsedResumeResult
     }
   }
 
-  // 8. Notice Period & CTC
+  // 12. Notice Period & CTC
   let noticePeriod = 'Immediate / 30 Days';
   const noticeMatch = cleanText.match(/Notice\s*Period\s*[:–-]?\s*([^·\n,\r]+)/i);
   if (noticeMatch) noticePeriod = noticeMatch[1].trim();
@@ -361,7 +509,7 @@ export function parseResumeText(text: string, filename = ''): ParsedResumeResult
   const expCtcMatch = cleanText.match(/Expected\s*(?:CTC|Salary)?\s*[:–-]?\s*([^·\n,\r]+)/i);
   if (expCtcMatch) expectedCtc = expCtcMatch[1].trim();
 
-  // 9. Current Title & Company
+  // 13. Current Title & Company
   let currentTitle = '';
   let currentCompany = '';
 
@@ -374,37 +522,22 @@ export function parseResumeText(text: string, filename = ''): ParsedResumeResult
         .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '')
         .replace(/\b(Bengaluru|Bangalore|Hyderabad|Pune|Mumbai|Delhi|Noida|Gurgaon|Chennai|Remote|India|KA|MH|DL)\b.*/gi, '')
         .trim();
-      if (cleanRole.length >= 3 && cleanRole.length <= 50) {
+      if (cleanRole.length >= 3 && cleanRole.length <= 60) {
         currentTitle = cleanRole;
         break;
       }
     }
   }
 
-  // Check Professional Experience section for company and role
-  const expIdx = cleanText.search(/PROFESSIONAL\s+EXPERIENCE|WORK\s+EXPERIENCE|^EXPERIENCE/im);
-  if (expIdx !== -1) {
-    const expSub = cleanText.slice(expIdx, expIdx + 1000);
-    const expLines = expSub.split('\n').map((l) => l.trim()).filter(Boolean);
-    for (const l of expLines) {
-      if (/PROFESSIONAL\s+EXPERIENCE|WORK\s+EXPERIENCE|^EXPERIENCE$/i.test(l)) continue;
-      if (l.includes('|') && /(?:20\d\d|19\d\d|present)/i.test(l)) {
-        const parts = l.split('|').map((p) => p.trim());
-        if (parts.length >= 2) {
-          currentCompany = parts[0].replace(/[^\w\s&.-]/g, '').trim();
-          if (!currentTitle && parts.length >= 2) {
-            const roleCandidate = parts[1].replace(/[^\w\s&.-]/g, '').trim();
-            if (roleCandidate.length >= 3 && roleCandidate.length <= 50) {
-              currentTitle = roleCandidate;
-            }
-          }
-          break;
-        }
-      }
+  // If work history exists, sync currentCompany and currentTitle from most recent position
+  if (workHistory.length > 0) {
+    currentCompany = workHistory[0].company;
+    if (!currentTitle || currentTitle.includes('Professional')) {
+      if (workHistory[0].role) currentTitle = workHistory[0].role;
     }
   }
 
-  // Fallback for company regex
+  // Fallback company regex
   if (!currentCompany) {
     const compMatch = cleanText.match(/(?:\b(?:current\s+)?company\b|\bworking at\b|\bcurrently at\b|\bat\b)\s*[:–-]?\s*([A-Z][A-Za-z0-9\s&]{2,30}(?:Ltd|Pvt|Inc|Technologies|Solutions|Software|Services|Consulting|Corp)?)/i);
     if (compMatch) currentCompany = compMatch[1].trim();
@@ -414,7 +547,7 @@ export function parseResumeText(text: string, filename = ''): ParsedResumeResult
     currentTitle = uniqueSkills.slice(0, 2).join(' / ') + ' Professional';
   }
 
-  // 10. Links (LinkedIn & Portfolios)
+  // 14. Links (LinkedIn & Portfolios)
   let linkedinUrl = '';
   const linkedinMatch = cleanText.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/([a-zA-Z0-9_-]+)/i);
   if (linkedinMatch) {
@@ -422,21 +555,31 @@ export function parseResumeText(text: string, filename = ''): ParsedResumeResult
   }
 
   const portfolioSites: string[] = [];
-  const portIdx = cleanText.search(/PORTFOLIO\s+SITES|PORTFOLIO|PROJECTS\s+URL/i);
-  if (portIdx !== -1) {
-    const portSub = cleanText.slice(portIdx, portIdx + 300);
-    const urlMatches = portSub.match(/[a-zA-Z0-9-]+\.(?:com|in|au|app|net|io|org|co|dev)(?:\/[a-zA-Z0-9._/-]+)?/gi);
-    if (urlMatches) {
-      for (const u of urlMatches) {
-        if (!u.includes('linkedin.com') && !portfolioSites.includes(u)) {
-          portfolioSites.push(u);
+  const portMatch = cleanText.match(/(?:PORTFOLIO|LIVE\s+PROJECTS)([\s\S]*?)$/i);
+  if (portMatch) {
+    const rawPortLine = portMatch[1].split('\n').map((l) => l.trim()).filter(Boolean)[0] || '';
+    if (rawPortLine.includes('|')) {
+      const parts = rawPortLine.split('|').map((p) => p.trim()).filter(Boolean);
+      for (const p of parts) {
+        if (!p.includes('linkedin.com') && !portfolioSites.includes(p)) {
+          portfolioSites.push(p);
+        }
+      }
+    } else {
+      const links = portMatch[1].match(/[a-zA-Z0-9-]+\.(?:com|in|au|app|net|io|org|co|dev)(?:\/[a-zA-Z0-9._/-]+)?/gi);
+      if (links) {
+        for (const l of links) {
+          if (!l.includes('linkedin.com') && !portfolioSites.includes(l)) {
+            portfolioSites.push(l);
+          }
         }
       }
     }
   }
 
-  // 11. Search indexing tokens
+  // 15. Search indexing tokens
   const locationTokens = location.toLowerCase().split(/[\s,]+/).filter(Boolean);
+  const companyTokens = workHistory.map((w) => w.company.toLowerCase());
   const searchTokens = Array.from(
     new Set([
       fullName.toLowerCase(),
@@ -447,14 +590,17 @@ export function parseResumeText(text: string, filename = ''): ParsedResumeResult
       ...education.map((e) => e.toLowerCase()),
       currentTitle.toLowerCase(),
       currentCompany.toLowerCase(),
+      ...companyTokens,
+      ...coreStrengths.map((s) => s.toLowerCase()),
     ].filter(Boolean))
   );
 
-  // 12. Confidence Scoring
+  // 16. Confidence Scoring
   let score = 20;
-  if (email) score += 25;
-  if (phone) score += 20;
-  if (uniqueSkills.length > 0) score += 20;
+  if (email) score += 20;
+  if (phone) score += 15;
+  if (uniqueSkills.length > 0) score += 15;
+  if (workHistory.length > 0) score += 15;
   if (totalExperienceYears > 0) score += 10;
   if (education.length > 0) score += 5;
   const confidenceScore = Math.min(100, score);
@@ -470,6 +616,10 @@ export function parseResumeText(text: string, filename = ''): ParsedResumeResult
     skillsByCategory,
     currentCompany,
     currentTitle,
+    summary: summary || undefined,
+    workHistory: workHistory.length > 0 ? workHistory : undefined,
+    projects: projects.length > 0 ? projects : undefined,
+    coreStrengths: coreStrengths.length > 0 ? coreStrengths : undefined,
     education,
     noticePeriod,
     currentCtc,
