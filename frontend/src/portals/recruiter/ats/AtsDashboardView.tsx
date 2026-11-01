@@ -82,6 +82,14 @@ export function AtsDashboardView({ onNavigateTab }: { onNavigateTab: (tab: strin
           </button>
           <button
             type="button"
+            onClick={() => onNavigateTab('ats-reports')}
+            className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-md transition-colors flex items-center gap-1.5"
+          >
+            <TrendingUp size={14} />
+            <span>Reports & Velocity</span>
+          </button>
+          <button
+            type="button"
             onClick={() => onNavigateTab('ats-import')}
             className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-xs transition-colors"
           >

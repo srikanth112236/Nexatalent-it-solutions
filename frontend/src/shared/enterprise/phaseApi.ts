@@ -348,4 +348,12 @@ export const atsApi = {
   duplicates: () => apiClient.get('/api/v1/ats/duplicates'),
   mergeDuplicates: (primaryId: string, secondaryId: string) => apiClient.post('/api/v1/ats/duplicates/merge', { primaryId, secondaryId }),
   funnelAnalytics: (params = '') => apiClient.get(`/api/v1/ats/analytics/funnel${params}`),
+  remindInterview: (id: string) => apiClient.post(`/api/v1/ats/interviews/${id}/remind`, {}),
+  automationSweep: () => apiClient.post('/api/v1/ats/automation/sweep', {}),
+  recruiterReminders: () => apiClient.get('/api/v1/ats/reminders/recruiter'),
+  resolveReminder: (applicationId: string, action = 'dismiss') => apiClient.post('/api/v1/ats/reminders/resolve', { applicationId, action }),
+  funnelReport: (params = '') => apiClient.get(`/api/v1/ats/reports/funnel${params}`),
+  timeToHireReport: () => apiClient.get('/api/v1/ats/reports/time-to-hire'),
+  sourceReport: () => apiClient.get('/api/v1/ats/reports/sources'),
+  recruiterWorkloadReport: () => apiClient.get('/api/v1/ats/reports/recruiter-workload'),
 };
