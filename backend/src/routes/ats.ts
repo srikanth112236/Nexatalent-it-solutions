@@ -6,7 +6,7 @@ import { loadDb, persist, uid, nowIso, audit, pushHistory } from '../db/store.js
 import { requireAuth, ctxOf, tenantOf } from '../middleware/rbac.js';
 import { paginate, paged } from '../validate/schemas.js';
 import { emit } from '../events/bus.js';
-import { parseResumeText, extractTextFromBuffer } from '../services/atsResumeParser.js';
+import { parseResumeText, extractTextFromBuffer, validateResumeBuffer } from '../services/atsResumeParser.js';
 import { uploadFile, downloadFile, isBlobStorageConfigured, DEFAULT_CONTAINER } from '../storage/blob.js';
 
 export const atsRouter = Router();
@@ -614,7 +614,12 @@ atsRouter.get('/candidates', requireAuth(ATS_ROLES), (req: Request, res: Respons
 
   if (q) {
     const s = String(q).toLowerCase();
-    candidates = candidates.filter((c) => `${c.name || ''} ${c.email || ''} ${c.headline || ''} ${c.skills || ''} ${c.phone || ''}`.toLowerCase().includes(s));
+    candidates = candidates.filter((c) => {
+      const basic = `${c.name || ''} ${c.email || ''} ${c.headline || ''} ${c.skills || ''} ${c.phone || ''} ${c.currentCompany || ''} ${c.location || ''}`.toLowerCase();
+      if (basic.includes(s)) return true;
+      if (Array.isArray(c.searchTokens) && c.searchTokens.some((t: string) => String(t).toLowerCase().includes(s))) return true;
+      return false;
+    });
   }
 
   if (skills) {
@@ -1054,14 +1059,25 @@ atsRouter.post('/candidates/:id/resume', requireAuth(ATS_ROLES), async (req: Req
 // 8. RESUME PARSER (NATIVE NODE.JS EXTRACTOR)
 // =========================================================================
 atsRouter.post('/resumes/parse', requireAuth(ATS_ROLES), async (req: Request, res: Response) => {
-  const { filename, base64Data, rawText } = req.body || {};
+  const { filename, base64Data, rawText, formatHint } = req.body || {};
 
   let textToParse = rawText || '';
 
   if (!textToParse && base64Data) {
     try {
       const buffer = Buffer.from(base64Data, 'base64');
-      textToParse = extractTextFromBuffer(buffer);
+
+      // Magic byte validation for PDF, DOC, DOCX
+      const validation = validateResumeBuffer(buffer);
+      if (!validation.valid) {
+        return res.status(415).json({
+          success: false,
+          code: 'UNSUPPORTED_FORMAT',
+          message: validation.error || 'Invalid file format. Upload PDF, DOC, or DOCX files.',
+        });
+      }
+
+      textToParse = extractTextFromBuffer(buffer, formatHint || validation.format);
 
       ensureUploadDir();
       const fileRef = uid('RES');
@@ -1085,11 +1101,14 @@ atsRouter.post('/resumes/parse', requireAuth(ATS_ROLES), async (req: Request, re
         id: uid('PARSE'),
         fileRef,
         filename: filename || 'resume.pdf',
+        format: validation.format,
+        status: 'completed',
         extracted: parseResult,
         isDuplicate: !!(dupByEmail || dupByPhone),
         duplicateCandidateId: dupByEmail?.id || dupByPhone?.id || null,
         duplicateReason: dupByEmail ? 'Matching Email' : dupByPhone ? 'Matching Phone' : null,
         createdAt: nowIso(),
+        processedAt: nowIso(),
       };
 
       db.atsResumeParses.unshift(parseRecord);
@@ -1103,6 +1122,8 @@ atsRouter.post('/resumes/parse', requireAuth(ATS_ROLES), async (req: Request, re
           extracted: parseResult,
           isDuplicate: parseRecord.isDuplicate,
           duplicateReason: parseRecord.duplicateReason,
+          format: validation.format,
+          status: 'completed',
         },
       });
     } catch (err: any) {
@@ -1112,6 +1133,148 @@ atsRouter.post('/resumes/parse', requireAuth(ATS_ROLES), async (req: Request, re
 
   const parseResult = parseResumeText(textToParse, filename || '');
   res.json({ success: true, data: { extracted: parseResult } });
+});
+
+// Resume Processing Queue & Status
+atsRouter.get('/resumes/queue', requireAuth(ATS_ROLES), (_req: Request, res: Response) => {
+  const db = loadDb();
+  const queue = (db.atsResumeParses as any[] || []).slice(0, 50);
+  res.json({ success: true, count: queue.length, data: queue });
+});
+
+// Retry Failed Parse Job
+atsRouter.post('/resumes/queue/:id/retry', requireAuth(ATS_ROLES), async (req: Request, res: Response) => {
+  const db = loadDb();
+  const parse = (db.atsResumeParses as any[]).find((p) => p.id === req.params.id);
+  if (!parse) return res.status(404).json({ success: false, message: 'Parse job not found.' });
+
+  try {
+    const localPath = join(UPLOAD_DIR, `${parse.fileRef}.bin`);
+    if (!existsSync(localPath)) return res.status(410).json({ success: false, message: 'Source resume file no longer available.' });
+    const buffer = readFileSync(localPath);
+    const text = extractTextFromBuffer(buffer, parse.format);
+    const result = parseResumeText(text, parse.filename);
+    parse.extracted = result;
+    parse.status = 'completed';
+    parse.processedAt = nowIso();
+    persist();
+    res.json({ success: true, data: parse });
+  } catch (err: any) {
+    parse.status = 'failed';
+    parse.error = err?.message || 'Extraction retry failed';
+    persist();
+    res.status(500).json({ success: false, message: err?.message || 'Retry failed' });
+  }
+});
+
+// Recruiter Review & Overrides
+atsRouter.put('/resumes/parses/:id', requireAuth(ATS_ROLES), (req: Request, res: Response) => {
+  const db = loadDb();
+  const parse = (db.atsResumeParses as any[]).find((p) => p.id === req.params.id);
+  if (!parse) return res.status(404).json({ success: false, message: 'Parse record not found.' });
+
+  parse.reviewOverrides = req.body || {};
+  parse.status = 'reviewed';
+  parse.reviewedAt = nowIso();
+  persist();
+
+  res.json({ success: true, data: parse });
+});
+
+// Confirm & Commit Parsed Candidate into CRM
+atsRouter.post('/resumes/parses/:id/confirm', requireAuth(ATS_ROLES), (req: Request, res: Response) => {
+  const db = loadDb();
+  const ctx = ctxOf(req);
+  const parse = (db.atsResumeParses as any[]).find((p) => p.id === req.params.id);
+  if (!parse) return res.status(404).json({ success: false, message: 'Parse record not found.' });
+
+  const overrides = req.body.overrides || parse.reviewOverrides || {};
+  const ext = parse.extracted || {};
+  const email = String(overrides.email || ext.email || `${uid('cnd')}@applicant.local`).toLowerCase().trim();
+  const name = String(overrides.fullName || ext.fullName || 'Candidate').trim();
+  const phone = String(overrides.phone || ext.phone || '').trim();
+  const skills = Array.isArray(overrides.skills) ? overrides.skills : ext.skills || [];
+  const location = overrides.location || ext.location || 'India';
+  const experienceYears = Number(overrides.totalExperienceYears ?? ext.totalExperienceYears) || 3;
+  const currentTitle = overrides.currentTitle || ext.currentTitle || 'Professional';
+  const currentCompany = overrides.currentCompany || ext.currentCompany || '';
+  const currentCtc = overrides.currentCtc || ext.currentCtc || 'Competitive';
+  const expectedCtc = overrides.expectedCtc || ext.expectedCtc || 'Competitive';
+  const noticePeriod = overrides.noticePeriod || ext.noticePeriod || 'Immediate';
+  const targetJobId = req.body.jobId;
+
+  let candidate = (db.candidateProfiles as any[]).find((c) => !c.deleted && String(c.email).toLowerCase() === email);
+  if (!candidate) {
+    const searchTokens = Array.from(new Set([
+      name.toLowerCase(), email, phone.replace(/\D/g, ''), location.toLowerCase(),
+      currentCompany.toLowerCase(), currentTitle.toLowerCase(), ...skills.map((s: string) => String(s).toLowerCase())
+    ].filter(Boolean)));
+
+    candidate = {
+      id: uid('CND'),
+      name,
+      email,
+      phone,
+      headline: `${currentTitle} | ${skills.slice(0, 3).join(', ')}`,
+      roleTitle: currentTitle,
+      currentCompany,
+      experienceYears,
+      location,
+      currentCtc,
+      expectedCtc,
+      noticePeriod,
+      skills: skills.join(', '),
+      resumeRef: parse.fileRef,
+      resumeName: parse.filename,
+      searchTokens,
+      source: 'Resume Parser',
+      sourceType: 'ATS Structured Import',
+      status: 'Active',
+      assignedRecruiter: ctx.email,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    };
+    db.candidateProfiles.unshift(candidate);
+  } else {
+    candidate.resumeRef = parse.fileRef;
+    candidate.resumeName = parse.filename;
+    candidate.updatedAt = nowIso();
+  }
+
+  if (targetJobId) {
+    const job = (db.jobs as any[]).find((j) => j.id === targetJobId || j.slug === targetJobId);
+    if (job) {
+      const appExists = (db.applications as any[]).some((a) => a.candidateEmail === email && (a.jobId === job.id || a.jobId === job.slug));
+      if (!appExists) {
+        const app = {
+          id: uid('APP'),
+          key: `${job.id}::${email}`,
+          jobId: job.id,
+          jobTitle: job.title,
+          orgId: job.orgId || 'TNT-9011',
+          candidateEmail: email,
+          candidateName: name,
+          stage: 'Applied',
+          source: 'Resume Parser',
+          resumeRef: parse.fileRef,
+          resumeName: parse.filename,
+          phone,
+          createdAt: nowIso(),
+          updatedAt: nowIso(),
+        };
+        db.applications.unshift(app);
+        pushHistory(db.stageHistory, { id: uid('STG'), applicationId: app.id, from: '-', to: 'Applied', actor: ctx.email, createdAt: nowIso() });
+        job.applicantsCount = (job.applicantsCount || 0) + 1;
+      }
+    }
+  }
+
+  parse.status = 'reviewed';
+  parse.candidateId = candidate.id;
+  audit(ctx.email, `ATS_PARSE_CONFIRMED:${parse.id}`, tenantOf(req), 'candidate', candidate.id, req.ip);
+  persist();
+
+  res.json({ success: true, data: { candidate, parseId: parse.id } });
 });
 
 // Bulk Confirm / Create Candidates
