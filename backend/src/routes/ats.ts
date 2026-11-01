@@ -973,7 +973,8 @@ atsRouter.get('/candidates', requireAuth(ATS_ROLES), (req: Request, res: Respons
       applicationsCount: myApps.length,
       currentActiveJob: latestApp ? latestApp.jobTitle || latestApp.jobId : null,
       currentStage: latestApp ? latestApp.stage : null,
-      resumeUrl: c.resumeRef ? `/api/v1/ats/candidates/${c.id}/resume` : null,
+      hasResume: true,
+      resumeUrl: `/api/v1/ats/candidates/${c.id}/resume`,
     };
   });
 
@@ -1091,7 +1092,8 @@ atsRouter.get('/candidates/:id', requireAuth(ATS_ROLES), (req: Request, res: Res
       notes: myNotes,
       interviews: myInterviews,
       documents: myDocs,
-      resumeUrl: c.resumeRef ? `/api/v1/candidates/${c.id}/resume` : null,
+      hasResume: true,
+      resumeUrl: `/api/v1/ats/candidates/${c.id}/resume`,
     },
   });
 });
