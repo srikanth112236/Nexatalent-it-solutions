@@ -26,6 +26,7 @@ export function InactivityGuard({ timeoutMs = 15 * 60 * 1000, children }: Inacti
     const doLogout = async () => {
       const userEmail = getUserEmail();
       const tenantId = getTenantId();
+      const currentRole = getAccessToken() ? (typeof window !== 'undefined' ? localStorage.getItem('nexatalent_active_role') : null) : null;
       try {
         if (getAccessToken()) {
           await apiClient.post('/api/v1/auth/logout', {
@@ -38,7 +39,10 @@ export function InactivityGuard({ timeoutMs = 15 * 60 * 1000, children }: Inacti
         // best-effort server notify; local session is always cleared
       } finally {
         clearSession();
-        navigate('/login?reason=inactivity', { replace: true });
+        const roleTarget = currentRole && ['recruiter', 'employer', 'superadmin', 'employee', 'vendor', 'candidate'].includes(currentRole)
+          ? `/${currentRole}/login?reason=inactivity`
+          : '/login?reason=inactivity';
+        navigate(roleTarget, { replace: true });
       }
     };
 

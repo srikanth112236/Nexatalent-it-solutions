@@ -17,7 +17,11 @@ export function AuthGuard({ children }: AuthGuardProps) {
   // Presence + structural expiry check. Full server validation happens on
   // first API call (401 → refresh → redirect) and via AuthProvider /me boot.
   if (!token || isTokenExpired(token)) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    const segment = location.pathname.split('/')[1];
+    const targetLogin = ['recruiter', 'employer', 'superadmin', 'employee', 'vendor', 'candidate'].includes(segment)
+      ? `/${segment}/login`
+      : '/login';
+    return <Navigate to={targetLogin} state={{ from: location }} replace />;
   }
 
   return <>{children}</>;

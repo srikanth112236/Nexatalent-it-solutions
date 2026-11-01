@@ -157,6 +157,7 @@ class ApiClient {
 
   private clearSessionAndRedirect(reason: string) {
     if (typeof window !== 'undefined') {
+      const activeRole = localStorage.getItem(AUTH_STORAGE_KEYS.ACTIVE_ROLE);
       localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
       localStorage.removeItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
       localStorage.removeItem(AUTH_STORAGE_KEYS.ACTIVE_ROLE);
@@ -165,7 +166,11 @@ class ApiClient {
       localStorage.removeItem('user_email');
       sessionStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
       sessionStorage.removeItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
-      window.location.href = `/login?reason=${reason}`;
+
+      const targetEndpoint = activeRole && ['recruiter', 'employer', 'superadmin', 'employee', 'vendor', 'candidate'].includes(activeRole)
+        ? `/${activeRole}/login?reason=${reason}`
+        : `/login?reason=${reason}`;
+      window.location.href = targetEndpoint;
     }
   }
 

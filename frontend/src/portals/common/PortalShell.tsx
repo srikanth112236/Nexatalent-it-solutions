@@ -146,7 +146,10 @@ export function PortalShell({ portalTitle, portalRole, navItems, children }: Por
       console.warn('Logout API call notice:', (err as any)?.response?.status ?? 'network');
     } finally {
       clearSession();
-      navigate('/login', { replace: true });
+      const targetLogin = portalRole && ['recruiter', 'employer', 'superadmin', 'employee', 'vendor', 'candidate'].includes(portalRole)
+        ? `/${portalRole}/login?reason=sign_out`
+        : '/login?reason=sign_out';
+      navigate(targetLogin, { replace: true });
     }
   };
 
