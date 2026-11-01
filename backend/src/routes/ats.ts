@@ -7,6 +7,7 @@ import { requireAuth, ctxOf, tenantOf } from '../middleware/rbac.js';
 import { paginate, paged } from '../validate/schemas.js';
 import { emit } from '../events/bus.js';
 import { parseResumeText, extractTextFromBuffer, validateResumeBuffer } from '../services/atsResumeParser.js';
+import { calculateJobAtsMatch } from '../services/atsScoringEngine.js';
 import { uploadFile, downloadFile, isBlobStorageConfigured, DEFAULT_CONTAINER } from '../storage/blob.js';
 
 export const atsRouter = Router();
@@ -419,6 +420,13 @@ atsRouter.get('/jobs/:id/pipeline', requireAuth(ATS_ROLES), (req: Request, res: 
       const lead = a.leadId ? (db.leads as any[]).find((l) => l.id === a.leadId) : null;
       const daysInStage = Math.max(0, Math.floor((Date.now() - new Date(a.updatedAt || a.createdAt || Date.now()).getTime()) / (24 * 3600 * 1000)));
 
+      const match = calculateJobAtsMatch(candidate || {
+        name: a.candidateName,
+        email: a.candidateEmail,
+        skills: a.skills,
+        experienceYears: candidate?.experienceYears,
+      }, job);
+
       return {
         id: a.id,
         applicationId: a.id,
@@ -433,6 +441,10 @@ atsRouter.get('/jobs/:id/pipeline', requireAuth(ATS_ROLES), (req: Request, res: 
         skills: candidate?.skills || ['Golang', 'React.js', 'GCP'],
         stage: a.stage,
         daysInStage,
+        matchScore: a.matchScore || match.score,
+        matchTier: a.matchTier || match.tier,
+        isShortlistEligible: a.isShortlistEligible !== undefined ? a.isShortlistEligible : match.isShortlistEligible,
+        atsMatch: match,
         hasResume: !!(a.resumeRef || a.resumeName || lead?.resumeRef || candidate?.resumeRef),
         resumeName: a.resumeName || lead?.resumeName || candidate?.resumeName || 'Resume.pdf',
         resumeUrl: `/api/v1/applications/${a.id}/resume`,
@@ -451,6 +463,21 @@ atsRouter.get('/jobs/:id/pipeline', requireAuth(ATS_ROLES), (req: Request, res: 
     };
   });
 
+  const eligibleForShortlistCount = apps.filter((a) => {
+    const c = (db.candidateProfiles as any[]).find((x) => String(x.email || '').toLowerCase() === String(a.candidateEmail || '').toLowerCase());
+    const merged = {
+      ...(c || {}),
+      name: c?.name || a.candidateName,
+      email: a.candidateEmail,
+      skills: (c?.skills?.length ? c.skills : a.skills) || [],
+      experienceYears: c?.experienceYears ?? a.experienceYears,
+      currentTitle: c?.currentTitle || a.currentTitle,
+      education: c?.education || a.education,
+    };
+    const m = calculateJobAtsMatch(merged, job);
+    return m.isShortlistEligible && (a.stage === 'Applied' || a.stage === 'Sourced' || a.stage === 'Screening');
+  }).length;
+
   res.json({
     success: true,
     data: {
@@ -463,10 +490,100 @@ atsRouter.get('/jobs/:id/pipeline', requireAuth(ATS_ROLES), (req: Request, res: 
         salaryMax: job.salaryMax,
         openings: job.openings || 1,
         applicantsCount: apps.length,
+        mustHaveSkills: job.mustHaveSkills || [],
+        niceToHaveSkills: job.niceToHaveSkills || [],
+        minExperienceYears: job.minExperienceYears || 3,
+        maxExperienceYears: job.maxExperienceYears || 7,
+        autoShortlistThreshold: job.autoShortlistThreshold || 75,
+        autoShortlistMode: job.autoShortlistMode || 'assisted',
+      },
+      summary: {
+        totalApplicants: apps.length,
+        shortlistEligibleCount: eligibleForShortlistCount,
+        threshold: job.autoShortlistThreshold || 75,
       },
       stages,
       columns,
     },
+  });
+});
+
+// BULK AUTO-SHORTLIST QUALIFIED CANDIDATES FOR A JOB MANDATE
+atsRouter.post('/jobs/:id/auto-shortlist', requireAuth(ATS_ROLES), (req: Request, res: Response) => {
+  const db = loadDb();
+  const ctx = ctxOf(req);
+  const qId = String(req.params.id).toLowerCase();
+  const job = (db.jobs as any[]).find((j) => String(j.id).toLowerCase() === qId || String(j.slug || '').toLowerCase() === qId);
+
+  if (!job) return res.status(404).json({ success: false, message: 'Job mandate not found.' });
+
+  const threshold = req.body.threshold !== undefined ? Number(req.body.threshold) : (job.autoShortlistThreshold || 75);
+  const validIds = new Set<string>([job.id]);
+  if (job.slug) validIds.add(job.slug);
+
+  const eligibleStages = new Set(['Applied', 'Sourced', 'Screening']);
+  const candidatesMoved: any[] = [];
+
+  for (const app of (db.applications as any[])) {
+    if (validIds.has(app.jobId) && eligibleStages.has(app.stage)) {
+      const candidate = (db.candidateProfiles as any[]).find((c) => String(c.email).toLowerCase() === String(app.candidateEmail).toLowerCase());
+      const mergedCandidate = {
+        ...(candidate || {}),
+        name: candidate?.name || app.candidateName,
+        email: app.candidateEmail,
+        skills: (candidate?.skills?.length ? candidate.skills : app.skills) || [],
+        experienceYears: candidate?.experienceYears ?? app.experienceYears,
+        currentTitle: candidate?.currentTitle || app.currentTitle,
+        education: candidate?.education || app.education,
+      };
+      const match = calculateJobAtsMatch(mergedCandidate, job);
+
+      app.matchScore = match.score;
+      app.matchTier = match.tier;
+      app.isShortlistEligible = match.isShortlistEligible;
+      app.atsMatch = match;
+
+      if (match.score >= threshold && match.missingMustHaveSkills.length <= 1) {
+        const prevStage = app.stage;
+        app.stage = 'Shortlisted';
+        app.updatedAt = nowIso();
+
+        pushHistory(db.stageHistory, {
+          id: uid('STG'),
+          applicationId: app.id,
+          from: prevStage,
+          to: 'Shortlisted',
+          actor: ctx.email || 'ATS Scoring Engine',
+          note: `Auto-shortlisted by ATS Match Engine (Score: ${match.score}%, Threshold: ${threshold}%)`,
+          createdAt: nowIso(),
+        });
+
+        candidatesMoved.push({
+          applicationId: app.id,
+          candidateName: app.candidateName,
+          candidateEmail: app.candidateEmail,
+          score: match.score,
+          previousStage: prevStage,
+        });
+      }
+    }
+  }
+
+  audit(ctx.email, `ATS_JOB_AUTO_SHORTLIST:${job.id}:${candidatesMoved.length}`, job.orgId || tenantOf(req), 'job', job.id, req.ip);
+  persist();
+
+  res.json({
+    success: true,
+    data: {
+      jobId: job.id,
+      threshold,
+      shortlistedCount: candidatesMoved.length,
+      candidatesMoved,
+    },
+    jobId: job.id,
+    threshold,
+    count: candidatesMoved.length,
+    candidates: candidatesMoved,
   });
 });
 
@@ -519,7 +636,20 @@ atsRouter.get('/applications', requireAuth(ATS_ROLES), (req: Request, res: Respo
 atsRouter.post('/applications', requireAuth(ATS_ROLES), (req: Request, res: Response) => {
   const db = loadDb();
   const ctx = ctxOf(req);
-  const { jobId, candidateEmail, candidateName, phone, resumeRef, resumeName, source } = req.body || {};
+  const {
+    jobId,
+    candidateEmail,
+    candidateName,
+    phone,
+    resumeRef,
+    resumeName,
+    source,
+    skills,
+    experienceYears,
+    currentTitle,
+    location,
+    education,
+  } = req.body || {};
 
   if (!jobId || !candidateEmail) {
     return res.status(400).json({ success: false, message: 'jobId and candidateEmail are required.' });
@@ -550,9 +680,12 @@ atsRouter.post('/applications', requireAuth(ATS_ROLES), (req: Request, res: Resp
       name: candidateName || emailNorm.split('@')[0],
       email: emailNorm,
       phone: phone || '',
-      headline: 'Candidate Profile',
-      experienceYears: 3,
-      location: 'India',
+      headline: currentTitle || 'Candidate Profile',
+      currentTitle: currentTitle || '',
+      skills: Array.isArray(skills) ? skills : [],
+      experienceYears: experienceYears !== undefined ? Number(experienceYears) : 3,
+      location: location || 'India',
+      education: Array.isArray(education) ? education : [],
       status: 'Active',
       source: source || 'ATS Submission',
       resumeRef: resumeRef || '',
@@ -562,11 +695,36 @@ atsRouter.post('/applications', requireAuth(ATS_ROLES), (req: Request, res: Resp
       updatedAt: nowIso(),
     };
     db.candidateProfiles.unshift(candidate);
-  } else if (resumeRef && !candidate.resumeRef) {
-    candidate.resumeRef = resumeRef;
-    candidate.resumeName = resumeName || 'Resume.pdf';
+  } else {
+    if (resumeRef && !candidate.resumeRef) {
+      candidate.resumeRef = resumeRef;
+      candidate.resumeName = resumeName || 'Resume.pdf';
+    }
+    if (Array.isArray(skills) && skills.length > 0 && (!candidate.skills || candidate.skills.length === 0)) {
+      candidate.skills = skills;
+    }
+    if (experienceYears !== undefined && !candidate.experienceYears) {
+      candidate.experienceYears = Number(experienceYears);
+    }
+    if (currentTitle && !candidate.currentTitle) {
+      candidate.currentTitle = currentTitle;
+    }
     candidate.updatedAt = nowIso();
   }
+
+  const matchCandidate = {
+    ...candidate,
+    skills: (Array.isArray(skills) && skills.length > 0) ? skills : (candidate.skills || []),
+    experienceYears: experienceYears !== undefined ? Number(experienceYears) : (candidate.experienceYears ?? 3),
+    currentTitle: currentTitle || candidate.currentTitle || candidate.headline || '',
+    education: Array.isArray(education) ? education : (candidate.education || []),
+    location: location || candidate.location || 'India',
+  };
+
+  const match = calculateJobAtsMatch(matchCandidate, job);
+  const initialStage = (job.autoShortlistMode === 'automatic' && match.isShortlistEligible)
+    ? 'Shortlisted'
+    : 'Applied';
 
   const app = {
     id: uid('APP'),
@@ -577,11 +735,15 @@ atsRouter.post('/applications', requireAuth(ATS_ROLES), (req: Request, res: Resp
     candidateEmail: emailNorm,
     candidateName: candidateName || candidate.name,
     phone: phone || candidate.phone || '',
-    stage: 'Applied',
+    stage: initialStage,
     source: source || 'Recruiter ATS Submission',
     assignedRecruiter: ctx.email,
     resumeRef: resumeRef || candidate.resumeRef || '',
     resumeName: resumeName || candidate.resumeName || 'Resume.pdf',
+    matchScore: match.score,
+    matchTier: match.tier,
+    isShortlistEligible: match.isShortlistEligible,
+    atsMatch: match,
     createdAt: nowIso(),
     updatedAt: nowIso(),
   };
@@ -591,8 +753,9 @@ atsRouter.post('/applications', requireAuth(ATS_ROLES), (req: Request, res: Resp
     id: uid('STG'),
     applicationId: app.id,
     from: '-',
-    to: 'Applied',
-    actor: ctx.email,
+    to: initialStage,
+    actor: initialStage === 'Shortlisted' ? 'ATS Automation Engine' : ctx.email,
+    note: initialStage === 'Shortlisted' ? `Auto-shortlisted by ATS Match Engine (Score: ${match.score}%)` : undefined,
     createdAt: nowIso(),
   });
 
@@ -1359,6 +1522,11 @@ atsRouter.post('/resumes/parses/:id/confirm', requireAuth(ATS_ROLES), (req: Requ
     if (job) {
       const appExists = (db.applications as any[]).some((a) => a.candidateEmail === email && (a.jobId === job.id || a.jobId === job.slug));
       if (!appExists) {
+        const match = calculateJobAtsMatch(candidate, job);
+        const initialStage = (job.autoShortlistMode === 'automatic' && match.isShortlistEligible)
+          ? 'Shortlisted'
+          : 'Applied';
+
         const app = {
           id: uid('APP'),
           key: `${job.id}::${email}`,
@@ -1367,16 +1535,28 @@ atsRouter.post('/resumes/parses/:id/confirm', requireAuth(ATS_ROLES), (req: Requ
           orgId: job.orgId || 'TNT-9011',
           candidateEmail: email,
           candidateName: name,
-          stage: 'Applied',
+          stage: initialStage,
           source: 'Resume Parser',
           resumeRef: parse.fileRef,
           resumeName: parse.filename,
           phone,
+          matchScore: match.score,
+          matchTier: match.tier,
+          isShortlistEligible: match.isShortlistEligible,
+          atsMatch: match,
           createdAt: nowIso(),
           updatedAt: nowIso(),
         };
         db.applications.unshift(app);
-        pushHistory(db.stageHistory, { id: uid('STG'), applicationId: app.id, from: '-', to: 'Applied', actor: ctx.email, createdAt: nowIso() });
+        pushHistory(db.stageHistory, {
+          id: uid('STG'),
+          applicationId: app.id,
+          from: '-',
+          to: initialStage,
+          actor: initialStage === 'Shortlisted' ? 'ATS Automation Engine' : ctx.email,
+          note: initialStage === 'Shortlisted' ? `Auto-shortlisted by ATS Match Engine (Score: ${match.score}%)` : undefined,
+          createdAt: nowIso(),
+        });
         job.applicantsCount = (job.applicantsCount || 0) + 1;
       }
     }
@@ -1442,6 +1622,11 @@ atsRouter.post('/candidates/bulk-create', requireAuth(ATS_ROLES), (req: Request,
     if (targetJob) {
       const appExists = (db.applications as any[]).some((a) => a.candidateEmail === email && (a.jobId === targetJob.id || a.jobId === targetJob.slug));
       if (!appExists) {
+        const match = calculateJobAtsMatch(existing, targetJob);
+        const initialStage = (targetJob.autoShortlistMode === 'automatic' && match.isShortlistEligible)
+          ? 'Shortlisted'
+          : 'Applied';
+
         const app = {
           id: uid('APP'),
           key: `${targetJob.id}::${email}`,
@@ -1450,16 +1635,28 @@ atsRouter.post('/candidates/bulk-create', requireAuth(ATS_ROLES), (req: Request,
           orgId: targetJob.orgId || 'TNT-9011',
           candidateEmail: email,
           candidateName: existing.name,
-          stage: 'Applied',
+          stage: initialStage,
           source: 'Bulk ATS Import',
           resumeRef: existing.resumeRef,
           resumeName: existing.resumeName,
           phone: existing.phone,
+          matchScore: match.score,
+          matchTier: match.tier,
+          isShortlistEligible: match.isShortlistEligible,
+          atsMatch: match,
           createdAt: nowIso(),
           updatedAt: nowIso(),
         };
         db.applications.unshift(app);
-        pushHistory(db.stageHistory, { id: uid('STG'), applicationId: app.id, from: '-', to: 'Applied', actor: ctx.email, createdAt: nowIso() });
+        pushHistory(db.stageHistory, {
+          id: uid('STG'),
+          applicationId: app.id,
+          from: '-',
+          to: initialStage,
+          actor: initialStage === 'Shortlisted' ? 'ATS Automation Engine' : ctx.email,
+          note: initialStage === 'Shortlisted' ? `Auto-shortlisted by ATS Match Engine (Score: ${match.score}%)` : undefined,
+          createdAt: nowIso(),
+        });
         targetJob.applicantsCount = (targetJob.applicantsCount || 0) + 1;
       }
     }
