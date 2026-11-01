@@ -359,4 +359,5 @@ export const atsApi = {
   timeToHireReport: () => apiClient.get('/api/v1/ats/reports/time-to-hire'),
   sourceReport: () => apiClient.get('/api/v1/ats/reports/sources'),
   recruiterWorkloadReport: () => apiClient.get('/api/v1/ats/reports/recruiter-workload'),
+  qualificationReport: (params = '') => apiClient.get(`/api/v1/ats/reports/qualification${params}`),
 };

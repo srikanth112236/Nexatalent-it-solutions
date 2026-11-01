@@ -92,4 +92,19 @@ describe('ATS Phase 5: Automation, Reminders & Advanced Reporting', () => {
     expect(res.body.data).toHaveProperty('remindedInterviewsCount');
     expect(res.body.data).toHaveProperty('flaggedStaleCount');
   });
+
+  it('serves qualification & shortlist intelligence report', async () => {
+    const res = await request(app)
+      .get('/api/v1/ats/reports/qualification')
+      .set(auth());
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveProperty('totalEvaluated');
+    expect(res.body.data).toHaveProperty('totalQualified');
+    expect(res.body.data).toHaveProperty('overallPassRate');
+    expect(res.body.data).toHaveProperty('tierDistribution');
+    expect(Array.isArray(res.body.data.topMissingSkills)).toBe(true);
+    expect(Array.isArray(res.body.data.mandateStats)).toBe(true);
+  });
 });

@@ -13,18 +13,20 @@ import {
   Layers,
   ArrowRight,
   Flame,
+  Sparkles,
 } from 'lucide-react';
 import { atsApi } from '../../../shared/enterprise/phaseApi';
 import { InlineLoading } from '../../../shared/ui/DataState';
 
 export function AtsReportsView({ onNavigateTab }: { onNavigateTab?: (tab: string) => void }) {
-  const [activeTab, setActiveTab] = useState<'funnel' | 'time' | 'sources' | 'workload' | 'reminders'>('funnel');
+  const [activeTab, setActiveTab] = useState<'funnel' | 'qualification' | 'time' | 'sources' | 'workload' | 'reminders'>('funnel');
   const [jobs, setJobs] = useState<any[]>([]);
   const [selectedJobId, setSelectedJobId] = useState('');
   const [loading, setLoading] = useState(true);
 
   // Report States
   const [funnelData, setFunnelData] = useState<any>(null);
+  const [qualificationData, setQualificationData] = useState<any>(null);
   const [timeData, setTimeData] = useState<any>(null);
   const [sourceData, setSourceData] = useState<any>(null);
   const [workloadData, setWorkloadData] = useState<any>(null);
@@ -37,8 +39,9 @@ export function AtsReportsView({ onNavigateTab }: { onNavigateTab?: (tab: string
   const loadAllReports = async () => {
     setLoading(true);
     try {
-      const [fRes, tRes, sRes, wRes, rRes, jRes]: any[] = await Promise.all([
+      const [fRes, qRes, tRes, sRes, wRes, rRes, jRes]: any[] = await Promise.all([
         atsApi.funnelReport(selectedJobId ? `?jobId=${selectedJobId}` : ''),
+        atsApi.qualificationReport(selectedJobId ? `?jobId=${selectedJobId}` : ''),
         atsApi.timeToHireReport(),
         atsApi.sourceReport(),
         atsApi.recruiterWorkloadReport(),
@@ -47,6 +50,7 @@ export function AtsReportsView({ onNavigateTab }: { onNavigateTab?: (tab: string
       ]);
 
       setFunnelData(fRes?.data || null);
+      setQualificationData(qRes?.data || null);
       setTimeData(tRes?.data || null);
       setSourceData(sRes?.data || null);
       setWorkloadData(wRes?.data || null);
@@ -163,7 +167,7 @@ export function AtsReportsView({ onNavigateTab }: { onNavigateTab?: (tab: string
           </div>
 
           {/* Module Navigation Pills */}
-          <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-2xl">
+          <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-2xl flex-wrap">
             <button
               type="button"
               onClick={() => setActiveTab('funnel')}
@@ -173,6 +177,16 @@ export function AtsReportsView({ onNavigateTab }: { onNavigateTab?: (tab: string
             >
               <TrendingUp size={13} className="text-[#0265FF]" />
               <span>Hiring Funnel</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('qualification')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                activeTab === 'qualification' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Sparkles size={13} className="text-amber-500" />
+              <span>ATS Qualification Gate</span>
             </button>
             <button
               type="button"
@@ -333,6 +347,208 @@ export function AtsReportsView({ onNavigateTab }: { onNavigateTab?: (tab: string
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Module 1.5: ATS Qualification Intelligence Report */}
+      {activeTab === 'qualification' && (
+        <div className="space-y-5">
+          {/* Top Metric Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-white rounded-3xl border border-slate-200/90 p-4 shadow-sm space-y-1">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+                Evaluated Applicants
+              </span>
+              <div className="text-2xl font-black text-slate-900 tabular-nums">
+                {qualificationData?.totalEvaluated || 0}
+              </div>
+              <span className="text-[11px] text-slate-500 font-medium">Scored via 5-Pillar Engine</span>
+            </div>
+
+            <div className="bg-white rounded-3xl border border-slate-200/90 p-4 shadow-sm space-y-1">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+                Shortlist Qualified
+              </span>
+              <div className="text-2xl font-black text-emerald-600 tabular-nums">
+                {qualificationData?.totalQualified || 0}
+              </div>
+              <span className="text-[11px] text-emerald-700 font-medium">Met or exceeded threshold</span>
+            </div>
+
+            <div className="bg-white rounded-3xl border border-slate-200/90 p-4 shadow-sm space-y-1">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+                Overall Pass Rate
+              </span>
+              <div className="text-2xl font-black text-[#0265FF] tabular-nums">
+                {qualificationData?.overallPassRate || 0}%
+              </div>
+              <span className="text-[11px] text-slate-500 font-medium">Threshold qualification yield</span>
+            </div>
+
+            <div className="bg-white rounded-3xl border border-slate-200/90 p-4 shadow-sm space-y-1">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+                Avg ATS Score
+              </span>
+              <div className="text-2xl font-black text-purple-600 tabular-nums">
+                {qualificationData?.overallAvgScore || 0}%
+              </div>
+              <span className="text-[11px] text-slate-500 font-medium">Mean candidate score</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* Match Tier Distribution */}
+            <div className="lg:col-span-6 bg-white rounded-3xl border border-slate-200/90 p-6 shadow-sm space-y-4">
+              <div className="border-b border-slate-100 pb-3">
+                <h3 className="text-base font-extrabold text-slate-900">ATS Match Tier Distribution</h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  Distribution of candidate match strength against target mandate requisitions
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-emerald-950">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> High Match (&ge; 75%)
+                    </span>
+                    <span className="font-mono">{qualificationData?.tierDistribution?.high || 0} candidates</span>
+                  </div>
+                  <div className="w-full h-2 bg-emerald-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-500 rounded-full transition-all"
+                      style={{
+                        width: `${qualificationData?.totalEvaluated ? ((qualificationData.tierDistribution.high / qualificationData.totalEvaluated) * 100) : 0}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-amber-950">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Medium Match (50–74%)
+                    </span>
+                    <span className="font-mono">{qualificationData?.tierDistribution?.medium || 0} candidates</span>
+                  </div>
+                  <div className="w-full h-2 bg-amber-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-amber-500 rounded-full transition-all"
+                      style={{
+                        width: `${qualificationData?.totalEvaluated ? ((qualificationData.tierDistribution.medium / qualificationData.totalEvaluated) * 100) : 0}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-slate-400" /> Low Match (&lt; 50%)
+                    </span>
+                    <span className="font-mono">{qualificationData?.tierDistribution?.low || 0} candidates</span>
+                  </div>
+                  <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-slate-400 rounded-full transition-all"
+                      style={{
+                        width: `${qualificationData?.totalEvaluated ? ((qualificationData.tierDistribution.low / qualificationData.totalEvaluated) * 100) : 0}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Top Missing Mandatory Skills Bottlenecks */}
+            <div className="lg:col-span-6 bg-white rounded-3xl border border-slate-200/90 p-6 shadow-sm space-y-4">
+              <div className="border-b border-slate-100 pb-3">
+                <h3 className="text-base font-extrabold text-slate-900">Mandatory Skill Bottlenecks</h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  Top required skills most frequently missing among candidate submissions
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                {qualificationData?.topMissingSkills?.length > 0 ? (
+                  qualificationData.topMissingSkills.map((m: any) => (
+                    <div key={m.skill} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs font-bold">
+                      <span className="text-slate-800 flex items-center gap-2">
+                        <AlertTriangle size={14} className="text-amber-500 shrink-0" />
+                        {m.skill}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-extrabold text-[11px]">
+                        Missing in {m.missingCount} candidates
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-400 italic py-6 text-center">
+                    No critical missing skill bottlenecks detected.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Mandate Qualification Pass Rate Table */}
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-sm space-y-4">
+            <div className="border-b border-slate-100 pb-3">
+              <h3 className="text-base font-extrabold text-slate-900">Mandate Qualification Pass Rates</h3>
+              <p className="text-xs text-slate-500 font-medium">
+                Real-time auto-shortlist throughput and candidate qualification yield across all active job positions
+              </p>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
+                  <tr>
+                    <th className="py-3 px-4">Job Mandate</th>
+                    <th className="py-3 px-4">Threshold</th>
+                    <th className="py-3 px-4">Mode</th>
+                    <th className="py-3 px-4">Total Evaluated</th>
+                    <th className="py-3 px-4">Qualified Count</th>
+                    <th className="py-3 px-4">Pass Rate %</th>
+                    <th className="py-3 px-4 text-right">Avg Score</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {qualificationData?.mandateStats?.map((m: any) => (
+                    <tr key={m.jobId} className="hover:bg-slate-50/70 transition">
+                      <td className="py-3 px-4">
+                        <div className="font-extrabold text-slate-900">{m.jobTitle}</div>
+                        <div className="text-[10px] text-slate-400 font-mono">{m.jobId}</div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="font-mono font-bold text-slate-700">{m.threshold}%</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                          m.shortlistMode === 'automatic'
+                            ? 'bg-purple-100 text-purple-800'
+                            : 'bg-blue-100 text-[#0265FF]'
+                        }`}>
+                          {m.shortlistMode}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-mono font-bold text-slate-800">{m.totalApplicants}</td>
+                      <td className="py-3 px-4 font-mono font-bold text-emerald-700">{m.qualifiedCount}</td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <span className="font-black text-slate-800 font-mono">{m.passRate}%</span>
+                          <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${m.passRate}%` }} />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono font-black text-purple-700">{m.avgScore}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

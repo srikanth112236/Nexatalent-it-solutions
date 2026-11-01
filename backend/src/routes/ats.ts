@@ -2228,6 +2228,96 @@ atsRouter.get('/reports/recruiter-workload', requireAuth(ATS_ROLES), (_req: Requ
   });
 });
 
+// ATS Qualification & Shortlist Intelligence Analytics Report
+atsRouter.get('/reports/qualification', requireAuth(ATS_ROLES), (req: Request, res: Response) => {
+  const db = loadDb();
+  const { jobId } = req.query as any;
+
+  let jobs = (db.jobs as any[]);
+  let apps = (db.applications as any[]);
+  const candidates = (db.candidateProfiles as any[]);
+
+  if (jobId) {
+    jobs = jobs.filter((j) => j.id === jobId || j.slug === jobId);
+    apps = apps.filter((a) => a.jobId === jobId || a.key?.startsWith(`${jobId}::`));
+  }
+
+  let totalEvaluated = 0;
+  let totalQualified = 0;
+  let scoreSum = 0;
+  const tierDistribution = { high: 0, medium: 0, low: 0 };
+  const missingSkillFrequency: Record<string, number> = {};
+
+  const mandateStats = jobs.map((job) => {
+    const jobApps = apps.filter((a) => a.jobId === job.id || a.key?.startsWith(`${job.id}::`));
+    let jobQualified = 0;
+    let jobScoreSum = 0;
+
+    for (const app of jobApps) {
+      totalEvaluated++;
+      const cand = candidates.find((c: any) => String(c.email).toLowerCase() === String(app.candidateEmail).toLowerCase());
+      const mergedCand = {
+        ...(cand || {}),
+        name: cand?.name || app.candidateName,
+        email: app.candidateEmail,
+        skills: (cand?.skills?.length ? cand.skills : app.skills) || [],
+        experienceYears: cand?.experienceYears ?? app.experienceYears,
+        currentTitle: cand?.currentTitle || app.currentTitle,
+        education: cand?.education || app.education,
+      };
+
+      const match = calculateJobAtsMatch(mergedCand, job);
+      scoreSum += match.score;
+      jobScoreSum += match.score;
+
+      if (match.tier === 'HIGH') tierDistribution.high++;
+      else if (match.tier === 'MEDIUM') tierDistribution.medium++;
+      else tierDistribution.low++;
+
+      if (match.isShortlistEligible) {
+        totalQualified++;
+        jobQualified++;
+      }
+
+      for (const missing of match.missingMustHaveSkills) {
+        missingSkillFrequency[missing] = (missingSkillFrequency[missing] || 0) + 1;
+      }
+    }
+
+    return {
+      jobId: job.id,
+      jobTitle: job.title,
+      threshold: job.autoShortlistThreshold || 75,
+      shortlistMode: job.autoShortlistMode || 'assisted',
+      totalApplicants: jobApps.length,
+      qualifiedCount: jobQualified,
+      passRate: jobApps.length > 0 ? Math.round((jobQualified / jobApps.length) * 100) : 0,
+      avgScore: jobApps.length > 0 ? Math.round(jobScoreSum / jobApps.length) : 0,
+    };
+  });
+
+  const topMissingSkills = Object.entries(missingSkillFrequency)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([skill, count]) => ({ skill, missingCount: count }));
+
+  const overallPassRate = totalEvaluated > 0 ? Math.round((totalQualified / totalEvaluated) * 100) : 0;
+  const overallAvgScore = totalEvaluated > 0 ? Math.round(scoreSum / totalEvaluated) : 0;
+
+  res.json({
+    success: true,
+    data: {
+      totalEvaluated,
+      totalQualified,
+      overallPassRate,
+      overallAvgScore,
+      tierDistribution,
+      topMissingSkills,
+      mandateStats,
+    },
+  });
+});
+
 // Keep legacy /analytics/funnel for backwards compatibility
 atsRouter.get('/analytics/funnel', requireAuth(ATS_ROLES), (req: Request, res: Response) => {
   const db = loadDb();
