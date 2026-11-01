@@ -318,14 +318,25 @@ export function JobDetailPage() {
     window.scrollTo(0, 0);
   }, [jobSlug]);
 
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = String(reader.result || '');
+        const comma = result.indexOf(',');
+        resolve(comma >= 0 ? result.slice(comma + 1) : result);
+      };
+      reader.onerror = () => reject(new Error('Could not read file.'));
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setResumeFile(e.target.files[0]);
     }
   };
 
-  // Phase 7: the website captures interest as a real enquiry lead (server-validated,
-  // deduped). Tracked applications live in the candidate portal — no fake references.
   const handleApplicationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setApplyError('');
@@ -336,6 +347,16 @@ export function JobDetailPage() {
       return;
     }
     try {
+      setIsSubmitting(true);
+      let resumeBase64: string | undefined = undefined;
+      if (resumeFile) {
+        try {
+          resumeBase64 = await fileToBase64(resumeFile);
+        } catch {
+          // ignore or continue
+        }
+      }
+
       const base = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '' : ((typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || '');
       const res = await fetch(`${base}/api/v1/enquiries`, {
         method: 'POST',
@@ -346,18 +367,28 @@ export function JobDetailPage() {
           workEmail: email.trim(),
           phone: phone.trim() || undefined,
           enquiryType: 'candidate',
+          formName: 'Careers',
+          jobId: liveJob?.id || job.id,
+          jobSlug: job.id,
+          location: job.location,
+          currentCtc: currentCtc.trim() || undefined,
+          expectedCtc: expectedCtc.trim() || undefined,
+          notice: noticePeriod,
+          resumeBase64,
+          resumeName: resumeFile ? resumeFile.name : undefined,
+          sourcePage: `/jobs/${job.id}`,
           message: [
-            `Interest in ${liveJob?.title || job.title} (${liveJob?.id || job.id}).`,
-            `Notice: ${noticePeriod}.`,
-            currentCtc.trim() ? `Current CTC: ${currentCtc.trim()}.` : '',
-            expectedCtc.trim() ? `Expected CTC: ${expectedCtc.trim()}.` : '',
-            resumeFile ? `Resume attached by candidate at submit: ${resumeFile.name}.` : '',
-          ].filter(Boolean).join('\n'),
+            `Role: ${liveJob?.title || job.title} (${liveJob?.id || job.id})`,
+            `Notice period: ${noticePeriod}`,
+            currentCtc.trim() ? `Current CTC: ${currentCtc.trim()}` : '',
+            expectedCtc.trim() ? `Expected CTC: ${expectedCtc.trim()}` : '',
+            resumeFile ? `Resume: ${resumeFile.name}` : '',
+          ].filter(Boolean).join(' · '),
         }),
       });
       const body = await res.json().catch(() => null);
       if (!res.ok) throw new Error(body?.message || 'Could not send your request. Please try again.');
-      setAppReferenceId(body?.data?.id || '');
+      setAppReferenceId(body?.data?.id || body?.data?.applicationId || '');
       setSubmitted(true);
     } catch (err: any) {
       setApplyError(err?.message || 'Could not send your request. Please try again.');

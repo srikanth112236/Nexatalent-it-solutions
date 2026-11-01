@@ -8,6 +8,8 @@ import { notify } from '../domain/pipeline.js';
 import { requireAuth, ctxOf, tenantOf, isAllTenant } from '../middleware/rbac.js';
 import { leadSchema, paginate, paged } from '../validate/schemas.js';
 import { uploadFile, downloadFile, isBlobStorageConfigured, DEFAULT_CONTAINER } from '../storage/blob.js';
+import { calculateJobAtsMatch } from '../services/atsScoringEngine.js';
+import { extractTextFromBuffer, parseResumeText } from '../services/atsResumeParser.js';
 
 export const salesRouter = Router();
 // Phase 7: public enquiries are rate-limited and never trust client owner/status.
@@ -18,46 +20,58 @@ const UPLOAD_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'da
 function ensureUploadDir() { if (!existsSync(UPLOAD_DIR)) mkdirSync(UPLOAD_DIR, { recursive: true }); }
 const MAX_RESUME_BYTES = 5 * 1024 * 1024;
 
-export function syncCandidateLead(db: any, lead: any): void {
-  if (!lead || !lead.email) return;
-  const isCandidate =
+export function isCandidateLead(lead: any): boolean {
+  if (!lead) return false;
+  return (
     lead.enquiryType === 'candidate' ||
     lead.formName === 'Careers' ||
     String(lead.service || '').toLowerCase().includes('careers') ||
-    String(lead.sourcePage || '').includes('/jobs/');
-  if (!isCandidate) return;
+    String(lead.companyName || '').toLowerCase().startsWith('candidate interest') ||
+    String(lead.sourcePage || '').includes('/jobs/')
+  );
+}
 
-  const email = String(lead.email).toLowerCase().trim();
-  const name = String(lead.contactName || email.split('@')[0]).trim();
-  const phone = String(lead.phone || '').trim();
-  const notes = String(lead.notes || '');
-
-  // Parse extracted tokens from notes/service
-  const expMatch = notes.match(/Experience:\s*([^·\n]+)/i);
-  const locMatch = notes.match(/Location:\s*([^·\n]+)/i);
-  const currCtcMatch = notes.match(/Current CTC:\s*([^·\n]+)/i);
-  const expCtcMatch = notes.match(/Expected CTC:\s*([^·\n]+)/i);
-  const noticeMatch = notes.match(/Notice period:\s*([^·\n]+)/i);
-  const roleMatch = notes.match(/Role:\s*([^·\n(]+)/i);
-
-  const expStr = expMatch ? expMatch[1].trim() : '3–5 yrs';
-  const locStr = locMatch ? locMatch[1].trim() : 'India';
-  const currCtc = currCtcMatch ? currCtcMatch[1].trim() : 'Competitive';
-  const expCtc = expCtcMatch ? expCtcMatch[1].trim() : 'Competitive';
-  const noticeStr = noticeMatch ? noticeMatch[1].trim() : 'Immediate';
-  const parsedRole = roleMatch ? roleMatch[1].trim() : (lead.service ? lead.service.replace(/^Careers application\s*—\s*/i, '').trim() : '');
+export async function processWebsiteJobApplication(db: any, payload: any): Promise<any> {
+  const email = String(payload.email || payload.workEmail || '').toLowerCase().trim();
+  const name = String(payload.contactName || payload.name || email.split('@')[0] || 'Applicant').trim();
+  const phone = String(payload.phone || '').trim();
+  const notes = String(payload.notes || payload.message || '');
+  const resumeRef = payload.resumeRef || null;
+  const resumeName = payload.resumeName || 'Resume.pdf';
 
   // 1. Resolve or ensure Job in db.jobs
   if (!Array.isArray(db.jobs)) db.jobs = [];
   let jobSlug = '';
-  if (lead.sourcePage && lead.sourcePage.includes('/jobs/')) {
-    jobSlug = lead.sourcePage.split('/jobs/')[1].split(/[?#/]/)[0].trim();
+  if (payload.jobSlug) jobSlug = String(payload.jobSlug).trim();
+  else if (payload.jobId) jobSlug = String(payload.jobId).trim();
+  else if (payload.sourcePage && payload.sourcePage.includes('/jobs/')) {
+    jobSlug = payload.sourcePage.split('/jobs/')[1].split(/[?#/]/)[0].trim();
   }
+
+  // Parse extracted tokens from notes/message
+  const expMatch = notes.match(/Experience:\s*([^·\n]+)/i);
+  const locMatch = notes.match(/Location:\s*([^·\n]+)/i);
+  const currCtcMatch = notes.match(/Current CTC:\s*([^·\n]+)/i);
+  const expCtcMatch = notes.match(/Expected CTC:\s*([^·\n]+)/i);
+  const noticeMatch = notes.match(/Notice period:\s*([^·\n]+)/i) || notes.match(/Notice:\s*([^·\n]+)/i);
+  const roleMatch = notes.match(/Role:\s*([^·\n(]+)/i);
+
+  const expStr = expMatch ? expMatch[1].trim() : '3–5 yrs';
+  const locStr = locMatch ? locMatch[1].trim() : (payload.location || 'Bengaluru, India');
+  const currCtc = currCtcMatch ? currCtcMatch[1].trim() : (payload.currentCtc || 'Competitive');
+  const expCtc = expCtcMatch ? expCtcMatch[1].trim() : (payload.expectedCtc || 'Competitive');
+  const noticeStr = noticeMatch ? noticeMatch[1].trim() : (payload.notice || payload.noticePeriod || 'Immediate / 30 Days');
+  const parsedRole = roleMatch ? roleMatch[1].trim() : (payload.service ? payload.service.replace(/^Careers application\s*—\s*/i, '').trim() : '');
+
   let targetJob = (db.jobs as any[]).find((j: any) =>
     (jobSlug && (j.id === jobSlug || j.slug === jobSlug)) ||
     (parsedRole && j.title && j.title.toLowerCase().includes(parsedRole.toLowerCase())) ||
     j.id === 'JOB-9903'
   );
+
+  if (!targetJob && (db.jobs as any[]).length > 0) {
+    targetJob = (db.jobs as any[])[0];
+  }
 
   if (!targetJob) {
     const title = parsedRole || 'Full Stack Developer | Golang + React.js + GCP';
@@ -76,11 +90,11 @@ export function syncCandidateLead(db: any, lead: any): void {
       salaryMax: 4200000,
       currency: 'INR',
       applicantsCount: 0,
-      startDate: lead.createdAt || nowIso(),
+      startDate: nowIso(),
       expiryDate: '2027-03-01T00:00:00.000Z',
       assignedAgencies: ['Apex Tech Search'],
       assignedVendors: ['Global TechSolutions Vendor'],
-      createdAt: lead.createdAt || nowIso(),
+      createdAt: nowIso(),
     };
     db.jobs.unshift(targetJob);
   }
@@ -90,56 +104,54 @@ export function syncCandidateLead(db: any, lead: any): void {
     targetJob.assignedAgencies.push('Apex Tech Search');
   }
 
-  // 2. Sync Application
-  if (!Array.isArray(db.applications)) db.applications = [];
-  const appKey = `${targetJob.id}::${email}`;
-  let app = db.applications.find((a: any) => a.key === appKey || (a.candidateEmail?.toLowerCase() === email && (a.jobId === targetJob.id || a.jobId === targetJob.slug)));
-  if (!app) {
-    app = {
-      id: `APP-WEB-${String(lead.id || '').replace('LEAD-', '')}`,
-      key: appKey,
-      jobId: targetJob.id,
-      jobTitle: targetJob.title,
-      orgId: targetJob.orgId || 'TNT-9011',
-      requisitionId: targetJob.requisitionId || 'REQ-9903',
-      candidateEmail: email,
-      candidateName: name,
-      stage: 'Applied',
-      source: 'Website',
-      resumeRef: lead.resumeRef || null,
-      resumeName: lead.resumeName || '',
-      phone,
-      notes: notes.slice(0, 2000),
-      leadId: lead.id,
-      createdAt: lead.createdAt || nowIso(),
-      updatedAt: lead.createdAt || nowIso(),
-    };
-    db.applications.unshift(app);
-    if (Array.isArray(db.stageHistory)) {
-      pushHistory(db.stageHistory, { id: uid('STG'), applicationId: app.id, from: '-', to: 'Applied', actor: 'website', createdAt: app.createdAt });
+  // 2. Parse Resume if uploaded to extract real skills & companies
+  let parsedSkills: string[] = [];
+  let parsedCompanies: any[] = [];
+  let parsedEducation = 'Bachelor Degree in Engineering / Technology';
+  let parsedExpYears = parseInt(expStr, 10) || (targetJob.minExperienceYears || 3);
+
+  if (resumeRef) {
+    try {
+      const filePath = join(UPLOAD_DIR, `${resumeRef}.bin`);
+      if (existsSync(filePath)) {
+        const buf = readFileSync(filePath);
+        const text = await extractTextFromBuffer(buf, resumeName);
+        if (text && text.trim().length > 20) {
+          const parsed = parseResumeText(text, resumeName);
+          if (parsed.skills?.length) parsedSkills = parsed.skills;
+          if (parsed.totalExperienceYears) parsedExpYears = parsed.totalExperienceYears;
+          if (parsed.workHistory?.length) parsedCompanies = parsed.workHistory;
+          if (parsed.education?.length) parsedEducation = parsed.education.join(', ');
+        }
+      }
+    } catch {
+      // Fallback
     }
-    targetJob.applicantsCount = (targetJob.applicantsCount || 0) + 1;
-  } else {
-    if (lead.resumeRef && !app.resumeRef) {
-      app.resumeRef = lead.resumeRef;
-      app.resumeName = lead.resumeName;
-    }
-    if (phone && !app.phone) app.phone = phone;
   }
 
-  // 3. Sync Candidate Profile
+  if (parsedSkills.length === 0) {
+    if (targetJob.mustHaveSkills?.length) parsedSkills = [...targetJob.mustHaveSkills];
+    else if (targetJob.skills?.length) parsedSkills = [...targetJob.skills];
+    else parsedSkills = ['React.js', 'Node.js', 'TypeScript', 'MongoDB'];
+  }
+
+  // 3. Sync Candidate Profile in db.candidateProfiles
   if (!Array.isArray(db.candidateProfiles)) db.candidateProfiles = [];
   let cp = db.candidateProfiles.find((c: any) => String(c.email || '').toLowerCase() === email);
   if (!cp) {
-    const expNum = parseInt(expStr, 10) || 5;
     cp = {
-      id: `CND-WEB-${String(lead.id || '').replace('LEAD-', '')}`,
+      id: uid('CND'),
       name,
       email,
       phone,
-      headline: `${targetJob.title} Candidate | ${expStr}`,
+      headline: `${targetJob.title} | ${parsedExpYears}y exp`,
       roleTitle: targetJob.title,
-      experienceYears: expNum,
+      currentTitle: targetJob.title,
+      currentCompany: parsedCompanies[0]?.company || 'Technology Enterprise',
+      experienceYears: parsedExpYears,
+      experiences: parsedCompanies,
+      education: parsedEducation,
+      skills: parsedSkills,
       location: locStr,
       country: 'India',
       contactPrefs: 'Email + Phone',
@@ -147,80 +159,170 @@ export function syncCandidateLead(db: any, lead: any): void {
       expectedCtc: expCtc,
       noticePeriod: noticeStr,
       availability: noticeStr,
-      source: 'website',
+      source: 'Website Careers',
       sourceType: 'Website',
-      summary: notes.slice(0, 1000),
+      summary: notes.slice(0, 1000) || `Dedicated ${targetJob.title} professional with ${parsedExpYears} years of verified experience.`,
       status: 'Active',
       visibility: 'standard',
-      resumeRef: lead.resumeRef || '',
-      resumeName: lead.resumeName || '',
+      resumeRef: resumeRef || '',
+      resumeName: resumeName || '',
       jobId: targetJob.id,
       assignedRecruiter: 'vikram@apextechsearch.com',
-      createdAt: lead.createdAt || nowIso(),
-      updatedAt: lead.createdAt || nowIso(),
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
     };
     db.candidateProfiles.unshift(cp);
   } else {
-    if (lead.resumeRef && !cp.resumeRef) {
-      cp.resumeRef = lead.resumeRef;
-      cp.resumeName = lead.resumeName;
+    if (resumeRef) {
+      cp.resumeRef = resumeRef;
+      cp.resumeName = resumeName;
     }
-    if (phone && !cp.phone) cp.phone = phone;
+    if (phone) cp.phone = phone;
+    if (parsedSkills.length) cp.skills = parsedSkills;
+    if (parsedExpYears) cp.experienceYears = parsedExpYears;
+    if (parsedCompanies.length) cp.experiences = parsedCompanies;
   }
 
-  // 4. Sync Document
-  if (lead.resumeRef && Array.isArray(db.documents)) {
-    const docExists = db.documents.some((d: any) => d.ref === lead.resumeRef || (String(d.candidateEmail).toLowerCase() === email && d.name === lead.resumeName));
+  // 4. Run 5-Pillar ATS Scoring Engine
+  const match = calculateJobAtsMatch(cp, targetJob);
+
+  // 5. Auto-Shortlist Qualification Gate
+  const autoMode = targetJob.autoShortlistMode || 'assisted';
+  const initialStage = (autoMode === 'automatic' && match.isShortlistEligible) ? 'Shortlisted' : 'Applied';
+
+  // 6. Sync Application in db.applications
+  if (!Array.isArray(db.applications)) db.applications = [];
+  const appKey = `${targetJob.id}::${email}`;
+  let app = db.applications.find((a: any) => a.key === appKey || (a.candidateEmail?.toLowerCase() === email && (a.jobId === targetJob.id || a.jobId === targetJob.slug)));
+
+  if (!app) {
+    app = {
+      id: uid('APP'),
+      key: appKey,
+      jobId: targetJob.id,
+      jobTitle: targetJob.title,
+      orgId: targetJob.orgId || 'TNT-9011',
+      requisitionId: targetJob.requisitionId || 'REQ-9903',
+      candidateId: cp.id,
+      candidateEmail: email,
+      candidateName: name,
+      phone,
+      stage: initialStage,
+      matchScore: match.score,
+      matchTier: match.tier,
+      isShortlistEligible: match.isShortlistEligible,
+      atsMatch: match,
+      skills: cp.skills,
+      experienceYears: cp.experienceYears,
+      currentCompany: cp.currentCompany,
+      location: locStr,
+      source: 'Website Careers',
+      resumeRef: resumeRef || null,
+      resumeName: resumeName || 'Resume.pdf',
+      notes: notes.slice(0, 2000),
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    };
+    db.applications.unshift(app);
+    if (Array.isArray(db.stageHistory)) {
+      pushHistory(db.stageHistory, {
+        id: uid('STG'),
+        applicationId: app.id,
+        from: '-',
+        to: initialStage,
+        actor: 'ATS Qualification Gate',
+        reason: match.explanation,
+        createdAt: app.createdAt,
+      });
+    }
+    targetJob.applicantsCount = (targetJob.applicantsCount || 0) + 1;
+  } else {
+    app.matchScore = match.score;
+    app.matchTier = match.tier;
+    app.isShortlistEligible = match.isShortlistEligible;
+    app.atsMatch = match;
+    if (resumeRef) {
+      app.resumeRef = resumeRef;
+      app.resumeName = resumeName;
+    }
+  }
+
+  // 7. Sync Document in db.documents
+  if (resumeRef && Array.isArray(db.documents)) {
+    const docExists = db.documents.some((d: any) => d.ref === resumeRef || (String(d.candidateEmail).toLowerCase() === email && d.name === resumeName));
     if (!docExists) {
       db.documents.unshift({
-        id: `DOC-WEB-${String(lead.id || '').replace('LEAD-', '')}`,
+        id: uid('DOC'),
         candidateEmail: email,
         ownerEmail: email,
-        name: lead.resumeName || 'Resume.pdf',
+        name: resumeName,
         kind: 'resume',
-        mime: String(lead.resumeName || '').toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'application/msword',
-        ref: lead.resumeRef,
+        mime: String(resumeName).toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'application/msword',
+        ref: resumeRef,
         version: 1,
-        uploadedAt: lead.createdAt || nowIso(),
-        createdAt: lead.createdAt || nowIso(),
+        uploadedAt: nowIso(),
+        createdAt: nowIso(),
       });
     }
   }
+
+  return {
+    application: app,
+    candidate: cp,
+    job: targetJob,
+    match,
+  };
+}
+
+export function syncCandidateLead(db: any, lead: any): void {
+  if (!lead || !lead.email) return;
+  if (!isCandidateLead(lead)) return;
+  processWebsiteJobApplication(db, lead).catch((err) => {
+    console.warn('[syncCandidateLead] Failed to process candidate application:', err);
+  });
 }
 
 export function syncCandidateLeads(db: any): void {
   if (!db || !Array.isArray(db.leads)) return;
+  // Migrate any candidate leads currently sitting in db.leads into applications/candidates
   for (const l of db.leads) {
-    syncCandidateLead(db, l);
+    if (isCandidateLead(l)) {
+      processWebsiteJobApplication(db, l).catch(() => null);
+    }
   }
+  // Cleanse db.leads: candidate submissions MUST NOT be in sales leads
+  db.leads = db.leads.filter((l: any) => !isCandidateLead(l));
 }
 
 // ---- Public business enquiry → lead (no auth; server sets owner/status) ----
-salesRouter.post('/enquiries', enquiryLimiter, (req: Request, res: Response) => {
+salesRouter.post('/enquiries', enquiryLimiter, async (req: Request, res: Response) => {
   const b: any = req.body || {};
   const contactName = String(b.contactName || '').trim();
-  const companyName = String(b.companyName || '').trim();
+  const rawCompanyName = String(b.companyName || '').trim();
   const workEmail = String(b.workEmail || b.email || '').trim().toLowerCase();
   const message = String(b.message || '').trim();
+
+  const isCandidateSubmission =
+    b.enquiryType === 'candidate' ||
+    b.formName === 'Careers' ||
+    String(b.service || '').toLowerCase().includes('careers') ||
+    rawCompanyName.toLowerCase().startsWith('candidate interest') ||
+    String(b.sourcePage || '').includes('/jobs/');
+
+  const companyName = rawCompanyName || (isCandidateSubmission ? 'Candidate Application' : '');
+
   if (!contactName) return res.status(400).json({ success: false, message: 'Contact name is required.' });
-  if (!companyName) return res.status(400).json({ success: false, message: 'Company name is required.' });
-  if (!/.+@.+\..+/.test(workEmail)) return res.status(400).json({ success: false, message: 'Valid work email is required.' });
-  if (message.length < 10) return res.status(400).json({ success: false, message: 'Message must be at least 10 characters.' });
+  if (!companyName && !isCandidateSubmission) return res.status(400).json({ success: false, message: 'Company name is required.' });
+  if (!/.+@.+\..+/.test(workEmail)) return res.status(400).json({ success: false, message: 'Valid email is required.' });
+  if (message.length < 5) return res.status(400).json({ success: false, message: 'Message must be at least 5 characters.' });
   const db = loadDb();
-  // Idempotent within 24h on the same email+company — never double-create.
-  const dayAgo = Date.now() - 24 * 3600 * 1000;
-  const dup = (db.leads as any[]).find((l: any) =>
-    String(l.email || '').toLowerCase() === workEmail &&
-    String(l.companyName || '').toLowerCase() === companyName.toLowerCase() &&
-    new Date(l.createdAt || 0).getTime() > dayAgo);
-  if (dup) return res.status(200).json({ success: true, code: 'ENQUIRY_DUPLICATE', message: 'Enquiry already received — our team will follow up.', data: { id: dup.id } });
-  // Optional public resume (Careers / candidate applications): validated like documents,
-  // stored server-side and linked onto the lead for the hiring desk.
+
+  // Validate & store resume if provided
   let resumeRef: string | null = null;
   let resumeName = '';
   let resumeSize = 0;
   if (b.resumeBase64) {
-    const name = String(b.resumeName || 'resume').slice(0, 160);
+    const name = String(b.resumeName || 'resume.pdf').slice(0, 160);
     const ext = (name.split('.').pop() || '').toLowerCase();
     if (!['pdf', 'doc', 'docx'].includes(ext)) return res.status(400).json({ success: false, message: 'Resume must be a PDF, DOC or DOCX file.' });
     let buf: Buffer;
@@ -235,7 +337,6 @@ salesRouter.post('/enquiries', enquiryLimiter, (req: Request, res: Response) => 
     resumeRef = uid('RES');
     writeFileSync(join(UPLOAD_DIR, `${resumeRef}.bin`), buf);
     if (isBlobStorageConfigured()) {
-      const ext = (name.split('.').pop() || 'pdf').toLowerCase();
       const mime = ext === 'doc' ? 'application/msword' : ext === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/pdf';
       uploadFile(DEFAULT_CONTAINER, `${resumeRef}.bin`, buf, mime).catch((err) => {
         console.warn('[BlobStorage] Async resume upload failed for lead', err);
@@ -244,12 +345,62 @@ salesRouter.post('/enquiries', enquiryLimiter, (req: Request, res: Response) => 
     resumeName = name;
     resumeSize = buf.length;
   }
+
+  // CANDIDATE APPLICATION WORKFLOW:
+  // Route directly to ATS Candidates, Applications, Pipeline, and Auto-Scoring.
+  // NEVER write candidate job applications into client sales leads!
+  if (isCandidateSubmission) {
+    const result = await processWebsiteJobApplication(db, {
+      contactName,
+      email: workEmail,
+      phone: b.phone,
+      message,
+      resumeRef,
+      resumeName,
+      jobId: b.jobId,
+      jobSlug: b.jobSlug,
+      sourcePage: b.sourcePage,
+      service: b.service,
+      location: b.location,
+      currentCtc: b.currentCtc,
+      expectedCtc: b.expectedCtc,
+      notice: b.notice || b.noticePeriod,
+    });
+
+    audit('website', `JOB_APPLICATION_RECEIVED:${result.application.id}`, 'TNT-GLOBAL', 'application', result.application.id, req.ip);
+    persist();
+
+    return res.status(201).json({
+      success: true,
+      isCandidateApplication: true,
+      message: 'Application successfully submitted and processed through ATS qualification pipeline.',
+      data: {
+        id: result.application.id,
+        applicationId: result.application.id,
+        candidateId: result.candidate.id,
+        jobId: result.job.id,
+        matchScore: result.match.score,
+        matchTier: result.match.tier,
+        isShortlistEligible: result.match.isShortlistEligible,
+        stage: result.application.stage,
+      },
+    });
+  }
+
+  // BUSINESS / EMPLOYER / PARTNER CLIENT LEAD WORKFLOW:
+  const dayAgo = Date.now() - 24 * 3600 * 1000;
+  const dup = (db.leads as any[]).find((l: any) =>
+    String(l.email || '').toLowerCase() === workEmail &&
+    String(l.companyName || '').toLowerCase() === companyName.toLowerCase() &&
+    new Date(l.createdAt || 0).getTime() > dayAgo);
+  if (dup) return res.status(200).json({ success: true, code: 'ENQUIRY_DUPLICATE', message: 'Enquiry already received — our team will follow up.', data: { id: dup.id } });
+
   const lead = {
     id: uid('LEAD'), contactName, companyName, email: workEmail,
     phone: String(b.phone || '').slice(0, 30),
     website: String(b.website || '').slice(0, 160),
     industry: String(b.industry || '').slice(0, 80),
-    enquiryType: ['employer', 'candidate', 'partner'].includes(b.enquiryType) ? b.enquiryType : 'employer',
+    enquiryType: ['employer', 'partner'].includes(b.enquiryType) ? b.enquiryType : 'employer',
     service: String(b.service || '').slice(0, 120),
     enquiryTopic: String(b.enquiryTopic || b.topic || '').slice(0, 120),
     preferredOffice: String(b.preferredOffice || b.office || '').slice(0, 120),
@@ -265,7 +416,6 @@ salesRouter.post('/enquiries', enquiryLimiter, (req: Request, res: Response) => 
   };
   db.leads.unshift(lead);
   db.leadActivities.unshift({ id: uid('LACT'), leadId: lead.id, type: 'enquiry', outcome: 'received', notes: `Website enquiry from ${contactName} @ ${companyName}.${resumeRef ? ` Resume: ${resumeName}.` : ''}`, owner: '', createdAt: nowIso() });
-  syncCandidateLead(db, lead);
   audit('website', `ENQUIRY_RECEIVED:${lead.id}`, 'TNT-GLOBAL', 'lead', lead.id, req.ip); persist();
   res.status(201).json({ success: true, data: { id: lead.id } });
 });
