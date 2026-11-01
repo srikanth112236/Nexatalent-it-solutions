@@ -1,5 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Search, Eye, Clock, MessageSquare, History, Briefcase, X } from 'lucide-react';
+import {
+  Search,
+  Eye,
+  Clock,
+  MessageSquare,
+  History,
+  Briefcase,
+  X,
+  Sparkles,
+  Check,
+  CheckCircle,
+  AlertCircle,
+} from 'lucide-react';
 import { atsApi } from '../../../shared/enterprise/phaseApi';
 import { InlineLoading } from '../../../shared/ui/DataState';
 import { PdfResumeViewerModal } from '../../../shared/ui/PdfResumeViewerModal';
@@ -12,6 +24,8 @@ export function AtsApplicantsView() {
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
   const [stageFilter, setStageFilter] = useState('');
+  const [sortBy, setSortBy] = useState<'score_desc' | 'newest' | 'oldest'>('score_desc');
+  const [scoreDrawerCandidate, setScoreDrawerCandidate] = useState<any | null>(null);
 
   // Selected Candidate / App modals
   const [resumePreview, setResumePreview] = useState<{ applicationId?: string; candidateId?: string; leadId?: string; title?: string; filename?: string } | null>(null);
@@ -66,16 +80,29 @@ export function AtsApplicantsView() {
     loadApplicants();
   }, [selectedJobId, stageFilter, q]);
 
-  // Filtered applicants
-  const filtered = applicants.filter((a) => {
-    if (stageFilter && a.stage !== stageFilter) return false;
-    if (q.trim()) {
-      const s = q.toLowerCase();
-      const match = `${a.candidateName || ''} ${a.candidateEmail || ''} ${a.phone || ''} ${a.jobTitle || ''}`.toLowerCase();
-      if (!match.includes(s)) return false;
-    }
-    return true;
-  });
+  // Filtered and sorted applicants
+  const filtered = applicants
+    .filter((a) => {
+      if (stageFilter && a.stage !== stageFilter) return false;
+      if (q.trim()) {
+        const s = q.toLowerCase();
+        const match = `${a.candidateName || ''} ${a.candidateEmail || ''} ${a.phone || ''} ${a.jobTitle || ''}`.toLowerCase();
+        if (!match.includes(s)) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'score_desc') {
+        return (b.matchScore ?? 0) - (a.matchScore ?? 0);
+      }
+      if (sortBy === 'newest') {
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      }
+      if (sortBy === 'oldest') {
+        return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+      }
+      return 0;
+    });
 
   const openNotes = async (app: any) => {
     setNoteApp(app);
@@ -150,7 +177,7 @@ export function AtsApplicantsView() {
         {error && <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded-xl">{error}</div>}
 
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-          <div className="sm:col-span-5 relative">
+          <div className="sm:col-span-4 relative">
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
@@ -161,13 +188,13 @@ export function AtsApplicantsView() {
             />
           </div>
 
-          <div className="sm:col-span-4">
+          <div className="sm:col-span-3">
             <select
               value={selectedJobId}
               onChange={(e) => setSelectedJobId(e.target.value)}
               className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:ring-2 focus:ring-[#0265FF] bg-slate-50 text-slate-700 truncate"
             >
-              <option value="">All Job Mandates (All Candidates)</option>
+              <option value="">All Job Mandates</option>
               {jobs.map((j) => (
                 <option key={j.id} value={j.id}>
                   {j.id} — {j.title}
@@ -176,7 +203,7 @@ export function AtsApplicantsView() {
             </select>
           </div>
 
-          <div className="sm:col-span-3">
+          <div className="sm:col-span-2">
             <select
               value={stageFilter}
               onChange={(e) => setStageFilter(e.target.value)}
@@ -190,6 +217,18 @@ export function AtsApplicantsView() {
               <option value="Offer">Offer</option>
               <option value="Hired">Hired</option>
               <option value="Rejected">Rejected</option>
+            </select>
+          </div>
+
+          <div className="sm:col-span-3">
+            <select
+              value={sortBy}
+              onChange={(e: any) => setSortBy(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-extrabold outline-none focus:ring-2 focus:ring-[#0265FF] bg-blue-50/70 text-[#0265FF]"
+            >
+              <option value="score_desc">⚡ Sort: Highest ATS Match Score</option>
+              <option value="newest">📅 Sort: Newest Applications</option>
+              <option value="oldest">⏳ Sort: Longest in Pipeline</option>
             </select>
           </div>
         </div>
@@ -214,6 +253,7 @@ export function AtsApplicantsView() {
                 <tr>
                   <th className="py-3.5 px-4">Candidate</th>
                   <th className="py-3.5 px-4">Target Mandate</th>
+                  <th className="py-3.5 px-4">ATS Match</th>
                   <th className="py-3.5 px-4">Recruitment Stage</th>
                   <th className="py-3.5 px-4">Experience & Skills</th>
                   <th className="py-3.5 px-4">Stage Age</th>
@@ -230,8 +270,31 @@ export function AtsApplicantsView() {
                     </td>
 
                     <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-800">{cand.jobTitle}</div>
+                      <div className="font-bold text-slate-800">{cand.jobTitle || 'Tech Mandate'}</div>
                       <div className="text-[10px] text-slate-400">{cand.jobId}</div>
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      <button
+                        type="button"
+                        onClick={() => setScoreDrawerCandidate(cand)}
+                        title="Click to view 5-Pillar ATS breakdown"
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black border transition hover:scale-105 cursor-pointer ${
+                          (cand.matchScore ?? 0) >= 75
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                            : (cand.matchScore ?? 0) >= 50
+                            ? 'bg-amber-50 text-amber-800 border-amber-300'
+                            : 'bg-slate-100 text-slate-600 border-slate-200'
+                        }`}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                        <span>{cand.matchScore ?? 0}%</span>
+                        {cand.isShortlistEligible && (
+                          <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-emerald-200 text-emerald-950 font-black">
+                            Pass
+                          </span>
+                        )}
+                      </button>
                     </td>
 
                     <td className="py-3.5 px-4">
@@ -241,9 +304,9 @@ export function AtsApplicantsView() {
                     </td>
 
                     <td className="py-3.5 px-4">
-                      <div className="text-slate-700 font-semibold">{cand.experience}</div>
+                      <div className="text-slate-700 font-semibold">{cand.experienceYears ? `${cand.experienceYears}y exp` : (cand.experience || '3-5y')}</div>
                       <div className="text-[11px] text-slate-400 truncate max-w-[200px]">
-                        {Array.isArray(cand.skills) ? cand.skills.join(', ') : 'Tech Talent'}
+                        {Array.isArray(cand.skills) ? cand.skills.join(', ') : (cand.skills || 'Tech Talent')}
                       </div>
                     </td>
 
@@ -472,6 +535,208 @@ export function AtsApplicantsView() {
                 Add
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Candidate ATS Score Breakdown Drawer / Modal */}
+      {scoreDrawerCandidate && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-scale-in">
+            {/* Header */}
+            <div className="flex items-start justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-lg shadow-md ${
+                  (scoreDrawerCandidate.matchScore ?? 0) >= 75
+                    ? 'bg-emerald-600'
+                    : (scoreDrawerCandidate.matchScore ?? 0) >= 50
+                    ? 'bg-amber-500'
+                    : 'bg-slate-500'
+                }`}>
+                  {scoreDrawerCandidate.matchScore ?? 0}%
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-extrabold text-slate-900">
+                      {scoreDrawerCandidate.candidateName}
+                    </h3>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                      scoreDrawerCandidate.matchTier === 'HIGH' || (scoreDrawerCandidate.matchScore ?? 0) >= 75
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : scoreDrawerCandidate.matchTier === 'MEDIUM' || (scoreDrawerCandidate.matchScore ?? 0) >= 50
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-slate-100 text-slate-700'
+                    }`}>
+                      {scoreDrawerCandidate.matchTier || 'TIER'} MATCH
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 font-mono mt-0.5">
+                    {scoreDrawerCandidate.candidateEmail} &bull; Mandate: <strong className="text-slate-800">{scoreDrawerCandidate.jobTitle || scoreDrawerCandidate.jobId}</strong>
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setScoreDrawerCandidate(null)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Threshold & Qualification */}
+            <div className={`p-4 rounded-2xl border flex items-center justify-between gap-3 ${
+              scoreDrawerCandidate.isShortlistEligible || (scoreDrawerCandidate.matchScore ?? 0) >= 75
+                ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900'
+                : 'bg-slate-50 border-slate-200 text-slate-700'
+            }`}>
+              <div className="flex items-center gap-2.5">
+                {scoreDrawerCandidate.isShortlistEligible || (scoreDrawerCandidate.matchScore ?? 0) >= 75 ? (
+                  <CheckCircle size={18} className="text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertCircle size={18} className="text-slate-400 shrink-0" />
+                )}
+                <div>
+                  <p className="text-xs font-bold">
+                    {scoreDrawerCandidate.isShortlistEligible || (scoreDrawerCandidate.matchScore ?? 0) >= 75
+                      ? 'Qualified for Shortlisting'
+                      : 'Under Mandatory Qualification Threshold'}
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    Mandate Target Threshold: 75% Match
+                  </p>
+                </div>
+              </div>
+
+              {scoreDrawerCandidate.stage !== 'Shortlisted' && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await atsApi.moveStage(scoreDrawerCandidate.id || scoreDrawerCandidate.applicationId, 'Shortlisted', 'Shortlisted via ATS Applicants Review');
+                      setScoreDrawerCandidate(null);
+                      loadApplicants();
+                    } catch (err: any) {
+                      alert(`Failed to move: ${err?.message || err}`);
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-sm cursor-pointer"
+                >
+                  Move to Shortlisted
+                </button>
+              )}
+            </div>
+
+            {/* 5-Pillar Breakdown */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles size={14} className="text-[#0265FF]" /> 5-Pillar Algorithmic Scoring Breakdown
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+                    <span>1. Mandatory Skills Fit</span>
+                    <span className="font-mono text-[#0265FF]">
+                      {scoreDrawerCandidate.atsMatch?.breakdown?.mustHaveSkillsScore ?? (scoreDrawerCandidate.matchScore ? Math.round((scoreDrawerCandidate.matchScore * 0.4)) : 0)} / 40 pts
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-[#0265FF] h-full rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(100, (((scoreDrawerCandidate.atsMatch?.breakdown?.mustHaveSkillsScore ?? (scoreDrawerCandidate.matchScore ? Math.round((scoreDrawerCandidate.matchScore * 0.4)) : 0)) / 40) * 100))}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+                    <span>2. Experience Alignment</span>
+                    <span className="font-mono text-emerald-600">
+                      {scoreDrawerCandidate.atsMatch?.breakdown?.experienceScore ?? (scoreDrawerCandidate.matchScore ? Math.round((scoreDrawerCandidate.matchScore * 0.25)) : 0)} / 25 pts
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(100, (((scoreDrawerCandidate.atsMatch?.breakdown?.experienceScore ?? (scoreDrawerCandidate.matchScore ? Math.round((scoreDrawerCandidate.matchScore * 0.25)) : 0)) / 25) * 100))}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+                    <span>3. Role & Title Fit</span>
+                    <span className="font-mono text-purple-600">
+                      {scoreDrawerCandidate.atsMatch?.breakdown?.titleScore ?? 12} / 15 pts
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-purple-500 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${((scoreDrawerCandidate.atsMatch?.breakdown?.titleScore ?? 12) / 15) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+                    <span>4. Education Fit</span>
+                    <span className="font-mono text-amber-600">
+                      {scoreDrawerCandidate.atsMatch?.breakdown?.educationScore ?? 8} / 10 pts
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-amber-500 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${((scoreDrawerCandidate.atsMatch?.breakdown?.educationScore ?? 8) / 10) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5 sm:col-span-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+                    <span>5. Secondary Skills & Location Fit</span>
+                    <span className="font-mono text-teal-600">
+                      {scoreDrawerCandidate.atsMatch?.breakdown?.niceToHaveScore ?? 7} / 10 pts
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-teal-500 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${((scoreDrawerCandidate.atsMatch?.breakdown?.niceToHaveScore ?? 7) / 10) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Matched skills */}
+            <div className="space-y-3 pt-2 border-t border-slate-100">
+              <div>
+                <h5 className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                  <Check size={13} /> Matched Must-Have Skills ({scoreDrawerCandidate.atsMatch?.matchedMustHaveSkills?.length || (Array.isArray(scoreDrawerCandidate.skills) ? scoreDrawerCandidate.skills.length : 0)})
+                </h5>
+                <div className="flex flex-wrap gap-1.5">
+                  {(scoreDrawerCandidate.atsMatch?.matchedMustHaveSkills || (Array.isArray(scoreDrawerCandidate.skills) ? scoreDrawerCandidate.skills : [])).map((sk: string) => (
+                    <span key={sk} className="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1">
+                      <Check size={11} className="text-emerald-600" /> {sk}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setScoreDrawerCandidate(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs hover:bg-slate-200 transition cursor-pointer"
+              >
+                Close Inspector
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -93,6 +93,58 @@ interface QueueItem {
   extracted?: any;
 }
 
+function computeQuickMatchScore(cand: StagedCandidate, job: any): { score: number; tier: 'HIGH' | 'MEDIUM' | 'LOW'; isEligible: boolean } {
+  if (!job) return { score: 0, tier: 'LOW', isEligible: false };
+
+  const candSkills = (cand.skills || []).map((s) => s.toLowerCase());
+  const mustHave: string[] = (job.mustHaveSkills && job.mustHaveSkills.length > 0)
+    ? job.mustHaveSkills
+    : (job.skills || []).slice(0, 3);
+
+  let matchedMustHave = 0;
+  for (const req of mustHave) {
+    const rLower = req.toLowerCase();
+    if (candSkills.some((s) => s.includes(rLower) || rLower.includes(s))) {
+      matchedMustHave++;
+    }
+  }
+
+  const skillScore = mustHave.length > 0 ? (matchedMustHave / mustHave.length) * 40 : 40;
+
+  // Experience (25 pts)
+  const minExp = job.minExperienceYears || 3;
+  let expScore = 0;
+  const exp = cand.totalExperienceYears || 0;
+  if (exp >= minExp) expScore = 25;
+  else if (exp >= minExp * 0.7) expScore = 18;
+  else expScore = Math.max(5, Math.round((exp / minExp) * 20));
+
+  // Title (15 pts)
+  let titleScore = 10;
+  if (cand.currentTitle && job.title) {
+    const t1 = cand.currentTitle.toLowerCase();
+    const t2 = job.title.toLowerCase();
+    if (t1.includes(t2) || t2.includes(t1)) titleScore = 15;
+    else if (['developer', 'engineer', 'architect', 'lead', 'full stack', 'devops', 'backend', 'frontend'].some((kw) => t1.includes(kw) && t2.includes(kw))) titleScore = 13;
+  }
+
+  // Education (10 pts)
+  const eduScore = (cand.education && cand.education.length > 0) ? 10 : 8;
+
+  // Nice to have (10 pts)
+  let niceScore = 7;
+  if (cand.location && job.location && cand.location.toLowerCase().includes(job.location.toLowerCase())) {
+    niceScore += 3;
+  }
+
+  const total = Math.min(100, Math.round(skillScore + expScore + titleScore + eduScore + niceScore));
+  const threshold = job.autoShortlistThreshold || 75;
+  const isEligible = total >= threshold && (mustHave.length === 0 || matchedMustHave >= mustHave.length - 1);
+  const tier = total >= 75 ? 'HIGH' : total >= 50 ? 'MEDIUM' : 'LOW';
+
+  return { score: total, tier, isEligible };
+}
+
 export function AtsBulkImportView({ onNavigateTab }: { onNavigateTab?: (tab: string) => void }) {
   const [activeSubTab, setActiveSubTab] = useState<'upload' | 'queue'>('upload');
   const [stagedFiles, setStagedFiles] = useState<StagedCandidate[]>([]);
@@ -530,6 +582,7 @@ export function AtsBulkImportView({ onNavigateTab }: { onNavigateTab?: (tab: str
                       <th className="px-4 py-3">Email Address</th>
                       <th className="px-4 py-3">Phone</th>
                       <th className="px-4 py-3">Experience</th>
+                      {targetJobId && <th className="px-4 py-3">ATS Match</th>}
                       <th className="px-4 py-3">Extracted Skills</th>
                       <th className="px-4 py-3 text-right">Actions</th>
                     </tr>
@@ -608,6 +661,34 @@ export function AtsBulkImportView({ onNavigateTab }: { onNavigateTab?: (tab: str
                             className="px-2 py-1 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 w-14 outline-none focus:ring-1 focus:ring-[#0265FF]"
                           />
                         </td>
+
+                        {targetJobId && (
+                          <td className="px-4 py-3">
+                            {(() => {
+                              const job = jobs.find((j) => j.id === targetJobId);
+                              const match = computeQuickMatchScore(c, job);
+                              return (
+                                <div className="flex items-center gap-1">
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border flex items-center gap-1 shrink-0 ${
+                                    match.score >= (job?.autoShortlistThreshold || 75)
+                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                                      : match.score >= 50
+                                      ? 'bg-amber-50 text-amber-700 border-amber-300'
+                                      : 'bg-slate-100 text-slate-600 border-slate-200'
+                                  }`}>
+                                    <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                                    <span>{match.score}%</span>
+                                  </span>
+                                  {match.isEligible && (
+                                    <span className="text-[9px] uppercase font-black bg-emerald-100 text-emerald-800 px-1 py-0.5 rounded">
+                                      Pass
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </td>
+                        )}
 
                         <td className="px-4 py-3 max-w-xs">
                           <input

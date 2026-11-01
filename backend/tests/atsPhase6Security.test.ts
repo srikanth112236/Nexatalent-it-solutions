@@ -135,7 +135,7 @@ describe('ATS Phase 6: Security, RBAC, Tenant Isolation & Data Integrity', () =>
       const db = loadDb();
       const validJob = (db.jobs as any[]).find((j) => j.status === 'Published') || (db.jobs as any[])[0];
       if (validJob) {
-        const email = 'duplicate.test.cand@example.com';
+        const email = `duplicate.test.${Date.now()}@example.com`;
         // First application
         const first = await request(app)
           .post('/api/v1/ats/applications')

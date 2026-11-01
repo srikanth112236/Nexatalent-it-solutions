@@ -615,12 +615,40 @@ atsRouter.get('/applications', requireAuth(ATS_ROLES), (req: Request, res: Respo
     );
   }
 
+  const jobs = (db.jobs as any[]);
   const candidates = (db.candidateProfiles as any[]);
   const enriched = apps.map((a) => {
     const emailNorm = String(a.candidateEmail || '').toLowerCase();
     const cand = candidates.find((c) => String(c.email || '').toLowerCase() === emailNorm) || {};
+    const job = jobs.find((j) => j.id === a.jobId || j.slug === a.jobId);
+    let matchScore = a.matchScore;
+    let matchTier = a.matchTier;
+    let isShortlistEligible = a.isShortlistEligible;
+    let atsMatch = a.atsMatch;
+
+    if (matchScore === undefined && job) {
+      const mergedCand = {
+        ...cand,
+        name: cand.name || a.candidateName,
+        email: a.candidateEmail,
+        skills: (cand.skills?.length ? cand.skills : a.skills) || [],
+        experienceYears: cand.experienceYears ?? a.experienceYears,
+        currentTitle: cand.currentTitle || a.currentTitle,
+        education: cand.education || a.education,
+      };
+      const match = calculateJobAtsMatch(mergedCand, job);
+      matchScore = match.score;
+      matchTier = match.tier;
+      isShortlistEligible = match.isShortlistEligible;
+      atsMatch = match;
+    }
+
     return {
       ...a,
+      matchScore: matchScore ?? 50,
+      matchTier: matchTier ?? 'MEDIUM',
+      isShortlistEligible: isShortlistEligible ?? false,
+      atsMatch,
       currentCompany: cand.currentCompany || a.currentCompany || '',
       experienceYears: cand.experienceYears ?? a.experienceYears ?? 3,
       skills: cand.skills || a.skills || '',
