@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Briefcase, Eye, MessageSquare, Clock, MapPin, AlertCircle, RefreshCw } from 'lucide-react';
+import { Briefcase, Eye, MessageSquare, Clock, MapPin, AlertCircle, RefreshCw, Plus, History, X, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { atsApi } from '../../../shared/enterprise/phaseApi';
 import { InlineLoading } from '../../../shared/ui/DataState';
 import { PdfResumeViewerModal } from '../../../shared/ui/PdfResumeViewerModal';
@@ -14,10 +14,24 @@ export function AtsJobPipelineView({ initialJobId }: { initialJobId?: string }) 
   const [movingApp, setMovingApp] = useState<{ id: string; targetStage: string } | null>(null);
   const [moveReason, setMoveReason] = useState('');
   const [resumePreview, setResumePreview] = useState<{ applicationId?: string; title?: string; filename?: string } | null>(null);
+
+  // Notes drawer
   const [noteApp, setNoteApp] = useState<any | null>(null);
   const [newNote, setNewNote] = useState('');
   const [notesList, setNotesList] = useState<any[]>([]);
   const [notesLoading, setNotesLoading] = useState(false);
+
+  // Application Stage History Modal
+  const [historyApp, setHistoryApp] = useState<any | null>(null);
+  const [historyList, setHistoryList] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  // Attach Candidate Modal
+  const [showAttachModal, setShowAttachModal] = useState(false);
+  const [attachForm, setAttachForm] = useState({ candidateEmail: '', candidateName: '', phone: '', source: 'Recruiter ATS' });
+  const [attachSaving, setAttachSaving] = useState(false);
+  const [attachError, setAttachError] = useState('');
+  const [attachSuccess, setAttachSuccess] = useState('');
 
   // 1. Load jobs list for the selector
   useEffect(() => {
@@ -115,16 +129,61 @@ export function AtsJobPipelineView({ initialJobId }: { initialJobId?: string }) 
     }
   };
 
+  // Open Stage Transition History Timeline
+  const openHistory = async (candidate: any) => {
+    setHistoryApp(candidate);
+    setHistoryLoading(true);
+    try {
+      const res: any = await atsApi.applicationHistory(candidate.id);
+      setHistoryList(res?.data || []);
+    } catch {
+      setHistoryList([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // Attach Candidate Handler
+  const handleAttachCandidate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedJobId || !attachForm.candidateEmail) return;
+    setAttachSaving(true);
+    setAttachError('');
+    setAttachSuccess('');
+    try {
+      const res: any = await atsApi.createApplication({
+        jobId: selectedJobId,
+        candidateEmail: attachForm.candidateEmail.trim(),
+        candidateName: attachForm.candidateName.trim() || undefined,
+        phone: attachForm.phone.trim() || undefined,
+        source: attachForm.source,
+      });
+      if (res?.data) {
+        setAttachSuccess('Candidate successfully attached to this mandate!');
+        loadPipeline(selectedJobId);
+        setTimeout(() => {
+          setShowAttachModal(false);
+          setAttachSuccess('');
+          setAttachForm({ candidateEmail: '', candidateName: '', phone: '', source: 'Recruiter ATS' });
+        }, 1200);
+      }
+    } catch (err: any) {
+      setAttachError(err?.response?.data?.message || err?.message || 'Failed to attach candidate.');
+    } finally {
+      setAttachSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-5">
       {/* Top Header & Job Mandate Selector */}
       <div className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h3 className="text-base font-extrabold text-slate-900">Job Pipeline Kanban</h3>
-          <p className="text-xs text-slate-500 font-medium">Drag-and-drop applicant cards across recruitment stages</p>
+          <p className="text-xs text-slate-500 font-medium">Drag-and-drop applicant cards across configurable recruitment stages</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <label htmlFor="ats-job-select" className="text-xs font-bold text-slate-600 shrink-0">Mandate:</label>
           <select
             id="ats-job-select"
@@ -142,9 +201,16 @@ export function AtsJobPipelineView({ initialJobId }: { initialJobId?: string }) 
             type="button"
             onClick={() => loadPipeline(selectedJobId)}
             title="Refresh board"
-            className="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600"
+            className="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 cursor-pointer"
           >
             <RefreshCw size={15} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAttachModal(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0265FF] hover:bg-[#0055db] text-white font-bold text-xs shadow-md transition cursor-pointer"
+          >
+            <Plus size={14} /> Attach Candidate
           </button>
         </div>
       </div>
@@ -241,7 +307,7 @@ export function AtsJobPipelineView({ initialJobId }: { initialJobId?: string }) 
                         )}
 
                         {/* Card Action Buttons */}
-                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1.5">
+                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1">
                           {c.hasResume ? (
                             <button
                               type="button"
@@ -253,26 +319,39 @@ export function AtsJobPipelineView({ initialJobId }: { initialJobId?: string }) 
                                   filename: c.resumeName || 'Resume.pdf',
                                 });
                               }}
-                              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#0265FF] text-[10px] font-bold border border-blue-200 transition-colors"
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#0265FF] text-[10px] font-bold border border-blue-200 transition-colors cursor-pointer"
                             >
                               <Eye size={11} />
-                              <span>Preview CV</span>
+                              <span>CV</span>
                             </button>
                           ) : (
-                            <span className="text-[10px] text-slate-400 italic">No resume</span>
+                            <span className="text-[10px] text-slate-400 italic">No CV</span>
                           )}
 
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openNotes(c);
-                            }}
-                            title="Recruiter Notes"
-                            className="p-1 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors"
-                          >
-                            <MessageSquare size={13} />
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openHistory(c);
+                              }}
+                              title="Stage Transition History"
+                              className="p-1 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+                            >
+                              <History size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openNotes(c);
+                              }}
+                              title="Recruiter Notes"
+                              className="p-1 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+                            >
+                              <MessageSquare size={13} />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))
@@ -309,17 +388,63 @@ export function AtsJobPipelineView({ initialJobId }: { initialJobId?: string }) 
               <button
                 type="button"
                 onClick={() => setMovingApp(null)}
-                className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs"
+                className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={confirmMove}
-                className="px-4 py-2 rounded-xl bg-[#0265FF] hover:bg-[#0055db] text-white font-bold text-xs shadow-md"
+                className="px-4 py-2 rounded-xl bg-[#0265FF] hover:bg-[#0055db] text-white font-bold text-xs shadow-md cursor-pointer"
               >
                 Confirm Move
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* STAGE TRANSITION HISTORY MODAL */}
+      {historyApp && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl p-6 shadow-2xl max-w-md w-full border border-slate-200 space-y-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h4 className="text-sm font-extrabold text-slate-900">Stage Transition Audit History</h4>
+                <p className="text-xs text-slate-500 font-medium">{historyApp.candidateName}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHistoryApp(null)}
+                className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-500 cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {historyLoading ? (
+                <p className="text-xs text-slate-400 italic text-center py-4">Loading transition logs...</p>
+              ) : historyList.length === 0 ? (
+                <p className="text-xs text-slate-400 italic text-center py-4">No stage transitions recorded yet.</p>
+              ) : (
+                historyList.map((h: any) => (
+                  <div key={h.id} className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1">
+                    <div className="flex items-center justify-between font-extrabold text-slate-900">
+                      <span>{h.from} → <strong className="text-[#0265FF]">{h.to}</strong></span>
+                      <span className="text-[10px] text-slate-400 font-normal">
+                        {h.createdAt ? new Date(h.createdAt).toLocaleDateString('en-IN') : ''}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-500">By: {h.actor}</div>
+                    {h.reason && (
+                      <div className="text-slate-700 bg-white p-2 rounded-xl border border-slate-200 mt-1 font-medium">
+                        "{h.reason}"
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -337,9 +462,9 @@ export function AtsJobPipelineView({ initialJobId }: { initialJobId?: string }) 
               <button
                 type="button"
                 onClick={() => setNoteApp(null)}
-                className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-500"
+                className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-500 cursor-pointer"
               >
-                ✕
+                <X size={16} />
               </button>
             </div>
 
@@ -374,10 +499,96 @@ export function AtsJobPipelineView({ initialJobId }: { initialJobId?: string }) 
               <button
                 type="submit"
                 disabled={!newNote.trim()}
-                className="px-4 py-2 rounded-xl bg-[#0265FF] text-white font-bold text-xs disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-[#0265FF] text-white font-bold text-xs disabled:opacity-50 cursor-pointer"
               >
                 Add
               </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ATTACH CANDIDATE MODAL */}
+      {showAttachModal && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl p-6 shadow-2xl max-w-md w-full border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h4 className="text-base font-extrabold text-slate-900">Attach Candidate to Mandate</h4>
+                <p className="text-xs text-slate-500">Duplicate application prevention is strictly enforced.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAttachModal(false)}
+                className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-500 cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {attachError && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded-xl flex items-center gap-2">
+                <AlertTriangle size={15} className="shrink-0" /> {attachError}
+              </div>
+            )}
+
+            {attachSuccess && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-xl flex items-center gap-2">
+                <CheckCircle2 size={15} className="shrink-0" /> {attachSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleAttachCandidate} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Candidate Email *</label>
+                <input
+                  type="email"
+                  required
+                  value={attachForm.candidateEmail}
+                  onChange={(e) => setAttachForm({ ...attachForm, candidateEmail: e.target.value })}
+                  placeholder="candidate@example.com"
+                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold outline-none focus:ring-2 focus:ring-[#0265FF]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Candidate Name (optional)</label>
+                <input
+                  type="text"
+                  value={attachForm.candidateName}
+                  onChange={(e) => setAttachForm({ ...attachForm, candidateName: e.target.value })}
+                  placeholder="e.g. Priya Nair"
+                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold outline-none focus:ring-2 focus:ring-[#0265FF]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Phone Number (optional)</label>
+                <input
+                  type="tel"
+                  value={attachForm.phone}
+                  onChange={(e) => setAttachForm({ ...attachForm, phone: e.target.value })}
+                  placeholder="+91 90362 27317"
+                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold outline-none focus:ring-2 focus:ring-[#0265FF]"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAttachModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={attachSaving}
+                  className="px-4 py-2 rounded-xl bg-[#0265FF] hover:bg-[#0055db] text-white font-bold text-xs shadow-md cursor-pointer"
+                >
+                  {attachSaving ? 'Attaching…' : 'Attach to Mandate'}
+                </button>
+              </div>
             </form>
           </div>
         </div>
