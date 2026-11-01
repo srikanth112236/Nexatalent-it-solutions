@@ -711,7 +711,7 @@ atsRouter.post('/candidates/check-duplicate', requireAuth(ATS_ROLES), (req: Requ
 
   if (dupEmail || dupPhone) {
     const match = dupEmail || dupPhone;
-    return res.json({
+    const matchData = {
       isDuplicate: true,
       matchType: dupEmail ? 'email' : 'phone',
       candidate: {
@@ -721,10 +721,15 @@ atsRouter.post('/candidates/check-duplicate', requireAuth(ATS_ROLES), (req: Requ
         phone: match.phone,
         currentTitle: match.headline,
       },
+    };
+    return res.json({
+      success: true,
+      ...matchData,
+      data: matchData,
     });
   }
 
-  res.json({ isDuplicate: false });
+  res.json({ success: true, isDuplicate: false, data: { isDuplicate: false } });
 });
 
 // Create Candidate Master Profile
