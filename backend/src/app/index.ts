@@ -12,6 +12,7 @@ import { commercialRouter } from '../routes/commercial.js';
 import { salesRouter } from '../routes/sales.js';
 import { directoryRouter } from '../routes/directory.js';
 import { extendedRouter } from '../routes/extended.js';
+import { atsRouter } from '../routes/ats.js';
 import { requireAuth, ctxOf, tenantOf, maskCandidate, isAllTenant } from '../middleware/rbac.js';
 
 function pick<T extends Record<string, unknown>>(obj: unknown, keys: string[]): T {
@@ -112,6 +113,7 @@ export function createApp(): Express {
   app.use('/api/v1', salesRouter);
   app.use('/api/v1', directoryRouter);
   app.use('/api/v1', extendedRouter);
+  app.use('/api/v1/ats', atsRouter);
 
   // ---- Legacy bridges (old frontend keeps working) ----
   // Phase A: the legacy candidate dump is scoped + paged like everything else.

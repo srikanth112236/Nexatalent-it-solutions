@@ -311,3 +311,21 @@ export const platformApi = {
   createTask: (body: unknown) => apiClient.post('/api/v1/tasks', body),
   setTask: (id: string, status: string) => apiClient.patch(`/api/v1/tasks/${id}`, { status }),
 };
+
+
+// ATS Suite native module API
+export const atsApi = {
+  dashboard: () => apiClient.get('/api/v1/ats/dashboard'),
+  jobs: (params = '') => apiClient.get(`/api/v1/ats/jobs${params}`),
+  jobPipeline: (jobId: string) => apiClient.get(`/api/v1/ats/jobs/${jobId}/pipeline`),
+  moveStage: (applicationId: string, stage: string, reason?: string) => apiClient.patch(`/api/v1/ats/applications/${applicationId}/stage`, { stage, reason }),
+  notes: (applicationId: string) => apiClient.get(`/api/v1/ats/applications/${applicationId}/notes`),
+  addNote: (applicationId: string, content: string, category = 'screening') => apiClient.post(`/api/v1/ats/applications/${applicationId}/notes`, { content, category }),
+  candidates: (params = '') => apiClient.get(`/api/v1/ats/candidates${params}`),
+  candidate360: (id: string) => apiClient.get(`/api/v1/ats/candidates/${id}`),
+  parseResume: (body: { filename: string; base64Data?: string; rawText?: string }) => apiClient.post('/api/v1/ats/resumes/parse', body),
+  bulkCreateCandidates: (body: { candidates: any[]; jobId?: string }) => apiClient.post('/api/v1/ats/candidates/bulk-create', body),
+  duplicates: () => apiClient.get('/api/v1/ats/duplicates'),
+  mergeDuplicates: (primaryId: string, secondaryId: string) => apiClient.post('/api/v1/ats/duplicates/merge', { primaryId, secondaryId }),
+  funnelAnalytics: (params = '') => apiClient.get(`/api/v1/ats/analytics/funnel${params}`),
+};

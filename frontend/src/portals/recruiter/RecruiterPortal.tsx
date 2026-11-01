@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { PortalShell } from '../common/PortalShell';
 import { Briefcase, Plus, CheckCircle2, X, Search, Clock } from 'lucide-react';
 import { apiClient } from '../../shared/api-client';
@@ -13,16 +13,24 @@ import { useCan } from '../../shared/auth/AuthContext';
 import { onboardingCompleted } from '../../shared/onboarding';
 import { MfaPanel } from '../../auth/components/MfaPanel';
 import { EmptyState, InlineLoading } from '../../shared/ui/DataState';
+import { AtsDashboardView } from './ats/AtsDashboardView';
+import { AtsJobPipelineView } from './ats/AtsJobPipelineView';
+import { AtsCandidateCrmView } from './ats/AtsCandidateCrmView';
+import { AtsBulkImportView } from './ats/AtsBulkImportView';
 
 const navItems = [
   { label: 'Pipeline Overview', path: '/recruiter' },
+  { label: 'ATS Dashboard', path: '/recruiter/ats-dashboard', group: 'ATS Suite' },
+  { label: 'Jobs & Pipeline', path: '/recruiter/ats-pipeline', group: 'ATS Suite' },
+  { label: 'Candidate CRM', path: '/recruiter/ats-candidates', group: 'ATS Suite' },
+  { label: 'Bulk Resume Import', path: '/recruiter/ats-import', group: 'ATS Suite' },
+  { label: 'Website Applicants', path: '/recruiter/website-leads', group: 'ATS Suite' },
   { label: 'Agency Profile', path: '/recruiter/profile', group: 'Workspace' },
   { label: 'Clients', path: '/recruiter/clients', group: 'Delivery' },
   { label: 'Requisitions', path: '/recruiter/requisitions', group: 'Delivery' },
   { label: 'Jobs & Mandates', path: '/recruiter/jobs', group: 'Delivery' },
   { label: 'Talent Pool Search', path: '/recruiter/talent-pool', group: 'Delivery' },
-  { label: 'ATS Stages', path: '/recruiter/ats', group: 'Delivery' },
-  { label: 'Website Applicants', path: '/recruiter/website-leads', group: 'Delivery' },
+  { label: 'ATS Stages (Legacy)', path: '/recruiter/ats', group: 'Delivery' },
   { label: 'Candidate Submissions', path: '/recruiter/submissions', group: 'Delivery' },
   { label: 'Talent Pools', path: '/recruiter/pools', group: 'Delivery' },
   { label: 'Schedule Interview', path: '/recruiter/schedule', group: 'Delivery' },
@@ -57,7 +65,9 @@ function CommissionLocked() {
   );
 }
 
-export function RecruiterPortal() {  const location = useLocation();
+export function RecruiterPortal() {
+  const location = useLocation();
+  const navigate = useNavigate();
   // Phase 1 — finance nav denied by default (§3.3). Server denies API;
   // UI hides as secondary measure. Explicit `manage_billing` grant restores it.
   const canFinance = useCan('manage_billing');
@@ -65,6 +75,10 @@ export function RecruiterPortal() {  const location = useLocation();
 
   const currentTab = (() => {
     const p = location.pathname;
+    if (p.includes('/ats-dashboard')) return 'ats-dashboard';
+    if (p.includes('/ats-pipeline')) return 'ats-pipeline';
+    if (p.includes('/ats-candidates')) return 'ats-candidates';
+    if (p.includes('/ats-import')) return 'ats-import';
     if (p.includes('/jobs')) return 'jobs';
     if (p.includes('/profile')) return 'profile';
     if (p.includes('/clients')) return 'clients';
@@ -395,6 +409,12 @@ export function RecruiterPortal() {  const location = useLocation();
         <div className="px-1">
           <h2 className="text-base font-extrabold text-slate-900">{navItems.find((n) => location.pathname === n.path)?.label || navItems.filter((n) => n.path !== '/recruiter' && location.pathname.startsWith(n.path)).sort((a, b) => b.path.length - a.path.length)[0]?.label || navItems[0].label}</h2>
         </div>
+
+        {/* ATS SUITE NATIVE MODULES */}
+        {currentTab === 'ats-dashboard' && <AtsDashboardView onNavigateTab={(t) => navigate(`/recruiter/${t}`)} />}
+        {currentTab === 'ats-pipeline' && <AtsJobPipelineView />}
+        {currentTab === 'ats-candidates' && <AtsCandidateCrmView />}
+        {currentTab === 'ats-import' && <AtsBulkImportView onNavigateTab={(t) => navigate(`/recruiter/${t}`)} />}
 
         {/* ENTERPRISE: new phase modules */}
         {currentTab === 'profile' && (

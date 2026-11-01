@@ -21,9 +21,17 @@ import { MfaPanel } from '../../auth/components/MfaPanel';
 import { OrganizationsManager, UsersManager } from './SuperAdminDirectory';
 import { WebsiteLeadsPanel } from '../common/WebsiteLeadsPanel';
 import { OpenPositionsPanel } from '../common/OpenPositionsPanel';
+import { AtsDashboardView } from '../recruiter/ats/AtsDashboardView';
+import { AtsJobPipelineView } from '../recruiter/ats/AtsJobPipelineView';
+import { AtsCandidateCrmView } from '../recruiter/ats/AtsCandidateCrmView';
+import { AtsBulkImportView } from '../recruiter/ats/AtsBulkImportView';
 
 const navItems = [
   { label: 'Overview', path: '/superadmin' },
+  { label: 'ATS Dashboard', path: '/superadmin/ats-dashboard', group: 'ATS Suite' },
+  { label: 'Jobs & Pipeline', path: '/superadmin/ats-pipeline', group: 'ATS Suite' },
+  { label: 'Candidate CRM', path: '/superadmin/ats-candidates', group: 'ATS Suite' },
+  { label: 'Bulk Resume Import', path: '/superadmin/ats-import', group: 'ATS Suite' },
   { label: 'Tenants & Subscriptions', path: '/superadmin/organizations', group: 'Directory' },
   { label: 'Global Directory', path: '/superadmin/users', group: 'Directory' },
   { label: 'Agencies & Vendors', path: '/superadmin/agencies', group: 'Directory' },
@@ -64,6 +72,10 @@ export function SuperAdminPortal() {
 
   const currentTab = (() => {
     const p = location.pathname;
+    if (p.includes('/ats-dashboard')) return 'ats-dashboard';
+    if (p.includes('/ats-pipeline')) return 'ats-pipeline';
+    if (p.includes('/ats-candidates')) return 'ats-candidates';
+    if (p.includes('/ats-import')) return 'ats-import';
     if (p.includes('/organizations')) return 'organizations';
     if (p.includes('/users')) return 'users';
     if (p.includes('/agencies')) return 'agencies';
@@ -379,6 +391,12 @@ export function SuperAdminPortal() {
         <div className="px-1">
           <h2 className="text-lg font-extrabold text-slate-900">{navItems.find((n) => location.pathname === n.path)?.label || navItems.filter((n) => n.path !== '/superadmin' && location.pathname.startsWith(n.path)).sort((a, b) => b.path.length - a.path.length)[0]?.label || navItems[0].label}</h2>
         </div>
+
+        {/* ATS SUITE NATIVE MODULES */}
+        {currentTab === 'ats-dashboard' && <AtsDashboardView onNavigateTab={(t) => navigate(`/superadmin/${t}`)} />}
+        {currentTab === 'ats-pipeline' && <AtsJobPipelineView />}
+        {currentTab === 'ats-candidates' && <AtsCandidateCrmView />}
+        {currentTab === 'ats-import' && <AtsBulkImportView onNavigateTab={(t) => navigate(`/superadmin/${t}`)} />}
 
         {/* TAB 1: OVERVIEW — modern interactive command center */}
         {currentTab === 'overview' && (

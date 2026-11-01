@@ -39,6 +39,7 @@ export interface DbShape {
   // legacy compat mirrors
   jobsLegacy: any[]; candidatesLegacy: any[]; tenantsLegacy: any[];
   contractors: any[]; compliance: any[]; credentials: any[];
+  atsJobStages: any[]; atsCandidateNotes: any[]; atsResumeParses: any[]; atsDuplicateMatches: any[];
 }
 
 function seed(): DbShape {
@@ -167,6 +168,10 @@ function seed(): DbShape {
     ],
     compliance: [],
     credentials: [],
+    atsJobStages: [],
+    atsCandidateNotes: [],
+    atsResumeParses: [],
+    atsDuplicateMatches: [],
   };
 }
 
@@ -284,6 +289,10 @@ export function loadDb(): DbShape {
       if ((db!.agencyProfiles || []).length === 0) db!.agencyProfiles = fresh.agencyProfiles;
       if (!Array.isArray((db as any).candidateInfoRequests)) (db as any).candidateInfoRequests = [];
       if (!Array.isArray((db as any).privacyRequests)) (db as any).privacyRequests = [];
+      if (!Array.isArray((db as any).atsJobStages)) (db as any).atsJobStages = [];
+      if (!Array.isArray((db as any).atsCandidateNotes)) (db as any).atsCandidateNotes = [];
+      if (!Array.isArray((db as any).atsResumeParses)) (db as any).atsResumeParses = [];
+      if (!Array.isArray((db as any).atsDuplicateMatches)) (db as any).atsDuplicateMatches = [];
       // Backfill the standard agreement template for DBs seeded before it existed.
       if (Array.isArray((db as any).agreementTemplates) && !(db as any).agreementTemplates.find((t: any) => t.id === 'AGT-STD-001')) {
         (db as any).agreementTemplates.unshift(standardTemplate(new Date().toISOString()));
