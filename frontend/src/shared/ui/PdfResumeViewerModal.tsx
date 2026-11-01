@@ -52,17 +52,39 @@ export function PdfResumeViewerModal({
         let rawBlob: Blob | null = initialBlob || null;
 
         if (!rawBlob) {
+          // Priority 1: Candidate ATS resume endpoint
           if (candidateId) {
-            rawBlob = await apiClient.getBlob(`/api/v1/ats/candidates/${candidateId}/resume`);
-          } else if (leadId) {
-            if (leadId.startsWith('CND-')) {
-              rawBlob = await apiClient.getBlob(`/api/v1/ats/candidates/${leadId}/resume`);
-            } else {
-              rawBlob = await salesApi.leadResume(leadId);
+            try {
+              rawBlob = await apiClient.getBlob(`/api/v1/ats/candidates/${candidateId}/resume`);
+            } catch {
+              rawBlob = null;
             }
-          } else if (applicationId) {
-            rawBlob = await (applicationsApi as any).resume(applicationId);
-          } else if (initialUrl) {
+          }
+
+          // Priority 2: Application resume endpoint
+          if (!rawBlob && applicationId) {
+            try {
+              rawBlob = await (applicationsApi as any).resume(applicationId);
+            } catch {
+              rawBlob = null;
+            }
+          }
+
+          // Priority 3: Lead resume endpoint
+          if (!rawBlob && leadId) {
+            try {
+              if (leadId.startsWith('CND-')) {
+                rawBlob = await apiClient.getBlob(`/api/v1/ats/candidates/${leadId}/resume`);
+              } else {
+                rawBlob = await salesApi.leadResume(leadId);
+              }
+            } catch {
+              rawBlob = null;
+            }
+          }
+
+          // Priority 4: Initial Url fetch
+          if (!rawBlob && initialUrl) {
             const resp = await fetch(initialUrl);
             if (!resp.ok) throw new Error(`Failed to load file (${resp.status})`);
             rawBlob = await resp.blob();
@@ -102,7 +124,7 @@ export function PdfResumeViewerModal({
     return () => {
       isCancelled = true;
     };
-  }, [open, leadId, applicationId, initialBlob, initialUrl, filename]);
+  }, [open, candidateId, leadId, applicationId, initialBlob, initialUrl, filename]);
 
   useEffect(() => {
     if (!open) return;

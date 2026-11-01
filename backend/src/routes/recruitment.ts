@@ -10,6 +10,7 @@ import { existsSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { downloadFile, isBlobStorageConfigured, DEFAULT_CONTAINER } from '../storage/blob.js';
+import { generateCandidateResumePdf } from '../services/atsResumePdfGenerator.js';
 const UPLOAD_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'data', 'uploads');
 
 export const recruitmentRouter = Router();
@@ -1303,30 +1304,37 @@ recruitmentRouter.get('/applications/:id/resume', requireAuth(), async (req, res
     }
   }
 
-  if (!resumeRef) {
-    return res.status(404).json({ success: false, message: 'No resume attached to this application.' });
-  }
-
   try {
-    let buf: Buffer;
-    const localPath = join(UPLOAD_DIR, `${resumeRef}.bin`);
-    if (existsSync(localPath)) {
-      buf = readFileSync(localPath);
-    } else if (isBlobStorageConfigured()) {
-      buf = await downloadFile(DEFAULT_CONTAINER, `${resumeRef}.bin`);
-    } else {
-      return res.status(410).json({ success: false, message: 'Resume file no longer available.' });
+    let buf: Buffer | null = null;
+    if (resumeRef) {
+      const localPath = join(UPLOAD_DIR, `${resumeRef}.bin`);
+      if (existsSync(localPath)) {
+        buf = readFileSync(localPath);
+      } else if (isBlobStorageConfigured()) {
+        try {
+          buf = await downloadFile(DEFAULT_CONTAINER, `${resumeRef}.bin`);
+        } catch {
+          buf = null;
+        }
+      }
     }
+
+    if (!buf || buf.length === 0) {
+      // Find candidate profile or generate from application
+      const cand = (db.candidateProfiles as any[] || []).find((c: any) => String(c.email || '').toLowerCase() === String(a.candidateEmail || '').toLowerCase()) || a;
+      buf = await generateCandidateResumePdf(cand);
+    }
+
     const ext = (String(resumeName || '').split('.').pop() || 'pdf').toLowerCase();
     const mime = ext === 'doc' ? 'application/msword' : ext === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/pdf';
     res.setHeader('Content-Type', mime);
-    const safeName = String(resumeName || 'resume.pdf').replace(/["\r\n\\]/g, '').slice(0, 160) || 'resume.pdf';
+    const safeName = String(resumeName || `${a.candidateName || 'Candidate'}-Resume.pdf`).replace(/["\r\n\\]/g, '').slice(0, 160) || 'resume.pdf';
     const isInline = req.query.view === 'true' || req.query.inline === 'true';
     res.setHeader('Content-Disposition', `${isInline ? 'inline' : 'attachment'}; filename="${safeName}"`);
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.send(buf);
-  } catch {
-    res.status(410).json({ success: false, message: 'Resume file no longer available.' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: `Could not retrieve resume: ${err?.message || err}` });
   }
 });
 
