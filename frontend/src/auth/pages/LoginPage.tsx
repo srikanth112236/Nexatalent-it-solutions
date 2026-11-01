@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { UserRole } from '../../shared/types';
@@ -14,169 +14,13 @@ import {
   CheckCircle2,
   HelpCircle,
   X,
-  AlertCircle,
-  Briefcase,
-  Building2,
-  Shield,
-  Users,
-  Building,
-  GraduationCap,
-  Sparkles,
+  AlertCircle
 } from 'lucide-react';
 import { useFormValidation, required, email } from '../../shared/validation';
-
-export interface RolePreset {
-  key: string;
-  role: UserRole;
-  badge: string;
-  title: string;
-  subtitle: string;
-  demoEmail: string;
-  demoName: string;
-  path: string;
-  target: string;
-  icon: any;
-}
-
-const ROLE_PRESETS: Record<string, RolePreset> = {
-  recruiter: {
-    key: 'recruiter',
-    role: 'recruiter',
-    badge: 'Agency Recruiter',
-    title: 'Agency Recruiter Portal',
-    subtitle: 'Access your full ATS pipeline, candidate CRM, live mandates & interview scorecards.',
-    demoEmail: 'vikram@apextechsearch.com',
-    demoName: 'Vikram Malhotra',
-    path: '/recruiter/login',
-    target: '/recruiter',
-    icon: Briefcase,
-  },
-  employer: {
-    key: 'employer',
-    role: 'employer',
-    badge: 'Employer / Client',
-    title: 'Employer & Client Portal',
-    subtitle: 'Review candidate shortlists, approve interview rounds & manage hiring requisitions.',
-    demoEmail: 'aditi@fintechscaleops.io',
-    demoName: 'Aditi Sharma',
-    path: '/employer/login',
-    target: '/employer',
-    icon: Building2,
-  },
-  superadmin: {
-    key: 'superadmin',
-    role: 'superadmin',
-    badge: 'Superadmin Console',
-    title: 'Platform Superadmin Console',
-    subtitle: 'Multi-tenant directory, global RBAC governance, ATS configuration & system audit.',
-    demoEmail: 'superadmin@nexatalent.com',
-    demoName: 'Super Admin',
-    path: '/superadmin/login',
-    target: '/superadmin',
-    icon: Shield,
-  },
-  employee: {
-    key: 'employee',
-    role: 'employee',
-    badge: 'Internal Operations',
-    title: 'Operations & Staff Portal',
-    subtitle: 'Enterprise requisition delivery, internal sourcing, and workforce fulfillment.',
-    demoEmail: 'kiran@nexatalent.com',
-    demoName: 'Kiran Sharma',
-    path: '/employee/login',
-    target: '/employee',
-    icon: Users,
-  },
-  vendor: {
-    key: 'vendor',
-    role: 'vendor',
-    badge: 'Vendor Partner',
-    title: 'Vendor Partner Portal',
-    subtitle: 'Submit candidate batches, monitor SLA fulfillment & track commission payouts.',
-    demoEmail: 'rajesh@techsolutionsvendor.com',
-    demoName: 'Rajesh Verma',
-    path: '/vendor/login',
-    target: '/vendor',
-    icon: Building,
-  },
-  candidate: {
-    key: 'candidate',
-    role: 'candidate',
-    badge: 'Candidate Portal',
-    title: 'Candidate Career Portal',
-    subtitle: 'Track your applied jobs, view 5-pillar match scores, schedule rounds & accept offers.',
-    demoEmail: 'candidate@nexatalent.com',
-    demoName: 'Siddharth Nair',
-    path: '/candidate/login',
-    target: '/candidate',
-    icon: GraduationCap,
-  },
-};
-
-const ENTERPRISE_ROLES: string[] = ['recruiter', 'employer', 'superadmin', 'employee', 'vendor'];
 
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-
-  // 1. Detect role context from URL path (e.g. /recruiter/login) or query string (?role=recruiter)
-  const pathRole = useMemo(() => {
-    const p = location.pathname.toLowerCase();
-    if (p.startsWith('/recruiter')) return 'recruiter';
-    if (p.startsWith('/employer')) return 'employer';
-    if (p.startsWith('/superadmin')) return 'superadmin';
-    if (p.startsWith('/employee')) return 'employee';
-    if (p.startsWith('/vendor')) return 'vendor';
-    if (p.startsWith('/candidate')) return 'candidate';
-
-    const params = new URLSearchParams(location.search);
-    const qRole = params.get('role')?.toLowerCase();
-    if (qRole && ROLE_PRESETS[qRole]) return qRole;
-    return null;
-  }, [location.pathname, location.search]);
-
-  // Is this an individual role login route (/recruiter/login, /employer/login, etc.) vs general (/login)?
-  const isIndividualRoleRoute = Boolean(pathRole);
-
-  // Selected role tab for the unified login page (defaults to recruiter or pathRole)
-  const [selectedRoleKey, setSelectedRoleKey] = useState<string>(() => pathRole || 'recruiter');
-
-  useEffect(() => {
-    if (pathRole) setSelectedRoleKey(pathRole);
-  }, [pathRole]);
-
-  // Read session notification reason (inactivity, sign_out, etc.)
-  const sessionNotice = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    const r = params.get('reason');
-    if (r === 'inactivity') {
-      return {
-        type: 'warning',
-        message: 'Your session timed out due to inactivity. Please sign in again to continue.',
-      };
-    }
-    if (r === 'sign_out') {
-      return {
-        type: 'info',
-        message: 'You have been safely signed out. Please sign in to resume your session.',
-      };
-    }
-    if (r === 'refresh_failed') {
-      return {
-        type: 'warning',
-        message: 'Your security token expired. Please enter your credentials to reconnect.',
-      };
-    }
-    if (r === 'tenant_missing') {
-      return {
-        type: 'warning',
-        message: 'Tenant verification required. Please sign in to establish your workspace.',
-      };
-    }
-    return null;
-  }, [location.search]);
-
-  const activePreset = ROLE_PRESETS[selectedRoleKey] || ROLE_PRESETS.recruiter;
 
   const [loginError, setLoginError] = useState('');
   const [failedAttempts, setFailedAttempts] = useState(0);
@@ -189,6 +33,10 @@ export function LoginPage() {
   const [mfaCode, setMfaCode] = useState('');
   const [mfaBusy, setMfaBusy] = useState(false);
 
+  // Check for session notification from logout or inactivity timeout
+  const searchParams = new URLSearchParams(location.search);
+  const sessionReason = searchParams.get('reason');
+
   /* ---- Main login form validation ---- */
   const loginForm = useFormValidation(
     { email: '', password: '' },
@@ -198,14 +46,6 @@ export function LoginPage() {
     },
     { validateOnChange: true, validateOnBlur: true }
   );
-
-  // 1-Click Quick Fill Helper
-  const handleAutofillPreset = (preset: RolePreset) => {
-    setSelectedRoleKey(preset.key);
-    loginForm.setField('email', preset.demoEmail);
-    loginForm.setField('password', 'NexaTalent123');
-    setLoginError('');
-  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -258,7 +98,7 @@ export function LoginPage() {
         email: user?.email || loginForm.values.email.trim(),
       });
 
-      // Target redirection: deep link in location.state.from (if within user's allowed workspace) or default dashboard
+      // Target redirection: deep link from location.state.from (if valid for this role) or default dashboard
       const requestedFrom = (location.state as any)?.from?.pathname;
       const defaultTarget = ROLE_DEFAULT_REDIRECTS[serverRole] || '/login';
       const finalTarget =
@@ -340,171 +180,36 @@ export function LoginPage() {
     }
   };
 
-  const pageTitle = isIndividualRoleRoute ? activePreset.title : 'Welcome to NexaTalent';
-  const pageSubtitle = isIndividualRoleRoute
-    ? activePreset.subtitle
-    : 'Unified Enterprise Sign In — Connect to your recruiter, client, or staff workspace.';
-
   return (
     <>
-      <AuthLayout title={pageTitle} subtitle={pageSubtitle}>
-        {/* Session Status Notice (Inactivity, Sign Out, etc.) */}
-        {sessionNotice && (
-          <div
-            className={`mt-4 p-3 rounded-2xl border text-xs font-bold flex items-center gap-2.5 shadow-xs ${
-              sessionNotice.type === 'warning'
-                ? 'bg-amber-50 border-amber-200 text-amber-900'
-                : 'bg-emerald-50 border-emerald-200 text-emerald-900'
-            }`}
-          >
-            {sessionNotice.type === 'warning' ? <AlertCircle size={16} className="text-amber-600 shrink-0" /> : <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />}
-            <span>{sessionNotice.message}</span>
+      <AuthLayout title="Welcome back" subtitle="Sign in to your NexaTalent account">
+        {sessionReason === 'inactivity' && (
+          <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 font-bold flex items-center gap-2">
+            <AlertCircle size={15} /> Your session timed out due to inactivity. Please sign in again.
+          </div>
+        )}
+        {sessionReason === 'sign_out' && (
+          <div className="mt-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-bold flex items-center gap-2">
+            <CheckCircle2 size={15} /> You have been safely signed out.
+          </div>
+        )}
+        {sessionReason === 'refresh_failed' && (
+          <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 font-bold flex items-center gap-2">
+            <AlertCircle size={15} /> Your session expired. Please sign in to reconnect.
           </div>
         )}
 
-        {/* Login Error Notification */}
         {loginError && (
-          <div className="mt-4 p-3 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-700 font-bold flex items-center gap-2 shadow-xs">
-            <AlertCircle size={16} className="text-red-500 shrink-0" />
-            <span>{loginError}</span>
+          <div className="mt-5 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-bold flex items-center gap-2">
+            <AlertCircle size={15} /> {loginError}
           </div>
         )}
 
-        {/* ========================================================================= */}
-        {/* ROLE SELECTION TABS & CANDIDATE BANNER (When on Unified /login)           */}
-        {/* ========================================================================= */}
-        {!isIndividualRoleRoute ? (
-          <div className="mt-5 space-y-3">
-            {/* Enterprise Role Selector Tabs */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
-                  Select Enterprise Role
-                </span>
-                <span className="text-[11px] font-bold text-slate-400">
-                  Direct login supported
-                </span>
-              </div>
-
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 bg-slate-100 p-1.5 rounded-2xl">
-                {ENTERPRISE_ROLES.map((k) => {
-                  const p = ROLE_PRESETS[k];
-                  const Icon = p.icon;
-                  const isSelected = selectedRoleKey === k;
-                  return (
-                    <button
-                      key={k}
-                      type="button"
-                      onClick={() => handleAutofillPreset(p)}
-                      className={`py-2 px-1.5 rounded-xl text-[11px] font-black transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
-                        isSelected
-                          ? 'bg-white text-slate-950 shadow-sm border border-slate-200/80 scale-[1.02]'
-                          : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/60'
-                      }`}
-                      title={`Sign in as ${p.badge}`}
-                    >
-                      <Icon size={14} className={isSelected ? 'text-[#0265FF]' : 'text-slate-400'} />
-                      <span className="truncate max-w-full text-[10px]">{p.badge.split(' ')[0]}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Quick Demo Pill Bar */}
-            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3 text-xs">
-              <div className="truncate">
-                <span className="font-extrabold text-slate-800 flex items-center gap-1.5 truncate">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                  {activePreset.demoName} ({activePreset.badge})
-                </span>
-                <span className="font-mono text-[11px] text-slate-500 truncate block mt-0.5">
-                  {activePreset.demoEmail}
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handleAutofillPreset(activePreset)}
-                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-[11px] flex items-center gap-1.5 shrink-0 shadow-sm cursor-pointer transition"
-              >
-                <Sparkles size={12} className="text-amber-300" />
-                Fill Demo
-              </button>
-            </div>
-
-            {/* Candidate Portal Separate Entrypoint */}
-            <div className="p-3 rounded-2xl bg-blue-50/70 border border-blue-200/80 flex items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-[#0265FF] flex items-center justify-center shrink-0">
-                  <GraduationCap size={16} />
-                </div>
-                <div>
-                  <p className="font-extrabold text-slate-900">Are you a Job Seeker / Candidate?</p>
-                  <p className="text-[11px] text-slate-500">Track your applications, interviews & offers.</p>
-                </div>
-              </div>
-
-              <Link
-                to="/candidate/login"
-                className="px-3 py-1.5 rounded-xl bg-[#0265FF] hover:bg-[#0256da] text-white font-extrabold text-[11px] flex items-center gap-1 shrink-0 shadow-sm transition"
-              >
-                Candidate Sign In &rarr;
-              </Link>
-            </div>
-          </div>
-        ) : (
-          /* When on Individual Role Route (e.g. /recruiter/login) */
-          <div className="mt-5 space-y-3">
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                  Dedicated Portal Authentication
-                </span>
-                <span className="text-xs font-black text-slate-900 flex items-center gap-1.5 mt-0.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  {activePreset.badge} &bull; {activePreset.demoName}
-                </span>
-                <span className="text-[11px] font-mono text-slate-500 block">
-                  {activePreset.demoEmail}
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handleAutofillPreset(activePreset)}
-                className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs flex items-center gap-1.5 shrink-0 shadow-sm cursor-pointer transition"
-              >
-                <Sparkles size={12} className="text-amber-300" />
-                Fill Demo
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between text-xs font-bold text-slate-500 px-1">
-              <Link to="/login" className="hover:text-slate-900 transition flex items-center gap-1">
-                &larr; Switch to Unified Sign In
-              </Link>
-              {pathRole === 'candidate' ? (
-                <Link to="/candidate/register" className="text-[#0265FF] hover:underline font-extrabold">
-                  Create Candidate Account &rarr;
-                </Link>
-              ) : (
-                <Link to={`/register/${pathRole}`} className="text-[#0265FF] hover:underline font-extrabold">
-                  Register {activePreset.badge} &rarr;
-                </Link>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* LOGIN FORM & MFA                                                          */}
-        {/* ========================================================================= */}
         {mfa ? (
           <form onSubmit={handleMfaSubmit} className="mt-6 space-y-4" noValidate>
-            <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 text-xs font-semibold text-blue-900">
-              Two-factor authentication is active for <strong className="font-extrabold">{mfa.email}</strong>. Enter
-              the 6-digit verification code from your authenticator app or backup code.
+            <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-xs font-semibold text-blue-900">
+              Two-factor authentication is on for <span className="font-extrabold">{mfa.email}</span>. Enter the 6-digit
+              code from your authenticator app, or a backup code.
             </div>
             <div>
               <label htmlFor="login-mfa" className="block text-xs font-bold text-slate-900 uppercase tracking-wider mb-1.5">
@@ -525,7 +230,7 @@ export function LoginPage() {
               disabled={mfaBusy || mfaCode.trim().length < 6}
               className="w-full py-3.5 px-5 rounded-xl bg-black hover:bg-neutral-800 text-white font-bold text-xs shadow-lg shadow-black/10 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
-              <span>{mfaBusy ? 'Verifying…' : 'Verify & Sign In'}</span>
+              <span>{mfaBusy ? 'Verifying…' : 'Verify and sign in'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
             <button
@@ -537,10 +242,10 @@ export function LoginPage() {
             </button>
           </form>
         ) : (
-          <form onSubmit={handleLogin} className="mt-5 space-y-4" noValidate>
+          <form onSubmit={handleLogin} className="mt-6 space-y-4" noValidate>
             <div>
               <label className="block text-xs font-bold text-slate-900 uppercase tracking-wider mb-1.5">
-                Email Address *
+                Corporate or Account Email *
               </label>
               <div className="relative">
                 <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -551,7 +256,7 @@ export function LoginPage() {
                   onChange={(e) => loginForm.setField('email', e.target.value)}
                   onBlur={() => loginForm.setTouchedField('email')}
                   placeholder="user@nexatalent.com"
-                  className={`w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-3.5 py-3 text-slate-900 font-semibold text-xs focus:bg-white focus:border-black outline-none transition ${
+                  className={`w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-3.5 py-3 text-slate-900 font-semibold text-xs focus:bg-white focus:border-black outline-none ${
                     loginForm.errorFor('email') ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : ''
                   }`}
                 />
@@ -594,47 +299,43 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={loginForm.isSubmitting || !loginForm.isValid}
-              className="w-full py-3.5 px-5 rounded-2xl bg-black hover:bg-neutral-800 text-white font-extrabold text-xs shadow-lg shadow-black/10 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="w-full py-3.5 px-5 rounded-xl bg-black hover:bg-neutral-800 text-white font-bold text-xs shadow-lg shadow-black/10 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
-              <span>{loginForm.isSubmitting ? 'Authenticating…' : `Sign In to ${activePreset.badge}`}</span>
+              <span>{loginForm.isSubmitting ? 'Signing you in...' : 'Sign In'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
         )}
 
-        {/* Dedicated Registration Links */}
+        {/* Registration Links for All Roles */}
         <div className="mt-6 pt-4 border-t border-slate-200 space-y-2 text-xs font-bold text-slate-600">
-          <div className="text-[11px] uppercase text-slate-500 tracking-wider font-extrabold mb-1">
-            New Account Registration Portals:
+          <div className="text-[11px] uppercase text-slate-600 tracking-wider font-extrabold mb-1">
+            New Account Onboarding Portals:
           </div>
           <div className="grid grid-cols-2 gap-2 text-[11px]">
             <Link
               to="/candidate/register"
-              className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-black text-black hover:text-black transition-all flex items-center justify-between"
+              className="p-2 rounded-lg bg-slate-50 border border-slate-200 hover:border-black text-black hover:text-black transition-all"
             >
-              <span>Candidate Career Reg</span>
-              <ArrowRight size={12} />
+              Candidate Reg →
             </Link>
             <Link
               to="/employer/register"
-              className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-black text-black hover:text-black transition-all flex items-center justify-between"
+              className="p-2 rounded-lg bg-slate-50 border border-slate-200 hover:border-black text-black hover:text-black transition-all"
             >
-              <span>Employer Client Reg</span>
-              <ArrowRight size={12} />
+              Employer KYC Reg →
             </Link>
             <Link
               to="/recruiter/register"
-              className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-black text-black hover:text-black transition-all flex items-center justify-between"
+              className="p-2 rounded-lg bg-slate-50 border border-slate-200 hover:border-black text-black hover:text-black transition-all"
             >
-              <span>Agency Recruiter Reg</span>
-              <ArrowRight size={12} />
+              Agency Recruiter Reg →
             </Link>
             <Link
               to="/vendor/register"
-              className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-black text-black hover:text-black transition-all flex items-center justify-between"
+              className="p-2 rounded-lg bg-slate-50 border border-slate-200 hover:border-black text-black hover:text-black transition-all"
             >
-              <span>Vendor Partner Reg</span>
-              <ArrowRight size={12} />
+              Vendor Partner Reg →
             </Link>
           </div>
         </div>
@@ -669,9 +370,7 @@ export function LoginPage() {
               </div>
 
               {forgotError && (
-                <div className="p-3 mb-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-bold">
-                  {forgotError}
-                </div>
+                <div className="p-3 mb-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-bold">{forgotError}</div>
               )}
               {forgotSent ? (
                 <div className="p-4 rounded-2xl bg-neutral-100 border border-neutral-200 text-xs text-black text-center space-y-2">
