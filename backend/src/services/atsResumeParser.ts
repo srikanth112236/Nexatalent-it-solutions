@@ -1,10 +1,20 @@
 /**
  * NexaTalent ATS Native Resume Parser & Text Extractor Service
  * High-performance, zero-cost, asynchronous parsing in native Node.js.
- * Supports PDF, DOC, DOCX and text documents.
+ * Supports PDF (Mozilla pdf.js engine), DOC, DOCX and text documents.
  */
 
+import { createRequire } from 'module';
 import zlib from 'zlib';
+
+const require = createRequire(import.meta.url);
+let pdfParse: any = null;
+try {
+  // Use direct lib path to bypass pdf-parse's top-level index.js debug test harness
+  pdfParse = require('pdf-parse/lib/pdf-parse.js');
+} catch (err) {
+  console.warn('[atsResumeParser] pdf-parse library failed to load:', err);
+}
 
 export interface SkillsByCategory {
   backend: string[];
@@ -30,6 +40,8 @@ export interface ParsedResumeResult {
   noticePeriod: string;
   currentCtc: string;
   expectedCtc: string;
+  linkedinUrl?: string;
+  portfolioSites?: string[];
   confidenceScore: number;
   searchTokens: string[];
   rawTextPreview: string;
@@ -38,23 +50,24 @@ export interface ParsedResumeResult {
 // Categorized Skills Taxonomy
 export const SKILLS_TAXONOMY_MAP = {
   backend: [
-    'Golang', 'Go', 'Node.js', 'Python', 'Java', 'Spring Boot', 'Django', 'FastAPI',
-    'Flask', 'C#', '.NET', 'C++', 'Ruby', 'Ruby on Rails', 'PHP', 'Laravel', 'Rust', 'gRPC'
+    'Golang', 'Go', 'Node.js', 'Express.js', 'Express', 'Python', 'Java', 'Spring Boot', 'Django', 'FastAPI',
+    'Flask', 'C#', '.NET', 'C++', 'Ruby', 'Ruby on Rails', 'PHP', 'Laravel', 'Rust', 'gRPC', 'REST APIs', 'JWT', 'RBAC'
   ],
   frontend: [
     'React.js', 'React', 'TypeScript', 'JavaScript', 'Next.js', 'Vue.js', 'Angular',
-    'HTML5', 'CSS3', 'Tailwind CSS', 'Redux', 'GraphQL', 'React Native', 'Flutter', 'Swift', 'Kotlin'
+    'HTML5', 'CSS3', 'Tailwind CSS', 'Tailwind', 'Redux', 'GraphQL', 'React Native', 'Flutter', 'Swift', 'Kotlin',
+    'Material UI', 'Ant Design', 'Framer Motion', 'GSAP', 'SCSS', 'Axios'
   ],
   cloudDevOps: [
     'GCP', 'Google Cloud', 'AWS', 'Azure', 'Docker', 'Kubernetes', 'GKE', 'Cloud Run',
-    'Cloud Functions', 'Terraform', 'CI/CD', 'Jenkins', 'GitHub Actions', 'Linux', 'DevOps'
+    'Cloud Functions', 'Terraform', 'CI/CD', 'Jenkins', 'GitHub Actions', 'Linux', 'DevOps', 'Git', 'GitHub', 'Vite', 'Webpack', 'Postman', 'Figma', 'Agile'
   ],
   database: [
-    'BigQuery', 'Snowflake', 'PostgreSQL', 'MySQL', 'MongoDB', 'Redis', 'Kafka',
+    'MongoDB', 'Mongoose', 'BigQuery', 'Snowflake', 'PostgreSQL', 'MySQL', 'Redis', 'Kafka',
     'Elasticsearch', 'DynamoDB', 'SQL', 'NoSQL', 'Cassandra', 'Data Engineering', 'ETL'
   ],
   architecture: [
-    'Microservices', 'Distributed Systems', 'System Design', 'REST APIs', 'Scalability',
+    'Microservices', 'Distributed Systems', 'System Design', 'Scalability',
     'High Availability', 'Event-Driven Architecture', 'Cloud Architecture'
   ],
   qaTesting: [
@@ -65,20 +78,21 @@ export const SKILLS_TAXONOMY_MAP = {
 export const ALL_SKILLS = Array.from(new Set(Object.values(SKILLS_TAXONOMY_MAP).flat()));
 
 const DEGREE_PATTERNS = [
-  /\bB\.?Tech(?:\s*\(?[^,\n)]+\)?)?/i,
-  /\bM\.?Tech(?:\s*\(?[^,\n)]+\)?)?/i,
-  /\bB\.?E\.?(?:\s*\(?[^,\n)]+\)?)?/i,
-  /\bM\.?E\.?(?:\s*\(?[^,\n)]+\)?)?/i,
-  /\bB\.?S\.?c?(?:\s*\(?[^,\n)]+\)?)?/i,
-  /\bM\.?S\.?c?(?:\s*\(?[^,\n)]+\)?)?/i,
+  /\b(?:Bachelor|Master)\s+of\s+[A-Za-z\s]+(?:\s*\([^)]+\))?/i,
+  /\bB\.?Tech(?:\s+in\s+[A-Za-z\s]+)?/i,
+  /\bM\.?Tech(?:\s+in\s+[A-Za-z\s]+)?/i,
+  /\b(?:B\.E\.|B\.E\b|Bachelor of Engineering)(?:\s+in\s+[A-Za-z\s]+)?/i,
+  /\b(?:M\.E\.|M\.E\b|Master of Engineering)(?:\s+in\s+[A-Za-z\s]+)?/i,
+  /\bB\.?Sc(?:\s+in\s+[A-Za-z\s]+)?/i,
+  /\bM\.?Sc(?:\s+in\s+[A-Za-z\s]+)?/i,
   /\bBCA\b/i,
   /\bMCA\b/i,
-  /\bMBA(?:\s*\(?[^,\n)]+\)?)?/i,
+  /\bMBA(?:\s+in\s+[A-Za-z\s]+)?/i,
   /\bBBA\b/i,
-  /\bB\.?Com\b/i,
-  /\bM\.?Com\b/i,
+  /\bB\.?Com(?:\s*\([^)]+\))?/i,
+  /\bM\.?Com(?:\s*\([^)]+\))?/i,
   /\bPh\.?D\b/i,
-  /\bDiploma\s+(?:in\s+[^,\n]+)/i,
+  /\bDiploma\s+(?:in\s+[^,\n|]+)/i,
 ];
 
 const CITIES = [
@@ -156,21 +170,34 @@ function extractDocxText(buffer: Buffer): string {
 
 /**
  * Universal buffer text extractor for PDF, DOC, DOCX and TXT files.
+ * Uses Mozilla pdf.js engine via pdf-parse to decode FlateDecode streams accurately.
  */
-export function extractTextFromBuffer(buffer: Buffer, formatHint?: string): string {
+export async function extractTextFromBuffer(buffer: Buffer, formatHint?: string): Promise<string> {
   try {
     const validation = validateResumeBuffer(buffer);
     const format = formatHint || validation.format;
 
+    // DOCX extraction
     if (format === 'docx') {
       const docxText = extractDocxText(buffer);
       if (docxText && docxText.length > 50) return docxText;
     }
 
-    const raw = buffer.toString('utf-8');
+    // PDF extraction via pdf-parse Mozilla pdf.js engine
+    if (format === 'pdf' || (buffer.length >= 4 && buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46)) {
+      if (typeof pdfParse === 'function') {
+        try {
+          const parsed = await pdfParse(buffer);
+          if (parsed && parsed.text && parsed.text.trim().length > 30) {
+            return parsed.text;
+          }
+        } catch {
+          // fallback to character stream regex
+        }
+      }
 
-    // PDF specific character stream & Tj run extractor
-    if (format === 'pdf' || buffer.slice(0, 5).toString('ascii').startsWith('%PDF')) {
+      // Fallback PDF character stream & Tj run extractor
+      const raw = buffer.toString('utf-8');
       const pdfTextTokens: string[] = [];
       const textMatches = raw.match(/\(([^()]{2,100})\)\s*Tj/g) || [];
       for (const m of textMatches) {
@@ -185,10 +212,10 @@ export function extractTextFromBuffer(buffer: Buffer, formatHint?: string): stri
 
     // DOC / binary text run extractor
     if (format === 'doc') {
-      return raw.replace(/[^\x20-\x7E\t\r\n]+/g, ' ').replace(/\s{2,}/g, ' ');
+      return buffer.toString('utf-8').replace(/[^\x20-\x7E\t\r\n]+/g, ' ').replace(/\s{2,}/g, ' ');
     }
 
-    return raw;
+    return buffer.toString('utf-8');
   } catch {
     return buffer.toString('utf-8');
   }
@@ -211,8 +238,14 @@ export function parseResumeText(text: string, filename = ''): ParsedResumeResult
   let phone = '';
   const phoneMatch = phoneRegex.exec(cleanText);
   if (phoneMatch) {
-    phone = phoneMatch[0].replace(/[^\d+]/g, '');
-    if (!phone.startsWith('+91') && phone.length === 10) phone = `+91 ${phone}`;
+    const rawDigits = phoneMatch[0].replace(/[^\d+]/g, '');
+    if (rawDigits.startsWith('+91') && rawDigits.length === 13) {
+      phone = `+91 ${rawDigits.slice(3)}`;
+    } else if (rawDigits.length === 10) {
+      phone = `+91 ${rawDigits}`;
+    } else {
+      phone = rawDigits;
+    }
   }
 
   // 3. Name extraction
@@ -228,7 +261,8 @@ export function parseResumeText(text: string, filename = ''): ParsedResumeResult
       lower.includes('page ') ||
       lower.includes('http') ||
       lower.length > 50 ||
-      lower.length < 2
+      lower.length < 2 ||
+      /(?:endobj|obj|stream|endstream|xref|trailer|startxref)/i.test(line)
     ) {
       continue;
     }
@@ -296,8 +330,11 @@ export function parseResumeText(text: string, filename = ''): ParsedResumeResult
   const education: string[] = [];
   for (const degRegex of DEGREE_PATTERNS) {
     const degMatch = cleanText.match(degRegex);
-    if (degMatch && !education.includes(degMatch[0].trim())) {
-      education.push(degMatch[0].trim());
+    if (degMatch) {
+      const val = degMatch[0].trim();
+      if (!education.some((e) => e.includes(val) || val.includes(e))) {
+        education.push(val);
+      }
     }
   }
 
@@ -325,12 +362,80 @@ export function parseResumeText(text: string, filename = ''): ParsedResumeResult
   if (expCtcMatch) expectedCtc = expCtcMatch[1].trim();
 
   // 9. Current Title & Company
-  let currentTitle = uniqueSkills.slice(0, 2).join(' / ') + ' Professional';
+  let currentTitle = '';
   let currentCompany = '';
-  const compMatch = cleanText.match(/(?:\b(?:current\s+)?company\b|\bworking at\b|\bcurrently at\b|\bat\b)\s*[:–-]?\s*([A-Z][A-Za-z0-9\s&]{2,30}(?:Ltd|Pvt|Inc|Technologies|Solutions|Software|Services)?)/i);
-  if (compMatch) currentCompany = compMatch[1].trim();
 
-  // 10. Search indexing tokens
+  // Check header lines 1-4 for candidate title
+  for (let i = 1; i < Math.min(5, lines.length); i++) {
+    const line = lines[i];
+    if (/(?:Engineer|Developer|Architect|Lead|Manager|Consultant|Designer|Specialist|Analyst|Scientist|Programmer|Administrator)/i.test(line)) {
+      const cleanRole = line.split('|')[0]
+        .replace(/[\d+()\-–—]{7,}/g, '')
+        .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '')
+        .replace(/\b(Bengaluru|Bangalore|Hyderabad|Pune|Mumbai|Delhi|Noida|Gurgaon|Chennai|Remote|India|KA|MH|DL)\b.*/gi, '')
+        .trim();
+      if (cleanRole.length >= 3 && cleanRole.length <= 50) {
+        currentTitle = cleanRole;
+        break;
+      }
+    }
+  }
+
+  // Check Professional Experience section for company and role
+  const expIdx = cleanText.search(/PROFESSIONAL\s+EXPERIENCE|WORK\s+EXPERIENCE|^EXPERIENCE/im);
+  if (expIdx !== -1) {
+    const expSub = cleanText.slice(expIdx, expIdx + 1000);
+    const expLines = expSub.split('\n').map((l) => l.trim()).filter(Boolean);
+    for (const l of expLines) {
+      if (/PROFESSIONAL\s+EXPERIENCE|WORK\s+EXPERIENCE|^EXPERIENCE$/i.test(l)) continue;
+      if (l.includes('|') && /(?:20\d\d|19\d\d|present)/i.test(l)) {
+        const parts = l.split('|').map((p) => p.trim());
+        if (parts.length >= 2) {
+          currentCompany = parts[0].replace(/[^\w\s&.-]/g, '').trim();
+          if (!currentTitle && parts.length >= 2) {
+            const roleCandidate = parts[1].replace(/[^\w\s&.-]/g, '').trim();
+            if (roleCandidate.length >= 3 && roleCandidate.length <= 50) {
+              currentTitle = roleCandidate;
+            }
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  // Fallback for company regex
+  if (!currentCompany) {
+    const compMatch = cleanText.match(/(?:\b(?:current\s+)?company\b|\bworking at\b|\bcurrently at\b|\bat\b)\s*[:–-]?\s*([A-Z][A-Za-z0-9\s&]{2,30}(?:Ltd|Pvt|Inc|Technologies|Solutions|Software|Services|Consulting|Corp)?)/i);
+    if (compMatch) currentCompany = compMatch[1].trim();
+  }
+
+  if (!currentTitle) {
+    currentTitle = uniqueSkills.slice(0, 2).join(' / ') + ' Professional';
+  }
+
+  // 10. Links (LinkedIn & Portfolios)
+  let linkedinUrl = '';
+  const linkedinMatch = cleanText.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/([a-zA-Z0-9_-]+)/i);
+  if (linkedinMatch) {
+    linkedinUrl = linkedinMatch[0].startsWith('http') ? linkedinMatch[0] : `https://${linkedinMatch[0]}`;
+  }
+
+  const portfolioSites: string[] = [];
+  const portIdx = cleanText.search(/PORTFOLIO\s+SITES|PORTFOLIO|PROJECTS\s+URL/i);
+  if (portIdx !== -1) {
+    const portSub = cleanText.slice(portIdx, portIdx + 300);
+    const urlMatches = portSub.match(/[a-zA-Z0-9-]+\.(?:com|in|au|app|net|io|org|co|dev)(?:\/[a-zA-Z0-9._/-]+)?/gi);
+    if (urlMatches) {
+      for (const u of urlMatches) {
+        if (!u.includes('linkedin.com') && !portfolioSites.includes(u)) {
+          portfolioSites.push(u);
+        }
+      }
+    }
+  }
+
+  // 11. Search indexing tokens
   const locationTokens = location.toLowerCase().split(/[\s,]+/).filter(Boolean);
   const searchTokens = Array.from(
     new Set([
@@ -345,7 +450,7 @@ export function parseResumeText(text: string, filename = ''): ParsedResumeResult
     ].filter(Boolean))
   );
 
-  // 11. Confidence Scoring
+  // 12. Confidence Scoring
   let score = 20;
   if (email) score += 25;
   if (phone) score += 20;
@@ -369,6 +474,8 @@ export function parseResumeText(text: string, filename = ''): ParsedResumeResult
     noticePeriod,
     currentCtc,
     expectedCtc,
+    linkedinUrl: linkedinUrl || undefined,
+    portfolioSites: portfolioSites.length > 0 ? portfolioSites : undefined,
     confidenceScore,
     searchTokens,
     rawTextPreview: cleanText.slice(0, 500).replace(/\s+/g, ' ').trim(),

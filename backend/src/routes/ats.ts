@@ -1111,7 +1111,7 @@ atsRouter.post('/candidates/:id/resume', requireAuth(ATS_ROLES), async (req: Req
     c.updatedAt = nowIso();
 
     // Parse text and update skills if missing
-    const text = extractTextFromBuffer(buffer);
+    const text = await extractTextFromBuffer(buffer);
     const parsed = parseResumeText(text, filename || 'resume.pdf');
     if (!c.skills && parsed.skills.length > 0) {
       c.skills = parsed.skills.join(', ');
@@ -1155,7 +1155,7 @@ atsRouter.post('/resumes/parse', requireAuth(ATS_ROLES), async (req: Request, re
         });
       }
 
-      textToParse = extractTextFromBuffer(buffer, formatHint || validation.format);
+      textToParse = await extractTextFromBuffer(buffer, formatHint || validation.format);
 
       ensureUploadDir();
       const fileRef = uid('RES');
@@ -1230,7 +1230,7 @@ atsRouter.post('/resumes/queue/:id/retry', requireAuth(ATS_ROLES), async (req: R
     const localPath = join(UPLOAD_DIR, `${parse.fileRef}.bin`);
     if (!existsSync(localPath)) return res.status(410).json({ success: false, message: 'Source resume file no longer available.' });
     const buffer = readFileSync(localPath);
-    const text = extractTextFromBuffer(buffer, parse.format);
+    const text = await extractTextFromBuffer(buffer, parse.format);
     const result = parseResumeText(text, parse.filename);
     parse.extracted = result;
     parse.status = 'completed';

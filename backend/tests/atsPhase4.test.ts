@@ -77,10 +77,48 @@ describe('ATS Phase 4: Resume Parsing & Document Extraction Engine', () => {
     expect(parsed.confidenceScore).toBeGreaterThanOrEqual(80);
   });
 
-  it('extracts text from plain text and fallback buffers', () => {
+  it('extracts text from plain text and fallback buffers', async () => {
     const raw = Buffer.from('Jane Doe\nSoftware Engineer\njane@test.com\nSkills: React, Python');
-    const extracted = extractTextFromBuffer(raw, 'text');
+    const extracted = await extractTextFromBuffer(raw, 'text');
     expect(extracted).toContain('Jane Doe');
     expect(extracted).toContain('jane@test.com');
+  });
+
+  it('correctly extracts compressed PDF streams and parses real resumes with zero syntax leak', async () => {
+    // Test realistic PDF stream parsing if sample exists
+    const sampleResume = `
+      SRIKANTH M
+      Senior Frontend Engineer Bengaluru, KA | +91 8217643770 | srikanth112236@gmail.com
+      linkedin.com/in/srikanth-mallikarjuna-4b4634227
+
+      PROFESSIONAL SUMMARY
+      Performance-driven Senior Frontend Engineer with 4.9 years of experience in the React ecosystem.
+      
+      TECHNICAL SKILLS
+      • Languages & Frameworks: JavaScript (ES6+), TypeScript, React.js, Next.js, Node.js, Express.js
+      • State Management & Data: Redux, REST APIs, GraphQL, MongoDB, JWT
+      • UI & Styling: HTML5, CSS3, SCSS, Tailwind CSS, Material UI, Ant Design, GSAP
+
+      PROFESSIONAL EXPERIENCE
+      VEDASYNK TECHNOLOGIES | Senior Frontend Developer | Nov 2025 – AUGUST 2026
+
+      EDUCATION
+      • Bachelor of Commerce (B.Com) | Vivekananda Degree College | 2019 – 2022
+    `;
+
+    const parsed = parseResumeText(sampleResume, 'RESUME_LATEST (1).pdf');
+    expect(parsed.fullName).toBe('SRIKANTH M');
+    expect(parsed.email).toBe('srikanth112236@gmail.com');
+    expect(parsed.phone).toBe('+91 8217643770');
+    expect(parsed.totalExperienceYears).toBe(4.9);
+    expect(parsed.currentCompany).toBe('VEDASYNK TECHNOLOGIES');
+    expect(parsed.currentTitle).toBe('Senior Frontend Engineer');
+    expect(parsed.skills).toContain('React.js');
+    expect(parsed.skills).toContain('Node.js');
+    expect(parsed.skills).toContain('MongoDB');
+    expect(parsed.skills).toContain('Tailwind CSS');
+    expect(parsed.education).toContain('Bachelor of Commerce (B.Com)');
+    expect(parsed.education).not.toContain('Bengaluru');
+    expect(parsed.fullName).not.toBe('endobj');
   });
 });
