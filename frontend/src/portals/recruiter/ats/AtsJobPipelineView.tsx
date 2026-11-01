@@ -5,8 +5,9 @@ import { InlineLoading } from '../../../shared/ui/DataState';
 import { PdfResumeViewerModal } from '../../../shared/ui/PdfResumeViewerModal';
 
 export function AtsJobPipelineView({ initialJobId }: { initialJobId?: string }) {
+  const queryJob = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('job') : null;
   const [jobs, setJobs] = useState<any[]>([]);
-  const [selectedJobId, setSelectedJobId] = useState<string>(initialJobId || '');
+  const [selectedJobId, setSelectedJobId] = useState<string>(initialJobId || queryJob || '');
   const [pipelineData, setPipelineData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

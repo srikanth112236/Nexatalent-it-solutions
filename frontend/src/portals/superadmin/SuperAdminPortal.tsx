@@ -28,6 +28,7 @@ import { AtsApplicantsView } from '../recruiter/ats/AtsApplicantsView';
 import { AtsCandidateCrmView } from '../recruiter/ats/AtsCandidateCrmView';
 import { AtsInterviewCalendarView } from '../recruiter/ats/AtsInterviewCalendarView';
 import { AtsBulkImportView } from '../recruiter/ats/AtsBulkImportView';
+import { AtsReportsView } from '../recruiter/ats/AtsReportsView';
 
 const navItems = [
   { label: 'Overview', path: '/superadmin' },
@@ -38,6 +39,7 @@ const navItems = [
   { label: 'Candidate CRM', path: '/superadmin/ats-candidates', group: 'ATS Suite' },
   { label: 'Interviews & Scorecards', path: '/superadmin/ats-interviews', group: 'ATS Suite' },
   { label: 'Bulk Resume Import', path: '/superadmin/ats-import', group: 'ATS Suite' },
+  { label: 'ATS Analytics & Reports', path: '/superadmin/ats-reports', group: 'ATS Suite' },
   { label: 'Tenants & Subscriptions', path: '/superadmin/organizations', group: 'Directory' },
   { label: 'Global Directory', path: '/superadmin/users', group: 'Directory' },
   { label: 'Agencies & Vendors', path: '/superadmin/agencies', group: 'Directory' },
@@ -85,6 +87,7 @@ export function SuperAdminPortal() {
     if (p.includes('/ats-candidates')) return 'ats-candidates';
     if (p.includes('/ats-interviews')) return 'ats-interviews';
     if (p.includes('/ats-import')) return 'ats-import';
+    if (p.includes('/ats-reports')) return 'ats-reports';
     if (p.includes('/organizations')) return 'organizations';
     if (p.includes('/users')) return 'users';
     if (p.includes('/agencies')) return 'agencies';
@@ -409,6 +412,7 @@ export function SuperAdminPortal() {
         {currentTab === 'ats-candidates' && <AtsCandidateCrmView />}
         {currentTab === 'ats-interviews' && <AtsInterviewCalendarView />}
         {currentTab === 'ats-import' && <AtsBulkImportView onNavigateTab={(t) => navigate(`/superadmin/${t}`)} />}
+        {currentTab === 'ats-reports' && <AtsReportsView onNavigateTab={(t) => navigate(`/superadmin/${t}`)} />}
 
         {/* TAB 1: OVERVIEW — modern interactive command center */}
         {currentTab === 'overview' && (

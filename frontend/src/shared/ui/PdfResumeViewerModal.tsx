@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { FileText, Download, ExternalLink, X, RefreshCw, AlertCircle } from 'lucide-react';
-import { salesApi, applicationsApi } from '../enterprise/phaseApi';
+import { salesApi, applicationsApi, apiClient } from '../enterprise/phaseApi';
 
 export interface PdfResumeViewerModalProps {
   open: boolean;
@@ -8,6 +8,7 @@ export interface PdfResumeViewerModalProps {
   title?: string;
   filename?: string;
   leadId?: string;
+  candidateId?: string;
   applicationId?: string;
   initialBlob?: Blob | null;
   initialUrl?: string;
@@ -19,6 +20,7 @@ export function PdfResumeViewerModal({
   title = 'Candidate Resume',
   filename = 'Resume.pdf',
   leadId,
+  candidateId,
   applicationId,
   initialBlob,
   initialUrl,
@@ -50,8 +52,14 @@ export function PdfResumeViewerModal({
         let rawBlob: Blob | null = initialBlob || null;
 
         if (!rawBlob) {
-          if (leadId) {
-            rawBlob = await salesApi.leadResume(leadId);
+          if (candidateId) {
+            rawBlob = await apiClient.getBlob(`/api/v1/ats/candidates/${candidateId}/resume`);
+          } else if (leadId) {
+            if (leadId.startsWith('CND-')) {
+              rawBlob = await apiClient.getBlob(`/api/v1/ats/candidates/${leadId}/resume`);
+            } else {
+              rawBlob = await salesApi.leadResume(leadId);
+            }
           } else if (applicationId) {
             rawBlob = await (applicationsApi as any).resume(applicationId);
           } else if (initialUrl) {

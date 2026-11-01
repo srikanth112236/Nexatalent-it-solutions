@@ -438,6 +438,49 @@ atsRouter.get('/jobs/:id/pipeline', requireAuth(ATS_ROLES), (req: Request, res: 
 // =========================================================================
 // 5. APPLICATIONS LINKED TO CANDIDATES & JOBS
 // =========================================================================
+
+// List ATS Applications Across All or Specific Mandates
+atsRouter.get('/applications', requireAuth(ATS_ROLES), (req: Request, res: Response) => {
+  const db = loadDb();
+  const { page, pageSize, jobId, stage, q } = req.query as any;
+
+  let apps = (db.applications as any[]);
+
+  if (jobId) {
+    apps = apps.filter((a) => a.jobId === jobId || a.jobId === String(jobId).replace(/^JOB-/, ''));
+  }
+
+  if (stage) {
+    apps = apps.filter((a) => String(a.stage).toLowerCase() === String(stage).toLowerCase());
+  }
+
+  if (q) {
+    const s = String(q).toLowerCase();
+    apps = apps.filter((a) =>
+      `${a.candidateName || ''} ${a.candidateEmail || ''} ${a.jobTitle || ''} ${a.phone || ''} ${a.stage || ''}`
+        .toLowerCase()
+        .includes(s)
+    );
+  }
+
+  const candidates = (db.candidateProfiles as any[]);
+  const enriched = apps.map((a) => {
+    const emailNorm = String(a.candidateEmail || '').toLowerCase();
+    const cand = candidates.find((c) => String(c.email || '').toLowerCase() === emailNorm) || {};
+    return {
+      ...a,
+      currentCompany: cand.currentCompany || a.currentCompany || '',
+      experienceYears: cand.experienceYears ?? a.experienceYears ?? 3,
+      skills: cand.skills || a.skills || '',
+      resumeRef: a.resumeRef || cand.resumeRef || null,
+      resumeName: a.resumeName || cand.resumeName || 'Resume.pdf',
+    };
+  });
+
+  const pagedResult = paged(enriched, parseInt(page as string, 10) || 1, parseInt(pageSize as string, 10) || 25);
+  res.json({ success: true, ...pagedResult });
+});
+
 atsRouter.post('/applications', requireAuth(ATS_ROLES), (req: Request, res: Response) => {
   const db = loadDb();
   const ctx = ctxOf(req);
@@ -690,7 +733,7 @@ atsRouter.get('/candidates', requireAuth(ATS_ROLES), (req: Request, res: Respons
       applicationsCount: myApps.length,
       currentActiveJob: latestApp ? latestApp.jobTitle || latestApp.jobId : null,
       currentStage: latestApp ? latestApp.stage : null,
-      resumeUrl: c.resumeRef ? `/api/v1/candidates/${c.id}/resume` : null,
+      resumeUrl: c.resumeRef ? `/api/v1/ats/candidates/${c.id}/resume` : null,
     };
   });
 

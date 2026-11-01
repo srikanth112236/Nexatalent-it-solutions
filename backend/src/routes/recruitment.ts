@@ -1289,10 +1289,16 @@ recruitmentRouter.get('/applications/:id/resume', requireAuth(), async (req, res
       resumeRef = l.resumeRef;
       if (l.resumeName) resumeName = l.resumeName;
     } else {
-      const doc = (db.documents as any[] || []).find((d: any) => String(d.candidateEmail || d.ownerEmail || '').toLowerCase() === email && (d.ref || d.id));
-      if (doc) {
-        resumeRef = doc.ref || doc.id;
-        if (doc.name) resumeName = doc.name;
+      const cp = (db.candidateProfiles as any[] || []).find((c: any) => String(c.email || '').toLowerCase() === email && c.resumeRef);
+      if (cp) {
+        resumeRef = cp.resumeRef;
+        if (cp.resumeName) resumeName = cp.resumeName;
+      } else {
+        const doc = (db.documents as any[] || []).find((d: any) => String(d.candidateEmail || d.ownerEmail || '').toLowerCase() === email && (d.ref || d.id));
+        if (doc) {
+          resumeRef = doc.ref || doc.id;
+          if (doc.name) resumeName = doc.name;
+        }
       }
     }
   }

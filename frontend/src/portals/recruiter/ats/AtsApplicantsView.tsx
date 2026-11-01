@@ -46,32 +46,15 @@ export function AtsApplicantsView() {
     setLoading(true);
     setError('');
     try {
-      if (selectedJobId) {
-        const res: any = await atsApi.jobPipeline(selectedJobId);
-        if (res?.data?.columns) {
-          const all: any[] = [];
-          for (const col of res.data.columns) {
-            for (const cand of col.candidates) {
-              all.push({
-                ...cand,
-                stage: col.stageName,
-                jobTitle: res.data.job.title,
-                jobId: res.data.job.id,
-              });
-            }
-          }
-          setApplicants(all);
-        }
-      } else {
-        // Load first job or aggregate
-        const resJobs: any = await atsApi.jobs('?pageSize=5');
-        const jobList = resJobs?.data?.items || resJobs?.data || [];
-        if (jobList.length > 0) {
-          setSelectedJobId(jobList[0].id);
-        } else {
-          setApplicants([]);
-        }
-      }
+      const params = new URLSearchParams();
+      if (selectedJobId) params.set('jobId', selectedJobId);
+      if (stageFilter) params.set('stage', stageFilter);
+      if (q.trim()) params.set('q', q.trim());
+      params.set('pageSize', '100');
+
+      const res: any = await atsApi.applications(`?${params.toString()}`);
+      const list = res?.data || res?.items || [];
+      setApplicants(list);
     } catch (err: any) {
       setError(err?.message || 'Failed to load applicants.');
     } finally {
@@ -81,7 +64,7 @@ export function AtsApplicantsView() {
 
   useEffect(() => {
     loadApplicants();
-  }, [selectedJobId]);
+  }, [selectedJobId, stageFilter, q]);
 
   // Filtered applicants
   const filtered = applicants.filter((a) => {
@@ -184,6 +167,7 @@ export function AtsApplicantsView() {
               onChange={(e) => setSelectedJobId(e.target.value)}
               className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:ring-2 focus:ring-[#0265FF] bg-slate-50 text-slate-700 truncate"
             >
+              <option value="">All Job Mandates (All Candidates)</option>
               {jobs.map((j) => (
                 <option key={j.id} value={j.id}>
                   {j.id} — {j.title}

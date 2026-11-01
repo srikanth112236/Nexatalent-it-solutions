@@ -1,4 +1,5 @@
 import { apiClient } from '../api-client';
+export { apiClient };
 
 /**
  * Enterprise Phase API — typed surface for all 5 spec phases.
@@ -324,6 +325,7 @@ export const atsApi = {
   saveJobStages: (jobId: string, stages: unknown[]) => apiClient.put(`/api/v1/ats/jobs/${jobId}/stages`, { stages }),
   assignJobRecruiters: (jobId: string, recruiters: string[], agencies?: string[]) => apiClient.patch(`/api/v1/ats/jobs/${jobId}/recruiters`, { recruiters, agencies }),
   jobPipeline: (jobId: string) => apiClient.get(`/api/v1/ats/jobs/${jobId}/pipeline`),
+  applications: (params = '') => apiClient.get(`/api/v1/ats/applications${params}`),
   createApplication: (body: { jobId: string; candidateEmail: string; candidateName?: string; phone?: string; resumeRef?: string; resumeName?: string; source?: string }) => apiClient.post('/api/v1/ats/applications', body),
   moveStage: (applicationId: string, stage: string, reason?: string) => apiClient.patch(`/api/v1/ats/applications/${applicationId}/stage`, { stage, reason }),
   applicationHistory: (applicationId: string) => apiClient.get(`/api/v1/ats/applications/${applicationId}/history`),

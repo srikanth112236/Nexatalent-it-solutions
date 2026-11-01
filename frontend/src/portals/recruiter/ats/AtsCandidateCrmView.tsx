@@ -14,7 +14,7 @@ export function AtsCandidateCrmView() {
   const [selectedCandidate, setSelectedCandidate] = useState<any | null>(null);
   const [candidateDetail, setCandidateDetail] = useState<any | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [resumePreview, setResumePreview] = useState<{ applicationId?: string; leadId?: string; title?: string; filename?: string } | null>(null);
+  const [resumePreview, setResumePreview] = useState<{ applicationId?: string; leadId?: string; candidateId?: string; title?: string; filename?: string } | null>(null);
 
   // Drawer tabs & data
   const [drawerTab, setDrawerTab] = useState<'info' | 'notes' | 'activity'>('info');
@@ -381,6 +381,7 @@ export function AtsCandidateCrmView() {
                       type="button"
                       onClick={() => {
                         setResumePreview({
+                          candidateId: selectedCandidate.id,
                           leadId: selectedCandidate.id,
                           title: `${selectedCandidate.name} — Resume`,
                           filename: selectedCandidate.resumeName || 'Resume.pdf',
@@ -693,6 +694,7 @@ export function AtsCandidateCrmView() {
         onClose={() => setResumePreview(null)}
         title={resumePreview?.title || 'Resume Document'}
         filename={resumePreview?.filename || 'Resume.pdf'}
+        candidateId={resumePreview?.candidateId}
         leadId={resumePreview?.leadId}
       />
     </div>
