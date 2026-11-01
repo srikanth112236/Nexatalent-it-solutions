@@ -194,6 +194,21 @@ atsRouter.post('/jobs', requireAuth(['superadmin', 'agency_admin', 'company_admi
   const id = uid('JOB');
   const slug = String(b.title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + id.toLowerCase().slice(-4);
 
+  const rawSkills = Array.isArray(b.skills) ? b.skills : String(b.skills || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+  const mustHave = Array.isArray(b.mustHaveSkills)
+    ? b.mustHaveSkills
+    : b.mustHaveSkills
+    ? String(b.mustHaveSkills).split(',').map((s: string) => s.trim()).filter(Boolean)
+    : rawSkills.slice(0, 3);
+  const niceToHave = Array.isArray(b.niceToHaveSkills)
+    ? b.niceToHaveSkills
+    : b.niceToHaveSkills
+    ? String(b.niceToHaveSkills).split(',').map((s: string) => s.trim()).filter(Boolean)
+    : rawSkills.slice(3);
+
+  const parsedMinExp = b.minExperienceYears !== undefined ? Number(b.minExperienceYears) : (parseInt(b.experienceLevel, 10) || 3);
+  const parsedMaxExp = b.maxExperienceYears !== undefined ? Number(b.maxExperienceYears) : Math.max(parsedMinExp + 3, 6);
+
   const job = {
     id,
     slug,
@@ -201,7 +216,9 @@ atsRouter.post('/jobs', requireAuth(['superadmin', 'agency_admin', 'company_admi
     department: b.department || 'Engineering',
     location: b.location || 'Pune, India',
     workMode: b.workMode || 'Hybrid',
-    experienceLevel: b.experienceLevel || '6–7 Years',
+    experienceLevel: b.experienceLevel || `${parsedMinExp}–${parsedMaxExp} Years`,
+    minExperienceYears: parsedMinExp,
+    maxExperienceYears: parsedMaxExp,
     salaryMin: b.salaryMin ? Number(b.salaryMin) : 1800000,
     salaryMax: b.salaryMax ? Number(b.salaryMax) : 3200000,
     currency: b.currency || 'INR',
@@ -210,7 +227,13 @@ atsRouter.post('/jobs', requireAuth(['superadmin', 'agency_admin', 'company_admi
     description: b.description || '',
     responsibilities: b.responsibilities || [],
     requirements: b.requirements || [],
-    skills: Array.isArray(b.skills) ? b.skills : String(b.skills || '').split(',').map((s: string) => s.trim()).filter(Boolean),
+    skills: rawSkills.length > 0 ? rawSkills : Array.from(new Set([...mustHave, ...niceToHave])),
+    mustHaveSkills: mustHave,
+    niceToHaveSkills: niceToHave,
+    minQualification: b.minQualification || 'Bachelor of Technology (B.Tech) / B.E. or Graduate Equivalent',
+    requiredLocation: Array.isArray(b.requiredLocation) ? b.requiredLocation : [b.location || 'India'],
+    autoShortlistThreshold: b.autoShortlistThreshold !== undefined ? Math.max(10, Math.min(100, Number(b.autoShortlistThreshold))) : 75,
+    autoShortlistMode: b.autoShortlistMode === 'automatic' ? 'automatic' : 'assisted',
     benefits: b.benefits || [],
     assignedAgencies: b.assignedAgencies || ['Apex Tech Search'],
     assignedRecruiters: b.assignedRecruiters || [ctx.email],
@@ -269,6 +292,18 @@ atsRouter.put('/jobs/:id', requireAuth(['superadmin', 'agency_admin', 'company_a
   if (b.responsibilities !== undefined) job.responsibilities = b.responsibilities;
   if (b.requirements !== undefined) job.requirements = b.requirements;
   if (b.skills !== undefined) job.skills = Array.isArray(b.skills) ? b.skills : String(b.skills || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+  if (b.mustHaveSkills !== undefined) {
+    job.mustHaveSkills = Array.isArray(b.mustHaveSkills) ? b.mustHaveSkills : String(b.mustHaveSkills).split(',').map((s: string) => s.trim()).filter(Boolean);
+  }
+  if (b.niceToHaveSkills !== undefined) {
+    job.niceToHaveSkills = Array.isArray(b.niceToHaveSkills) ? b.niceToHaveSkills : String(b.niceToHaveSkills).split(',').map((s: string) => s.trim()).filter(Boolean);
+  }
+  if (b.minExperienceYears !== undefined) job.minExperienceYears = Number(b.minExperienceYears);
+  if (b.maxExperienceYears !== undefined) job.maxExperienceYears = Number(b.maxExperienceYears);
+  if (b.minQualification !== undefined) job.minQualification = String(b.minQualification);
+  if (b.requiredLocation !== undefined) job.requiredLocation = Array.isArray(b.requiredLocation) ? b.requiredLocation : [String(b.requiredLocation)];
+  if (b.autoShortlistThreshold !== undefined) job.autoShortlistThreshold = Math.max(10, Math.min(100, Number(b.autoShortlistThreshold)));
+  if (b.autoShortlistMode !== undefined) job.autoShortlistMode = b.autoShortlistMode === 'automatic' ? 'automatic' : 'assisted';
   if (b.assignedAgencies !== undefined) job.assignedAgencies = b.assignedAgencies;
   if (b.assignedRecruiters !== undefined) job.assignedRecruiters = b.assignedRecruiters;
   job.updatedAt = nowIso();

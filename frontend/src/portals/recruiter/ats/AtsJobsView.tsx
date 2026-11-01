@@ -1,22 +1,33 @@
 import { useState, useEffect } from 'react';
-import { Briefcase, Plus, Search, MapPin, IndianRupee, Users, X, CheckCircle2, Layers, Edit3, ArrowRight } from 'lucide-react';
+import {
+  Briefcase,
+  Plus,
+  Users,
+  Search,
+  CheckCircle2,
+  MapPin,
+  IndianRupee,
+  ArrowRight,
+  Edit3,
+  Layers,
+  X,
+  Target,
+  Zap,
+} from 'lucide-react';
 import { atsApi } from '../../../shared/enterprise/phaseApi';
-import { InlineLoading } from '../../../shared/ui/DataState';
 
 export function AtsJobsView({ onNavigatePipeline }: { onNavigatePipeline?: (jobId: string) => void }) {
   const [jobs, setJobs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
-  // Selected job for Details Drawer
+  // Selected Job Details & Stages Drawer
   const [selectedJob, setSelectedJob] = useState<any | null>(null);
   const [jobDetailsLoading, setJobDetailsLoading] = useState(false);
-
-  // Custom Stages Editor State
-  const [editingStages, setEditingStages] = useState(false);
   const [stagesList, setStagesList] = useState<any[]>([]);
+  const [editingStages, setEditingStages] = useState(false);
   const [newStageName, setNewStageName] = useState('');
   const [stagesSaving, setStagesSaving] = useState(false);
 
@@ -27,16 +38,23 @@ export function AtsJobsView({ onNavigatePipeline }: { onNavigatePipeline?: (jobI
   const [createForm, setCreateForm] = useState({
     title: '',
     department: 'Engineering',
-    location: 'Pune, India',
+    location: 'Bengaluru, India',
     workMode: 'Hybrid',
-    experienceLevel: '6–7 Years',
+    experienceLevel: '4–8 Years',
     salaryMin: '1800000',
     salaryMax: '3200000',
     openings: '1',
-    skills: 'Golang, React.js, GCP, BigQuery',
-    description: 'Looking for a Senior Full Stack Developer to build cloud-native enterprise products.',
-    responsibilities: '• Design full-stack applications with Go and React.js\n• Build microservices on GCP and BigQuery\n• Lead architectural reviews and system design',
-    requirements: '• 6+ years hands-on Golang and React experience\n• Strong knowledge of GCP, Docker and Kubernetes\n• Excellent problem solving and leadership capabilities',
+    skills: 'React.js, Node.js, TypeScript, MongoDB, Docker',
+    mustHaveSkills: 'React.js, Node.js, TypeScript',
+    niceToHaveSkills: 'Tailwind CSS, Docker, GraphQL',
+    minExperienceYears: '4',
+    maxExperienceYears: '8',
+    minQualification: 'Bachelor of Technology (B.Tech) / B.E. or Graduate Equivalent',
+    autoShortlistThreshold: 75,
+    autoShortlistMode: 'assisted',
+    description: 'Looking for a Senior Full Stack Developer to build high-performance cloud applications.',
+    responsibilities: '• Design full-stack web applications with React.js and Node.js\n• Build and scale REST APIs and microservices\n• Lead architectural reviews, error-boundary design, and code quality',
+    requirements: '• 4+ years hands-on React.js and Node.js experience\n• Strong knowledge of TypeScript, MongoDB, REST APIs\n• Clean code and agile sprint leadership',
   });
 
   const loadJobs = async () => {
@@ -86,6 +104,13 @@ export function AtsJobsView({ onNavigatePipeline }: { onNavigatePipeline?: (jobI
       const res: any = await atsApi.createJob({
         ...createForm,
         skills: createForm.skills.split(',').map((s) => s.trim()).filter(Boolean),
+        mustHaveSkills: createForm.mustHaveSkills.split(',').map((s) => s.trim()).filter(Boolean),
+        niceToHaveSkills: createForm.niceToHaveSkills.split(',').map((s) => s.trim()).filter(Boolean),
+        minExperienceYears: Number(createForm.minExperienceYears) || 3,
+        maxExperienceYears: Number(createForm.maxExperienceYears) || 7,
+        minQualification: createForm.minQualification,
+        autoShortlistThreshold: Number(createForm.autoShortlistThreshold) || 75,
+        autoShortlistMode: createForm.autoShortlistMode,
         responsibilities: createForm.responsibilities.split('\n').filter(Boolean),
         requirements: createForm.requirements.split('\n').filter(Boolean),
         openings: Number(createForm.openings) || 1,
@@ -94,7 +119,7 @@ export function AtsJobsView({ onNavigatePipeline }: { onNavigatePipeline?: (jobI
       });
 
       if (res?.data) {
-        setCreateSuccess('Job requisition created successfully!');
+        setCreateSuccess('Job requisition & ATS qualification profile published successfully!');
         setJobs([res.data, ...jobs]);
         setTimeout(() => {
           setShowCreateModal(false);
@@ -119,7 +144,7 @@ export function AtsJobsView({ onNavigatePipeline }: { onNavigatePipeline?: (jobI
         alert('Recruitment stages updated successfully!');
       }
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || 'Failed to save stages');
+      alert(err?.response?.data?.message || err?.message || 'Failed to update stages');
     } finally {
       setStagesSaving(false);
     }
@@ -127,18 +152,14 @@ export function AtsJobsView({ onNavigatePipeline }: { onNavigatePipeline?: (jobI
 
   const addCustomStage = () => {
     if (!newStageName.trim()) return;
-    const nextOrder = stagesList.length + 1;
-    setStagesList([
-      ...stagesList,
-      {
-        id: `custom_${Date.now()}`,
-        name: newStageName.trim(),
-        order: nextOrder,
-        type: 'interview',
-        color: 'purple',
-        slaDays: 3,
-      },
-    ]);
+    const newStage = {
+      name: newStageName.trim(),
+      order: stagesList.length + 1,
+      type: 'interview',
+      color: 'blue',
+      slaDays: 3,
+    };
+    setStagesList([...stagesList, newStage]);
     setNewStageName('');
   };
 
@@ -147,90 +168,107 @@ export function AtsJobsView({ onNavigatePipeline }: { onNavigatePipeline?: (jobI
   };
 
   return (
-    <div className="space-y-5">
-      {/* Top Header & Quick Action Bar */}
+    <div className="space-y-6">
+      {/* HEADER & FILTER BAR */}
       <div className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h3 className="text-base font-extrabold text-slate-900">Job Requisitions & Mandates</h3>
-            <p className="text-xs text-slate-500 font-medium">Manage open requisitions, job descriptions, pipeline stages and recruiter assignments</p>
+            <h3 className="text-base font-extrabold text-slate-900">Job Requisitions & ATS Mandates</h3>
+            <p className="text-xs text-slate-500 font-medium">
+              Manage job positions, ATS qualification criteria, auto-shortlist threshold gates, and custom recruitment pipelines.
+            </p>
           </div>
           <button
             type="button"
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0265FF] hover:bg-[#0055db] text-white font-bold text-xs shadow-md transition cursor-pointer self-start sm:self-auto"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-[#0265FF] hover:bg-[#0055db] text-white font-bold text-xs shadow-md transition cursor-pointer self-start sm:self-auto"
           >
-            <Plus size={15} /> Post New Mandate
+            <Plus size={14} />
+            <span>Post New Mandate</span>
           </button>
         </div>
 
-        {error && <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded-xl">{error}</div>}
-
-        {/* Filter Controls */}
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-          <div className="sm:col-span-8 relative">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+        {/* Filter controls */}
+        <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100 text-xs">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
             <input
               type="text"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search by job title, mandate ID, department, location..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:ring-2 focus:ring-[#0265FF] bg-slate-50"
+              placeholder="Search by job title, department, location, or requisition ID..."
+              className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 text-xs font-medium outline-none focus:ring-2 focus:ring-[#0265FF]"
             />
           </div>
 
-          <div className="sm:col-span-4">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:ring-2 focus:ring-[#0265FF] bg-slate-50 text-slate-700"
-            >
-              <option value="">All Statuses</option>
-              <option value="Published">Published / Live</option>
-              <option value="Draft">Draft</option>
-              <option value="On Hold">On Hold</option>
-              <option value="Closed">Closed</option>
-            </select>
-          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 text-xs font-bold outline-none focus:ring-2 focus:ring-[#0265FF]"
+          >
+            <option value="">All Statuses</option>
+            <option value="Published">Published / Active</option>
+            <option value="Draft">Draft</option>
+            <option value="Paused">Paused</option>
+            <option value="Closed">Closed</option>
+          </select>
         </div>
       </div>
 
-      {/* Jobs Grid */}
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-800 text-xs font-bold rounded-2xl">
+          {error}
+        </div>
+      )}
+
+      {/* JOBS GRID */}
       {loading ? (
-        <div className="bg-white rounded-3xl border border-slate-200/90 p-12 shadow-sm">
-          <InlineLoading message="Loading job requisitions…" />
+        <div className="p-12 text-center text-slate-400 text-xs font-medium bg-white rounded-3xl border border-slate-200/80">
+          Loading ATS job mandates…
         </div>
       ) : jobs.length === 0 ? (
-        <div className="bg-white rounded-3xl border border-slate-200/90 p-8 shadow-sm text-center space-y-2">
-          <Briefcase size={32} className="mx-auto text-slate-400" />
-          <h4 className="text-base font-extrabold text-slate-900">No Job Requisitions Found</h4>
-          <p className="text-xs text-slate-500">Post a new mandate or adjust your filter query.</p>
+        <div className="p-12 text-center text-slate-400 text-xs font-medium bg-white rounded-3xl border border-slate-200/80 space-y-3">
+          <Briefcase size={32} className="mx-auto text-slate-300" />
+          <p>No job requisitions found matching your filter.</p>
+          <button
+            type="button"
+            onClick={() => setShowCreateModal(true)}
+            className="px-4 py-2 rounded-xl bg-blue-50 text-[#0265FF] font-bold text-xs hover:bg-blue-100"
+          >
+            Create Your First Job Mandate
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {jobs.map((job) => (
             <div
               key={job.id}
-              className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-sm hover:shadow-md hover:border-blue-300 transition-all flex flex-col justify-between space-y-4"
+              className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4"
             >
               <div className="space-y-2">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">{job.id}</span>
-                    <h4 className="text-sm font-black text-slate-900 truncate mt-0.5">{job.title}</h4>
-                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600">
+                    {job.id}
+                  </span>
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shrink-0 ${
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                       job.status === 'Published'
-                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                        : 'bg-slate-100 text-slate-600 border border-slate-200'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : job.status === 'Draft'
+                        ? 'bg-slate-100 text-slate-700'
+                        : 'bg-amber-100 text-amber-800'
                     }`}
                   >
-                    {job.status}
+                    {job.status || 'Published'}
                   </span>
                 </div>
 
-                <div className="space-y-1 text-xs text-slate-600 font-medium">
+                <div>
+                  <h4 className="text-sm font-extrabold text-slate-900 line-clamp-1">{job.title}</h4>
+                  <span className="text-[11px] font-semibold text-slate-400">{job.department || 'Engineering'}</span>
+                </div>
+
+                <div className="space-y-1.5 text-xs text-slate-600 font-medium">
                   <div className="flex items-center gap-1.5">
                     <MapPin size={12} className="text-slate-400 shrink-0" />
                     <span>{job.location || 'India'} ({job.workMode || 'Hybrid'})</span>
@@ -245,14 +283,28 @@ export function AtsJobsView({ onNavigatePipeline }: { onNavigatePipeline?: (jobI
                   </div>
                 </div>
 
-                {/* Skills tags */}
-                <div className="flex flex-wrap gap-1 pt-1">
-                  {Array.isArray(job.skills) &&
-                    job.skills.slice(0, 3).map((s: string, idx: number) => (
-                      <span key={idx} className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100">
+                {/* ATS Threshold Gate Badge */}
+                <div className="p-2 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-[11px]">
+                  <span className="font-bold text-slate-600 flex items-center gap-1">
+                    <Target size={12} className="text-[#0265FF]" /> ATS Shortlist Gate:
+                  </span>
+                  <span className="px-2 py-0.5 rounded-lg bg-blue-50 text-[#0265FF] font-black border border-blue-200">
+                    ≥ {job.autoShortlistThreshold || 75}% Score
+                  </span>
+                </div>
+
+                {/* Must-Have Skills tags */}
+                <div className="space-y-1 pt-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">
+                    Must-Have Criteria:
+                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {(job.mustHaveSkills || (Array.isArray(job.skills) ? job.skills.slice(0, 3) : ['React', 'Node.js'])).map((s: string, idx: number) => (
+                      <span key={idx} className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
                         {s}
                       </span>
                     ))}
+                  </div>
                 </div>
               </div>
 
@@ -313,8 +365,66 @@ export function AtsJobsView({ onNavigatePipeline }: { onNavigatePipeline?: (jobI
                 <p className="text-base font-black text-slate-900 mt-0.5">{selectedJob.openings || 1}</p>
               </div>
               <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-center">
-                <span className="text-[10px] font-bold text-slate-400 uppercase">Experience</span>
-                <p className="text-base font-black text-slate-900 mt-0.5">{selectedJob.experienceLevel || '6–7 Yrs'}</p>
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Experience Bounds</span>
+                <p className="text-base font-black text-slate-900 mt-0.5">
+                  {selectedJob.minExperienceYears || 3}–{selectedJob.maxExperienceYears || 7} Yrs
+                </p>
+              </div>
+            </div>
+
+            {/* ATS MATCHING PROFILE BOX */}
+            <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-3xl space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                  <Target size={14} className="text-[#0265FF]" />
+                  <span>ATS Candidate Qualification & Shortlist Profile</span>
+                </h4>
+                <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-[#0265FF] font-black text-xs">
+                  Target: ≥ {selectedJob.autoShortlistThreshold || 75}%
+                </span>
+              </div>
+
+              <div className="space-y-2 text-xs">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+                    Mandatory Must-Have Skills:
+                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {(selectedJob.mustHaveSkills || ['React.js', 'Node.js', 'TypeScript']).map((s: string, idx: number) => (
+                      <span key={idx} className="px-2.5 py-0.5 rounded-lg bg-emerald-100 text-emerald-900 font-bold text-xs border border-emerald-200">
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {selectedJob.niceToHaveSkills && selectedJob.niceToHaveSkills.length > 0 && (
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+                      Secondary (Nice-to-Have) Skills:
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedJob.niceToHaveSkills.map((s: string, idx: number) => (
+                        <span key={idx} className="px-2 py-0.5 rounded-lg bg-white text-slate-700 font-semibold text-[11px] border border-slate-200">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-blue-100/60">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Minimum Degree</span>
+                    <span className="font-bold text-slate-800">{selectedJob.minQualification || 'Bachelor of Technology (B.Tech) / B.E.'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Shortlist Gate Mode</span>
+                    <span className="font-bold text-[#0265FF] flex items-center gap-1">
+                      <Zap size={11} /> {selectedJob.autoShortlistMode === 'automatic' ? 'Autonomous Shortlist' : 'Assisted 1-Click Shortlist'}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -448,17 +558,21 @@ export function AtsJobsView({ onNavigatePipeline }: { onNavigatePipeline?: (jobI
 
       {/* POST NEW MANDATE MODAL */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
-          <div className="w-full max-w-xl bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 relative space-y-4 max-h-[90vh] overflow-y-auto">
-            <button
-              onClick={() => setShowCreateModal(false)}
-              className="absolute right-5 top-5 p-2 text-slate-400 hover:text-slate-700 cursor-pointer"
-            >
-              <X size={18} />
-            </button>
-
-            <h3 className="text-lg font-black text-slate-900">Post New ATS Job Mandate</h3>
-            <p className="text-xs text-slate-500">Configure mandate specifications, compensation bounds, requirements, and recruiter assignments.</p>
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-3xl p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-lg font-black text-slate-900">Post New ATS Job Mandate</h3>
+                <p className="text-xs text-slate-500">Configure mandate specifications, qualification bounds, and auto-shortlist threshold gates.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="p-2 rounded-xl hover:bg-slate-100 text-slate-500 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
             {createSuccess && (
               <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-xl flex items-center gap-2">
@@ -466,7 +580,7 @@ export function AtsJobsView({ onNavigatePipeline }: { onNavigatePipeline?: (jobI
               </div>
             )}
 
-            <form onSubmit={handleCreateJob} className="space-y-3 text-xs">
+            <form onSubmit={handleCreateJob} className="space-y-4 text-xs">
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Job Title *</label>
                 <input
@@ -474,7 +588,7 @@ export function AtsJobsView({ onNavigatePipeline }: { onNavigatePipeline?: (jobI
                   required
                   value={createForm.title}
                   onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
-                  placeholder="e.g. Senior Full Stack Developer (Golang + React)"
+                  placeholder="e.g. Senior Full Stack Developer (React.js + Node.js)"
                   className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold outline-none focus:ring-2 focus:ring-[#0265FF]"
                 />
               </div>
@@ -533,15 +647,115 @@ export function AtsJobsView({ onNavigatePipeline }: { onNavigatePipeline?: (jobI
                 </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Required Skills (comma-separated)</label>
-                <input
-                  type="text"
-                  value={createForm.skills}
-                  onChange={(e) => setCreateForm({ ...createForm, skills: e.target.value })}
-                  placeholder="Golang, React.js, GCP, BigQuery, Docker"
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold outline-none focus:ring-2 focus:ring-[#0265FF]"
-                />
+              {/* ATS QUALIFICATION PROFILE BOX */}
+              <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                    <Target size={14} className="text-[#0265FF]" />
+                    <span>ATS Matching Criteria & Shortlisting Gate</span>
+                  </h4>
+                  <span className="text-[11px] font-bold text-[#0265FF]">Automatic Candidate Scoring</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1">
+                      <span>Mandatory (Must-Have) Skills *</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={createForm.mustHaveSkills}
+                      onChange={(e) => setCreateForm({ ...createForm, mustHaveSkills: e.target.value })}
+                      placeholder="e.g. React.js, Node.js, TypeScript, MongoDB"
+                      className="w-full p-2 rounded-xl border border-slate-200 bg-white font-medium outline-none focus:ring-2 focus:ring-[#0265FF]"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">Determines 40% of candidate ATS score</span>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Secondary (Nice-to-Have) Skills
+                    </label>
+                    <input
+                      type="text"
+                      value={createForm.niceToHaveSkills}
+                      onChange={(e) => setCreateForm({ ...createForm, niceToHaveSkills: e.target.value })}
+                      placeholder="e.g. Tailwind CSS, Docker, GraphQL"
+                      className="w-full p-2 rounded-xl border border-slate-200 bg-white font-medium outline-none focus:ring-2 focus:ring-[#0265FF]"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">Secondary bonus match points</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Min Exp (Yrs)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={createForm.minExperienceYears}
+                      onChange={(e) => setCreateForm({ ...createForm, minExperienceYears: e.target.value })}
+                      className="w-full p-2 rounded-xl border border-slate-200 bg-white font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Max Exp (Yrs)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={createForm.maxExperienceYears}
+                      onChange={(e) => setCreateForm({ ...createForm, maxExperienceYears: e.target.value })}
+                      className="w-full p-2 rounded-xl border border-slate-200 bg-white font-medium"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block font-bold text-slate-700 mb-1">Min Degree / Education</label>
+                    <select
+                      value={createForm.minQualification}
+                      onChange={(e) => setCreateForm({ ...createForm, minQualification: e.target.value })}
+                      className="w-full p-2 rounded-xl border border-slate-200 bg-white font-medium"
+                    >
+                      <option value="Bachelor of Technology (B.Tech) / B.E. or Graduate Equivalent">B.Tech / B.E. or Any Graduate</option>
+                      <option value="Bachelor of Computer Applications (BCA) / MCA">BCA / MCA</option>
+                      <option value="Bachelor of Commerce (B.Com) / BBA">B.Com / BBA</option>
+                      <option value="Master of Technology (M.Tech) / M.S.">M.Tech / M.S. or Higher</option>
+                      <option value="Any Graduate / Diploma">Any Graduate / Diploma</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Auto Shortlist Slider & Gate Selection */}
+                <div className="p-3 bg-white rounded-xl border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <label className="font-bold text-slate-800 flex items-center gap-1">
+                      <Target size={13} className="text-[#0265FF]" />
+                      <span>Auto-Shortlist Score Threshold:</span>
+                      <span className="text-[#0265FF] font-black">{createForm.autoShortlistThreshold}%</span>
+                    </label>
+                    <input
+                      type="range"
+                      min={50}
+                      max={95}
+                      step={5}
+                      value={createForm.autoShortlistThreshold}
+                      onChange={(e) => setCreateForm({ ...createForm, autoShortlistThreshold: parseInt(e.target.value, 10) })}
+                      className="w-48 accent-[#0265FF] cursor-pointer"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Shortlist Trigger Mode</label>
+                    <select
+                      value={createForm.autoShortlistMode}
+                      onChange={(e) => setCreateForm({ ...createForm, autoShortlistMode: e.target.value })}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold"
+                    >
+                      <option value="assisted">Assisted (Highlight + 1-Click Shortlist)</option>
+                      <option value="automatic">Automatic (Move to Shortlist Instantly)</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -580,7 +794,7 @@ export function AtsJobsView({ onNavigatePipeline }: { onNavigatePipeline?: (jobI
                   disabled={createSaving}
                   className="w-full py-3 rounded-xl bg-[#0265FF] hover:bg-[#0055db] text-white font-bold text-xs shadow-md transition cursor-pointer"
                 >
-                  {createSaving ? 'Publishing Mandate…' : 'Publish Requisition'}
+                  {createSaving ? 'Publishing Mandate…' : 'Publish Requisition & ATS Criteria'}
                 </button>
               </div>
             </form>
