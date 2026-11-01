@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Briefcase, Eye, MessageSquare, Clock, MapPin, AlertCircle, RefreshCw, Plus, History, X, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Briefcase, Eye, MessageSquare, Clock, MapPin, AlertCircle, RefreshCw, Plus, History, X, CheckCircle2, AlertTriangle, ArrowRight } from 'lucide-react';
 import { atsApi } from '../../../shared/enterprise/phaseApi';
 import { InlineLoading } from '../../../shared/ui/DataState';
 import { PdfResumeViewerModal } from '../../../shared/ui/PdfResumeViewerModal';
@@ -14,7 +14,7 @@ export function AtsJobPipelineView({ initialJobId }: { initialJobId?: string }) 
   const [draggedAppId, setDraggedAppId] = useState<string | null>(null);
   const [movingApp, setMovingApp] = useState<{ id: string; targetStage: string } | null>(null);
   const [moveReason, setMoveReason] = useState('');
-  const [resumePreview, setResumePreview] = useState<{ applicationId?: string; title?: string; filename?: string } | null>(null);
+  const [resumePreview, setResumePreview] = useState<{ applicationId?: string; candidateId?: string; leadId?: string; title?: string; filename?: string } | null>(null);
 
   // Notes drawer
   const [noteApp, setNoteApp] = useState<any | null>(null);
@@ -234,7 +234,7 @@ export function AtsJobPipelineView({ initialJobId }: { initialJobId?: string }) 
       {!loading && !error && pipelineData && (
         <div className="overflow-x-auto pb-4" data-lenis-prevent>
           <div className="flex gap-4 min-w-[1200px] items-start">
-            {pipelineData.columns.map((col: any) => (
+            {pipelineData.columns.map((col: any, colIdx: number) => (
               <div
                 key={col.stageId}
                 onDragOver={handleDragOver}
@@ -309,13 +309,15 @@ export function AtsJobPipelineView({ initialJobId }: { initialJobId?: string }) 
 
                         {/* Card Action Buttons */}
                         <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1">
-                          {c.hasResume ? (
+                          {c.hasResume || c.resumeRef ? (
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setResumePreview({
                                   applicationId: c.id,
+                                  candidateId: c.candidateId || c.id,
+                                  leadId: c.leadId,
                                   title: `${c.candidateName} — Resume`,
                                   filename: c.resumeName || 'Resume.pdf',
                                 });
@@ -352,6 +354,20 @@ export function AtsJobPipelineView({ initialJobId }: { initialJobId?: string }) 
                             >
                               <MessageSquare size={13} />
                             </button>
+                            {pipelineData.columns[colIdx + 1] && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setMovingApp({ id: c.id, targetStage: pipelineData.columns[colIdx + 1].stageName });
+                                  setMoveReason('');
+                                }}
+                                title={`Advance to ${pipelineData.columns[colIdx + 1].stageName}`}
+                                className="p-1 rounded-lg hover:bg-emerald-50 text-slate-400 hover:text-emerald-700 transition-colors cursor-pointer"
+                              >
+                                <ArrowRight size={13} />
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -602,6 +618,8 @@ export function AtsJobPipelineView({ initialJobId }: { initialJobId?: string }) 
         title={resumePreview?.title || 'Resume Document'}
         filename={resumePreview?.filename || 'Resume.pdf'}
         applicationId={resumePreview?.applicationId}
+        candidateId={resumePreview?.candidateId}
+        leadId={resumePreview?.leadId}
       />
     </div>
   );

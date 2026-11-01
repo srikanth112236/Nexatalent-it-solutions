@@ -14,7 +14,7 @@ export function AtsApplicantsView() {
   const [stageFilter, setStageFilter] = useState('');
 
   // Selected Candidate / App modals
-  const [resumePreview, setResumePreview] = useState<{ applicationId?: string; title?: string; filename?: string } | null>(null);
+  const [resumePreview, setResumePreview] = useState<{ applicationId?: string; candidateId?: string; leadId?: string; title?: string; filename?: string } | null>(null);
   const [noteApp, setNoteApp] = useState<any | null>(null);
   const [notesList, setNotesList] = useState<any[]>([]);
   const [newNote, setNewNote] = useState('');
@@ -256,13 +256,15 @@ export function AtsApplicantsView() {
 
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        {cand.hasResume && (
+                        {(cand.hasResume || cand.resumeRef) && (
                           <button
                             type="button"
                             onClick={() => {
                               setResumePreview({
                                 applicationId: cand.applicationId || cand.id,
-                                title: `${cand.candidateName} — Resume`,
+                                candidateId: cand.candidateId || cand.id,
+                                leadId: cand.leadId,
+                                title: `${cand.candidateName || cand.name} — Resume`,
                                 filename: cand.resumeName || 'Resume.pdf',
                               });
                             }}
@@ -481,6 +483,8 @@ export function AtsApplicantsView() {
         title={resumePreview?.title || 'Resume Document'}
         filename={resumePreview?.filename || 'Resume.pdf'}
         applicationId={resumePreview?.applicationId}
+        candidateId={resumePreview?.candidateId}
+        leadId={resumePreview?.leadId}
       />
     </div>
   );

@@ -5,6 +5,7 @@ import { InlineLoading } from '../../../shared/ui/DataState';
 
 export function AtsDashboardView({ onNavigateTab }: { onNavigateTab: (tab: string) => void }) {
   const [data, setData] = useState<any>(null);
+  const [reminders, setReminders] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -12,8 +13,12 @@ export function AtsDashboardView({ onNavigateTab }: { onNavigateTab: (tab: strin
     setLoading(true);
     setError('');
     try {
-      const res: any = await atsApi.dashboard();
+      const [res, rRes]: any[] = await Promise.all([
+        atsApi.dashboard(),
+        atsApi.recruiterReminders().catch(() => ({ data: null })),
+      ]);
       if (res?.data) setData(res.data);
+      if (rRes?.data) setReminders(rRes.data);
     } catch (err: any) {
       setError(err?.message || 'Failed to load ATS dashboard metrics.');
     } finally {
@@ -97,6 +102,33 @@ export function AtsDashboardView({ onNavigateTab }: { onNavigateTab: (tab: strin
           </button>
         </div>
       </div>
+
+      {/* Recruiter Actionable Alerts Strip */}
+      {reminders && (reminders.summary?.totalStale > 0 || reminders.summary?.totalUpcoming > 0 || reminders.summary?.totalPendingFeedback > 0) && (
+        <div className="bg-amber-50/80 border border-amber-200/90 rounded-3xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-700 flex items-center justify-center shrink-0 border border-amber-300/60 font-black">
+              <Clock size={18} />
+            </div>
+            <div>
+              <h4 className="text-xs font-black text-amber-950 uppercase tracking-wide">
+                Action Required: {reminders.summary?.totalStale || 0} Stale Candidates • {reminders.summary?.totalUpcoming || 0} Upcoming Interviews
+              </h4>
+              <p className="text-[11px] text-amber-800 font-medium">
+                Candidates waiting over 3 days in stage and interviews within 48h requiring recruiter attention.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigateTab('ats-reports')}
+            className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer"
+          >
+            <span>Review Alerts & Velocity</span>
+            <ArrowRight size={13} />
+          </button>
+        </div>
+      )}
 
       {/* KPI Tiles */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
