@@ -367,7 +367,7 @@ recruitmentRouter.get('/jobs-public/:id', (req, res) => {
   const enrichedJob = { ...j, companyName: companyFallback };
   res.json({ success: true, data: { ...publicJob(enrichedJob), counts: jobCounts(db, enrichedJob), acceptingApplications: true } });
 });
-recruitmentRouter.post('/jobs', requireAuth(['employer','superadmin','platform_owner','company_admin','hiring_manager','employee','operations_admin']), (req: Request, res: Response) => {
+recruitmentRouter.post('/jobs', requireAuth(['employer','superadmin','platform_owner','company_admin','hiring_manager','employee','operations_admin','internal_recruiter','recruiter']), (req: Request, res: Response) => {
   const parsed = jobSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'Validation failed.', errors: parsed.error.flatten() });
   const ctx = ctxOf(req);
@@ -416,7 +416,7 @@ recruitmentRouter.post('/requisitions/:id/request-changes', requireAuth(['employ
   audit(ctx.email, `REQUISITION_CHANGES_REQUESTED:${r.id}`, r.orgId, 'requisition', r.id, req.ip); persist();
   res.json({ success: true, data: r });
 });
-recruitmentRouter.put('/jobs/:id', requireAuth(['employer','superadmin','platform_owner','company_admin','hiring_manager','employee','operations_admin']), (req: Request, res: Response) => {
+recruitmentRouter.put('/jobs/:id', requireAuth(['employer','superadmin','platform_owner','company_admin','hiring_manager','employee','operations_admin','internal_recruiter','recruiter']), (req: Request, res: Response) => {
   const db = loadDb(); const j: any = db.jobs.find((x: any) => x.id === req.params.id);
   if (!j) return res.status(404).json({ success: false, message: 'Job not found.' });
   const ctx = ctxOf(req);
@@ -460,7 +460,7 @@ recruitmentRouter.put('/jobs/:id', requireAuth(['employer','superadmin','platfor
   audit(ctx.email, `JOB_EDITED:${j.id}`, j.orgId, 'job', j.id, req.ip); persist();
   res.json({ success: true, data: j });
 });
-recruitmentRouter.patch('/jobs/:id/status', requireAuth(['employer','superadmin','company_admin','hiring_manager','employee','operations_admin']), (req: Request, res: Response) => {
+recruitmentRouter.patch('/jobs/:id/status', requireAuth(['employer','superadmin','platform_owner','company_admin','hiring_manager','employee','operations_admin','internal_recruiter','recruiter']), (req: Request, res: Response) => {
   const db = loadDb(); const j: any = db.jobs.find((x: any) => x.id === req.params.id);
   if (!j) return res.status(404).json({ success: false, message: 'Job not found.' });
   const ctx = ctxOf(req);
@@ -631,7 +631,7 @@ recruitmentRouter.get('/applications', requireAuth(), (req, res) => {
   });
   res.json({ success: true, ...paged(enrichedApps, page, pageSize) });
 });
-recruitmentRouter.post('/applications', requireAuth(['candidate','superadmin','agency_recruiter','agency_admin','recruiter','vendor','internal_recruiter','employee']), (req: Request, res: Response) => {
+recruitmentRouter.post('/applications', requireAuth(['candidate','superadmin','agency_recruiter','agency_admin','recruiter','vendor','internal_recruiter','employee']), async (req: Request, res: Response) => {
   const { jobId, candidateEmail } = req.body || {};
   if (!jobId || !candidateEmail) return res.status(400).json({ success: false, message: 'jobId + candidateEmail required.' });
   const db = loadDb();
@@ -645,7 +645,64 @@ recruitmentRouter.post('/applications', requireAuth(['candidate','superadmin','a
   if (ctx.role === 'internal_recruiter' && !jobAssignedTo(db, job, emailOf(ctx))) {
     return res.status(403).json({ success: false, code: 'JOB_NOT_ASSIGNED', message: 'Attach candidates only to requirements assigned to you.' });
   }
-  const app = { id: uid('APP'), key, jobId, jobTitle: job.title, orgId: job.orgId, requisitionId: job.requisitionId, candidateEmail, stage: 'Applied', source: ctx.role, createdAt: nowIso(), updatedAt: nowIso() };
+
+  const candidateRecord: any = ((db.candidateProfiles as any[]) || []).find(
+    (c: any) => String(c.email || c.candidateEmail || '').toLowerCase() === String(candidateEmail).toLowerCase()
+  ) || ((db.users as any[]) || []).find((u: any) => String(u.email || '').toLowerCase() === String(candidateEmail).toLowerCase());
+  const cName = req.body?.candidateName || candidateRecord?.name || candidateRecord?.fullName || candidateEmail.split('@')[0];
+  const cPhone = req.body?.candidatePhone || candidateRecord?.phone || '';
+  const cResume = req.body?.resumeUrl || req.body?.resume || candidateRecord?.resumeUrl || candidateRecord?.resume || '';
+  const cSkills = req.body?.skills || candidateRecord?.skills || [];
+  const cExp = Number(req.body?.experienceYears ?? candidateRecord?.experienceYears ?? candidateRecord?.yearsOfExperience ?? 3);
+
+  // Compute live ATS Match Score
+  let atsMatch: any = null;
+  try {
+    const { calculateJobAtsMatch } = await import('../services/atsScoringEngine.js');
+    atsMatch = calculateJobAtsMatch(
+      {
+        skills: cSkills,
+        experienceYears: cExp,
+        education: candidateRecord?.education || req.body?.education || 'Bachelor of Engineering / Technology',
+        location: candidateRecord?.location || req.body?.location || 'India',
+      },
+      {
+        title: job.title,
+        skills: job.requiredSkills || job.skills || [],
+        minExperienceYears: job.experienceMin,
+        maxExperienceYears: job.experienceMax,
+        location: job.location,
+        autoShortlistThreshold: job.autoShortlistThreshold || 70,
+      }
+    );
+  } catch {
+    /* ATS scoring fallback */
+  }
+
+  const app: any = {
+    id: uid('APP'),
+    key,
+    jobId,
+    jobTitle: job.title,
+    orgId: job.orgId,
+    requisitionId: job.requisitionId,
+    candidateEmail,
+    candidateName: cName,
+    candidatePhone: cPhone,
+    resumeUrl: cResume,
+    skills: cSkills,
+    experienceYears: cExp,
+    score: atsMatch ? atsMatch.score : (req.body?.score || 75),
+    matchGrade: atsMatch ? atsMatch.tier : 'MEDIUM',
+    matchScore: atsMatch ? atsMatch.score : 75,
+    matchDetails: atsMatch || undefined,
+    stage: 'Applied',
+    source: ctx.role,
+    notes: req.body?.coverNote || req.body?.notes || undefined,
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+  };
+
   db.applications.unshift(app);
   pushHistory(db.stageHistory, { id: uid('STG'), applicationId: app.id, from: '-', to: 'Applied', actor: ctx.email, createdAt: nowIso() });
   job.applicantsCount = (job.applicantsCount || 0) + 1;
@@ -818,6 +875,11 @@ recruitmentRouter.post('/interviews/:id/feedback', requireAuth(['employer','supe
     notes: String(req.body.notes || '').slice(0, 2000), by: ctx.email, createdAt: nowIso(),
   };
   db.feedback.unshift(fb);
+  iv.status = 'Completed';
+  iv.feedback = fb.notes;
+  if (fb.rating !== undefined) iv.rating = fb.rating;
+  if (fb.recommendation) iv.recommendation = fb.recommendation;
+  iv.completedAt = nowIso();
   audit(ctx.email, `INTERVIEW_FEEDBACK:${iv.id}`, iv.companyId || iv.orgId, 'interview', iv.id, req.ip); persist();
   res.status(201).json({ success: true, data: fb });
 });
@@ -916,7 +978,7 @@ recruitmentRouter.post('/offers/:id/respond', requireAuth(['candidate','superadm
   audit(ctx.email, `OFFER_${offer.status.toUpperCase()}:${offer.id}`, offer.orgId, 'offer', offer.id, req.ip); persist();
   res.json({ success: true, data: offer });
 });
-recruitmentRouter.post('/offers', requireAuth(['employer','superadmin','company_admin','hiring_manager']), (req: Request, res: Response) => {
+recruitmentRouter.post('/offers', requireAuth(['employer','superadmin','platform_owner','company_admin','hiring_manager','operations_admin','internal_recruiter','employee']), (req: Request, res: Response) => {
   const db = loadDb(); const { applicationId, ctc, currency, joinDate, offerLetterMode, offerLetterRef, payPeriod } = req.body || {};
   const app: any = db.applications.find((a: any) => a.id === applicationId);
   if (!app) return res.status(404).json({ success: false, message: 'Application not found.' });
@@ -951,7 +1013,7 @@ recruitmentRouter.get('/offers', requireAuth(['employer','superadmin','company_a
   const { page, pageSize } = paginate.parse(req.query);
   res.json({ success: true, ...paged(rows, page, pageSize) });
 });
-recruitmentRouter.post('/offers/:id/withdraw', requireAuth(['employer','superadmin','company_admin','hiring_manager']), (req: Request, res: Response) => {
+recruitmentRouter.post('/offers/:id/withdraw', requireAuth(['employer','superadmin','platform_owner','company_admin','hiring_manager','operations_admin','internal_recruiter','employee']), (req: Request, res: Response) => {
   const db = loadDb(); const ctx = ctxOf(req);
   const offer: any = db.offers.find((o: any) => o.id === req.params.id);
   if (!offer) return res.status(404).json({ success: false, message: 'Offer not found.' });
@@ -995,6 +1057,27 @@ recruitmentRouter.post('/placements', requireAuth(['employer','superadmin','comp
   db.placements.unshift(pl); app.stage = 'Hired'; app.updatedAt = nowIso();
   audit(ctxOf(req).email, `PLACEMENT_JOINED:${pl.id}`, app.orgId, 'placement', pl.id, req.ip); persist();
   emit('placement.joined', { placementId: pl.id, applicationId, jobId: app.jobId, orgId: app.orgId, candidateEmail: app.candidateEmail, feeBasis: basis, stage: 'Hired' }, app.orgId, ctxOf(req).email);
+
+  // Ensure contractor deployment record exists for timesheets & payroll tracking
+  if (!Array.isArray(db.contractors)) db.contractors = [];
+  const existingCtr = db.contractors.find((c: any) => String(c.candidateEmail).toLowerCase() === String(app.candidateEmail).toLowerCase() && c.placementId === pl.id);
+  if (!existingCtr) {
+    const hourly = (offer as any)?.hourlyRate || (basis ? Math.round(Number(basis) / 160) : 500);
+    const newCtr = {
+      id: uid('CTR'),
+      placementId: pl.id,
+      candidateEmail: app.candidateEmail,
+      name: app.candidateName || String(app.candidateEmail).split('@')[0],
+      clientTenant: app.orgId,
+      clientName: plcJob?.companyName || app.orgId,
+      roleTitle: plcJob?.title || 'Contract Specialist',
+      hourlyRate: hourly,
+      status: 'Active',
+      startDate: pl.joinDate,
+      createdAt: nowIso()
+    };
+    db.contractors.unshift(newCtr);
+  }
   // Straight-through billing for trusted agreements: approve + first invoice immediately.
   // P0-2: auto-approve is a finance side-effect — only runs when the agreement
   // explicitly opts in AND the caller is finance-privileged. Employers without

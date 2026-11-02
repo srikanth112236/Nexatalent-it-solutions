@@ -1013,6 +1013,7 @@ export function CandidatePortal() {
           <CandidateOffersView
             offers={offersMine}
             loading={offersLoading}
+            candidateName={profile?.name || userEmail.split('@')[0] || 'Candidate'}
             onNavigate={navigate}
             onRespond={async (offerId, decision, reason) => {
               await respondOffer(offerId, decision, reason);

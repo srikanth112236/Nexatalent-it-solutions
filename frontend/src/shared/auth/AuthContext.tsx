@@ -9,6 +9,7 @@ export interface AuthUser {
   email: string;
   role: UserRole;
   tenantId?: string;
+  permissions?: string[];
 }
 
 interface AuthContextValue {
@@ -18,6 +19,7 @@ interface AuthContextValue {
   login: (input: { email: string; password: string; role: UserRole }) => Promise<void>;
   logout: (reason?: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
+  setSessionUser: (user: AuthUser | null) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -33,6 +35,7 @@ function normalizeLoginResponse(res: any): { accessToken: string; refreshToken?:
     email: body?.user?.email || getUserEmail() || '',
     role,
     tenantId: body?.user?.tenantId || getTenantId() || undefined,
+    permissions: Array.isArray(body?.user?.permissions) ? body.user.permissions : undefined,
   };
   return { accessToken, refreshToken: body?.refreshToken, user, fallback: false };
 }
@@ -56,10 +59,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const serverRole = (me.role || getActiveRole() || 'candidate') as UserRole;
         const serverTenant = me.tenantId || getTenantId() || undefined;
         const serverEmail = me.email || getUserEmail() || '';
+        const serverPerms = Array.isArray(me.permissions) ? me.permissions : undefined;
         // The server is authoritative: refresh the cached hint so a stale or
         // hand-edited role can never keep the wrong workspace painted.
         syncSessionIdentity({ role: serverRole, tenantId: serverTenant, email: serverEmail });
-        setUser({ id: me.id, email: serverEmail, role: serverRole, tenantId: serverTenant });
+        setUser({ id: me.id, email: serverEmail, role: serverRole, tenantId: serverTenant, permissions: serverPerms });
       } else {
         // /me unavailable but token present — keep lightweight session from storage
         const role = getActiveRole();
@@ -129,9 +133,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const setSessionUser = useCallback((u: AuthUser | null) => {
+    setUser(u);
+    setIsLoading(false);
+    clearPermissionsCache();
+  }, []);
+
   const value = useMemo<AuthContextValue>(
-    () => ({ user, isAuthenticated: !!user || (!isLoading && !!getAccessToken() && !isTokenExpired(getAccessToken())), isLoading, login, logout, refreshProfile }),
-    [user, isLoading, login, logout, refreshProfile],
+    () => ({
+      user,
+      isAuthenticated: !!user || (!isLoading && !!getAccessToken() && !isTokenExpired(getAccessToken())),
+      isLoading,
+      login,
+      logout,
+      refreshProfile,
+      setSessionUser,
+    }),
+    [user, isLoading, login, logout, refreshProfile, setSessionUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

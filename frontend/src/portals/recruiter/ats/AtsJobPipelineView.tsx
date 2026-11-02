@@ -115,12 +115,49 @@ export function AtsJobPipelineView({ initialJobId }: { initialJobId?: string }) 
 
   const confirmMove = async () => {
     if (!movingApp) return;
+    const { id, targetStage } = movingApp;
+
+    // Optimistic UI update so card moves immediately
+    setPipelineData((prev: any) => {
+      if (!prev?.columns) return prev;
+      let movingCand: any = null;
+      const newCols = prev.columns.map((col: any) => {
+        const found = col.candidates.find((c: any) => c.id === id);
+        if (found) {
+          movingCand = { ...found, stage: targetStage, daysInStage: 0 };
+          return {
+            ...col,
+            count: Math.max(0, col.count - 1),
+            candidates: col.candidates.filter((c: any) => c.id !== id),
+          };
+        }
+        return col;
+      });
+      if (movingCand) {
+        return {
+          ...prev,
+          columns: newCols.map((col: any) => {
+            if (col.stageName === targetStage) {
+              return {
+                ...col,
+                count: col.count + 1,
+                candidates: [movingCand, ...col.candidates],
+              };
+            }
+            return col;
+          }),
+        };
+      }
+      return prev;
+    });
+
     try {
-      await atsApi.moveStage(movingApp.id, movingApp.targetStage, moveReason);
+      await atsApi.moveStage(id, targetStage, moveReason);
       setMovingApp(null);
       setMoveReason('');
       if (selectedJobId) loadPipeline(selectedJobId);
     } catch (err: any) {
+      if (selectedJobId) loadPipeline(selectedJobId);
       alert(`Move failed: ${err?.message || err}`);
     }
   };
@@ -390,7 +427,11 @@ export function AtsJobPipelineView({ initialJobId }: { initialJobId?: string }) 
                               <span>{c.matchScore ?? 0}%</span>
                             </button>
 
-                            {c.daysInStage > 4 ? (
+                            {c.daysInStage >= 7 ? (
+                              <span className="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold shrink-0 flex items-center gap-1" title="Candidate stagnant in this stage for 7+ days">
+                                <AlertTriangle size={10} className="text-rose-600" /> {c.daysInStage}d
+                              </span>
+                            ) : c.daysInStage > 4 ? (
                               <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold shrink-0 flex items-center gap-0.5">
                                 <Clock size={10} /> {c.daysInStage}d
                               </span>
@@ -400,6 +441,33 @@ export function AtsJobPipelineView({ initialJobId }: { initialJobId?: string }) 
                               </span>
                             )}
                           </div>
+                        </div>
+
+                        {/* Badges row: Notice period & Tier */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {c.tier ? (
+                            <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded ${
+                              c.tier === 'Gold' ? 'bg-amber-100 text-amber-900 border border-amber-300' :
+                              c.tier === 'Silver' ? 'bg-slate-200 text-slate-800 border border-slate-300' :
+                              'bg-orange-50 text-orange-800 border border-orange-200'
+                            }`}>
+                              ★ {c.tier}
+                            </span>
+                          ) : (
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
+                              (c.matchScore ?? 0) >= 85 ? 'bg-amber-50 text-amber-800 border border-amber-200' :
+                              (c.matchScore ?? 0) >= 70 ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' :
+                              'bg-slate-100 text-slate-600'
+                            }`}>
+                              {(c.matchScore ?? 0) >= 85 ? '★ Top Tier' : (c.matchScore ?? 0) >= 70 ? 'Strong Fit' : 'Applicant'}
+                            </span>
+                          )}
+
+                          {(c.noticePeriod || c.notice_period) && (
+                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              ⏱ {c.noticePeriod || c.notice_period}
+                            </span>
+                          )}
                         </div>
 
                         <div className="space-y-0.5 text-[11px] text-slate-500 font-medium">

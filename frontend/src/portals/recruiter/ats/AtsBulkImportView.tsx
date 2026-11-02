@@ -558,6 +558,53 @@ export function AtsBulkImportView({ onNavigateTab }: { onNavigateTab?: (tab: str
             </div>
           )}
 
+          {/* Live Batch Parsing Progress & Duplicate Warning Banner */}
+          {stagedFiles.length > 0 && (() => {
+            const parsingCount = stagedFiles.filter((x) => x.parsing).length;
+            const duplicateCount = stagedFiles.filter((x) => x.isDuplicate).length;
+            const completedCount = stagedFiles.length - parsingCount;
+            const percent = Math.round((completedCount / stagedFiles.length) * 100);
+
+            return (
+              <div className="bg-white rounded-3xl border border-slate-200/90 p-4 shadow-sm space-y-3">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 font-bold text-slate-800">
+                    {parsingCount > 0 ? (
+                      <span className="flex items-center gap-1.5 text-blue-600">
+                        <RotateCw size={14} className="animate-spin" />
+                        Parsing Batch ({completedCount}/{stagedFiles.length} Completed)
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-emerald-600">
+                        <CheckCircle2 size={15} />
+                        All {stagedFiles.length} Resumes Extracted & Ready for Staging
+                      </span>
+                    )}
+                  </div>
+                  <span className="font-mono font-bold text-slate-600">{percent}%</span>
+                </div>
+
+                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-300 rounded-full ${
+                      parsingCount > 0 ? 'bg-[#0265FF]' : 'bg-emerald-500'
+                    }`}
+                    style={{ width: `${percent}%` }}
+                  />
+                </div>
+
+                {duplicateCount > 0 && (
+                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
+                    <AlertTriangle size={14} className="shrink-0 text-amber-600" />
+                    <span>
+                      {duplicateCount} resume{duplicateCount > 1 ? 's' : ''} flagged as potential duplicate{duplicateCount > 1 ? 's' : ''}. Inspect candidate details below before confirming.
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {/* Staged Review Table */}
           {stagedFiles.length > 0 && (
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden">

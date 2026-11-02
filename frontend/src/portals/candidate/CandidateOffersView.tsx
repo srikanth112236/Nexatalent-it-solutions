@@ -39,6 +39,7 @@ interface CandidateOffersViewProps {
   loading?: boolean;
   onNavigate: (path: string) => void;
   onRespond: (offerId: string, decision: 'accepted' | 'declined', reason?: string) => Promise<void>;
+  candidateName?: string;
 }
 
 export const CandidateOffersView: React.FC<CandidateOffersViewProps> = ({
@@ -46,7 +47,9 @@ export const CandidateOffersView: React.FC<CandidateOffersViewProps> = ({
   loading = false,
   onNavigate,
   onRespond,
+  candidateName,
 }) => {
+  const resolvedCandidateName = candidateName || 'Candidate';
   const [selectedOfferLetter, setSelectedOfferLetter] = useState<OfferItem | null>(null);
   const [acceptingOffer, setAcceptingOffer] = useState<OfferItem | null>(null);
   const [decliningOffer, setDecliningOffer] = useState<OfferItem | null>(null);
@@ -320,7 +323,7 @@ export const CandidateOffersView: React.FC<CandidateOffersViewProps> = ({
                           onClick={() => {
                             setAcceptingOffer(offer);
                             setESigned(false);
-                            setCandidateSignName('Siddharth Nair');
+                            setCandidateSignName(resolvedCandidateName);
                           }}
                           className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
                         >
@@ -384,7 +387,7 @@ export const CandidateOffersView: React.FC<CandidateOffersViewProps> = ({
               </div>
 
               <p>
-                <strong>Dear Siddharth Nair,</strong>
+                <strong>Dear {resolvedCandidateName},</strong>
               </p>
 
               <p>

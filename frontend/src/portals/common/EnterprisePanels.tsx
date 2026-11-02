@@ -907,6 +907,15 @@ export function RequisitionsPanel() {
         { label: 'Reject…', danger: true, onSelect: () => { setDecideFor({ row: r, action: 'reject' }); } },
         { label: 'Request changes…', onSelect: () => { setDecideFor({ row: r, action: 'changes' }); } },
       ] : []),
+      ...(['Approved', 'Sourcing'].includes(r.status) ? [
+        {
+          label: 'Create Job Mandate…',
+          onSelect: () => {
+            const targetBase = window.location.pathname.startsWith('/employer') ? '/employer' : '/superadmin';
+            navigate(`${targetBase}/jobs/new?requisitionId=${encodeURIComponent(r.id)}&orgId=${encodeURIComponent(r.orgId || '')}`);
+          },
+        },
+      ] : []),
       ...(REQ_TRANSITIONS[r.status] || []).filter((s) => !(['Approved', 'Cancelled', 'Draft'].includes(s) && r.status === 'Pending Approval')).map((s) => ({ label: `Move to ${s}`, onSelect: () => transition(r.id, s) })),
       { label: 'Assign recruiter…', onSelect: () => openAssign([r]) },
       ...(guard(r, 'delete').allowed ? [{ label: 'Delete…', danger: true, onSelect: () => setDeleteFor(r) }] : []),
@@ -1221,16 +1230,64 @@ export function JobCreatePage({ base }: { base: string }) {
   const navigate = useNavigate();
   const location = useLocation();
   const initialOrgId = new URLSearchParams(location.search).get('orgId') || '';
-  const [form, setForm] = useState({ orgId: initialOrgId, title: '', requisitionId: '', location: '', employmentType: 'Full-time', salaryMin: '', salaryMax: '', expiryDate: '', visibility: 'public', description: '' });
+  const initialReqId = new URLSearchParams(location.search).get('requisitionId') || '';
+  const [form, setForm] = useState({ orgId: initialOrgId, title: '', requisitionId: initialReqId, location: '', employmentType: 'Full-time', salaryMin: '', salaryMax: '', expiryDate: '', visibility: 'public', description: '' });
   const [reqs, setReqs] = useState<any[]>([]);
   const [orgs, setOrgs] = useState<any[]>([]);
-  const isPlatform = ['superadmin', 'platform_owner', 'operations_admin', 'employee'].includes(getActiveRole() || '');
+  const isPlatform = ['superadmin', 'platform_owner', 'operations_admin', 'internal_recruiter', 'recruiter', 'employee'].includes(getActiveRole() || '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+
+  const handleReqSelect = (reqId: string) => {
+    const match = reqs.find((r) => r.id === reqId);
+    if (match) {
+      setForm((prev) => ({
+        ...prev,
+        requisitionId: reqId,
+        orgId: prev.orgId || match.orgId || '',
+        title: prev.title || match.title || '',
+        location: prev.location || match.location || '',
+        employmentType: match.employmentType || prev.employmentType,
+        salaryMin: prev.salaryMin || (match.budgetMin !== undefined ? String(match.budgetMin) : ''),
+        salaryMax: prev.salaryMax || (match.budgetMax !== undefined ? String(match.budgetMax) : ''),
+        description: prev.description || match.description || '',
+      }));
+    } else {
+      setForm((prev) => ({ ...prev, requisitionId: reqId }));
+    }
+  };
+
   useEffect(() => {
     (async () => {
-      try { setReqs(unwrapList(await requisitionsApi.list('?page=1&pageSize=100'))); } catch { setReqs([]); }
-      if (isPlatform) { try { setOrgs(unwrapList(await directoryApi.tenants())); } catch { setOrgs([]); } }
+      try {
+        const list = unwrapList(await requisitionsApi.list('?page=1&pageSize=100'));
+        setReqs(list);
+        if (initialReqId) {
+          const match = list.find((r: any) => r.id === initialReqId);
+          if (match) {
+            setForm((prev) => ({
+              ...prev,
+              requisitionId: initialReqId,
+              orgId: prev.orgId || match.orgId || '',
+              title: prev.title || match.title || '',
+              location: prev.location || match.location || '',
+              employmentType: match.employmentType || prev.employmentType,
+              salaryMin: prev.salaryMin || (match.budgetMin !== undefined ? String(match.budgetMin) : ''),
+              salaryMax: prev.salaryMax || (match.budgetMax !== undefined ? String(match.budgetMax) : ''),
+              description: prev.description || match.description || '',
+            }));
+          }
+        }
+      } catch {
+        setReqs([]);
+      }
+      if (isPlatform) {
+        try {
+          setOrgs(unwrapList(await directoryApi.tenants()));
+        } catch {
+          setOrgs([]);
+        }
+      }
     })();
   }, []);
   const submit = async (e: React.FormEvent) => {
@@ -1266,7 +1323,7 @@ export function JobCreatePage({ base }: { base: string }) {
           ) : (
             <Field label="Organization ID"><input className={kitInput} value={form.orgId} onChange={(e) => setForm({ ...form, orgId: e.target.value })} placeholder="Blank = own org" /></Field>
           )}
-          <Field label="Requirement"><Select value={form.requisitionId} onChange={(v) => setForm({ ...form, requisitionId: v })} placeholder="Link a requirement (optional)" options={[{ value: '', label: 'No link' }, ...reqs.map((r: any) => ({ value: r.id, label: `${r.id} — ${r.title}` }))]} /></Field>
+          <Field label="Requirement"><Select value={form.requisitionId} onChange={handleReqSelect} placeholder="Link a requirement (optional)" options={[{ value: '', label: 'No link' }, ...reqs.map((r: any) => ({ value: r.id, label: `${r.id} — ${r.title}` }))]} /></Field>
           <Field label="Location"><input className={kitInput} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></Field>
           <Field label="Employment type"><Select value={form.employmentType} onChange={(v) => setForm({ ...form, employmentType: v })} options={['Full-time', 'Part-time', 'Contract', 'Internship'].map((v) => ({ value: v, label: v }))} /></Field>
           <Field label="Salary min"><input className={kitInput} type="number" value={form.salaryMin} onChange={(e) => setForm({ ...form, salaryMin: e.target.value })} /></Field>
@@ -1325,11 +1382,77 @@ export function DetailSection({ title, count, children }: { title: string; count
   );
 }
 
+function RequirementLifecycleStepper({ status }: { status: string }) {
+  const steps = [
+    { key: 'Draft', label: '1. Drafted', desc: 'Requirement created' },
+    { key: 'Pending Approval', label: '2. Review', desc: 'Awaiting approval' },
+    { key: 'Approved', label: '3. Approved', desc: 'Mandate ready' },
+    { key: 'Sourcing', label: '4. Sourcing', desc: 'Recruiting active' },
+    { key: 'Interviews', label: '5. Interviews', desc: 'Client rounds' },
+    { key: 'Fulfilled', label: '6. Fulfilled', desc: 'Positions filled' },
+  ];
+
+  const currentIdx = (() => {
+    const s = String(status || '').toLowerCase();
+    if (s.includes('fulfill') || s.includes('closed') || s.includes('hired')) return 5;
+    if (s.includes('interview')) return 4;
+    if (s.includes('sourcing')) return 3;
+    if (s.includes('approved')) return 2;
+    if (s.includes('pending')) return 1;
+    return 0;
+  })();
+
+  const isCancelled = status === 'Cancelled' || status === 'Rejected';
+
+  return (
+    <div className="p-3.5 rounded-2xl bg-gradient-to-r from-slate-50 via-white to-blue-50/40 border border-slate-200 shadow-2xs space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+          Requisition ATS Progress
+        </span>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+          isCancelled
+            ? 'bg-red-50 text-red-700 border border-red-200'
+            : 'bg-blue-50 text-blue-700 border border-blue-200'
+        }`}>
+          {isCancelled ? `Status: ${status}` : `Current Stage: ${steps[currentIdx]?.label || status}`}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-1.5">
+        {steps.map((step, idx) => {
+          const isPassed = !isCancelled && idx < currentIdx;
+          const isCurrent = !isCancelled && idx === currentIdx;
+          return (
+            <div
+              key={step.key}
+              className={`p-2 rounded-xl border text-center transition-all ${
+                isCurrent
+                  ? 'bg-[#0B5FD9] text-white border-[#0B5FD9] shadow-xs'
+                  : isPassed
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  : 'bg-white border-slate-200 text-slate-400'
+              }`}
+            >
+              <div className={`text-[11px] font-extrabold ${isCurrent ? 'text-white' : isPassed ? 'text-emerald-700' : 'text-slate-700'}`}>
+                {step.label}
+              </div>
+              <div className={`text-[10px] truncate mt-0.5 ${isCurrent ? 'text-blue-100' : isPassed ? 'text-emerald-600' : 'text-slate-400'}`}>
+                {step.desc}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function RequirementPipeline({ reqId, onClose, onDecide, onEdit, onAssign, onDelete }: {
   reqId: string; onClose: () => void;
   onDecide: (row: any, action: 'approve' | 'reject' | 'changes') => void;
   onEdit: (row: any) => void; onAssign: (rows: any[]) => void; onDelete: (row: any) => void;
 }) {
+  const navigate = useNavigate();
   const [data, setData] = useState<any>(null);
   const [interviews, setInterviews] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
@@ -1386,6 +1509,7 @@ export function RequirementPipeline({ reqId, onClose, onDecide, onEdit, onAssign
         <PanelError message={error} onRetry={() => window.location.reload()} />
       ) : (
         <div className="space-y-4 text-xs">
+          <RequirementLifecycleStepper status={data?.status || 'Draft'} />
           <div className="flex flex-wrap items-center gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200" role="toolbar" aria-label="Requirement actions">
             {gApprove.allowed && <button type="button" onClick={() => onDecide(data, 'approve')} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold">Approve</button>}
             {gApprove.allowed && <button type="button" onClick={() => onDecide(data, 'reject')} className="px-4 py-2 rounded-xl bg-red-600 text-white font-bold">Reject…</button>}
@@ -1393,6 +1517,19 @@ export function RequirementPipeline({ reqId, onClose, onDecide, onEdit, onAssign
             {gEdit.allowed && <button type="button" onClick={() => onEdit(data)} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold">Edit…</button>}
             {gAssign.allowed && <button type="button" onClick={() => onAssign([data])} className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold">Assign recruiter…</button>}
             {gDelete.allowed && <button type="button" onClick={() => onDelete(data)} className="px-4 py-2 rounded-xl bg-white border border-red-200 text-red-600 font-bold">Delete…</button>}
+            {['Approved', 'Sourcing'].includes(data?.status) && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  const targetBase = window.location.pathname.startsWith('/employer') ? '/employer' : '/superadmin';
+                  navigate(`${targetBase}/jobs/new?requisitionId=${encodeURIComponent(data.id)}&orgId=${encodeURIComponent(data.orgId || '')}`);
+                }}
+                className="px-4 py-2 rounded-xl bg-violet-600 text-white font-bold hover:bg-violet-700 transition"
+              >
+                + Create Job Mandate
+              </button>
+            )}
             {lockNotes.length > 0 && (
               <div className="w-full space-y-1 pt-1 border-t border-slate-200">
                 {lockNotes.map((n) => <div key={n} className="text-[11px] font-bold text-amber-700">🔒 {n}</div>)}
@@ -7096,6 +7233,7 @@ export function SubmissionsPanel({ canReview = false }: { canReview?: boolean })
   const [candProfile, setCandProfile] = useState<any>(null);
   const [candApps, setCandApps] = useState<any[]>([]);
   const [candLoading, setCandLoading] = useState(false);
+  const [resumePreview, setResumePreview] = useState<{ open: boolean; title?: string; filename?: string; applicationId?: string } | null>(null);
   const pageSize = 20;
   const load = async (p = page) => {
     setLoading(true); setError('');
@@ -7267,7 +7405,24 @@ export function SubmissionsPanel({ canReview = false }: { canReview?: boolean })
                       {s.applicationId && <div className="text-[10px] font-bold text-blue-700">in pipeline • {s.applicationId}</div>}
                     </td>
                     <td className="px-3 py-2.5">
-                      <button type="button" onClick={() => openDetail(s)} className="text-left font-bold text-slate-900 underline decoration-slate-300 underline-offset-2 hover:text-spec-electric cursor-pointer" title="View submission">{s.candidateEmail || '—'}</button>
+                      <div className="flex flex-col">
+                        <button type="button" onClick={() => openDetail(s)} className="text-left font-bold text-slate-900 underline decoration-slate-300 underline-offset-2 hover:text-[#0B5FD9] cursor-pointer" title="View submission">{s.candidateEmail || '—'}</button>
+                        <div className="mt-1">
+                          <button
+                            type="button"
+                            onClick={() => setResumePreview({
+                              open: true,
+                              title: `${s.candidateEmail} — Candidate CV`,
+                              filename: `${s.candidateEmail}_CV.pdf`,
+                              applicationId: s.applicationId,
+                            })}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-800 cursor-pointer"
+                          >
+                            <FileText size={12} />
+                            <span>Preview CV</span>
+                          </button>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-3 py-2.5 font-mono">{s.jobId || '—'}</td>
                     <td className="px-3 py-2.5 font-mono font-bold text-amber-700">{s.agencyId || s.submittedBy || 'direct'}</td>
@@ -7306,7 +7461,21 @@ export function SubmissionsPanel({ canReview = false }: { canReview?: boolean })
               ['Candidate', detail.candidateEmail || '—'], ['Job', detail.jobId || '—'], ['Agency', detail.agencyId || detail.submittedBy || '—'],
               ['Status', <StatusPill value={detail.status} />],
               ['Consent evidence', detail.consentEvidence || detail.consent || '—'],
-              ['Resume', detail.resumeRef || '—'],
+              ['Resume / CV', (
+                <button
+                  type="button"
+                  onClick={() => setResumePreview({
+                    open: true,
+                    title: `${detail.candidateEmail} — Candidate CV`,
+                    filename: `${detail.candidateEmail}_CV.pdf`,
+                    applicationId: detail.applicationId,
+                  })}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-xs border border-blue-200 cursor-pointer transition-colors"
+                >
+                  <FileText size={13} />
+                  <span>Preview Candidate CV</span>
+                </button>
+              )],
               ['Duplicate of', detail.duplicateOf || '—'],
               ['Pipeline application', detail.applicationId || '—'],
               ['Submitted', detail.createdAt ? String(detail.createdAt).slice(0, 10) : '—'],
@@ -7329,16 +7498,39 @@ export function SubmissionsPanel({ canReview = false }: { canReview?: boolean })
             )
           )}
           {detailTab === 'review' && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {!canReview ? <div className="text-[11px] text-slate-500 font-medium">Review actions need an employer reviewer account.</div> : (
                 <>
-                  <button type="button" disabled={busy || !!detail.applicationId || ['Rejected', 'Withdrawn'].includes(detail.status)} onClick={() => doAccept(detail)} className="w-full py-3 rounded-xl bg-[#0B5FD9] text-white font-bold text-xs disabled:opacity-40 cursor-pointer">
-                    {busy ? 'Accepting…' : detail.applicationId ? `Already in pipeline (${detail.applicationId})` : 'Accept to pipeline →'}
+                  <button
+                    type="button"
+                    disabled={busy || !!detail.applicationId || ['Rejected', 'Withdrawn'].includes(detail.status)}
+                    onClick={() => doAccept(detail)}
+                    className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs disabled:opacity-40 cursor-pointer shadow-xs transition flex items-center justify-center gap-1.5"
+                  >
+                    <span>{busy ? 'Accepting…' : detail.applicationId ? `In Pipeline (${detail.applicationId})` : '✓ Accept for Interview'}</span>
                   </button>
-                  <div className="flex gap-2 flex-wrap">
-                    {['Under Review', 'Shortlisted', 'Rejected', 'Withdrawn'].filter((x) => x !== detail.status).map((x) => (
-                      <button key={x} type="button" onClick={() => setReviewFor({ s: detail, to: x })} className={`px-3 py-2 rounded-xl font-bold text-[11px] cursor-pointer ${x === 'Rejected' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-white border border-slate-200 text-slate-700'}`}>Mark {x}</button>
-                    ))}
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setReviewFor({ s: detail, to: 'Shortlisted' })}
+                      className="py-2 px-3 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 font-bold text-xs cursor-pointer text-center"
+                    >
+                      Shortlist
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReviewFor({ s: detail, to: 'Under Review' })}
+                      className="py-2 px-3 rounded-xl bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 font-bold text-xs cursor-pointer text-center"
+                    >
+                      Hold / Info
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReviewFor({ s: detail, to: 'Rejected' })}
+                      className="py-2 px-3 rounded-xl bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 font-bold text-xs cursor-pointer text-center"
+                    >
+                      Reject…
+                    </button>
                   </div>
                 </>
               )}
@@ -7356,6 +7548,15 @@ export function SubmissionsPanel({ canReview = false }: { canReview?: boolean })
         tone={reviewFor?.to === 'Rejected' ? 'danger' : 'primary'}
         onConfirm={doReview}
       />
+      {resumePreview && (
+        <PdfResumeViewerModal
+          open={resumePreview.open}
+          onClose={() => setResumePreview(null)}
+          title={resumePreview.title}
+          filename={resumePreview.filename}
+          applicationId={resumePreview.applicationId}
+        />
+      )}
     </div>
   );
 }
@@ -7373,6 +7574,49 @@ export function TimesheetsPanel({ canApprove = false }: { canApprove?: boolean }
   const [runByTs, setRunByTs] = useState<Record<string, any>>({});
   const [ownDeployments, setOwnDeployments] = useState<any[]>([]);
   const [isCandidate, setIsCandidate] = useState(false);
+  const [selectedTs, setSelectedTs] = useState<Set<string>>(new Set());
+  const [batchBusy, setBatchBusy] = useState(false);
+  const [batchOk, setBatchOk] = useState('');
+
+  const toggleSelect = (id: string) => {
+    setSelectedTs((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const pendingIds = rows.filter((r) => r.status === 'Submitted').map((r) => r.id);
+    if (selectedTs.size === pendingIds.length && pendingIds.length > 0) {
+      setSelectedTs(new Set());
+    } else {
+      setSelectedTs(new Set(pendingIds));
+    }
+  };
+
+  const approveBatch = async () => {
+    if (selectedTs.size === 0) return;
+    setBatchBusy(true);
+    setError('');
+    setBatchOk('');
+    try {
+      const ids = Array.from(selectedTs);
+      const results = await Promise.all(
+        ids.map((id) => workforceApi.reviewTimesheet(id, 'approve'))
+      );
+      const updatedMap = new Map(results.map((r: any) => [unwrapObj(r)?.id, unwrapObj(r)]));
+      setRows((prev) => prev.map((r) => updatedMap.get(r.id) || r));
+      setSelectedTs(new Set());
+      setBatchOk(`Successfully approved ${ids.length} timesheet(s) in batch!`);
+      syncAll();
+    } catch (err: any) {
+      setError(errMsg(err));
+    } finally {
+      setBatchBusy(false);
+    }
+  };
   const openSubmit = async () => {
     setForm({ contractorId: '', period: new Date().toISOString().slice(0, 7), hours: '', notes: '' });
     setShowSubmit(true);
@@ -7422,6 +7666,12 @@ export function TimesheetsPanel({ canApprove = false }: { canApprove?: boolean }
         <button type="button" onClick={openSubmit} className={btnPrimary}>+ Submit timesheet</button>
       </div>
       {error && <PanelError message={error} onRetry={load} />}
+      {batchOk && (
+        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center justify-between">
+          <span>✓ {batchOk}</span>
+          <button type="button" onClick={() => setBatchOk('')} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+        </div>
+      )}
       <Modal open={showSubmit} onClose={() => setShowSubmit(false)} title="Submit timesheet" subtitle="Submitted → Approved / Rejected, one decision only">
         <form onSubmit={submit} className="space-y-3">
           {isCandidate && ownDeployments.length > 0 ? (
@@ -7438,15 +7688,52 @@ export function TimesheetsPanel({ canApprove = false }: { canApprove?: boolean }
           </div>
         </form>
       </Modal>
+
+      {/* Multi-Select Select-All Header */}
+      {canApprove && rows.some((t) => t.status === 'Submitted') && (
+        <div className="flex items-center justify-between p-3 rounded-xl bg-blue-50/70 border border-blue-200 text-xs">
+          <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
+            <input
+              type="checkbox"
+              checked={selectedTs.size > 0 && selectedTs.size === rows.filter((t) => t.status === 'Submitted').length}
+              onChange={toggleSelectAll}
+              className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
+            />
+            <span>Select all pending submissions ({rows.filter((t) => t.status === 'Submitted').length})</span>
+          </label>
+          {selectedTs.size > 0 && (
+            <button
+              type="button"
+              disabled={batchBusy}
+              onClick={approveBatch}
+              className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-xs transition cursor-pointer disabled:opacity-50"
+            >
+              {batchBusy ? 'Approving…' : `Approve Selected (${selectedTs.size})`}
+            </button>
+          )}
+        </div>
+      )}
+
       {loading ? <InlineLoading message="Loading timesheets…" /> : rows.length === 0 ? (
         <EmptyState title="No timesheets" message="Submitted timesheets appear here for review." />
       ) : (
         <div className="space-y-2">
           {rows.map((t) => (
-            <div key={t.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <div className="font-extrabold text-slate-900 text-sm truncate">{t.contractorName || t.contractorId} • {t.hours}h • ₹{Number(t.billableAmount ?? Number(t.hours || 0) * Number(t.hourlyRate || 0)).toLocaleString('en-IN')} • {t.period}</div>
-                <div className="text-xs text-slate-500 font-medium">{t.id} • <strong className={t.status === 'Approved' ? 'text-emerald-600' : t.status === 'Rejected' ? 'text-red-600' : 'text-blue-600'}>{t.status}</strong>{t.reviewedBy ? ` • by ${t.reviewedBy}` : ''}{runByTs[t.id] ? <span className="ml-1.5 px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200 font-bold text-[10px]">Billed {runByTs[t.id].id} • {runByTs[t.id].stage || runByTs[t.id].status}</span> : null}</div>
+            <div key={t.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3 hover:bg-slate-100/60 transition">
+              <div className="flex items-center gap-3 min-w-0">
+                {canApprove && t.status === 'Submitted' && (
+                  <input
+                    type="checkbox"
+                    checked={selectedTs.has(t.id)}
+                    onChange={() => toggleSelect(t.id)}
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 shrink-0 cursor-pointer"
+                    aria-label={`Select timesheet ${t.id}`}
+                  />
+                )}
+                <div className="min-w-0">
+                  <div className="font-extrabold text-slate-900 text-sm truncate">{t.contractorName || t.contractorId} • {t.hours}h • ₹{Number(t.billableAmount ?? Number(t.hours || 0) * Number(t.hourlyRate || 0)).toLocaleString('en-IN')} • {t.period}</div>
+                  <div className="text-xs text-slate-500 font-medium">{t.id} • <strong className={t.status === 'Approved' ? 'text-emerald-600' : t.status === 'Rejected' ? 'text-red-600' : 'text-blue-600'}>{t.status}</strong>{t.reviewedBy ? ` • by ${t.reviewedBy}` : ''}{runByTs[t.id] ? <span className="ml-1.5 px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200 font-bold text-[10px]">Billed {runByTs[t.id].id} • {runByTs[t.id].stage || runByTs[t.id].status}</span> : null}</div>
+                </div>
               </div>
               {canApprove && t.status === 'Submitted' && (
                 <RowMenu label="Review timesheet" items={[

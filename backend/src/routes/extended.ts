@@ -279,6 +279,19 @@ extendedRouter.patch('/meetings/:id', requireAuth(['superadmin', 'platform_owner
   res.json({ success: true, data: m });
 });
 
+/* ---------------- Contractors (active deployments for candidate & clients) ---------------- */
+extendedRouter.get('/contractors', requireAuth(), (req, res) => {
+  const db = loadDb();
+  const ctx = ctxOf(req);
+  let rows = (db.contractors as any[]) || [];
+  if (ctx.role === 'candidate') {
+    rows = rows.filter((c: any) => String(c.candidateEmail || '').toLowerCase() === String(ctx.email).toLowerCase());
+  } else if (![...PLATFORM, ...(FINANCE_VIEWERS as readonly string[])].includes(ctx.role)) {
+    rows = rows.filter((c: any) => c.clientTenant === tenantOf(req) || c.tenantId === tenantOf(req));
+  }
+  res.json({ success: true, data: rows });
+});
+
 /* ---------------- Timesheets (vendor submit → employer approve) ---------------- */
 extendedRouter.get('/timesheets', requireAuth(), (req, res) => {
   const { page, pageSize } = paginate.parse(req.query);
@@ -335,7 +348,7 @@ extendedRouter.post('/timesheets', requireAuth(['vendor', 'agency_admin', 'candi
   persist();
   res.status(201).json({ success: true, data: row });
 });
-extendedRouter.patch('/timesheets/:id/approve', requireAuth(['employer', 'company_admin', 'superadmin', 'platform_owner', 'operations_admin', 'employee']), async (req, res) => {
+extendedRouter.patch('/timesheets/:id/approve', requireAuth(['employer', 'company_admin', 'hiring_manager', 'superadmin', 'platform_owner', 'operations_admin', 'employee']), async (req, res) => {
   const db = loadDb(); const t: any = db.timesheets.find((x: any) => x.id === req.params.id);
   if (!t) return res.status(404).json({ success: false, message: 'Not found.' });
   const ctx = ctxOf(req);

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   Briefcase,
   Calendar,
@@ -21,6 +22,8 @@ import {
   Compass,
   Bell,
   History,
+  Check,
+  Plus,
 } from 'lucide-react';
 
 export interface CandidateDashboardProps {
@@ -92,6 +95,50 @@ export function CandidateDashboard({
     { label: 'Shortlisted', count: inReviewApps.length, color: 'bg-indigo-500' },
     { label: 'Interviewing', count: interviewApps.length, color: 'bg-amber-500' },
     { label: 'Offer / Placement', count: offerApps.length, color: 'bg-emerald-500' },
+  ];
+
+  // Missing profile items for 1-click completion jumper
+  const missingItems = useMemo(() => {
+    const list: Array<{ label: string; path: string }> = [];
+    if (!profile?.resumeRef) {
+      list.push({ label: 'Upload Resume / CV', path: '/candidate/docs' });
+    }
+    if (!profile?.skills || (Array.isArray(profile.skills) ? profile.skills.length === 0 : !String(profile.skills).trim())) {
+      list.push({ label: 'Add Skills', path: '/candidate/profile' });
+    }
+    if (!profile?.headline && !profile?.roleTitle) {
+      list.push({ label: 'Set Professional Headline', path: '/candidate/profile' });
+    }
+    if (!profile?.expectedCtc) {
+      list.push({ label: 'Specify Expected CTC', path: '/candidate/profile' });
+    }
+    if (!profile?.experiences || profile.experiences.length === 0) {
+      list.push({ label: 'Add Work History', path: '/candidate/profile' });
+    }
+    return list;
+  }, [profile]);
+
+  // Active application for live hiring funnel
+  const latestActiveApp = myApplications.find(
+    (a) => !['Rejected', 'Withdrawn', 'Closed'].includes(a.stage)
+  ) || (myApplications.length > 0 ? myApplications[0] : null);
+
+  const getFunnelProgress = (stage?: string) => {
+    if (!stage) return 0;
+    const s = stage.toLowerCase();
+    if (s.includes('hired')) return 4;
+    if (s.includes('offer') || s.includes('selected')) return 3;
+    if (s.includes('interview')) return 2;
+    if (s.includes('screening') || s.includes('review') || s.includes('shortlist')) return 1;
+    return 0; // Applied
+  };
+
+  const FUNNEL_STEPS = [
+    { name: 'Applied', desc: 'Application Received' },
+    { name: 'Screening', desc: 'Profile & ATS Review' },
+    { name: 'Interview', desc: 'Technical & Rounds' },
+    { name: 'Offer', desc: 'Letter Extended' },
+    { name: 'Hired', desc: 'Onboarded' },
   ];
 
   const getInitials = (name: string) => {
@@ -239,6 +286,48 @@ export function CandidateDashboard({
           </div>
         </div>
       </div>
+
+      {/* 1-Click Profile Completion Booster (when profile < 100%) */}
+      {matchScore < 100 && missingItems.length > 0 && (
+        <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/90 shadow-xs space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <Sparkles size={16} />
+              </div>
+              <div>
+                <h4 className="text-xs font-black text-slate-900">
+                  Boost Profile to 100% ({matchScore}% Completed)
+                </h4>
+                <p className="text-[11px] text-slate-500 font-medium">
+                  Complete these missing items to rank higher in recruiter searches and unlock priority matching.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/candidate/profile')}
+              className="text-xs font-bold text-[#087BFF] hover:underline shrink-0 self-start sm:self-auto cursor-pointer"
+            >
+              Open Full Profile →
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap pt-0.5">
+            {missingItems.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => navigate(item.path)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-[#087BFF] border border-slate-200 hover:border-blue-200 text-xs font-bold transition-all cursor-pointer"
+              >
+                <Plus size={12} className="text-[#087BFF]" />
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 4 Core Career KPI Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
@@ -392,6 +481,67 @@ export function CandidateDashboard({
             </div>
           ))}
         </div>
+
+        {/* Live 5-Step Hiring Funnel for Latest Application */}
+        {latestActiveApp && (() => {
+          const funnelIdx = getFunnelProgress(latestActiveApp.stage);
+          return (
+            <div className="pt-3 border-t border-slate-100 space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-extrabold text-slate-800">
+                    Latest Active Mandate:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/candidate/applications/${latestActiveApp.id}`)}
+                    className="font-bold text-[#087BFF] hover:underline truncate max-w-[240px]"
+                  >
+                    {latestActiveApp.jobTitle || 'Role'} • {latestActiveApp.companyName || 'Fintech ScaleOps'}
+                  </button>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-200">
+                  {latestActiveApp.stage || 'In Review'}
+                </span>
+              </div>
+
+              {/* 5-Step Funnel Stepper */}
+              <div className="grid grid-cols-5 gap-2">
+                {FUNNEL_STEPS.map((step, idx) => {
+                  const isDone = idx < funnelIdx;
+                  const isCurrent = idx === funnelIdx;
+                  return (
+                    <div key={step.name} className="space-y-1.5 text-center">
+                      <div className="relative flex items-center justify-center">
+                        <div
+                          className={`w-7 h-7 rounded-xl flex items-center justify-center text-[10px] font-black transition-all ${
+                            isDone
+                              ? 'bg-emerald-500 text-white shadow-xs'
+                              : isCurrent
+                              ? 'bg-[#087BFF] text-white ring-4 ring-blue-100 shadow-sm animate-pulse'
+                              : 'bg-slate-100 text-slate-400 border border-slate-200'
+                          }`}
+                        >
+                          {isDone ? <Check size={12} /> : idx + 1}
+                        </div>
+                      </div>
+                      <div className="space-y-0.5">
+                        <div className={`text-[11px] font-extrabold truncate ${
+                          isCurrent ? 'text-[#087BFF]' : isDone ? 'text-slate-800' : 'text-slate-400'
+                        }`}>
+                          {step.name}
+                        </div>
+                        <div className="text-[9px] text-slate-400 hidden sm:block truncate">
+                          {step.desc}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Main Grid: Recommended Jobs & Upcoming Interviews */}

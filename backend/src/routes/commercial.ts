@@ -1115,7 +1115,7 @@ commercialRouter.post('/commissions/:id/clawback', requireAuth(['superadmin','pl
    Sync chain: vendor submits → company approves → finance runs payroll (ONE run per org+period, idempotent)
    → staffing invoice (Company→NexaTalent, +18% GST) + contractor payouts @82% (NexaTalent→candidate, Payable)
    → company pays invoice → settle marks payouts Processed. Rejected timesheets are excluded. */
-const PAYROLL_GUARD = [requireAuth(['superadmin', 'platform_owner', 'finance_admin']), requirePermission('manage_billing')];
+const PAYROLL_GUARD = [requireAuth(['superadmin', 'platform_owner', 'finance_admin', 'finance_staff', 'operations_admin']), requirePermission('manage_billing')];
 // Timesheet rules: platform defaults (settings.payrollRules, superadmin-owned),
 // overridable per organization (org.payrollRules, employer-set via tenant PATCH).
 export function payrollRulesFor(db: any, orgId: string): { standardHours: number; overtimeMultiplier: number; payoutPercent: number; taxRate: number } {

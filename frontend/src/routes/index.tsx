@@ -112,7 +112,22 @@ export function AppRoutes() {
           element={
             <InactivityGuard>
               <AuthGuard>
-                <RoleGuard allowedRoles={['superadmin']}>
+                <RoleGuard
+                  allowedRoles={[
+                    'superadmin',
+                    'platform_owner',
+                    'operations_admin',
+                    'internal_recruiter',
+                    'recruiter',
+                    'employee',
+                    'finance_admin',
+                    'finance_staff',
+                    'sales_admin',
+                    'sales_manager',
+                    'bda',
+                    'support_admin',
+                  ]}
+                >
                   <PortalLazy>
                     <SuperAdminPortal />
                   </PortalLazy>

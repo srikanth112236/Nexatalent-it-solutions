@@ -700,7 +700,7 @@ salesRouter.get('/submissions', requireAuth(), (req, res) => {
   else if (!isAllTenant(ctx.role)) rows = rows.filter((s) => s.orgId === tenantOf(req));
   res.json({ success: true, ...paged(rows, page, pageSize) });
 });
-salesRouter.post('/submissions', requireAuth(['agency_admin','agency_recruiter','recruiter','vendor','superadmin']), (req: Request, res: Response) => {
+salesRouter.post('/submissions', requireAuth(['agency_admin','agency_recruiter','recruiter','vendor','superadmin','platform_owner','internal_recruiter','operations_admin','employee']), (req: Request, res: Response) => {
   const db: any = loadDb();
   const { jobId, candidateEmail, resumeRef, consent } = req.body || {};
   if (!jobId || !candidateEmail) return res.status(400).json({ success: false, message: 'jobId + candidateEmail required.' });
@@ -710,7 +710,7 @@ salesRouter.post('/submissions', requireAuth(['agency_admin','agency_recruiter',
   // Explicit assignments are matched by agency tenant id or agency name fragment.
   const ctx = ctxOf(req);
   const listed = (job.assignedAgencies || []) as string[];
-  const assigned = ['superadmin','platform_owner'].includes(ctx.role)
+  const assigned = ['superadmin','platform_owner','internal_recruiter','operations_admin','employee'].includes(ctx.role)
     || (['Published','Approved'].includes(job.status) && (listed.length === 0 || listed.some((a: string) => String(a).toLowerCase().includes(String(ctx.tenantId).toLowerCase()) || String(ctx.email).toLowerCase().includes(String(a).toLowerCase().split(' ')[0]))));
   if (!assigned) return res.status(403).json({ success: false, code: 'AGENCY_NOT_ASSIGNED', message: 'Job not assigned to your agency.' });
   // Duplicate / ownership window: 90 days

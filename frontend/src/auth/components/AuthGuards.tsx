@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import type { UserRole } from '../../shared/types';
 import { ROLE_DEFAULT_REDIRECTS } from '../../shared/constants';
@@ -33,13 +33,19 @@ interface RoleGuardProps {
 }
 
 export function RoleGuard({ allowedRoles, children }: RoleGuardProps) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, refreshProfile } = useAuth();
   const location = useLocation();
+  const token = getAccessToken();
 
-  // Wait for the /auth/me answer before painting a protected workspace. The
-  // cached role is client-editable (localStorage), so it must never decide on
-  // its own whether a console renders.
-  if (isLoading) {
+  // If a valid unexpired token exists in storage but React auth user state hasn't resolved yet,
+  // trigger refreshProfile rather than bouncing to /login immediately.
+  useEffect(() => {
+    if (!user && token && !isTokenExpired(token)) {
+      refreshProfile();
+    }
+  }, [user, token, refreshProfile]);
+
+  if (isLoading || (!user && token && !isTokenExpired(token))) {
     return (
       <div className="min-h-[60vh] grid place-items-center">
         <InlineLoading message="Verifying your access…" />

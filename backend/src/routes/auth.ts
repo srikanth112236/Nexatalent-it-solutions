@@ -142,16 +142,36 @@ authRouter.post('/login', limiter, async (req: Request, res: Response) => {
   if (email && locked(loginFails, String(email))) {
     return res.status(429).json({ success: false, code: 'ACCOUNT_LOCKED', message: 'Too many attempts. Try again in 15 minutes.' });
   }
-  if (!password || String(password).length < 4) return res.status(401).json({ success: false, message: 'Invalid email, password, or workspace.' });
+  if (!password || String(password).length < 4) return res.status(401).json({ success: false, message: 'Incorrect email or password. Please verify your credentials and try again.' });
   const db = loadDb();
   const user: any = db.users.find((u: any) => String(u.email).toLowerCase() === String(email).toLowerCase());
   const cred: any = db.credentials.find((c: any) => String(c.email).toLowerCase() === String(email).toLowerCase());
-  if (!user || !cred) { audit(String(email), 'AUTH_LOGIN_FAILED_UNKNOWN_ACCOUNT', 'TNT-GLOBAL', 'auth', String(email), req.ip); persist(); return res.status(401).json({ success: false, message: 'Invalid email, password, or workspace. Please try again.' }); }
+  if (!user || !cred) { audit(String(email), 'AUTH_LOGIN_FAILED_UNKNOWN_ACCOUNT', 'TNT-GLOBAL', 'auth', String(email), req.ip); persist(); return res.status(401).json({ success: false, message: 'Incorrect email or password. Please verify your credentials and try again.' }); }
   if (String(user.status).toLowerCase() !== 'active') return res.status(403).json({ success: false, message: 'Account is suspended. Contact support.' });
   const ok = await verifyPassword(String(password), cred.passwordHash);
-  if (!ok) { hit(loginFails, String(email)); audit(String(email), 'AUTH_LOGIN_FAILED', user.tenantId, 'auth', user.id, req.ip); persist(); return res.status(401).json({ success: false, message: 'Invalid email, password, or workspace. Please try again.' }); }
+  if (!ok) { hit(loginFails, String(email)); audit(String(email), 'AUTH_LOGIN_FAILED', user.tenantId, 'auth', user.id, req.ip); persist(); return res.status(401).json({ success: false, message: 'Incorrect email or password. Please verify your credentials and try again.' }); }
   clear(loginFails, String(email));
-  if (role && role !== user.role) { audit(String(email), `AUTH_ROLE_MISMATCH_BLOCKED:${role}`, user.tenantId, 'auth', user.id, req.ip); persist(); return res.status(403).json({ success: false, message: `This account is registered as '${user.role}'. Please use the ${user.role} workspace.` }); }
+
+  const PORTAL_ROLE_MAP: Record<string, string[]> = {
+    superadmin: ['superadmin', 'platform_owner', 'operations_admin', 'internal_recruiter', 'recruiter', 'employee', 'finance_admin', 'finance_staff', 'sales_admin', 'sales_manager', 'bda', 'support_admin'],
+    employer: ['employer', 'company_admin', 'hiring_manager', 'company_recruiter'],
+    candidate: ['candidate'],
+    recruiter: ['recruiter', 'agency_admin', 'agency_recruiter', 'internal_recruiter', 'superadmin', 'platform_owner'],
+    vendor: ['vendor', 'superadmin', 'platform_owner'],
+    employee: ['employee', 'operations_admin', 'internal_recruiter', 'finance_admin', 'finance_staff', 'sales_admin', 'sales_manager', 'bda', 'superadmin', 'platform_owner'],
+  };
+  if (role) {
+    const allowed = PORTAL_ROLE_MAP[role] || [role];
+    if (!allowed.includes(user.role)) {
+      audit(String(email), `AUTH_ROLE_MISMATCH_BLOCKED:${role}`, user.tenantId, 'auth', user.id, req.ip); persist();
+      return res.status(403).json({
+        success: false,
+        code: 'PORTAL_MISMATCH',
+        actualRole: user.role,
+        message: `This portal is for ${role} accounts. Your account is registered as '${user.role}' — please sign in at your assigned portal.`,
+      });
+    }
+  }
   // Provisioned demo fixtures are pre-verified (reserved domain, cannot be registered).
   verifyDemoAccount(user.email);
   // MFA gate: password passed but account requires a second factor — issue a 5-min ticket, not tokens.
@@ -260,7 +280,7 @@ authRouter.post('/logout', (req: Request, res: Response) => {
 // token, so a logged-out session still answered 200).
 authRouter.get('/me', requireAuth(), (req: Request, res: Response) => {
   const ctx = ctxOf(req);
-  res.json({ success: true, data: { id: ctx.id, email: ctx.email, role: ctx.role, tenantId: ctx.tenantId } });
+  res.json({ success: true, data: { id: ctx.id, email: ctx.email, role: ctx.role, tenantId: ctx.tenantId, permissions: ctx.permissions || [] } });
 });
 
 // Phase 6.3: own session visibility + revoke-all (refresh markers revoked immediately;

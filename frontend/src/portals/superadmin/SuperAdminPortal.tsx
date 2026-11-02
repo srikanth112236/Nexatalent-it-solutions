@@ -2,6 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { PortalShell } from '../common/PortalShell';
 import { apiClient } from '../../shared/api-client';
+import { useAuth } from '../../shared/auth/AuthContext';
+import { getActiveRole } from '../../shared/auth/session';
+import { ROLE_DEFAULT_REDIRECTS } from '../../shared/constants';
 import {
   Users, ShieldCheck, Plus, Lock, Key, Building2, BriefcaseBusiness,
   Activity, TrendingUp, AlertTriangle, IndianRupee, UserCheck,
@@ -73,9 +76,96 @@ const navItems = [
   { label: 'My Profile', path: '/superadmin/profile', group: 'Platform' },
 ];
 
+export function isTabAllowedForRole(tab: string, role: string, permissions: string[] = []): boolean {
+  if (role === 'superadmin' || role === 'platform_owner') return true;
+
+  // Commercial / Finance tabs
+  const isFinanceTab = ['invoices', 'payments', 'billing', 'commissions'].includes(tab);
+  if (isFinanceTab) {
+    if (['finance_admin', 'finance_staff'].includes(role)) return true;
+    if (permissions.includes('manage_billing') || permissions.includes('reconcile')) return true;
+    return false;
+  }
+
+  // Security / System Administration
+  const isPlatformControlTab = ['controls', 'settings', 'audit'].includes(tab);
+  if (isPlatformControlTab) {
+    if (role === 'operations_admin' && tab === 'audit') return true;
+    return false;
+  }
+
+  // Tenant Multi-org management
+  if (tab === 'organizations') {
+    return ['operations_admin'].includes(role);
+  }
+
+  // Global user management
+  if (tab === 'users') {
+    return ['operations_admin'].includes(role);
+  }
+
+  // Sales management
+  const isSalesTab = ['leads', 'website-leads', 'performance'].includes(tab);
+  if (isSalesTab) {
+    return ['sales_admin', 'sales_manager', 'bda', 'operations_admin'].includes(role);
+  }
+
+  // ATS Suite & Recruitment Delivery
+  const isAtsOrDeliveryTab = [
+    'ats-dashboard', 'ats-jobs', 'ats-pipeline', 'ats-applicants', 'ats-candidates',
+    'ats-interviews', 'ats-import', 'ats-reports',
+    'requisitions', 'requisitions-new', 'jobs', 'jobs-new', 'open-positions',
+    'applications', 'interviews', 'placements', 'talent', 'search', 'outreach',
+    'messages', 'candidates', 'agencies', 'branches',
+  ].includes(tab);
+  if (isAtsOrDeliveryTab) {
+    return [
+      'internal_recruiter', 'recruiter', 'operations_admin', 'employee', 'sales_manager',
+    ].includes(role);
+  }
+
+  // Timesheets
+  if (tab === 'timesheets') {
+    return [
+      'internal_recruiter', 'recruiter', 'operations_admin', 'employee',
+      'finance_admin', 'finance_staff',
+    ].includes(role);
+  }
+
+  // Base platform tabs accessible to internal staff
+  return ['overview', 'reports', 'support', 'notifications', 'profile'].includes(tab);
+}
+
 export function SuperAdminPortal() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const effectiveRole = user?.role || getActiveRole() || 'superadmin';
+  const userPerms = user?.permissions || [];
+
+  const visibleNavItems = useMemo(() => {
+    return navItems.filter((item) => {
+      const rawPath = item.path.replace('/superadmin/', '').replace('/superadmin', '');
+      const tabKey = rawPath || 'overview';
+      return isTabAllowedForRole(tabKey, effectiveRole, userPerms);
+    });
+  }, [effectiveRole, userPerms]);
+
+  const roleTitles: Record<string, string> = {
+    superadmin: 'Super Admin Console',
+    platform_owner: 'Platform Owner Console',
+    operations_admin: 'Operations & HR Console',
+    internal_recruiter: 'Recruitment & ATS Suite',
+    recruiter: 'Recruiter Workspace',
+    finance_admin: 'Finance & Commercials Console',
+    finance_staff: 'Finance Workspace',
+    sales_admin: 'Sales & Revenue Console',
+    sales_manager: 'Sales Pipeline Workspace',
+    bda: 'Business Development Workspace',
+    employee: 'Internal Operations Console',
+  };
+  const portalTitle = roleTitles[effectiveRole] || 'NexaTalent Operations Console';
+
   const [controlsTab, setControlsTab] = useState<'verification' | 'users' | 'lockouts' | 'exceptions' | 'roles' | 'skills'>('verification');
 
   const currentTab = (() => {
@@ -340,8 +430,35 @@ export function SuperAdminPortal() {
     }).length);
   }, [tenants]);
 
+  if (!isTabAllowedForRole(currentTab, effectiveRole, userPerms)) {
+    return (
+      <PortalShell portalTitle={portalTitle} portalRole={effectiveRole} navItems={visibleNavItems}>
+        <div className="max-w-4xl mx-auto py-16 px-4">
+          <div className="bg-white rounded-3xl border border-amber-200/90 p-8 shadow-sm text-center space-y-4">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600">
+              <Lock size={28} />
+            </div>
+            <h2 className="text-xl font-extrabold text-slate-900">Module Access Restricted</h2>
+            <p className="text-sm font-medium text-slate-600 max-w-md mx-auto">
+              Your role <span className="font-bold text-slate-800 uppercase px-2 py-0.5 rounded bg-slate-100">{effectiveRole}</span> does not have permission to access the <strong>{currentTab}</strong> module.
+            </p>
+            <div>
+              <button
+                type="button"
+                onClick={() => navigate((ROLE_DEFAULT_REDIRECTS as any)[effectiveRole] || '/superadmin')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition"
+              >
+                Go to My Assigned Workspace
+              </button>
+            </div>
+          </div>
+        </div>
+      </PortalShell>
+    );
+  }
+
   return (
-    <PortalShell portalTitle="Super Admin Console" portalRole="superadmin" navItems={navItems}>
+    <PortalShell portalTitle={portalTitle} portalRole={effectiveRole} navItems={visibleNavItems}>
       <div className="max-w-7xl mx-auto space-y-4">
         
         {/* Modern command hero — dashboard only */}
@@ -365,31 +482,43 @@ export function SuperAdminPortal() {
                 </span>
               </div>
               <h1 className="text-2xl sm:text-[28px] font-extrabold text-white tracking-tight leading-tight">
-                Superadmin Command Center
+                {portalTitle}
               </h1>
               <p className="text-xs sm:text-[13px] text-blue-100/90 font-medium mt-1.5 max-w-2xl">
-                Tenant estate, SaaS revenue, hiring pipeline & trust events — every number below is live from the platform API. Click any card to drill in.
+                Integrated talent platform: ATS pipelines, candidate management, client requisitions & operational controls.
               </p>
               <div className="flex flex-wrap items-center gap-2 mt-4 text-[11px] font-bold">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/10 border border-white/15 text-white"><IndianRupee size={13} className="text-emerald-300" /> MRR —</span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/10 border border-white/15 text-white"><BadgeCheck size={13} className="text-cyan-300" /> {analytics.activeTenants} active tenants</span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/10 border border-white/15 text-white"><AlertTriangle size={13} className={analytics.pendingVerify ? 'text-amber-300' : 'text-emerald-300'} /> {analytics.pendingVerify} pending verification</span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/10 border border-white/15 text-white"><Activity size={13} className="text-violet-300" /> {auditLogs.length} audit events</span>
+                {isTabAllowedForRole('billing', effectiveRole, userPerms) && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/10 border border-white/15 text-white"><IndianRupee size={13} className="text-emerald-300" /> MRR Live</span>
+                )}
+                {isTabAllowedForRole('organizations', effectiveRole, userPerms) && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/10 border border-white/15 text-white"><BadgeCheck size={13} className="text-cyan-300" /> {analytics.activeTenants} active tenants</span>
+                )}
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/10 border border-white/15 text-white"><BriefcaseBusiness size={13} className="text-violet-300" /> {kpis.publishedJobs} live jobs</span>
+                {isTabAllowedForRole('audit', effectiveRole, userPerms) && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/10 border border-white/15 text-white"><Activity size={13} className="text-amber-300" /> {auditLogs.length} audit events</span>
+                )}
               </div>
             </div>
             <div className="flex flex-col gap-2 shrink-0 w-full lg:w-auto">
               <div className="flex gap-2">
-                <button onClick={() => setShowTenantModal(true)} className="flex-1 lg:flex-none px-4 py-2.5 rounded-xl bg-white text-[#071B3A] font-extrabold text-xs shadow-lg hover:-translate-y-0.5 hover:shadow-xl transition flex items-center justify-center gap-1.5 cursor-pointer">
-                  <Plus size={15} /> Provision Tenant
-                </button>
-                <button onClick={() => setShowUserModal(true)} className="flex-1 lg:flex-none px-4 py-2.5 rounded-xl bg-slate-900/80 border border-white/20 text-white font-extrabold text-xs hover:-translate-y-0.5 hover:bg-slate-900 transition flex items-center justify-center gap-1.5 cursor-pointer backdrop-blur">
-                  <Users size={15} /> Add Global User
-                </button>
+                {isTabAllowedForRole('organizations', effectiveRole, userPerms) && (
+                  <button onClick={() => setShowTenantModal(true)} className="flex-1 lg:flex-none px-4 py-2.5 rounded-xl bg-white text-[#071B3A] font-extrabold text-xs shadow-lg hover:-translate-y-0.5 hover:shadow-xl transition flex items-center justify-center gap-1.5 cursor-pointer">
+                    <Plus size={15} /> Provision Tenant
+                  </button>
+                )}
+                {isTabAllowedForRole('users', effectiveRole, userPerms) && (
+                  <button onClick={() => setShowUserModal(true)} className="flex-1 lg:flex-none px-4 py-2.5 rounded-xl bg-slate-900/80 border border-white/20 text-white font-extrabold text-xs hover:-translate-y-0.5 hover:bg-slate-900 transition flex items-center justify-center gap-1.5 cursor-pointer backdrop-blur">
+                    <Users size={15} /> Add Global User
+                  </button>
+                )}
               </div>
               <div className="flex gap-2">
-                <button onClick={() => navigate('/superadmin/audit-logs')} className="flex-1 px-3 py-2 rounded-xl bg-white/10 border border-white/15 text-white font-bold text-[11px] hover:bg-white/20 transition flex items-center justify-center gap-1.5 cursor-pointer">
-                  <Radio size={13} /> Live audit stream <ArrowUpRight size={13} />
-                </button>
+                {isTabAllowedForRole('audit', effectiveRole, userPerms) && (
+                  <button onClick={() => navigate('/superadmin/audit-logs')} className="flex-1 px-3 py-2 rounded-xl bg-white/10 border border-white/15 text-white font-bold text-[11px] hover:bg-white/20 transition flex items-center justify-center gap-1.5 cursor-pointer">
+                    <Radio size={13} /> Live audit stream <ArrowUpRight size={13} />
+                  </button>
+                )}
                 <button onClick={() => setRefreshTick((t) => t + 1)} title="Refresh live data" className="px-3 py-2 rounded-xl bg-white/10 border border-white/15 text-white font-bold text-[11px] hover:bg-white/20 transition flex items-center gap-1.5 cursor-pointer">
                   <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} /> {isLoading ? 'Syncing…' : 'Refresh'}
                 </button>
@@ -485,7 +614,7 @@ export function SuperAdminPortal() {
                 { label: 'Applications', value: `${kpis.applications}`, icon: UserCheck, to: '/superadmin/applications', tint: 'text-slate-700 bg-slate-100 border-slate-200', note: `${kpis.jobs} jobs live` },
                 { label: 'Commissions due', value: `${kpis.commissionsDue}`, icon: CircleDot, to: '/superadmin/commissions', tint: kpis.commissionsDue ? 'text-amber-700 bg-amber-50 border-amber-200' : 'text-slate-600 bg-slate-100 border-slate-200', note: kpis.commissionsDue ? 'approve & pay' : 'settled' },
                 { label: 'Audit events', value: `${auditLogs.length}`, icon: Activity, to: '/superadmin/audit-logs', tint: 'text-slate-700 bg-slate-100 border-slate-200', note: 'immutable trail' },
-              ].map((c) => (
+              ].filter((c) => isTabAllowedForRole(c.to.replace('/superadmin/', ''), effectiveRole, userPerms)).map((c) => (
                 <button key={c.label} type="button" onClick={() => navigate(c.to)} title={`Open ${c.label}`}
                   className="group p-3.5 bg-white rounded-2xl border border-slate-200/90 shadow-sm text-left hover:-translate-y-0.5 hover:shadow-md hover:border-[#0B5FD9] transition-all cursor-pointer">
                   <div className="flex items-center justify-between gap-2">
