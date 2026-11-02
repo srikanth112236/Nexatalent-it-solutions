@@ -37,7 +37,7 @@ export const V2_JOBS: V2Job[] = [
     category: 'Engineering',
     type: 'Permanent',
     posted: 'Just now',
-    salary: 'Competitive, based on experience and technical expertise',
+    salary: '',
     location: 'Pune',
     domain: 'Cloud & Enterprise',
     premium: true,
@@ -112,22 +112,19 @@ export const V2_JOBS: V2Job[] = [
       'Agile / Scrum methodologies.',
     ],
     benefits: [
-      'Competitive CTC — tailored to experience, technical expertise, and interview performance',
       'Hybrid work mode in Pune with high-trust engineering culture',
       'Direct ownership of enterprise-grade cloud-native platforms',
       'Comprehensive health coverage and performance incentives',
       'Fast-track interview process with immediate offer rollout for qualified joiners',
     ],
     interviewStages: [
-      { name: 'Profile Screen & Alignment', duration: '30 min', focus: 'Role fit, Go + React background, notice period & CTC' },
+      { name: 'Profile Screen & Alignment', duration: '30 min', focus: 'Role fit, Go + React background, notice period & immediate availability' },
       { name: 'Technical & System Design', duration: '60 min', focus: 'Golang microservices, React state, GCP & BigQuery architecture' },
       { name: 'Leadership & Feature Ownership', duration: '45 min', focus: 'Product lifecycle, customer collaboration, problem solving' },
-      { name: 'Offer & Expedited Onboarding', duration: '24–48 hrs', focus: 'Final CTC rollout and immediate joining' },
+      { name: 'Offer & Expedited Onboarding', duration: '24–48 hrs', focus: 'Expedited onboarding and immediate joining' },
     ],
     applyInstructions: [
       'Email Subject: Full Stack Developer – Pune – 6–7 Years',
-      'Current CTC',
-      'Expected CTC',
       'Relevant Technical Experience (Golang, React.js, GCP, BigQuery)',
       'Current Location (Pune / Hybrid)',
       'Availability to join (Immediate joiners only)',
@@ -667,5 +664,7 @@ export const V2_JOBS: V2Job[] = [
 ];
 
 export function getV2Job(slug?: string) {
-  return V2_JOBS.find((j) => j.slug === slug);
+  if (!slug) return undefined;
+  const clean = slug.toLowerCase().replace(/\/$/, '').trim();
+  return V2_JOBS.find((j) => j.slug.toLowerCase() === clean);
 }

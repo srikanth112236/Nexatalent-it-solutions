@@ -245,19 +245,22 @@ export function NewJobDetailPage() {
               </div>
 
               {/* salary strip */}
-              <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-black/15 bg-white px-4 py-3">
-                <span className="flex items-center gap-2">
-                  <Wallet size={15} className="text-black" aria-hidden />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-black">Compensation</span>
-                  <span className="text-[15px] font-black tabular-nums text-black">{job.salary}</span>
-                </span>
-                <span className="hidden h-4 w-px bg-black sm:block" aria-hidden />
-                <span className="text-[11px] font-semibold text-black">
-                  Market note: <span className="text-black">{industry.note}</span>
-                </span>
-              
+              {job.salary ? (
+                <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-black/15 bg-white px-4 py-3">
+                  <span className="flex items-center gap-2">
+                    <Wallet size={15} className="text-black" aria-hidden />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-black">Compensation</span>
+                    <span className="text-[15px] font-black tabular-nums text-black">{job.salary}</span>
+                  </span>
+                  <span className="hidden h-4 w-px bg-black sm:block" aria-hidden />
+                  <span className="text-[11px] font-semibold text-black">
+                    Market note: <span className="text-black">{industry.note}</span>
+                  </span>
+                </div>
+              ) : null}
+
               {job.noticePeriod ? (
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900">
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900">
                   <div className="flex items-center gap-2 text-[12.5px] font-bold">
                     <Zap size={16} className="shrink-0 text-amber-600" aria-hidden />
                     <span>Hiring Notice: <span className="font-extrabold text-black">{job.noticePeriod}</span></span>
@@ -274,8 +277,6 @@ export function NewJobDetailPage() {
                   ) : null}
                 </div>
               ) : null}
-
-</div>
 
               {/* skills */}
               <ul className="mt-4 flex flex-wrap gap-1.5">
@@ -434,10 +435,9 @@ export function NewJobDetailPage() {
                   {(job.applyInstructions ?? [
                     'Total Experience',
                     'Relevant Experience in Go, React.js, GCP & BigQuery',
-                    'Current CTC',
-                    'Expected CTC',
+                    'Technical Skillset & Architecture Background',
                     'Notice Period / Earliest Joining Date',
-                    'Current Location',
+                    'Current Location & Hybrid Readiness',
                   ]).map((item) => (
                     <li key={item} className="flex items-center gap-2 rounded-lg bg-white border border-neutral-200 px-3 py-2">
                       <Check size={13} className="text-black shrink-0" strokeWidth={3} aria-hidden />
@@ -490,9 +490,9 @@ export function NewJobDetailPage() {
                 </SectionLabel>
                 <div className="mt-3 rounded-2xl border border-neutral-200 bg-white p-5">
                   <p className="text-[13px] leading-relaxed text-black">{industry.blurb}</p>
-                  <div className="mt-4 grid grid-cols-3 gap-3">
+                  <div className={`mt-4 grid ${job.salary ? 'grid-cols-3' : 'grid-cols-2'} gap-3`}>
                     {[
-                      ['Median band', industry.median],
+                      ...(job.salary ? [['Median band', industry.median]] : []),
                       ['Demand', industry.demand],
                       ['Open roles (ours)', `${peerOpenings} live`],
                     ].map(([k, v]) => (

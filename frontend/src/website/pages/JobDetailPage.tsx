@@ -54,6 +54,116 @@ interface JobDetailModel {
 }
 
 const JOBS_DATABASE: Record<string, JobDetailModel> = {
+  'full-stack-developer-golang-react-gcp': {
+    id: 'full-stack-developer-golang-react-gcp',
+    slug: 'full-stack-developer-golang-react-gcp',
+    title: 'Full Stack Developer | Golang + React.js + GCP + BigQuery',
+    department: 'Full Stack & Cloud Engineering',
+    clientType: 'Enterprise Cloud & Scalable Product Engineering',
+    location: 'Pune',
+    workMode: 'Hybrid',
+    exp: '6–7 Years',
+    ctc: '',
+    posted: 'Immediate',
+    urgency: 'Immediate Joiners Only',
+    skills: [
+      'Golang (Go)',
+      'React.js',
+      'Google Cloud Platform (GCP)',
+      'Google BigQuery',
+      'REST APIs',
+      'Microservices',
+      'Distributed Systems',
+      'JavaScript / TypeScript',
+      'SQL & Database Concepts',
+      'CI/CD & Cloud Deployment',
+      'Docker & Kubernetes',
+      'Cloud Run',
+      'GKE',
+      'Pub/Sub',
+      'Cloud Storage',
+      'Cloud SQL',
+      'Cloud Functions',
+      'System Design & Scalable Architecture',
+      'DevOps & Production Support',
+      'Agile / Scrum',
+    ],
+    summary: 'We are looking for a highly skilled Full Stack Developer with strong hands-on experience in backend development, frontend technologies, cloud platforms, and scalable product engineering using Golang, React.js, GCP, and BigQuery. ⚡ Immediate joiners only.',
+    responsibilities: [
+      'Design, develop, and maintain scalable full-stack applications using Golang and React.js.',
+      'Build robust backend services, REST APIs, and microservices.',
+      'Develop responsive, user-friendly web applications.',
+      'Implement data solutions using Google BigQuery.',
+      'Deploy and manage applications on Google Cloud Platform.',
+      'Own features throughout the complete Product Development Life Cycle (PDLC).',
+      'Gather business requirements and translate them into technical solutions.',
+      'Collaborate directly with customers and cross-functional teams.',
+      'Drive technical solutions from conception to production.',
+      'Troubleshoot production issues and optimize performance, scalability, and reliability.',
+      'Contribute to code reviews, system design, and architecture discussions.'
+    ],
+    requirements: [
+      'Experience: 6–7 Years of full-stack engineering experience.',
+      'Golang (Go) – Strong backend development expertise, REST APIs, and microservices.',
+      'React.js – Advanced frontend development experience with JavaScript / TypeScript.',
+      'Google Cloud Platform (GCP) – Cloud deployment, configuration, and production operations.',
+      'Google BigQuery – Implementing data solutions, SQL, and database concepts.',
+      'REST APIs, Microservices & Distributed Systems architecture.',
+      'CI/CD & Cloud Deployment automation.',
+      'Excellent problem-solving and analytical skills.',
+      'Strong system design and architectural understanding.',
+      'Experience in customer interaction and requirement gathering.',
+      'Ability to independently drive technical requirements and deliver solutions.',
+      'Confidence in handling challenging technical interviews.',
+      '⚡ IMPORTANT: Immediate joiners only. Candidates must have strong hands-on technical expertise and be available to join immediately.'
+    ],
+    benefits: [
+      'Hybrid work mode in Pune with high-trust engineering culture',
+      'Direct ownership of enterprise-grade cloud-native platforms',
+      'Comprehensive health coverage and performance incentives',
+      'Fast-track interview process with immediate offer rollout for qualified joiners'
+    ],
+    interviewStages: [
+      { step: '01', name: 'Profile Screen & Alignment', duration: '30 Mins', focus: 'Role fit, Go + React background, notice period & immediate availability' },
+      { step: '02', name: 'Technical & System Design', duration: '60 Mins', focus: 'Golang microservices, React state, GCP & BigQuery architecture' },
+      { step: '03', name: 'Leadership & Feature Ownership', duration: '45 Mins', focus: 'Product lifecycle, customer collaboration, problem solving' },
+      { step: '04', name: 'Offer & Expedited Onboarding', duration: '24–48 Hrs', focus: 'Expedited onboarding for immediate joiners' }
+    ],
+    vettingPhases: [
+      {
+        phase: 'PHASE 01',
+        title: 'Golang Microservices & Concurrency Calibration',
+        description: 'Hands-on validation of Go routines, channels, memory management, and microservice resilience.',
+        metric: 'Sub-10ms',
+        metricLabel: 'API P99 Latency Benchmark',
+        rubricItems: ['Golang concurrency patterns & channels', 'REST API design & gRPC microservices', 'SQL query optimization & BigQuery pipelines']
+      },
+      {
+        phase: 'PHASE 02',
+        title: 'React.js & Frontend State Management',
+        description: 'Component architecture, performance profiling, responsive design, and state management.',
+        metric: '100%',
+        metricLabel: 'Component Test Coverage',
+        rubricItems: ['Modern React patterns & TypeScript', 'Performance tuning & lazy loading', 'Complex enterprise UI workflows']
+      },
+      {
+        phase: 'PHASE 03',
+        title: 'GCP & BigQuery Cloud Architecture',
+        description: 'Hands-on architectural review of GCP services (Cloud Run, GKE, Pub/Sub, Cloud Storage) and BigQuery analytics.',
+        metric: 'Multi-Region',
+        metricLabel: 'Cloud Deployment Readiness',
+        rubricItems: ['GCP infrastructure & CI/CD deployment', 'BigQuery dataset partitioning & clustering', 'Cloud monitoring & error budgets']
+      },
+      {
+        phase: 'PHASE 04',
+        title: 'Immediate Joiner Expedited Onboarding',
+        description: 'Rapid alignment and verified notice period for immediate Pune hybrid team integration.',
+        metric: 'Immediate',
+        metricLabel: 'Joining Availability',
+        rubricItems: ['Immediate joiner verification', 'Direct leadership interview', 'Expedited offer rollout']
+      }
+    ]
+  },
   'j1': {
     id: 'j1',
     slug: 'senior-cloud-devops-sre-lead',
@@ -478,10 +588,12 @@ export function JobDetailPage() {
                   <Clock className="w-4 h-4 text-black" />
                   <span>{job.exp} Experience</span>
                 </span>
-                <span className="flex items-center gap-1.5 text-black font-extrabold bg-white px-3 py-1 rounded-full border border-black">
-                  <IndianRupee className="w-4 h-4 text-black" />
-                  <span>{job.ctc}</span>
-                </span>
+                {job.ctc ? (
+                  <span className="flex items-center gap-1.5 text-black font-extrabold bg-white px-3 py-1 rounded-full border border-black">
+                    <IndianRupee className="w-4 h-4 text-black" />
+                    <span>{job.ctc}</span>
+                  </span>
+                ) : null}
               </div>
             </div>
 
@@ -768,10 +880,12 @@ export function JobDetailPage() {
                       <MapPin size={14} className="text-black" />
                       {rel.location}
                     </span>
-                    <span className="flex items-center gap-1 text-black font-bold bg-white px-2 py-0.5 rounded border border-black">
-                      <IndianRupee size={14} className="text-black" />
-                      {rel.ctc}
-                    </span>
+                    {rel.ctc ? (
+                      <span className="flex items-center gap-1 text-black font-bold bg-white px-2 py-0.5 rounded border border-black">
+                        <IndianRupee size={14} className="text-black" />
+                        {rel.ctc}
+                      </span>
+                    ) : null}
                   </div>
 
                   <div className="flex flex-wrap gap-1.5 pt-2">
