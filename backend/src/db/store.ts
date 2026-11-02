@@ -105,10 +105,49 @@ function seed(): DbShape {
       { id: 'CON-9042', candidateEmail: 'ananya.d@cloudsec.net', email: 'ananya.d@cloudsec.net', purpose: 'placement-processing', status: 'granted', marketing: false, visibility: 'standard', withdrawn: false, createdAt: now },
     ],
     requisitions: [
+      { id: 'REQ-GOLANG-PUNE-01', orgId: 'TNT-GLOBAL', title: 'Full Stack Developer | Golang + React.js + GCP + BigQuery', department: 'Full Stack & Cloud Engineering', status: 'Sourcing', openings: 1, employmentType: 'Full-time', location: 'Pune / Hybrid', branch: 'Pune', hiringManager: 'info@nexatalentitsolutions.com', recruiter: 'info@nexatalentitsolutions.com', experienceMin: 6, experienceMax: 7, deadline: '2027-12-31T00:00:00.000Z', budgetMin: 2200000, budgetMax: 3200000, currency: 'INR', createdAt: now },
       { id: 'REQ-9901', orgId: 'TNT-9011', title: 'Senior React / Node Fullstack Architect', department: 'Core Engineering', status: 'Sourcing', openings: 3, employmentType: 'Full-time', location: 'Bengaluru / Hybrid', branch: 'Bengaluru HQ', hiringManager: 'aditi@fintechscaleops.io', recruiter: 'kiran@nexatalent.com', experienceMin: 6, experienceMax: 10, deadline: '2027-02-01T00:00:00.000Z', budgetMin: 3500000, budgetMax: 4500000, currency: 'INR', createdAt: now },
       { id: 'REQ-8890', orgId: 'TNT-9011', title: 'Senior AWS Cloud Security Lead', department: 'Infra Security', status: 'Sourcing', openings: 2, employmentType: 'Contract', location: 'Bengaluru / Hybrid', branch: 'Bengaluru HQ', hiringManager: 'aditi@fintechscaleops.io', recruiter: 'kiran@nexatalent.com', experienceMin: 7, experienceMax: 12, deadline: '2027-02-01T00:00:00.000Z', budgetMin: 3000, budgetMax: 3500, currency: 'INR', payPeriod: 'hourly', createdAt: now },
     ],
     jobs: [
+      {
+        id: 'JOB-GOLANG-REACT-PUNE',
+        requisitionId: 'REQ-GOLANG-PUNE-01',
+        orgId: 'TNT-GLOBAL',
+        title: 'Full Stack Developer | Golang + React.js + GCP + BigQuery',
+        description: 'We are looking for a highly skilled Full Stack Developer with strong hands-on experience in backend development, frontend technologies, cloud platforms, and scalable product engineering using Golang, React.js, GCP, and BigQuery. Immediate Joiners Only.',
+        status: 'Published',
+        visibility: 'public',
+        location: 'Pune',
+        workArrangement: 'Hybrid',
+        employmentType: 'Full-time',
+        salaryMin: 2200000,
+        salaryMax: 3200000,
+        currency: 'INR',
+        skills: ['Golang (Go)', 'React.js', 'Google Cloud Platform (GCP)', 'Google BigQuery', 'REST APIs', 'Microservices', 'Distributed Systems', 'JavaScript / TypeScript', 'SQL & Database Concepts', 'CI/CD & Cloud Deployment', 'Docker & Kubernetes'],
+        mustHaveSkills: ['Golang (Go)', 'React.js', 'Google Cloud Platform (GCP)', 'Google BigQuery', 'REST APIs', 'Microservices'],
+        niceToHaveSkills: ['Docker', 'Kubernetes', 'Cloud Run', 'GKE', 'Pub/Sub', 'System Design'],
+        minExperienceYears: 6,
+        maxExperienceYears: 7,
+        experienceMin: 6,
+        experienceMax: 7,
+        openings: 1,
+        noticePeriod: 'Immediate Joiners Only',
+        minQualification: 'Bachelor of Technology (B.Tech) / B.E. or Graduate Equivalent',
+        requiredLocation: ['Pune', 'Hybrid'],
+        autoShortlistThreshold: 75,
+        autoShortlistMode: 'assisted',
+        applicantsCount: 0,
+        startDate: now,
+        expiryDate: '2027-12-31T00:00:00.000Z',
+        companyName: 'NexaTalent IT Solutions',
+        department: 'Full Stack & Cloud Engineering',
+        contactEmail: 'info@nexatalentitsolutions.com',
+        contactPhone: '+91 70196 96166',
+        contactWhatsapp: '+91 9036227317',
+        acceptingApplications: true,
+        createdAt: now,
+      },
       {
         id: 'JOB-9901',
         requisitionId: 'REQ-9901',
@@ -358,6 +397,16 @@ export function loadDb(): DbShape {
         (db as any).settings.payrollRules = { standardHours: 160, overtimeMultiplier: 1.5, payoutPercent: 82, taxRate: 18 };
       }
       // Backfill filterable requirement fields on older requisitions.
+      for (const r of (fresh.requisitions as any[])) {
+        if (!db!.requisitions.some((x: any) => x.id === r.id)) {
+          db!.requisitions.unshift(r);
+        }
+      }
+      for (const j of (fresh.jobs as any[])) {
+        if (!db!.jobs.some((x: any) => x.id === j.id)) {
+          db!.jobs.unshift(j);
+        }
+      }
       for (const r of (db!.requisitions as any[])) {
         const ref = (fresh.requisitions as any[]).find((f) => f.id === r.id);
         if (ref) for (const k of ['branch', 'recruiter', 'hiringManager', 'experienceMin', 'experienceMax', 'deadline']) {
