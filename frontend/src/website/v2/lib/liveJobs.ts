@@ -1,4 +1,4 @@
-import type { V2Job } from '../data/jobs';
+import { type V2Job, getV2Job } from '../data/jobs';
 
 const API_BASE = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '' : ((typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || '');
 
@@ -57,6 +57,14 @@ function relativePosted(iso?: string): string {
 
 /** Map an API public job into the rich V2Job card/detail shape. */
 export function mapPublicJobToV2(p: PublicJobApi): V2Job {
+  const v2Match = getV2Job(p.slug || p.id);
+  if (v2Match) {
+    return {
+      ...v2Match,
+      slug: p.slug || v2Match.slug,
+      posted: relativePosted(p.createdAt) || v2Match.posted,
+    };
+  }
   const skills = [...(p.requiredSkills || []), ...(p.preferredSkills || [])].slice(0, 10);
   const exp =
     p.experienceMin != null || p.experienceMax != null

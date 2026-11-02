@@ -4,12 +4,7 @@ import { CreamSection, SectionHead, PillButton } from '../components/ui';
 
 const ROLES = [
   { title: 'Full Stack Developer | Golang + React.js + GCP + BigQuery', meta: 'Pune • Hybrid • 6–7 yrs • Immediate', type: 'Permanent' },
-  { title: 'Senior Backend Engineer (Java)', meta: 'Bengaluru • Hybrid • 5–8 yrs', type: 'Permanent' },
-  { title: 'React + Node Pod (4 engineers)', meta: 'Remote India • Contract', type: 'Contract' },
-  { title: 'Low-Latency C++ Developer', meta: 'Mumbai • Onsite • HFT', type: 'Permanent' },
-  { title: 'VP Engineering', meta: 'Bengaluru • Confidential', type: 'Executive' },
-  { title: 'DevOps / SRE Lead', meta: 'Hyderabad • Hybrid', type: 'Permanent' },
-  { title: 'Data Scientist (Pricing)', meta: 'Remote • Retail', type: 'Contract' },
+  { title: 'Full Stack Developer | Golang + React.js + GCP', meta: 'Pune • Hybrid • 6–7 yrs • 1 Week', type: 'Permanent' },
 ];
 
 const FAQS = [

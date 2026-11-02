@@ -324,6 +324,11 @@ export function NewJobsPage() {
                               Premium
                             </span>
                           ) : null}
+                          {r.noticePeriod ? (
+                            <span className="rounded-full bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 text-[10px] font-bold">
+                              ⚡ {r.noticePeriod}
+                            </span>
+                          ) : null}
                         </div>
                         <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
                           <div className="min-w-0">
@@ -335,9 +340,11 @@ export function NewJobsPage() {
                                 {r.title}
                               </Link>
                             </h3>
-                            <p className="mt-0.5 flex items-center gap-1.5 text-[13px] font-semibold text-black">
-                              <Wallet size={13} className="text-black" aria-hidden /> {r.salary}
-                            </p>
+                            {r.salary ? (
+                              <p className="mt-0.5 flex items-center gap-1.5 text-[13px] font-semibold text-black">
+                                <Wallet size={13} className="text-black" aria-hidden /> {r.salary}
+                              </p>
+                            ) : null}
                           </div>
                           <Link
                             to={`/jobs/${r.slug}`}
