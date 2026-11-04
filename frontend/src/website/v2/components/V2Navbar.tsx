@@ -20,6 +20,10 @@ export function V2Navbar() {
           </Link>
 
           <nav aria-label="Primary" className="hidden items-center gap-6 text-[13px] font-semibold text-black lg:flex">
+            <Link to="/ai-platform" className="inline-flex items-center gap-1.5 transition-colors hover:text-black font-bold text-[#071B3A]">
+              <span>AI Platform</span>
+              <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-[#2D5A27] text-white tracking-wider">AI</span>
+            </Link>
             <Link to="/about" className="transition-colors hover:text-black">About</Link>
             <Link to="/solutions" className="transition-colors hover:text-black">Solutions</Link>
             <Link to="/industries" className="transition-colors hover:text-black">Industries</Link>
@@ -59,6 +63,7 @@ export function V2Navbar() {
         {open && (
           <div id="v2-mobile-menu" className="mx-auto mt-2 max-w-6xl rounded-3xl border border-neutral-200 bg-white p-4 shadow-xl lg:hidden">
             {[
+              { to: '/ai-platform', label: 'AI Platform (Ecosystem)' },
               { to: '/about', label: 'About' },
               { to: '/solutions', label: 'Solutions' },
               { to: '/industries', label: 'Industries' },

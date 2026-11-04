@@ -32,6 +32,7 @@ import { NewAboutPage } from '../v2/pages/NewAboutPage';
 import { NewArticleDetailPage } from '../v2/pages/NewArticleDetailPage';
 import { NewJobDetailPage } from '../v2/pages/NewJobDetailPage';
 import { NewContactPage } from '../v2/pages/NewContactPage';
+import { NewAiPlatformPage } from '../v2/pages/NewAiPlatformPage';
 
 export function WebsiteRoutes() {
   return (
@@ -42,6 +43,12 @@ export function WebsiteRoutes() {
           <Route path="/" element={<NewHomePage />} />
           <Route path="/v1" element={<HomePage />} />
           <Route path="/home-v1" element={<HomePage />} />
+
+          {/* AI Recruitment Ecosystem & SaaS Platform */}
+          <Route path="/ai-platform" element={<NewAiPlatformPage />} />
+          <Route path="/platform" element={<NewAiPlatformPage />} />
+          <Route path="/ai-ecosystem" element={<NewAiPlatformPage />} />
+          <Route path="/saas" element={<NewAiPlatformPage />} />
 
           {/* 2. Core Employer & Client Pages — new standard (old preserved at /classic/*) */}
           <Route path="/employers" element={<NewEmployersPage />} />

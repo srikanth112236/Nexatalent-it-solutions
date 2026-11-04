@@ -11,6 +11,7 @@ const COLS: Array<{ title: string; links: Array<{ label: string; to: string }> }
   {
     title: 'Solutions',
     links: [
+      { label: 'AI Platform & SaaS', to: '/ai-platform' },
       { label: 'All Solutions', to: '/solutions' },
       { label: 'Permanent Recruitment', to: '/solutions/permanent-hiring' },
       { label: 'Contract Staffing', to: '/solutions/contract-staffing' },
