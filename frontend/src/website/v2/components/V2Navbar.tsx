@@ -20,9 +20,9 @@ export function V2Navbar() {
           </Link>
 
           <nav aria-label="Primary" className="hidden items-center gap-6 text-[13px] font-semibold text-black lg:flex">
-            <Link to="/ai-platform" className="inline-flex items-center gap-1.5 transition-colors hover:text-black font-bold text-[#071B3A]">
+            <Link to="/ai-platform" className="inline-flex items-center gap-1.5 transition-colors text-black hover:opacity-70 font-bold">
               <span>AI Platform</span>
-              <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-[#2D5A27] text-white tracking-wider">AI</span>
+              <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-black text-white tracking-wider">AI</span>
             </Link>
             <Link to="/about" className="transition-colors hover:text-black">About</Link>
             <Link to="/solutions" className="transition-colors hover:text-black">Solutions</Link>
