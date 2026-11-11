@@ -321,6 +321,7 @@ export const atsApi = {
   jobDetails: (jobId: string) => apiClient.get(`/api/v1/ats/jobs/${jobId}`),
   createJob: (body: unknown) => apiClient.post('/api/v1/ats/jobs', body),
   updateJob: (id: string, body: unknown) => apiClient.put(`/api/v1/ats/jobs/${id}`, body),
+  analyzeJd: (body: { rawText?: string; base64Data?: string; filename?: string; instructions?: string }) => apiClient.post('/api/v1/ats/jobs/analyze-jd', body),
   jobStages: (jobId: string) => apiClient.get(`/api/v1/ats/jobs/${jobId}/stages`),
   saveJobStages: (jobId: string, stages: unknown[]) => apiClient.put(`/api/v1/ats/jobs/${jobId}/stages`, { stages }),
   assignJobRecruiters: (jobId: string, recruiters: string[], agencies?: string[]) => apiClient.patch(`/api/v1/ats/jobs/${jobId}/recruiters`, { recruiters, agencies }),

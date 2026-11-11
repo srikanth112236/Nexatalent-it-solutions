@@ -9,6 +9,7 @@ import { emit } from '../events/bus.js';
 import { parseResumeText, extractTextFromBuffer, validateResumeBuffer } from '../services/atsResumeParser.js';
 import { calculateJobAtsMatch } from '../services/atsScoringEngine.js';
 import { generateCandidateResumePdf } from '../services/atsResumePdfGenerator.js';
+import { analyzeJobDescriptionWithAI } from '../services/atsJobAssistant.js';
 import { uploadFile, downloadFile, isBlobStorageConfigured, DEFAULT_CONTAINER } from '../storage/blob.js';
 
 export const atsRouter = Router();
@@ -152,6 +153,36 @@ atsRouter.get('/jobs', requireAuth(ATS_ROLES), (req: Request, res: Response) => 
   res.json({ success: true, ...paged(enriched, page, pageSize) });
 });
 
+// AI Job Description Analysis & Recruiter Playbook Generator
+atsRouter.post('/jobs/analyze-jd', requireAuth(ATS_ROLES), async (req: Request, res: Response) => {
+  try {
+    const { rawText, base64Data, filename, instructions } = req.body || {};
+    if (!rawText && !base64Data) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide either rawText or a base64 encoded JD document (PDF/DOCX).',
+      });
+    }
+
+    const analysis = await analyzeJobDescriptionWithAI({
+      rawText,
+      base64Data,
+      filename,
+      instructions,
+    });
+
+    return res.json({
+      success: true,
+      data: analysis,
+    });
+  } catch (err: any) {
+    return res.status(400).json({
+      success: false,
+      message: err?.message || 'Failed to analyze job description.',
+    });
+  }
+});
+
 // Single Job Details
 atsRouter.get('/jobs/:id', requireAuth(ATS_ROLES), (req: Request, res: Response) => {
   const db = loadDb();
@@ -237,6 +268,7 @@ atsRouter.post('/jobs', requireAuth(['superadmin', 'agency_admin', 'company_admi
     autoShortlistThreshold: b.autoShortlistThreshold !== undefined ? Math.max(10, Math.min(100, Number(b.autoShortlistThreshold))) : 75,
     autoShortlistMode: b.autoShortlistMode === 'automatic' ? 'automatic' : 'assisted',
     benefits: b.benefits || [],
+    briefing: b.briefing || null,
     assignedAgencies: b.assignedAgencies || ['Apex Tech Search'],
     assignedRecruiters: b.assignedRecruiters || [ctx.email],
     orgId: b.orgId || ctx.tenantId || 'TNT-9011',
@@ -306,6 +338,7 @@ atsRouter.put('/jobs/:id', requireAuth(['superadmin', 'agency_admin', 'company_a
   if (b.requiredLocation !== undefined) job.requiredLocation = Array.isArray(b.requiredLocation) ? b.requiredLocation : [String(b.requiredLocation)];
   if (b.autoShortlistThreshold !== undefined) job.autoShortlistThreshold = Math.max(10, Math.min(100, Number(b.autoShortlistThreshold)));
   if (b.autoShortlistMode !== undefined) job.autoShortlistMode = b.autoShortlistMode === 'automatic' ? 'automatic' : 'assisted';
+  if (b.briefing !== undefined) job.briefing = b.briefing;
   if (b.assignedAgencies !== undefined) job.assignedAgencies = b.assignedAgencies;
   if (b.assignedRecruiters !== undefined) job.assignedRecruiters = b.assignedRecruiters;
   job.updatedAt = nowIso();

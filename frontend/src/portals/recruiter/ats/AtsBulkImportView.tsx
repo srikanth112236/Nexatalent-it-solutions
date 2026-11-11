@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Upload,
   FileText,
@@ -22,6 +22,11 @@ import {
   Award,
   GraduationCap,
   Sparkles,
+  Pause,
+  Play,
+  RotateCcw,
+  Gauge,
+  Zap,
 } from 'lucide-react';
 import { atsApi } from '../../../shared/enterprise/phaseApi';
 
@@ -158,6 +163,19 @@ export function AtsBulkImportView({ onNavigateTab }: { onNavigateTab?: (tab: str
   const [loadingQueue, setLoadingQueue] = useState(false);
   const [retryingId, setRetryingId] = useState<string | null>(null);
 
+  // High-performance concurrency queue refs & metrics
+  const CONCURRENCY = 4;
+  const queueRef = useRef<{ tempId: string; file: File }[]>([]);
+  const activeWorkersRef = useRef<number>(0);
+  const isPausedRef = useRef<boolean>(false);
+  const startTimeRef = useRef<number | null>(null);
+
+  const [isPaused, setIsPaused] = useState(false);
+  const [filterTab, setFilterTab] = useState<'all' | 'high_match' | 'duplicates' | 'needs_review' | 'failed'>('all');
+  const [uploadSpeed, setUploadSpeed] = useState<string>('');
+  const [etaString, setEtaString] = useState<string>('');
+  const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null);
+
   // Modals state
   const [reviewCandidate, setReviewCandidate] = useState<StagedCandidate | null>(null);
   const [detailCandidate, setDetailCandidate] = useState<StagedCandidate | null>(null);
@@ -193,9 +211,124 @@ export function AtsBulkImportView({ onNavigateTab }: { onNavigateTab?: (tab: str
     }
   }, [activeSubTab]);
 
+  const pumpQueue = () => {
+    if (isPausedRef.current) return;
+
+    while (activeWorkersRef.current < CONCURRENCY && queueRef.current.length > 0) {
+      const task = queueRef.current.shift();
+      if (!task) break;
+
+      activeWorkersRef.current++;
+      processSingleFile(task);
+    }
+  };
+
+  const processSingleFile = (task: { tempId: string; file: File }) => {
+    const { tempId, file } = task;
+    const reader = new FileReader();
+
+    reader.onload = async () => {
+      try {
+        const result = reader.result as string;
+        const base64 = result.includes(',') ? result.split(',')[1] : result;
+
+        const res: any = await atsApi.parseResume({
+          filename: file.name,
+          base64Data: base64,
+        });
+
+        const ext = res?.data?.extracted;
+        setStagedFiles((prev) =>
+          prev.map((item) => {
+            if (item.id === tempId) {
+              return {
+                ...item,
+                rawBase64: base64,
+                parseId: res?.data?.id,
+                fileRef: res?.data?.fileRef || '',
+                fullName: ext?.fullName || item.fullName,
+                email: ext?.email || '',
+                phone: ext?.phone || '',
+                totalExperienceYears: ext?.totalExperienceYears || 3,
+                skills: ext?.skills || [],
+                skillsByCategory: ext?.skillsByCategory,
+                education: ext?.education || [],
+                location: ext?.location || 'India',
+                currentCompany: ext?.currentCompany || '',
+                currentTitle: ext?.currentTitle || 'Professional',
+                summary: ext?.summary || '',
+                workHistory: ext?.workHistory || [],
+                projects: ext?.projects || [],
+                coreStrengths: ext?.coreStrengths || [],
+                linkedinUrl: ext?.linkedinUrl || '',
+                portfolioSites: ext?.portfolioSites || [],
+                currentCtc: ext?.currentCtc || '',
+                expectedCtc: ext?.expectedCtc || '',
+                noticePeriod: ext?.noticePeriod || 'Immediate',
+                searchTokens: ext?.searchTokens || [],
+                confidenceScore: ext?.confidenceScore || 75,
+                isDuplicate: !!res?.data?.isDuplicate,
+                duplicateReason: res?.data?.duplicateReason,
+                parsing: false,
+                error: undefined,
+              };
+            }
+            return item;
+          })
+        );
+      } catch (err: any) {
+        const msg = err?.response?.data?.message || err?.message || 'Parse failed';
+        setStagedFiles((prev) =>
+          prev.map((item) => (item.id === tempId ? { ...item, parsing: false, error: msg } : item))
+        );
+      } finally {
+        activeWorkersRef.current--;
+
+        // Update live throughput & ETA
+        if (startTimeRef.current) {
+          const elapsed = (Date.now() - startTimeRef.current) / 1000;
+          if (elapsed > 0.4) {
+            setStagedFiles((latest) => {
+              const completed = latest.filter((x) => !x.parsing).length;
+              const rate = completed / elapsed;
+              if (rate > 0) {
+                setUploadSpeed(`${rate.toFixed(1)} files/s`);
+                const remaining = queueRef.current.length + activeWorkersRef.current;
+                if (remaining > 0) {
+                  const sec = Math.ceil(remaining / rate);
+                  setEtaString(sec > 60 ? `${Math.floor(sec / 60)}m ${sec % 60}s` : `${sec}s`);
+                } else {
+                  setEtaString('Done');
+                }
+              }
+              return latest;
+            });
+          }
+        }
+
+        pumpQueue();
+      }
+    };
+
+    reader.onerror = () => {
+      setStagedFiles((prev) =>
+        prev.map((item) => (item.id === tempId ? { ...item, parsing: false, error: 'File read error' } : item))
+      );
+      activeWorkersRef.current--;
+      pumpQueue();
+    };
+
+    reader.readAsDataURL(file);
+  };
+
   const handleFiles = async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
     if (!fileArray.length) return;
+
+    if (!startTimeRef.current) startTimeRef.current = Date.now();
+
+    const newEntries: StagedCandidate[] = [];
+    const newTasks: { tempId: string; file: File }[] = [];
 
     for (const file of fileArray) {
       const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -213,66 +346,32 @@ export function AtsBulkImportView({ onNavigateTab }: { onNavigateTab?: (tab: str
         isDuplicate: false,
         parsing: true,
       };
+      newEntries.push(entry);
+      newTasks.push({ tempId, file });
+    }
 
-      setStagedFiles((prev) => [entry, ...prev]);
+    setStagedFiles((prev) => [...newEntries, ...prev]);
+    queueRef.current.push(...newTasks);
+    pumpQueue();
+  };
 
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const result = reader.result as string;
-        const base64 = result.includes(',') ? result.split(',')[1] : result;
+  const togglePause = () => {
+    const next = !isPaused;
+    setIsPaused(next);
+    isPausedRef.current = next;
+    if (!next) {
+      pumpQueue();
+    }
+  };
 
-        try {
-          const res: any = await atsApi.parseResume({
-            filename: file.name,
-            base64Data: base64,
-          });
+  const handleRetryAllFailed = () => {
+    const failedItems = stagedFiles.filter((x) => x.error);
+    if (!failedItems.length) return;
 
-          const ext = res?.data?.extracted;
-          setStagedFiles((prev) =>
-            prev.map((item) => {
-              if (item.id === tempId) {
-                return {
-                  ...item,
-                  rawBase64: base64,
-                  parseId: res?.data?.id,
-                  fileRef: res?.data?.fileRef || '',
-                  fullName: ext?.fullName || item.fullName,
-                  email: ext?.email || '',
-                  phone: ext?.phone || '',
-                  totalExperienceYears: ext?.totalExperienceYears || 3,
-                  skills: ext?.skills || [],
-                  skillsByCategory: ext?.skillsByCategory,
-                  education: ext?.education || [],
-                  location: ext?.location || 'India',
-                  currentCompany: ext?.currentCompany || '',
-                  currentTitle: ext?.currentTitle || 'Professional',
-                  summary: ext?.summary || '',
-                  workHistory: ext?.workHistory || [],
-                  projects: ext?.projects || [],
-                  coreStrengths: ext?.coreStrengths || [],
-                  linkedinUrl: ext?.linkedinUrl || '',
-                  portfolioSites: ext?.portfolioSites || [],
-                  currentCtc: ext?.currentCtc || '',
-                  expectedCtc: ext?.expectedCtc || '',
-                  noticePeriod: ext?.noticePeriod || 'Immediate',
-                  searchTokens: ext?.searchTokens || [],
-                  confidenceScore: ext?.confidenceScore || 75,
-                  isDuplicate: !!res?.data?.isDuplicate,
-                  duplicateReason: res?.data?.duplicateReason,
-                  parsing: false,
-                };
-              }
-              return item;
-            })
-          );
-        } catch (err: any) {
-          const msg = err?.response?.data?.message || err?.message || 'Parse failed';
-          setStagedFiles((prev) =>
-            prev.map((item) => (item.id === tempId ? { ...item, parsing: false, error: msg } : item))
-          );
-        }
-      };
-      reader.readAsDataURL(file);
+    for (const item of failedItems) {
+      if (item.rawBase64) {
+        handleRescanCandidate(item);
+      }
     }
   };
 
@@ -377,17 +476,36 @@ export function AtsBulkImportView({ onNavigateTab }: { onNavigateTab?: (tab: str
         filename: c.filename,
       }));
 
-      const res: any = await atsApi.bulkCreateCandidates({
-        candidates: candidatesPayload,
-        jobId: targetJobId || undefined,
-      });
+      // Chunk bulk creation into batches of 40 to avoid HTTP timeout / memory spikes
+      const CHUNK_SIZE = 40;
+      let totalCreated = 0;
 
-      setSuccessMsg(`Successfully imported ${res?.count || candidatesPayload.length} candidates into the ATS pipeline!`);
+      for (let i = 0; i < candidatesPayload.length; i += CHUNK_SIZE) {
+        const chunk = candidatesPayload.slice(i, i + CHUNK_SIZE);
+        setImportProgress({
+          current: Math.min(i + CHUNK_SIZE, candidatesPayload.length),
+          total: candidatesPayload.length,
+        });
+
+        const res: any = await atsApi.bulkCreateCandidates({
+          candidates: chunk,
+          jobId: targetJobId || undefined,
+        });
+
+        totalCreated += res?.count || chunk.length;
+      }
+
+      setSuccessMsg(`Successfully imported ${totalCreated} candidates into the ATS pipeline!`);
       setStagedFiles([]);
+      setImportProgress(null);
+      startTimeRef.current = null;
+      setUploadSpeed('');
+      setEtaString('');
     } catch (err: any) {
       alert(`Import failed: ${err?.message || err}`);
     } finally {
       setSubmitting(false);
+      setImportProgress(null);
     }
   };
 
@@ -558,49 +676,186 @@ export function AtsBulkImportView({ onNavigateTab }: { onNavigateTab?: (tab: str
             </div>
           )}
 
-          {/* Live Batch Parsing Progress & Duplicate Warning Banner */}
+          {/* Live Batch Parsing Cockpit */}
           {stagedFiles.length > 0 && (() => {
             const parsingCount = stagedFiles.filter((x) => x.parsing).length;
             const duplicateCount = stagedFiles.filter((x) => x.isDuplicate).length;
+            const failedCount = stagedFiles.filter((x) => x.error).length;
             const completedCount = stagedFiles.length - parsingCount;
             const percent = Math.round((completedCount / stagedFiles.length) * 100);
+            const highMatchCount = targetJobId
+              ? stagedFiles.filter((c) => computeQuickMatchScore(c, jobs.find((j) => j.id === targetJobId)).score >= (jobs.find((j) => j.id === targetJobId)?.autoShortlistThreshold || 75)).length
+              : 0;
+            const reviewCount = stagedFiles.filter((c) => (c.confidenceScore || 0) < 65 || c.isDuplicate).length;
 
             return (
-              <div className="bg-white rounded-3xl border border-slate-200/90 p-4 shadow-sm space-y-3">
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2 font-bold text-slate-800">
-                    {parsingCount > 0 ? (
-                      <span className="flex items-center gap-1.5 text-blue-600">
-                        <RotateCw size={14} className="animate-spin" />
-                        Parsing Batch ({completedCount}/{stagedFiles.length} Completed)
+              <div className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-sm space-y-4">
+                {/* Cockpit Header with Metrics & Actions */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 font-black text-slate-900">
+                      {parsingCount > 0 ? (
+                        <span className="flex items-center gap-1.5 text-blue-600">
+                          <RotateCw size={14} className="animate-spin" />
+                          <span>Processing Queue: {completedCount} / {stagedFiles.length} Completed</span>
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1.5 text-emerald-600">
+                          <CheckCircle2 size={16} />
+                          <span>All {stagedFiles.length} Resumes Parsed & Staged</span>
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 text-[11px] text-slate-500 font-medium">
+                      {uploadSpeed && (
+                        <span className="flex items-center gap-1">
+                          <Gauge size={12} className="text-slate-400" />
+                          <span>Speed: <strong className="text-slate-700">{uploadSpeed}</strong></span>
+                        </span>
+                      )}
+                      {etaString && (
+                        <span className="flex items-center gap-1">
+                          <Clock size={12} className="text-slate-400" />
+                          <span>ETA: <strong className="text-slate-700">{etaString}</strong></span>
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <Zap size={12} className="text-amber-500" />
+                        <span>Worker Pool: <strong className="text-slate-700">{CONCURRENCY} parallel</strong></span>
                       </span>
-                    ) : (
-                      <span className="flex items-center gap-1.5 text-emerald-600">
-                        <CheckCircle2 size={15} />
-                        All {stagedFiles.length} Resumes Extracted & Ready for Staging
-                      </span>
+                    </div>
+                  </div>
+
+                  {/* Actions & Throttle Controls */}
+                  <div className="flex items-center gap-2">
+                    {parsingCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={togglePause}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer ${
+                          isPaused
+                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {isPaused ? <Play size={13} /> : <Pause size={13} />}
+                        <span>{isPaused ? 'Resume Processing' : 'Pause Queue'}</span>
+                      </button>
+                    )}
+
+                    {failedCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleRetryAllFailed}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-xs cursor-pointer"
+                      >
+                        <RotateCcw size={13} />
+                        <span>Retry Failed ({failedCount})</span>
+                      </button>
                     )}
                   </div>
-                  <span className="font-mono font-bold text-slate-600">{percent}%</span>
                 </div>
 
-                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-300 rounded-full ${
-                      parsingCount > 0 ? 'bg-[#0265FF]' : 'bg-emerald-500'
-                    }`}
-                    style={{ width: `${percent}%` }}
-                  />
+                {/* Progress Bar */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[11px] font-mono text-slate-500">
+                    <span>Extraction Progress</span>
+                    <span className="font-bold text-slate-800">{percent}%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-300 rounded-full ${
+                        parsingCount > 0 ? 'bg-gradient-to-r from-blue-500 to-indigo-600' : 'bg-emerald-500'
+                      }`}
+                      style={{ width: `${percent}%` }}
+                    />
+                  </div>
                 </div>
 
-                {duplicateCount > 0 && (
-                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
-                    <AlertTriangle size={14} className="shrink-0 text-amber-600" />
-                    <span>
-                      {duplicateCount} resume{duplicateCount > 1 ? 's' : ''} flagged as potential duplicate{duplicateCount > 1 ? 's' : ''}. Inspect candidate details below before confirming.
+                {/* Chunked Ingestion Banner (during import) */}
+                {importProgress && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-between text-xs text-blue-900 font-bold">
+                    <span className="flex items-center gap-2">
+                      <RotateCw size={14} className="animate-spin text-blue-600" />
+                      <span>Ingesting batch records into ATS Database ({importProgress.current} / {importProgress.total})...</span>
                     </span>
+                    <span className="font-mono text-[11px]">{Math.round((importProgress.current / importProgress.total) * 100)}%</span>
                   </div>
                 )}
+
+                {/* Duplicate Alert */}
+                {duplicateCount > 0 && (
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle size={15} className="shrink-0 text-amber-600" />
+                      <span>{duplicateCount} resume{duplicateCount > 1 ? 's' : ''} flagged as existing candidate in database.</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFilterTab('duplicates')}
+                      className="font-black underline hover:text-amber-950 cursor-pointer"
+                    >
+                      Filter Duplicates
+                    </button>
+                  </div>
+                )}
+
+                {/* Interactive Filter Pills */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setFilterTab('all')}
+                    className={`px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
+                      filterTab === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    All Resumes ({stagedFiles.length})
+                  </button>
+                  {targetJobId && (
+                    <button
+                      type="button"
+                      onClick={() => setFilterTab('high_match')}
+                      className={`px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
+                        filterTab === 'high_match' ? 'bg-[#0265FF] text-white' : 'bg-blue-50 text-[#0265FF] hover:bg-blue-100'
+                      }`}
+                    >
+                      High ATS Match ({highMatchCount})
+                    </button>
+                  )}
+                  {duplicateCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setFilterTab('duplicates')}
+                      className={`px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
+                        filterTab === 'duplicates' ? 'bg-amber-600 text-white' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                      }`}
+                    >
+                      Duplicates ({duplicateCount})
+                    </button>
+                  )}
+                  {reviewCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setFilterTab('needs_review')}
+                      className={`px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
+                        filterTab === 'needs_review' ? 'bg-purple-600 text-white' : 'bg-purple-50 text-purple-700 hover:bg-purple-100'
+                      }`}
+                    >
+                      Needs Review ({reviewCount})
+                    </button>
+                  )}
+                  {failedCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setFilterTab('failed')}
+                      className={`px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
+                        filterTab === 'failed' ? 'bg-red-600 text-white' : 'bg-red-50 text-red-700 hover:bg-red-100'
+                      }`}
+                    >
+                      Failed ({failedCount})
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })()}
@@ -635,7 +890,18 @@ export function AtsBulkImportView({ onNavigateTab }: { onNavigateTab?: (tab: str
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                    {stagedFiles.map((c) => (
+                    {stagedFiles
+                      .filter((c) => {
+                        if (filterTab === 'duplicates') return c.isDuplicate;
+                        if (filterTab === 'failed') return !!c.error;
+                        if (filterTab === 'needs_review') return (c.confidenceScore || 0) < 65 || c.isDuplicate;
+                        if (filterTab === 'high_match' && targetJobId) {
+                          const j = jobs.find((job) => job.id === targetJobId);
+                          return computeQuickMatchScore(c, j).score >= (j?.autoShortlistThreshold || 75);
+                        }
+                        return true;
+                      })
+                      .map((c) => (
                       <tr key={c.id} className="hover:bg-slate-50/60 transition-colors">
                         <td className="px-4 py-3 min-w-[160px]">
                           <div className="flex items-center gap-1.5 font-bold text-slate-900 truncate max-w-[150px]">
