@@ -94,14 +94,14 @@ export const COURSE_LEAD_STAGES = [
 ] as const;
 
 const DEFAULT_BENEFITS = [
-  'Live instructor-led training',
-  'Hands-on coding practice',
-  'Course materials and assignments',
-  'Real-time project experience',
-  'Resume building',
-  'Mock technical interviews',
+  '100% placement support & hiring network drives',
+  'Industry-level live instructor-led training',
+  'Industry-led real-time project experience',
+  'Hands-on daily coding practice & code reviews',
+  'Structured course materials and assignments',
+  'Resume building & GitHub portfolio setup',
+  '1-on-1 mock technical interviews',
   'Course completion certificate',
-  'Placement assistance and interview guidance (no job guarantee)',
 ];
 
 const DEFAULT_FEE_NOTE =

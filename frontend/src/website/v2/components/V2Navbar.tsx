@@ -4,8 +4,7 @@ import { Search, Menu, X, ChevronDown } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 
 /**
- * Sticky floating-pill navbar — plain links only (no dropdown menus).
- * Clicking Solutions / Industries goes straight to the full pages.
+ * Sticky floating-pill navbar — single-row links with whitespace-nowrap so items never wrap onto 2 lines.
  */
 export function V2Navbar() {
   const [open, setOpen] = useState(false);
@@ -14,38 +13,68 @@ export function V2Navbar() {
   return (
     <div className="sticky top-0 z-50">
       <div className="border-b border-neutral-100 bg-white/90 px-3 pt-3 backdrop-blur-md sm:px-6">
-        <header className="mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-full border border-black/5 bg-white py-2.5 pl-5 pr-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.08)]">
+        <header className="mx-auto flex max-w-7xl items-center justify-between gap-2 rounded-full border border-black/5 bg-white py-2.5 pl-4 pr-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.08)] sm:pl-5">
           <Link to="/" aria-label="NexaTalent home" className="shrink-0">
-            <Logo height={34} />
+            <Logo height={32} />
           </Link>
 
-          <nav aria-label="Primary" className="hidden items-center gap-6 text-[13px] font-semibold text-black lg:flex">
-            <Link to="/ai-platform" className="inline-flex items-center gap-1.5 transition-colors text-black hover:opacity-70 font-bold">
+          <nav
+            aria-label="Primary"
+            className="hidden items-center gap-3 text-[12px] font-semibold text-black lg:flex xl:gap-5 xl:text-[13px]"
+          >
+            <Link
+              to="/ai-platform"
+              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap font-bold text-black transition-colors hover:opacity-70"
+            >
               <span>AI Platform</span>
-              <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-black text-white tracking-wider">AI</span>
+              <span className="rounded-full bg-black px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white">
+                AI
+              </span>
             </Link>
-            <Link to="/about" className="transition-colors hover:text-black">About</Link>
-            <Link to="/solutions" className="transition-colors hover:text-black">Solutions</Link>
-            <Link to="/courses" className="transition-colors hover:text-black">Nexa Courses</Link>
-            <Link to="/industries" className="transition-colors hover:text-black">Industries</Link>
-            <Link to="/jobs" className="transition-colors hover:text-black">Jobs</Link>
-            <Link to="/careers" className="transition-colors hover:text-black">Careers</Link>
-            <Link to="/insights" className="transition-colors hover:text-black">Insights</Link>
-            <Link to="/employers" className="transition-colors hover:text-black">For Employers</Link>
+            <Link to="/about" className="shrink-0 whitespace-nowrap transition-colors hover:text-black">
+              About
+            </Link>
+            <Link to="/solutions" className="shrink-0 whitespace-nowrap transition-colors hover:text-black">
+              Solutions
+            </Link>
+            <Link to="/courses" className="shrink-0 whitespace-nowrap transition-colors hover:text-black">
+              Courses
+            </Link>
+            <Link to="/industries" className="shrink-0 whitespace-nowrap transition-colors hover:text-black">
+              Industries
+            </Link>
+            <Link to="/jobs" className="shrink-0 whitespace-nowrap transition-colors hover:text-black">
+              Jobs
+            </Link>
+            <Link to="/careers" className="shrink-0 whitespace-nowrap transition-colors hover:text-black">
+              Careers
+            </Link>
+            <Link to="/insights" className="shrink-0 whitespace-nowrap transition-colors hover:text-black">
+              Insights
+            </Link>
+            <Link to="/employers" className="shrink-0 whitespace-nowrap transition-colors hover:text-black">
+              For Employers
+            </Link>
           </nav>
 
-          <div className="hidden items-center gap-2 lg:flex">
+          <div className="hidden shrink-0 items-center gap-2 lg:flex">
             <button
               aria-label="Search jobs"
               onClick={() => navigate('/jobs')}
-              className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-neutral-100"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-neutral-100"
             >
-              <Search size={18} />
+              <Search size={17} />
             </button>
-            <Link to="/careers" className="rounded-full border border-neutral-300 px-5 py-2.5 text-[13px] font-bold transition-colors hover:border-black">
+            <Link
+              to="/careers"
+              className="shrink-0 whitespace-nowrap rounded-full border border-neutral-300 px-4 py-2 text-[12px] font-bold transition-colors hover:border-black xl:px-5 xl:py-2.5 xl:text-[13px]"
+            >
               For Candidates
             </Link>
-            <Link to="/contact" className="rounded-full bg-black px-5 py-2.5 text-[13px] font-bold text-white transition-colors hover:bg-neutral-800">
+            <Link
+              to="/contact"
+              className="shrink-0 whitespace-nowrap rounded-full bg-black px-4 py-2 text-[12px] font-bold text-white transition-colors hover:bg-neutral-800 xl:px-5 xl:py-2.5 xl:text-[13px]"
+            >
               Contact us
             </Link>
           </div>
@@ -62,7 +91,10 @@ export function V2Navbar() {
         </header>
 
         {open && (
-          <div id="v2-mobile-menu" className="mx-auto mt-2 max-w-6xl rounded-3xl border border-neutral-200 bg-white p-4 shadow-xl lg:hidden">
+          <div
+            id="v2-mobile-menu"
+            className="mx-auto mt-2 max-w-7xl rounded-3xl border border-neutral-200 bg-white p-4 shadow-xl lg:hidden"
+          >
             {[
               { to: '/ai-platform', label: 'AI Platform (Ecosystem)' },
               { to: '/about', label: 'About' },
