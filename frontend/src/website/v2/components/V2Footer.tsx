@@ -21,6 +21,7 @@ const COLS: Array<{ title: string; links: Array<{ label: string; to: string }> }
   {
     title: 'Talent',
     links: [
+      { label: 'Nexa Courses', to: '/courses' },
       { label: 'Find Jobs', to: '/jobs' },
       { label: 'For Employers', to: '/employers' },
       { label: 'Vendor Empanelment', to: '/partners' },

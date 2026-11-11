@@ -26,6 +26,7 @@ export function V2Navbar() {
             </Link>
             <Link to="/about" className="transition-colors hover:text-black">About</Link>
             <Link to="/solutions" className="transition-colors hover:text-black">Solutions</Link>
+            <Link to="/courses" className="transition-colors hover:text-black">Nexa Courses</Link>
             <Link to="/industries" className="transition-colors hover:text-black">Industries</Link>
             <Link to="/jobs" className="transition-colors hover:text-black">Jobs</Link>
             <Link to="/careers" className="transition-colors hover:text-black">Careers</Link>
@@ -66,6 +67,7 @@ export function V2Navbar() {
               { to: '/ai-platform', label: 'AI Platform (Ecosystem)' },
               { to: '/about', label: 'About' },
               { to: '/solutions', label: 'Solutions' },
+              { to: '/courses', label: 'Nexa Courses' },
               { to: '/industries', label: 'Industries' },
               { to: '/jobs', label: 'Jobs' },
               { to: '/careers', label: 'Careers' },

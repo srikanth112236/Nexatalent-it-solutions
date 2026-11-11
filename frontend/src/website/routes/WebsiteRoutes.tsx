@@ -33,6 +33,7 @@ import { NewArticleDetailPage } from '../v2/pages/NewArticleDetailPage';
 import { NewJobDetailPage } from '../v2/pages/NewJobDetailPage';
 import { NewContactPage } from '../v2/pages/NewContactPage';
 import { NewAiPlatformPage } from '../v2/pages/NewAiPlatformPage';
+import { NewCoursesPage } from '../v2/pages/NewCoursesPage';
 
 export function WebsiteRoutes() {
   return (
@@ -73,6 +74,11 @@ export function WebsiteRoutes() {
           <Route path="/candidate" element={<CandidatesPage />} />
           <Route path="/career-services" element={<CandidatesPage />} />
           <Route path="/candidate-resources" element={<CandidatesPage />} />
+
+          {/* 5b. Nexa Courses — Technical Training Programs */}
+          <Route path="/courses" element={<NewCoursesPage />} />
+          <Route path="/nexa-courses" element={<NewCoursesPage />} />
+          <Route path="/courses/:courseSlug" element={<NewCoursesPage />} />
 
           {/* 6. Jobs Board & Single Job Detail Mandates */}
           <Route path="/jobs" element={<NewJobsPage />} />

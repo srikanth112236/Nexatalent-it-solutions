@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from '
 import { randomBytes } from 'crypto';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { seedCourses } from './coursesSeed.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(here, '..', '..', 'data');
@@ -40,6 +41,8 @@ export interface DbShape {
   jobsLegacy: any[]; candidatesLegacy: any[]; tenantsLegacy: any[];
   contractors: any[]; compliance: any[]; credentials: any[];
   atsJobStages: any[]; atsCandidateNotes: any[]; atsResumeParses: any[]; atsDuplicateMatches: any[];
+  courses: any[];
+  courseLeads: any[];
 }
 
 function seed(): DbShape {
@@ -251,6 +254,8 @@ function seed(): DbShape {
     atsCandidateNotes: [],
     atsResumeParses: [],
     atsDuplicateMatches: [],
+    courses: seedCourses(now),
+    courseLeads: [],
   };
 }
 
@@ -372,6 +377,10 @@ export function loadDb(): DbShape {
       if (!Array.isArray((db as any).atsCandidateNotes)) (db as any).atsCandidateNotes = [];
       if (!Array.isArray((db as any).atsResumeParses)) (db as any).atsResumeParses = [];
       if (!Array.isArray((db as any).atsDuplicateMatches)) (db as any).atsDuplicateMatches = [];
+      if (!Array.isArray((db as any).courses) || (db as any).courses.length === 0) {
+        (db as any).courses = fresh.courses;
+      }
+      if (!Array.isArray((db as any).courseLeads)) (db as any).courseLeads = [];
       // Backfill the standard agreement template for DBs seeded before it existed.
       if (Array.isArray((db as any).agreementTemplates) && !(db as any).agreementTemplates.find((t: any) => t.id === 'AGT-STD-001')) {
         (db as any).agreementTemplates.unshift(standardTemplate(new Date().toISOString()));

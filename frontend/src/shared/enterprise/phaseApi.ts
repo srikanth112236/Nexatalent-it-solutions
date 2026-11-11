@@ -362,3 +362,37 @@ export const atsApi = {
   recruiterWorkloadReport: () => apiClient.get('/api/v1/ats/reports/recruiter-workload'),
   qualificationReport: (params = '') => apiClient.get(`/api/v1/ats/reports/qualification${params}`),
 };
+
+// Nexa Courses & Course Leads API
+export const coursesApi = {
+  listPublic: () => apiClient.get('/api/v1/courses-public'),
+  listAdmin: () => apiClient.get('/api/v1/courses'),
+  create: (body: unknown) => apiClient.post('/api/v1/courses', body),
+  update: (id: string, body: unknown) => apiClient.put(`/api/v1/courses/${id}`, body),
+  remove: (id: string) => apiClient.delete(`/api/v1/courses/${id}`),
+};
+
+export const courseLeadsApi = {
+  submitPublic: (body: {
+    courseId: string;
+    courseSlug?: string;
+    studentName: string;
+    mobileNumber: string;
+    educationBackground: string;
+    preferredTrainingMode: string;
+    sourcePage?: string;
+    notes?: string;
+  }) => apiClient.post('/api/v1/course-leads', body),
+  list: (params = '') => apiClient.get(`/api/v1/course-leads${params}`),
+  update: (
+    id: string,
+    body: {
+      stage?: string;
+      counsellorOwner?: string;
+      notes?: string;
+      addNote?: string;
+      activityNote?: string;
+    },
+  ) => apiClient.patch(`/api/v1/course-leads/${id}`, body),
+  remove: (id: string) => apiClient.delete(`/api/v1/course-leads/${id}`),
+};

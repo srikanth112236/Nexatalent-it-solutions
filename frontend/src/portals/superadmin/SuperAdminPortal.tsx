@@ -24,6 +24,8 @@ import { MfaPanel } from '../../auth/components/MfaPanel';
 import { OrganizationsManager, UsersManager } from './SuperAdminDirectory';
 import { WebsiteLeadsPanel } from '../common/WebsiteLeadsPanel';
 import { OpenPositionsPanel } from '../common/OpenPositionsPanel';
+import { CoursesManagerPanel } from './CoursesManagerPanel';
+import { CourseLeadsPanel } from './CourseLeadsPanel';
 import { AtsDashboardView } from '../recruiter/ats/AtsDashboardView';
 import { AtsJobsView } from '../recruiter/ats/AtsJobsView';
 import { AtsJobPipelineView } from '../recruiter/ats/AtsJobPipelineView';
@@ -67,6 +69,8 @@ const navItems = [
   { label: 'Leads & Pipeline', path: '/superadmin/leads', group: 'Sales' },
   { label: 'Website Leads', path: '/superadmin/website-leads', group: 'Sales' },
   { label: 'Sales Performance', path: '/superadmin/performance', group: 'Sales' },
+  { label: 'Courses & Curriculum', path: '/superadmin/courses', group: 'Nexa Courses' },
+  { label: 'Course Leads', path: '/superadmin/course-leads', group: 'Nexa Courses' },
   { label: 'Reports', path: '/superadmin/reports', group: 'Platform' },
   { label: 'Support & Issues', path: '/superadmin/support', group: 'Platform' },
   { label: 'Access Controls', path: '/superadmin/controls', group: 'Platform' },
@@ -105,9 +109,13 @@ export function isTabAllowedForRole(tab: string, role: string, permissions: stri
   }
 
   // Sales management
-  const isSalesTab = ['leads', 'website-leads', 'performance'].includes(tab);
+  const isSalesTab = ['leads', 'website-leads', 'performance', 'course-leads'].includes(tab);
   if (isSalesTab) {
-    return ['sales_admin', 'sales_manager', 'bda', 'operations_admin'].includes(role);
+    return ['sales_admin', 'sales_manager', 'bda', 'operations_admin', 'employee'].includes(role);
+  }
+
+  if (tab === 'courses') {
+    return ['operations_admin'].includes(role);
   }
 
   // ATS Suite & Recruitment Delivery
@@ -201,6 +209,8 @@ export function SuperAdminPortal() {
     if (p.includes('/billing')) return 'billing';
     if (p.includes('/commissions') || p.includes('/payouts')) return 'commissions';
     if (p.includes('/website-leads')) return 'website-leads';
+    if (p.includes('/course-leads')) return 'course-leads';
+    if (p.includes('/courses')) return 'courses';
     if (p.includes('/leads') || p.includes('/pipeline')) return 'leads';
     if (p.includes('/performance') || p.includes('/targets')) return 'performance';
     if (p.includes('/reports')) return 'reports';
@@ -1064,6 +1074,8 @@ export function SuperAdminPortal() {
         {currentTab === 'commissions' && (<div className="space-y-4"><PayrollPanel /><CommissionsPanel /></div>)}
         {currentTab === 'leads' && <LeadsPanel />}
         {currentTab === 'website-leads' && <WebsiteLeadsPanel />}
+        {currentTab === 'courses' && <CoursesManagerPanel />}
+        {currentTab === 'course-leads' && <CourseLeadsPanel />}
         {currentTab === 'performance' && <PerformancePanel />}
         {currentTab === 'reports' && <ReportsPanel />}
         {currentTab === 'support' && <SupportPanel />}
